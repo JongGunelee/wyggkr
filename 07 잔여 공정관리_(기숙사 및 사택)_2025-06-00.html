@@ -21004,13 +21004,10 @@
             animation: legendBlink 1s linear infinite;
         }
 
-        /* 개선 사항: 날짜 범례 항목 스타일 (크기 80%, 그룹화 색상) */
-        .legend-section [data-status-filter="오늘시작"],
-        .legend-section [data-status-filter="오늘종료"],
-        .legend-section [data-status-filter="내일시작"],
-        .legend-section [data-status-filter="내일종료"] {
-            transform: scale(0.8);
-            transform-origin: center;
+        /* [v4.57] 범례 아이템 자동 크기 조절 - JS autoFitLegendItems()에서 zoom 동적 적용 */
+        #legendSection > .flex.flex-nowrap > div {
+            white-space: nowrap;
+            flex-shrink: 0;
         }
 
         /* 오늘 그룹 색상 그룹화 (파란색 계열) */
@@ -21022,8 +21019,8 @@
         }
 
         .legend-section [data-status-filter="오늘종료"] {
-            background-color: rgba(59, 130, 246, 0.15);
-            border-left: 3px solid rgb(59, 130, 246);
+            background-color: rgba(30, 64, 175, 0.12);
+            border-left: 3px solid rgb(30, 64, 175);
             padding-left: 0.5rem;
             border-radius: 0.25rem;
         }
@@ -21906,21 +21903,21 @@
                                         data-status-filter="전체">
                                         <span class="w-4 h-4 rounded"
                                             style="background: linear-gradient(90deg, rgb(156, 163, 175), rgb(59, 130, 246), rgb(239, 68, 68), rgb(34, 197, 94));"></span>
-                                        <span class="text-sm">전체 <span id="legendAll"
+                                        <span class="text-sm">전체<span id="legendAll"
                                                 class="font-mono text-gray-500"></span></span>
                                     </div>
                                     <div class="flex items-center gap-2 cursor-pointer p-1 rounded-md transition-colors hover:bg-gray-100"
                                         data-status-filter="착공전">
                                         <span class="w-4 h-4 rounded"
                                             style="background-color: rgb(156, 163, 175);"></span>
-                                        <span class="text-sm">착공전 <span id="legendNotStarted"
+                                        <span class="text-sm">착공전<span id="legendNotStarted"
                                                 class="font-mono text-gray-500"></span></span>
                                     </div>
                                     <div class="flex items-center gap-2 cursor-pointer p-1 rounded-md transition-colors hover:bg-gray-100"
                                         data-status-filter="공사중">
                                         <span class="w-4 h-4 rounded"
                                             style="background-color: rgb(59, 130, 246);"></span>
-                                        <span class="text-sm">공사중 <span id="legendInProgress"
+                                        <span class="text-sm">공사중<span id="legendInProgress"
                                                 class="font-mono text-gray-500"></span></span>
                                     </div>
 
@@ -21929,55 +21926,55 @@
                                         data-status-filter="오늘작업">
                                         <span class="w-4 h-4 rounded"
                                             style="background-color: rgb(249, 115, 22);"></span>
-                                        <span class="text-sm">오늘 작업 <span id="legendTodayWork"
+                                        <span class="text-sm">오늘 작업<span id="legendTodayWork"
                                                 class="font-mono text-gray-500"></span></span>
                                     </div>
                                     <div class="flex items-center gap-2 cursor-pointer p-1 rounded-md transition-colors hover:bg-gray-100"
                                         data-status-filter="오늘시작">
                                         <span class="w-4 h-4 rounded"
                                             style="background-color: rgb(96, 165, 250);"></span>
-                                        <span class="text-sm">오늘 시작 <span id="legendTodayStart"
+                                        <span class="text-sm">오늘 시작<span id="legendTodayStart"
                                                 class="font-mono text-gray-500"></span></span>
                                     </div>
                                     <div class="flex items-center gap-2 cursor-pointer p-1 rounded-md transition-colors hover:bg-gray-100"
                                         data-status-filter="오늘종료">
                                         <span class="w-4 h-4 rounded"
-                                            style="background-color: rgb(59, 130, 246);"></span>
-                                        <span class="text-sm">오늘 종료 <span id="legendTodayEnd"
+                                            style="background-color: rgb(30, 64, 175);"></span>
+                                        <span class="text-sm">오늘 종료<span id="legendTodayEnd"
                                                 class="font-mono text-gray-500"></span></span>
                                     </div>
                                     <div class="flex items-center gap-2 cursor-pointer p-1 rounded-md transition-colors hover:bg-gray-100"
                                         data-status-filter="내일시작">
                                         <span class="w-4 h-4 rounded"
                                             style="background-color: rgb(196, 181, 253);"></span>
-                                        <span class="text-sm">내일 시작 <span id="legendTomorrowStart"
+                                        <span class="text-sm">내일 시작<span id="legendTomorrowStart"
                                                 class="font-mono text-gray-500"></span></span>
                                     </div>
                                     <div class="flex items-center gap-2 cursor-pointer p-1 rounded-md transition-colors hover:bg-gray-100"
                                         data-status-filter="내일종료">
                                         <span class="w-4 h-4 rounded"
                                             style="background-color: rgb(147, 51, 234);"></span>
-                                        <span class="text-sm">내일 종료 <span id="legendTomorrowEnd"
+                                        <span class="text-sm">내일 종료<span id="legendTomorrowEnd"
                                                 class="font-mono text-gray-500"></span></span>
                                     </div>
                                     <div class="flex items-center gap-2 cursor-pointer p-1 rounded-md transition-colors hover:bg-gray-100"
                                         data-status-filter="지연">
                                         <span class="w-4 h-4 rounded"
                                             style="background-color: rgb(239, 68, 68);"></span>
-                                        <span class="text-sm">지연 <span id="legendDelayed"
+                                        <span class="text-sm">지연<span id="legendDelayed"
                                                 class="font-mono text-gray-500"></span></span>
                                     </div>
                                     <div class="flex items-center gap-2 cursor-pointer p-1 rounded-md transition-colors hover:bg-gray-100"
                                         data-status-filter="완료">
                                         <span class="w-4 h-4 rounded"
                                             style="background-color: rgb(34, 197, 94);"></span>
-                                        <span class="text-sm">완료 <span id="legendCompleted"
+                                        <span class="text-sm">완료<span id="legendCompleted"
                                                 class="font-mono text-gray-500"></span></span>
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <span class="w-4 h-4 rounded"
                                             style="background: linear-gradient(90deg, rgb(156, 163, 175), rgb(59, 130, 246), rgb(34, 197, 94));"></span>
-                                        <span class="text-sm">그룹 진행률 <span id="legendGroupProgress"
+                                        <span class="text-sm">그룹 진행률<span id="legendGroupProgress"
                                                 class="font-mono text-gray-500"></span></span>
                                     </div>
                                 </div>
@@ -64411,6 +64408,66 @@
                 }, { capture: true }); // capture phase에서 먼저 실행
             } catch (e) { /* noop */ }
         });
+    </script>
+    <script>
+        // [v4.57] 범례 아이템 자동 크기 조절 (한 줄 표시)
+        (function() {
+            'use strict';
+
+            function autoFitLegendItems() {
+                const legendSection = document.getElementById('legendSection');
+                if (!legendSection || legendSection.classList.contains('legend-collapsed')) return;
+
+                const itemsContainer = legendSection.querySelector('.flex.flex-nowrap');
+                if (!itemsContainer) return;
+
+                // 측정을 위해 zoom 리셋
+                itemsContainer.style.zoom = '';
+
+                // 가용 너비: legendSection의 내부 너비 (패딩 제외는 clientWidth가 자동 처리)
+                const availableWidth = legendSection.clientWidth;
+                // 아이템 자연 너비 (스크롤 포함 전체 너비)
+                const naturalWidth = itemsContainer.scrollWidth;
+
+                if (naturalWidth > 0 && availableWidth > 0 && naturalWidth > availableWidth) {
+                    const ratio = availableWidth / naturalWidth;
+                    // 최소 50%, 최대 100% 범위로 클램프
+                    const clamped = Math.max(0.5, Math.min(1, ratio));
+                    itemsContainer.style.zoom = clamped;
+                } else {
+                    itemsContainer.style.zoom = '';
+                }
+            }
+
+            // DOMContentLoaded에서 초기 실행 (지연 실행으로 레이아웃 안정 후 계산)
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(autoFitLegendItems, 500);
+            });
+
+            // 윈도우 리사이즈 시 재계산 (debounce 적용)
+            let resizeTimer = null;
+            window.addEventListener('resize', function() {
+                if (resizeTimer) clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(autoFitLegendItems, 200);
+            });
+
+            // 범례 펼치기 시 재계산
+            const observer = new MutationObserver(function(mutations) {
+                for (const m of mutations) {
+                    if (m.type === 'attributes' && m.attributeName === 'class') {
+                        const el = m.target;
+                        if (el.id === 'legendSection' && !el.classList.contains('legend-collapsed')) {
+                            setTimeout(autoFitLegendItems, 350);
+                        }
+                    }
+                }
+            });
+            const ls = document.getElementById('legendSection');
+            if (ls) observer.observe(ls, { attributes: true, attributeFilter: ['class'] });
+
+            // 전역 노출 (다른 모듈에서 호출 가능)
+            window.autoFitLegendItems = autoFitLegendItems;
+        })();
     </script>
     <script>
         // [FIX] Ensure select dropdowns in '기간' and '진행' columns are hidden behind milestone headers
