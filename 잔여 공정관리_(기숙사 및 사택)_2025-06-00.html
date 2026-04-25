@@ -4006,13 +4006,14 @@
             pointer-events: none;
             z-index: 0;
             color: rgba(107, 114, 128, 0.5);
+            contain: paint;
         }
         .settlement-customer-gesture-guide svg {
             width: 72px;
             height: 72px;
             opacity: 0.24;
             transform-origin: center;
-            filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.45));
+            will-change: opacity, transform;
             animation: settlement-customer-guide-shimmer 2.4s ease-in-out infinite;
         }
         .settlement-customer-gesture-guide .settlement-customer-gesture-guide-label {
@@ -4031,6 +4032,7 @@
             backdrop-filter: blur(1px);
             white-space: nowrap;
             opacity: 0.78;
+            will-change: opacity;
             animation: settlement-customer-guide-label-shimmer 2.4s ease-in-out infinite;
         }
         .settlement-customer-card .settlement-customer-card-body {
@@ -4040,13 +4042,11 @@
         @keyframes settlement-customer-guide-shimmer {
             0%, 100% {
                 opacity: 0.18;
-                transform: scale(0.985);
-                filter: drop-shadow(0 1px 1px rgba(255, 255, 255, 0.4));
+                transform: translateZ(0) scale(0.985);
             }
             50% {
                 opacity: 0.38;
-                transform: scale(1.015);
-                filter: drop-shadow(0 0 7px rgba(156, 163, 175, 0.46));
+                transform: translateZ(0) scale(1.015);
             }
         }
         @keyframes settlement-customer-guide-label-shimmer {
