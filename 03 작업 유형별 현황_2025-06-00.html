@@ -11940,25 +11940,11 @@
         uploadStatusEl.style.color = "#4b5563";
       }
 
-      // Candidate URLs for the XLSB file (fully encoded, no raw Korean characters)
-      const candidates = [
+      // Candidate URLs for the XLSB file (紐⑤몢 ?ъ쟾 ?몄퐫?⑸맂 ?덉쟾??URL留??ъ슜)
+      const attemptedUrls = [
         "https://raw.githubusercontent.com/JongGunelee/wyggkr04/main/RawData/%EC%9E%91%EC%97%85%EC%9C%A0%ED%98%95%EB%B3%84/020%20%EC%9E%91%EC%97%85%20%EC%9C%A0%ED%98%95%EB%B3%84%20%ED%98%84%ED%99%A9.xlsb",
         "https://raw.githubusercontent.com/JongGunelee/wyggkr/main/RawData/%EC%9E%91%EC%97%85%EC%9C%A0%ED%98%95%EB%B3%84/020%20%EC%9E%91%EC%97%85%20%EC%9C%A0%ED%98%95%EB%B3%84%20%ED%98%84%ED%99%A9.xlsb"
       ];
-
-      const attemptedUrls = [];
-      candidates.forEach((c) => {
-        if (!c) return;
-        attemptedUrls.push(c);
-        try {
-          const enc = encodeURI(c);
-          if (enc && enc !== c && !attemptedUrls.includes(enc)) {
-            attemptedUrls.push(enc);
-          }
-        } catch (e) {
-          // ignore encoding errors
-        }
-      });
 
       const FETCH_TIMEOUT_MS = 20000;
       const attemptFetch = async (url) => {
@@ -30416,16 +30402,20 @@ async function processUploadedData(data, isExcel = false) {
           try {
             syncWorkTypeCheckboxesToAllSelected({ skipUpdate: true });
           } catch (e) { }
-          // Progress for this path is handled inside fetchDataFromGitHub
-          
-          if (location.protocol !== "http:" && location.protocol !== "https:") {
-            if (masterRawEntries.length === 0) {
-              const uploadStatusEl = document.getElementById("uploadStatus");
-              if (uploadStatusEl) {
-                uploadStatusEl.textContent = "遺꾩꽍???묒?/CSV ?뚯씪???좏깮?댁＜?몄슂.";
-                uploadStatusEl.style.color = "blue";
-              }
-            }
+        }
+
+        // [臾닿껐??蹂댁쬆 v4.76] ???섍꼍(HTTP/HTTPS)?먯꽌??????곗씠??濡쒖뺄 ?곗씠???좊Т? 臾닿??섍쾶
+        // ??긽 GitHub ?쇱씠釉?XLSB瑜?濡쒕뱶?섏뿬 ??쒕낫?쒕? 理쒖떊 ?곗씠?곕줈 媛깆떊?⑸땲??
+        if (location.protocol.startsWith("http")) {
+          fetchXlsbFromGitHub(true).catch((err) => {
+            console.warn("[AutoLoad] GitHub XLSB 濡쒕뵫 ?ㅽ뙣:", err);
+          });
+        } else if (!wasLoadedFromSave && masterRawEntries.length === 0) {
+          const uploadStatusEl = document.getElementById("uploadStatus");
+          if (uploadStatusEl) {
+            uploadStatusEl.textContent =
+              "遺꾩꽍???묒?/CSV ?뚯씪???좏깮?댁＜?몄슂.";
+            uploadStatusEl.style.color = "blue";
           }
         }
 
@@ -30607,14 +30597,6 @@ async function processUploadedData(data, isExcel = false) {
           window.__savedDashboardWarmupPending__ = false;
         } else if (!wasLoadedFromSave) {
           await finalizeInitialDashboardRender();
-        }
-
-        // [臾닿껐??蹂댁쬆] ???섍꼍?대㈃ ????곹깭 ?щ?? 臾닿??섍쾶 ??긽 GitHub XLSB 理쒖떊 ?곗씠?곕? 濡쒕뱶?쒕떎.
-        // ??λ맂 ?곹깭濡??쒖옉?대룄 媛??理쒖떊 ?먮낯 ?곗씠?곕줈 ??쒕낫?쒕? 媛깆떊?쒕떎.
-        if (location.protocol === "http:" || location.protocol === "https:") {
-          fetchXlsbFromGitHub(true).catch((err) => {
-            console.warn("[AutoLoad] GitHub XLSB 濡쒕뵫 ?ㅽ뙣:", err);
-          });
         }
 
         const layoutControls = document.getElementById(
@@ -39289,3 +39271,4 @@ async function processUploadedData(data, isExcel = false) {
 </body>
 
 </html>
+
