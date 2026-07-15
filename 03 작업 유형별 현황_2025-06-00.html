@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko">
 
 <head>
@@ -30742,12 +30742,12 @@ async function processUploadedData(data, isExcel = false) {
           } catch (e) { }
           // Progress for this path is handled inside fetchDataFromGitHub
           
-          // [개선] 웹 환경(HTTP/HTTPS)이고 내장 데이터가 없는 경우 GitHub의 XLSB를 자동 로드하고, 그 외의 경우 수동 파일 선택을 안내합니다.
-          if (location.protocol.startsWith("http") && masterRawEntries.length === 0) {
+          // [개선] 웹 환경(HTTP/HTTPS)에서는 항상 GitHub의 라이브 XLSB 데이터를 우선적으로 자동 로드합니다.
+          if (location.protocol.startsWith("http")) {
             fetchXlsbFromGitHub(true).catch((err) => {
               console.warn("[AutoLoad] GitHub XLSB 로딩 실패:", err);
             });
-          } else {
+          } else if (masterRawEntries.length === 0) {
             const uploadStatusEl = document.getElementById("uploadStatus");
             if (uploadStatusEl) {
               uploadStatusEl.textContent =
