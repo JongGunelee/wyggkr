@@ -12123,12 +12123,26 @@
 
       // Candidate URLs for the XLSB file
       const candidates = [
-        "https://raw.githubusercontent.com/JongGunelee/wyggkr04/main/RawData/%EC%9E%91%EC%97%85%EC%9C%A0%ED%98%95%EB%B3%84/020%20%EC%9E%91%EC%97%85%20%EC%9C%A0%ED%98%95%EB%B3%84%20%ED%98%84%ED%99%A9.xlsb",
-        "https://raw.githubusercontent.com/JongGunelee/wyggkr/main/RawData/%EC%9E%91%EC%97%85%EC%9C%A0%ED%98%95%EB%B3%84/020%20%EC%9E%91%EC%97%85%20%EC%9C%A0%ED%98%95%EB%B3%84%20%ED%98%84%ED%99%A9.xlsb",
-        "https://cdn.jsdelivr.net/gh/JongGunelee/wyggkr04@main/RawData/%EC%9E%91%EC%97%85%EC%9C%A0%ED%98%95%EB%B3%84/020%20%EC%9E%91%EC%97%85%20%EC%9C%A0%ED%98%95%EB%B3%84%20%ED%98%84%ED%99%A9.xlsb",
-        "https://cdn.jsdelivr.net/gh/JongGunelee/wyggkr@main/RawData/%EC%9E%91%EC%97%85%EC%9C%A0%ED%98%95%EB%B3%84/020%20%EC%9E%91%EC%97%85%20%EC%9C%A0%ED%98%95%EB%B3%84%20%ED%98%84%ED%99%A9.xlsb",
-        "./RawData/%EC%9E%91%EC%97%85%EC%9C%A0%ED%98%95%EB%B3%84/020%20%EC%9E%91%EC%97%85%20%EC%9C%A0%ED%98%95%EB%B3%84%20%ED%98%84%ED%99%A9.xlsb"
+        "https://raw.githubusercontent.com/JongGunelee/wyggkr04/main/RawData/작업유형별/020 작업 유형별 현황.xlsb",
+        "https://raw.githubusercontent.com/JongGunelee/wyggkr/main/RawData/작업유형별/020 작업 유형별 현황.xlsb",
+        "https://cdn.jsdelivr.net/gh/JongGunelee/wyggkr04@main/RawData/작업유형별/020 작업 유형별 현황.xlsb",
+        "https://cdn.jsdelivr.net/gh/JongGunelee/wyggkr@main/RawData/작업유형별/020 작업 유형별 현황.xlsb",
+        "./RawData/작업유형별/020 작업 유형별 현황.xlsb"
       ];
+
+      const attemptedUrls = [];
+      candidates.forEach((c) => {
+        if (!c) return;
+        attemptedUrls.push(c);
+        try {
+          const enc = encodeURI(c);
+          if (enc && enc !== c && !attemptedUrls.includes(enc)) {
+            attemptedUrls.push(enc);
+          }
+        } catch (e) {
+          // ignore encoding errors
+        }
+      });
 
       const FETCH_TIMEOUT_MS = 20000;
       const attemptFetch = async (url) => {
@@ -12155,8 +12169,8 @@
 
         let response = null;
         let lastError = null;
-        for (let i = 0; i < candidates.length; i++) {
-          const url = candidates[i];
+        for (let i = 0; i < attemptedUrls.length; i++) {
+          const url = attemptedUrls[i];
           try {
             response = await attemptFetch(url);
             if (response && response.ok) {
