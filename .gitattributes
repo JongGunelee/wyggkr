@@ -1,2 +1,4 @@
 *.xlsb binary
 *.xlsb filter=lfs diff=lfs merge=lfs -text
+
+"03 작업 유형별 현황_2025-06-00.html" -text

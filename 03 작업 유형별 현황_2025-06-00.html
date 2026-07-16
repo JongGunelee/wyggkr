@@ -4576,7 +4576,7 @@
       transition: opacity 0.5s ease-in-out;
     }
 
-    body.is-mobile #mobileLoadingOverlay.active {
+    #mobileLoadingOverlay.active {
       display: flex;
     }
 
@@ -4768,7 +4768,7 @@
       text-align: left !important;
       z-index: 9999 !important;
     }
-    body.is-mobile #mobileLoadingOverlay.mobile-progress-nonblocking.active {
+    #mobileLoadingOverlay.mobile-progress-nonblocking.active {
       display: block !important;
     }
     #mobileLoadingOverlay.mobile-progress-nonblocking .loading-content {
@@ -5016,6 +5016,9 @@
       </div>
       <p id="loadingPercentage" class="text-lg font-semibold text-sky-700 mt-4">
         0%
+      </p>
+      <p id="loadingTimer" class="text-sm text-slate-500 mt-2 font-mono" style="margin-top: 0.5rem;">
+        소요 시간: 0.0초
       </p>
     </div>
   </div>
@@ -10116,14 +10119,16 @@
     }
 
     // --- [모바일 최적화] 로딩 인디케이터 함수 ---
+    let loadingTimerInterval = null;
+    let loadingStartTime = 0;
+
     function showMobileLoading(
       title = "데이터 로딩 중",
       message = "잠시만 기다려주세요...",
     ) {
-      const isMobile = document.body.classList.contains("is-mobile");
-      if (!isMobile) return;
-
       const overlay = document.getElementById("mobileLoadingOverlay");
+      if (!overlay) return;
+
       document.getElementById("loadingTitle").textContent = title;
       document.getElementById("loadingMessage").textContent = message;
       document.getElementById("loadingProgressBar").style.width = "0%";
@@ -10132,6 +10137,21 @@
       document
         .getElementById("loadingProgressBar")
         ?.parentElement?.setAttribute("aria-valuenow", "0");
+
+      // 실시간 소요 시간용 타이머 가동
+      const timerEl = document.getElementById("loadingTimer");
+      if (timerEl) {
+        timerEl.textContent = "소요 시간: 0.0초";
+      }
+
+      if (loadingTimerInterval) clearInterval(loadingTimerInterval);
+      loadingStartTime = performance.now();
+      loadingTimerInterval = setInterval(() => {
+        const elapsed = ((performance.now() - loadingStartTime) / 1000).toFixed(1);
+        if (timerEl) {
+          timerEl.textContent = `소요 시간: ${elapsed}초`;
+        }
+      }, 100);
 
       // Always append to body (not documentElement). Appending to documentElement can cause
       // unexpected layout behaviour on some mobile browsers. Use fixed + inset + explicit
@@ -10187,11 +10207,8 @@
     }
 
     function updateMobileLoadingProgress(percentage, message) {
-      const isMobile = document.body.classList.contains("is-mobile");
-      if (!isMobile) return;
-
       const overlay = document.getElementById("mobileLoadingOverlay");
-      if (!overlay.classList.contains("active")) return;
+      if (!overlay || !overlay.classList.contains("active")) return;
 
       document.getElementById("loadingProgressBar").style.width =
         `${percentage}%`;
@@ -10206,11 +10223,19 @@
     }
 
     function hideMobileLoading(isSuccess = true) {
-      const isMobile = document.body.classList.contains("is-mobile");
-      if (!isMobile) return;
-
       const overlay = document.getElementById("mobileLoadingOverlay");
-      if (!overlay.classList.contains("active")) return;
+      if (!overlay || !overlay.classList.contains("active")) return;
+
+      // 타이머 중지 및 최종 소요 시간 출력
+      if (loadingTimerInterval) {
+        clearInterval(loadingTimerInterval);
+        loadingTimerInterval = null;
+      }
+      const elapsed = ((performance.now() - loadingStartTime) / 1000).toFixed(2);
+      const timerEl = document.getElementById("loadingTimer");
+      if (timerEl) {
+        timerEl.textContent = `최종 소요 시간: ${elapsed}초`;
+      }
 
       updateMobileLoadingProgress(
         100,
@@ -12093,19 +12118,21 @@
         }
       }
     }
-    // --- [v4.78] IndexedDB 기반 XLSB 파싱 캐싱 로직 추가 ---
+    // --- [v5.00] IndexedDB 기반 XLSB 완전 스냅샷 캐싱 (v2 아키텍처) ---
     const WYGGKR_DB_NAME = "WyggkrCacheDB";
     const WYGGKR_STORE_NAME = "xlsbDataStore";
-    const WYGGKR_DB_VERSION = 1;
+    const WYGGKR_DB_VERSION = 2;
 
     function initWyggkrCacheDB() {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open(WYGGKR_DB_NAME, WYGGKR_DB_VERSION);
         request.onupgradeneeded = (e) => {
           const db = e.target.result;
-          if (!db.objectStoreNames.contains(WYGGKR_STORE_NAME)) {
-            db.createObjectStore(WYGGKR_STORE_NAME);
+          // v1 store가 있으면 삭제 후 재생성
+          if (db.objectStoreNames.contains(WYGGKR_STORE_NAME)) {
+            db.deleteObjectStore(WYGGKR_STORE_NAME);
           }
+          db.createObjectStore(WYGGKR_STORE_NAME);
         };
         request.onsuccess = (e) => resolve(e.target.result);
         request.onerror = (e) => reject(e.target.error);
@@ -12121,6 +12148,70 @@
         return null;
       }
     }
+
+    /** [v5.00] processUploadedData 완료 후 전역 상태를 스냅샷으로 저장 */
+    function captureFullSnapshot() {
+      try {
+        return {
+          _snapshotVersion: 2,
+          masterRawEntries: cloneSerializableData(masterRawEntries),
+          masterCsvHeaders: cloneSerializableData(masterCsvHeaders),
+          allYearsGlobal: [...allYearsGlobal],
+          allDongsGlobal: [...allDongsGlobal],
+          allWorkTypesGlobal: [...allWorkTypesGlobal],
+          dataBuildingSummaryRaw: cloneSerializableData(dataBuildingSummaryRaw),
+          dataWorkTypeSummaryRaw: cloneSerializableData(dataWorkTypeSummaryRaw),
+          dataAnnualSummaryRaw: cloneSerializableData(dataAnnualSummaryRaw),
+          dataDongFinanceAndCountRaw: cloneSerializableData(dataDongFinanceAndCountRaw),
+          baseEstimateAmounts: cloneSerializableData(baseEstimateAmounts),
+          totalUnitsPerDongStatic: cloneSerializableData(totalUnitsPerDongStatic),
+          activeFilterConfigs: cloneSerializableData(activeFilterConfigs),
+          yearDongBaseAmounts: window.yearDongBaseAmounts ? cloneSerializableData(window.yearDongBaseAmounts) : null,
+          
+          // 추가: 필터 및 요약 캐시 상태
+          summaryCache: summaryCache ? cloneSerializableData(summaryCache) : null,
+          dashboardFilterCache: dashboardFilterCache ? cloneSerializableData(dashboardFilterCache) : null,
+          lastDashboardRenderStateKey: lastDashboardRenderStateKey,
+        };
+      } catch (e) {
+        console.warn("[v5.00] 스냅샷 캡처 실패:", e);
+        return null;
+      }
+    }
+
+    /** [v5.00] 스냅샷에서 전역 상태를 빠르게 복원 */
+    function restoreFromSnapshot(snapshot) {
+      masterRawEntries = snapshot.masterRawEntries;
+      masterCsvHeaders = snapshot.masterCsvHeaders;
+      allYearsGlobal = snapshot.allYearsGlobal;
+      allDongsGlobal = snapshot.allDongsGlobal;
+      allWorkTypesGlobal = snapshot.allWorkTypesGlobal;
+      dataBuildingSummaryRaw = snapshot.dataBuildingSummaryRaw;
+      dataWorkTypeSummaryRaw = snapshot.dataWorkTypeSummaryRaw;
+      dataAnnualSummaryRaw = snapshot.dataAnnualSummaryRaw;
+      dataDongFinanceAndCountRaw = snapshot.dataDongFinanceAndCountRaw;
+      baseEstimateAmounts = snapshot.baseEstimateAmounts;
+      totalUnitsPerDongStatic = snapshot.totalUnitsPerDongStatic;
+      activeFilterConfigs = snapshot.activeFilterConfigs;
+      if (snapshot.yearDongBaseAmounts) {
+        window.yearDongBaseAmounts = snapshot.yearDongBaseAmounts;
+      }
+      
+      // 복원: 필터 및 요약 캐시 상태
+      summaryCache = snapshot.summaryCache || null;
+      dashboardFilterCache = snapshot.dashboardFilterCache || null;
+      lastDashboardRenderStateKey = snapshot.lastDashboardRenderStateKey || null;
+
+      // 런타임 인덱스 및 필터 캐시 무효화
+      rawEntryRuntimeIndexes = null;
+      
+      // 초기 상태 복사본도 설정
+      initialMasterRawEntries = cloneRawEntriesForRuntime(masterRawEntries);
+      initialMasterCsvHeaders = cloneSerializableData(masterCsvHeaders);
+      initialTotalUnitsPerDongStatic = cloneSerializableData(totalUnitsPerDongStatic);
+      initialActiveFilterConfigs = cloneSerializableData(activeFilterConfigs);
+      try { initialStatCardMonthConfig = cloneSerializableData(statCardMonthConfig); } catch(e) {}
+    }
     // --------------------------------------------------------
 
     async function fetchXlsbFromGitHub(showStatus = true, retryCount = 0) {
@@ -12128,16 +12219,16 @@
       const MAX_RETRIES = 1;
       const RETRY_DELAY = 3000;
       
-      const isMobile = document.body.classList.contains("is-mobile");
       const updateProgress = async (pct, msg) => {
-        if (isMobile) {
-          updateMobileLoadingProgress(pct, msg);
-        } else {
+        updateMobileLoadingProgress(pct, msg);
+        try {
           setProcessingIndicator("xlsb-download", true, "GitHub 데이터 자동 로딩 중", msg);
-        }
+        } catch (e) {}
         await updateProgressAndYield(pct, msg);
       };
 
+      // 시작 시 로딩 마스크 표시
+      showMobileLoading("GitHub 데이터 자동 로딩 중", "서버로부터 데이터를 불러오고 있습니다...");
       await updateProgress(10, "GitHub에서 XLSB 데이터 가져오는 중...");
 
       if (retryCount > 0) {
@@ -12210,8 +12301,9 @@
         const arrayBuffer = await response.arrayBuffer();
         const data = new Uint8Array(arrayBuffer);
         
+        // --- [v5.00] 완전 스냅샷 캐시 조회 ---
         await updateProgress(70, "XLSB 무결성 해시 계산 및 캐시 확인 중...");
-        let json = null;
+        let cachedSnapshot = null;
         let fileHash = null;
         let db = null;
         try {
@@ -12221,66 +12313,103 @@
             const tx = db.transaction(WYGGKR_STORE_NAME, "readonly");
             const store = tx.objectStore(WYGGKR_STORE_NAME);
             const getRequest = store.get(fileHash);
-            json = await new Promise((resolve) => {
+            const cached = await new Promise((resolve) => {
               getRequest.onsuccess = () => resolve(getRequest.result);
               getRequest.onerror = () => resolve(null);
             });
+            // v2 스냅샷 형식인지 검증 및 다르면 비우기
+            if (cached) {
+              if (cached._snapshotVersion === 2 && Array.isArray(cached.masterRawEntries)) {
+                cachedSnapshot = cached;
+              } else {
+                console.log('%c[v5.00] 캐시 버전이 다르거나 손상되었습니다. 기존 캐시를 비웁니다.', 'color: #ef4444;');
+                try {
+                  const writeTx = db.transaction(WYGGKR_STORE_NAME, "readwrite");
+                  const writeStore = writeTx.objectStore(WYGGKR_STORE_NAME);
+                  writeStore.delete(fileHash);
+                } catch (err) {
+                  console.warn("기존 무효 캐시 삭제 실패:", err);
+                }
+              }
+            }
           }
         } catch (e) {
-          console.warn("IndexedDB 캐시 조회 실패, 강제 파싱을 진행합니다:", e);
+          console.warn("IndexedDB 캐시 조회 실패, 전체 파싱을 진행합니다:", e);
         }
 
-        if (json) {
-          await updateProgress(80, "캐시된 XLSB 데이터 로드 중 (파싱 생략)...");
+        // --- [v5.00] CACHE HIT: 스냅샷에서 즉시 복원 (processUploadedData 전체 건너뜀) ---
+        if (cachedSnapshot) {
+          console.log(`%c[v5.00] CACHE HIT! 스냅샷에서 즉시 복원합니다. (${cachedSnapshot.masterRawEntries.length}건)`, 'color: #16a34a; font-weight: bold;');
+          await updateProgress(80, "⚡ 캐시에서 즉시 복원 중...");
+          restoreFromSnapshot(cachedSnapshot);
+
+          await updateProgress(85, "필터 UI 초기화 중...");
+          initializeStatCardSelectors();
+          await initializeDynamicFiltersUI();
+          updateYearFilterTexts();
+          updateQuickYearFilterButtonText();
+
+          await updateProgress(90, "대시보드 렌더링 중...");
+          await applyYearFilter(3);
+
+          setProgress(100);
+          if (uploadStatusEl) {
+            uploadStatusEl.textContent = "⚡ 캐시에서 즉시 로드 완료.";
+            uploadStatusEl.style.color = "#16a34a";
+          }
         } else {
+          // --- CACHE MISS: 전체 파싱 + 처리 파이프라인 ---
+          console.log('%c[v5.00] CACHE MISS — 전체 파싱 및 매핑을 진행합니다.', 'color: #d97706; font-weight: bold;');
           await updateProgress(80, "최초 XLSB 파싱 중 (데이터 분석에 수 초 소요)...");
           const workbook = XLSX.read(data, {
             type: "array",
             cellDates: true,
+            cellFormula: false,
+            cellStyles: false,
+            cellHTML: false,
+            cellNF: false,
+            bookDeps: false,
+            bookFiles: false,
+            bookProps: false,
+            bookVBA: false,
           });
           const firstSheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[firstSheetName];
-          json = XLSX.utils.sheet_to_json(worksheet);
+          const json = XLSX.utils.sheet_to_json(worksheet);
 
+          await updateProgress(90, "데이터 매핑 및 로드 중...");
+          
+          wasScenarioActiveBeforeLoad = activeScenarioApplied;
+          scenarioNameBeforeLoad = activeScenarioName;
+          wasQuickYearFilterActiveBeforeLoad = activeQuickYearFilterApplied;
+          quickYearFilterNameBeforeLoad = activeQuickYearFilterName;
+          manualFilterStateBeforeLoad =
+            !wasScenarioActiveBeforeLoad && !wasQuickYearFilterActiveBeforeLoad
+              ? JSON.parse(JSON.stringify(activeFilterConfigs))
+              : null;
+
+          // [v5.00] 완전 가공된 스냅샷은 대시보드 첫 렌더링이 끝난 후에 저장하도록 플래그만 미리 설정
           if (db && fileHash) {
-            try {
-              const saveTx = db.transaction(WYGGKR_STORE_NAME, "readwrite");
-              const saveStore = saveTx.objectStore(WYGGKR_STORE_NAME);
-              saveStore.clear(); 
-              saveStore.put(json, fileHash);
-            } catch (e) {
-              console.warn("IndexedDB 캐시 저장 실패:", e);
-            }
+            window.__firstXlsbLoadPendingSave__ = { db, fileHash };
+            console.log('[v5.00] 최초 로드 시작. 대시보드 렌더링 후 스냅샷 저장을 대기합니다.');
+          }
+
+          const uploadResult = await processUploadedData(json, true);
+          if (uploadResult === false) {
+            window.__firstXlsbLoadPendingSave__ = null; // 실패 시 초기화
+            throw new Error("데이터 매핑/처리 중 오류가 발생하여 롤백되었습니다. 콘솔을 확인하세요.");
           }
         }
-
-        await updateProgress(90, "데이터 매핑 및 로드 중...");
         
-        wasScenarioActiveBeforeLoad = activeScenarioApplied;
-        scenarioNameBeforeLoad = activeScenarioName;
-        wasQuickYearFilterActiveBeforeLoad = activeQuickYearFilterApplied;
-        quickYearFilterNameBeforeLoad = activeQuickYearFilterName;
-        manualFilterStateBeforeLoad =
-          !wasScenarioActiveBeforeLoad && !wasQuickYearFilterActiveBeforeLoad
-            ? JSON.parse(JSON.stringify(activeFilterConfigs))
-            : null;
-
-        // [v4.77 무결성 보증] processUploadedData 리턴값 검증 - false이면 롤백 발생
-        const uploadResult = await processUploadedData(json, true);
-        if (uploadResult === false) {
-          throw new Error("데이터 매핑/처리 중 오류가 발생하여 롤백되었습니다. 콘솔을 확인하세요.");
-        }
-        
-        if (uploadStatusEl) {
+        if (uploadStatusEl && !cachedSnapshot) {
           uploadStatusEl.textContent = "GitHub XLSB 로드 및 매핑 완료.";
           uploadStatusEl.style.color = "green";
         }
         
-        if (isMobile) {
-          hideMobileLoading(true);
-        } else {
+        hideMobileLoading(true);
+        try {
           setProcessingIndicator("xlsb-download", false);
-        }
+        } catch (e) {}
       } catch (error) {
         console.error("XLSB 자동 로딩 실패:", error);
         if (retryCount < MAX_RETRIES) {
@@ -12296,11 +12425,10 @@
             uploadStatusEl.innerHTML = `자동 로딩 실패. 수동 파일을 선택해주세요.<br><span class="text-xs">원인: ${error.message || error}</span>`;
             uploadStatusEl.style.color = "red";
           }
-          if (isMobile) {
-            hideMobileLoading(false);
-          } else {
+          hideMobileLoading(false);
+          try {
             setProcessingIndicator("xlsb-download", false);
-          }
+          } catch (e) {}
           
           if (masterRawEntries.length === 0) {
             await initializeDataFromSource(
@@ -13485,6 +13613,7 @@
           optimizeForNetwork();
         }
 
+        console.time("[v5.00] updateDashboard Total");
         await updateProgressAndYield(85, "대시보드 렌더링 시작...");
         const {
           yearHeaderName,
@@ -13499,7 +13628,9 @@
         } = getDashboardSelectionState();
 
         // ▼▼▼ [성능 최적화] 필터링 결과 캐싱 및 최적화 ▼▼▼
+        console.time("[v5.00] updateDashboard - Filter Entries");
         ensureCurrentFilteredEntries();
+        console.timeEnd("[v5.00] updateDashboard - Filter Entries");
         await updateProgressAndYield(88, "데이터 요약 중...");
         // ▲▲▲ [성능 최적화] 끝 ▲▲▲
         let selectedWorkTypes = selectedWorkTypesFromState;
@@ -13538,6 +13669,7 @@
         let insightWorkTypeSummary;
         let insightCriteriaText;
         let dataForDongFinanceCountChart = [];
+        console.time("[v5.00] updateDashboard - Compute/Get Summary");
         const cachedSummaryPayload =
           summaryCache &&
           summaryCache.key === summaryCacheKey &&
@@ -13769,7 +13901,9 @@
             }),
           };
         }
+        console.timeEnd("[v5.00] updateDashboard - Compute/Get Summary");
 
+        console.time("[v5.00] updateDashboard - Update Summary/Stat Cards");
         updateThreeYearStatCards(currentFilteredEntries, selectedYears);
         await updateProgressAndYield(90, "통계 카드 업데이트...");
         // ▲▲▲ End of Optimization ▲▲▲
@@ -13784,6 +13918,7 @@
 
         updateYoYAnalysisCards();
         await updateProgressAndYield(94, "YoY 분석 업데이트...");
+        console.timeEnd("[v5.00] updateDashboard - Update Summary/Stat Cards");
 
         const generalTitleSuffix = buildDashboardTitleSuffix(
           selectedYears,
@@ -13822,6 +13957,7 @@
           });
         };
 
+        console.time("[v5.00] updateDashboard - Table Building Summary");
         const buildingDataForTable = sortData(
           dataBuildingSummaryRaw,
           buildingSummarySortConfig,
@@ -13835,8 +13971,10 @@
           "avgAmountPerUnit",
         ]);
         updateMainTableSortUI("tableBuildingSummary");
+        console.timeEnd("[v5.00] updateDashboard - Table Building Summary");
         await updateProgressAndYield(95, "테이블 생성...");
 
+        console.time("[v5.00] updateDashboard - Table WorkType Summary");
         const workTypeDataForTable = sortData(
           dataWorkTypeSummaryRaw,
           workTypeSummarySortConfig,
@@ -13849,6 +13987,7 @@
           true,
         );
         updateMainTableSortUI("tableWorkTypeSummary");
+        console.timeEnd("[v5.00] updateDashboard - Table WorkType Summary");
         // [개선] 복원 완료 시점: 테이블 렌더 직후 체크박스 선택을 이전 상태로 최종 동기화하고 플래그 해제
         try {
           if (restoreWorkTypesInProgress) {
@@ -13891,6 +14030,7 @@
 
         // [성능 최적화] 차트 업데이트를 비동기로 처리하여 UI 블로킹 방지
         requestAnimationFrame(() => {
+          console.time("[v5.00] updateDashboard - RequestAnimationFrame Charts (Async)");
           try {
             updateBuildingCharts(dataBuildingSummaryRaw, generalTitleSuffix);
             updateDongWorkTypeProgressChart(
@@ -13911,28 +14051,36 @@
           } catch (e) {
             console.warn("[대시보드] 차트 업데이트 실패:", e);
           }
+          console.timeEnd("[v5.00] updateDashboard - RequestAnimationFrame Charts (Async)");
         });
 
+        console.time("[v5.00] updateDashboard - Finance & Count Chart");
         updateDongWorkTypeFinanceAndCountChart(
           dataForDongFinanceCountChart,
           generalTitleSuffix,
         );
+        console.timeEnd("[v5.00] updateDashboard - Finance & Count Chart");
         await updateProgressAndYield(98, "차트 생성...");
 
+        console.time("[v5.00] updateDashboard - Comparison Chart");
         updateBuildingWorktypeComparisonChart(
           selectedDongs,
           selectedWorkTypes,
           orderedSelectedYears,
         );
+        console.timeEnd("[v5.00] updateDashboard - Comparison Chart");
 
+        console.time("[v5.00] updateDashboard - Populate Filters & Dropdowns");
         const selectionsWerePruned = populateDynamicFilterOptions();
         if (selectionsWerePruned && !restoreWorkTypesInProgress) {
+          console.timeEnd("[v5.00] updateDashboard - Populate Filters & Dropdowns");
           setTimeout(updateDashboard, 0);
           return; // Exit this run to prevent rendering with inconsistent state
         }
 
         populateScenarioDropdown();
         updateButtonActiveStates();
+        console.timeEnd("[v5.00] updateDashboard - Populate Filters & Dropdowns");
 
         updateQuickYearFilterButtonText();
 
@@ -13979,6 +14127,34 @@
         updateCompareButtonState();
         lastDashboardRenderStateKey = dashboardRenderStateKey;
         window.__savedDashboardHydratedFromSnapshot__ = false;
+
+        // [v5.00] 최초 XLSB 로딩 완료 후 첫 대시보드 렌더링이 성공한 시점에 완전한 스냅샷 저장
+        if (window.__firstXlsbLoadPendingSave__) {
+          try {
+            const { db, fileHash } = window.__firstXlsbLoadPendingSave__;
+            window.__firstXlsbLoadPendingSave__ = null; // 중복 저장 방지
+            const snapshot = captureFullSnapshot();
+            if (snapshot && db && fileHash) {
+              await new Promise((resolve) => {
+                const saveTx = db.transaction(WYGGKR_STORE_NAME, "readwrite");
+                const saveStore = saveTx.objectStore(WYGGKR_STORE_NAME);
+                saveStore.clear();
+                saveStore.put(snapshot, fileHash);
+                saveTx.oncomplete = () => {
+                  console.log('%c[v5.00] 대시보드 렌더링 완료 후 완전 스냅샷 캐시 저장 성공 (트랜잭션 커밋됨).', 'color: #2563eb; font-weight: bold;');
+                  resolve();
+                };
+                saveTx.onerror = () => {
+                  console.warn('[v5.00] 대시보드 렌더링 완료 후 스냅샷 저장 실패:', saveTx.error);
+                  resolve();
+                };
+              });
+            }
+          } catch (e) {
+            console.warn("[v5.00] 대시보드 렌더링 완료 후 스냅샷 저장 중 오류:", e);
+          }
+        }
+        console.timeEnd("[v5.00] updateDashboard Total");
       } finally {
         if (!silentMode) {
           setProcessingIndicator(dashboardIndicatorKey, false);
@@ -14708,10 +14884,6 @@
       }
 
       const yearHeaderName = getHeaderName("회계 연도");
-      const poAmountHeaderName = getHeaderName("PO금액");
-      const monthHeaderName = getHeaderName("매입 마감 (월)");
-      const parseMonth = (dateStr) =>
-        parseInt((dateStr || "0").match(/(\d{1,2})월/)?.[1] || 0, 10);
       const monthCountForCard =
         typeof statCardMonthConfig[cardId] === "number" &&
           !isNaN(statCardMonthConfig[cardId])
@@ -14721,22 +14893,20 @@
       let yearDataMap = {};
       if (years.length > 0) {
         years.forEach((year) => {
-          const yearEntries = entries.filter(
-            (e) => e[yearHeaderName] === year,
-          );
-          const monthFilteredEntries = yearEntries.filter(
-            (e) => parseMonth(e[monthHeaderName]) <= monthCountForCard,
-          );
+          let totalProjects = 0;
+          let totalExpenditure = 0;
 
-          const totalProjects = monthFilteredEntries.length;
-          const totalExpenditure = monthFilteredEntries.reduce(
-            (sum, item) =>
-              sum +
-              (parseFloat(
-                String(item[poAmountHeaderName]).replace(/,/g, ""),
-              ) || 0),
-            0,
-          );
+          for (let i = 0; i < entries.length; i++) {
+            const e = entries[i];
+            if (e[yearHeaderName] === year) {
+              const mVal = typeof e.parsedMonthInt === 'number' ? e.parsedMonthInt : 0;
+              if (mVal <= monthCountForCard) {
+                totalProjects++;
+                totalExpenditure += typeof e.parsedPoAmount === 'number' ? e.parsedPoAmount : 0;
+              }
+            }
+          }
+
           const avgCost =
             totalProjects > 0
               ? Math.round(totalExpenditure / totalProjects)
@@ -14753,32 +14923,22 @@
       let content = "";
       if (Object.keys(yearDataMap).length === 0) {
         let value = 0;
-        const monthFilteredEntries = entries.filter(
-          (e) => parseMonth(e[monthHeaderName]) <= monthCountForCard,
-        );
-        if (type === "count") value = monthFilteredEntries.length;
-        else if (type === "expenditure")
-          value = monthFilteredEntries.reduce(
-            (sum, item) =>
-              sum +
-              (parseFloat(
-                String(item[poAmountHeaderName]).replace(/,/g, ""),
-              ) || 0),
-            0,
-          );
+        let count = 0;
+        let totalExp = 0;
+
+        for (let i = 0; i < entries.length; i++) {
+          const e = entries[i];
+          const mVal = typeof e.parsedMonthInt === 'number' ? e.parsedMonthInt : 0;
+          if (mVal <= monthCountForCard) {
+            count++;
+            totalExp += typeof e.parsedPoAmount === 'number' ? e.parsedPoAmount : 0;
+          }
+        }
+
+        if (type === "count") value = count;
+        else if (type === "expenditure") value = totalExp;
         else if (type === "avgCost") {
-          const totalExp = monthFilteredEntries.reduce(
-            (sum, item) =>
-              sum +
-              (parseFloat(
-                String(item[poAmountHeaderName]).replace(/,/g, ""),
-              ) || 0),
-            0,
-          );
-          value =
-            monthFilteredEntries.length > 0
-              ? Math.round(totalExp / monthFilteredEntries.length)
-              : 0;
+          value = count > 0 ? Math.round(totalExp / count) : 0;
         }
         if (type === "expenditure" || type === "avgCost") {
           content = `<span class="stat-value interactive-tooltip-target" data-raw-value="${value}" data-label="${baseTitle}">${formatCurrency(value, type === "count")}</span>`;
@@ -14965,37 +15125,22 @@
 
       // entry 레벨에서 이미 정규화된 값이 있으면 그것을 우선 사용
       const getEntryMonth = (entryOrDateStr) => {
-        try {
-          // 디버그: entry에 정규화 필드가 있는지 확인
-          if (entryOrDateStr && typeof entryOrDateStr === "object") {
-            // 안전하게 읽되, 존재하지 않으면 undefined 허용
-            const mnum = entryOrDateStr._monthNum;
-            const mkey = entryOrDateStr._monthKey;
-            const orig = entryOrDateStr[monthHeader];
-            // 로그는 디버그 모드에서만 많이 나오도록 console.debug 사용
-            // [JIT-OPT] console.debug('[getEntryMonth] _monthNum:', mnum, '_monthKey:', mkey, 'origMonthCol:', orig);
-          }
-        } catch (e) {
-          // [JIT-OPT] console.debug('[getEntryMonth] debug probe failed', e);
-        }
-
         if (entryOrDateStr && typeof entryOrDateStr === "object") {
+          if (typeof entryOrDateStr.parsedMonthInt === 'number' && entryOrDateStr.parsedMonthInt > 0) {
+            return entryOrDateStr.parsedMonthInt;
+          }
           if (
             Number.isInteger(entryOrDateStr._monthNum) &&
             entryOrDateStr._monthNum > 0
           )
             return entryOrDateStr._monthNum;
-          // fallback: try to read normalized key
           if (entryOrDateStr._monthKey) {
             const mm = String(entryOrDateStr._monthKey).match(/(\d{1,2})월/);
             if (mm) return parseInt(mm[1], 10);
           }
-          // last resort: try original month column if present
           const possible = entryOrDateStr[monthHeader];
           return parseMonth(possible);
         }
-
-        // if a primitive/dateStr was provided, just parse it
         return parseMonth(entryOrDateStr);
       };
 
@@ -15194,11 +15339,11 @@
 
         // 메트릭스 계산
         const metricsMap = new Map();
-        yearEntries.forEach((e) => {
+        for (let i = 0; i < yearEntries.length; i++) {
+          const e = yearEntries[i];
           const workType = e[workTypeHeader];
-          const cost =
-            parseFloat(String(e[poAmountHeader]).replace(/,/g, "")) || 0;
           if (workType) {
+            const cost = typeof e.parsedPoAmount === 'number' ? e.parsedPoAmount : 0;
             if (!metricsMap.has(workType)) {
               metricsMap.set(workType, { cost: 0, count: 0 });
             }
@@ -15206,7 +15351,7 @@
             currentMetrics.cost += cost;
             currentMetrics.count += 1;
           }
-        });
+        }
 
         // 디버그: 메트릭 계산 결과 확인
         // [JIT-OPT] console.log(`[getMetricsByWorkType] ${year}: workTypes count=${metricsMap.size}, total entries=${yearEntries.length}`);
@@ -18430,26 +18575,49 @@
 
           // [개선] 동별 작업 유형 진척 차트에서 currentFilteredEntries 사용하여 제외 규칙이 이미 적용된 데이터 사용
           let cumulativeCount = 0;
+          const dongHeaderLocal = getHeaderName("건물동");
+          const workTypeHeaderLocal = getHeaderName("작업유형");
+          const yearHeaderLocal = getHeaderName("회계 연도");
+          const dongsSetLocal = new Set(dongsToUse);
+          const workTypesSetLocal = new Set(workTypesToUse);
+
           const workTypeProgressData = yearsToDisplay.map((year) => {
-            const yearEntries = currentFilteredEntries.filter(
-              (e) =>
-                dongsToUse.includes(
-                  e[getHeaderName("건물동")]
-                    ? e[getHeaderName("건물동")].replace("사택 ", "").trim()
-                    : "",
-                ) &&
-                workTypesToUse.includes(e[getHeaderName("작업유형")]) &&
-                e[getHeaderName("회계 연도")] === year,
-            );
-            const countForYear = yearEntries.length;
-            const poForYear = yearEntries.reduce(
-              (sum, e) =>
-                sum +
-                (parseFloat(
-                  String(e[getHeaderName("PO금액")]).replace(/,/g, ""),
-                ) || 0),
-              0,
-            );
+            let countForYear = 0;
+            let poForYear = 0;
+
+            // [성능 최적화] O(1) Lookup Map을 이용하여 루프 실행을 극도로 최적화
+            if (window._wyggkrPreFilteredLookup && window._wyggkrPreFilteredLookup[year]) {
+              const yearMap = window._wyggkrPreFilteredLookup[year];
+              dongsToUse.forEach(dongKey => {
+                const cleanDong = dongKey.replace("사택 ", "").trim();
+                if (yearMap[cleanDong]) {
+                  const dongMap = yearMap[cleanDong];
+                  workTypesToUse.forEach(wtKey => {
+                    if (dongMap[wtKey]) {
+                      countForYear += dongMap[wtKey].count;
+                      poForYear += dongMap[wtKey].cost;
+                    }
+                  });
+                }
+              });
+            } else {
+              // 폴백: 룩업 맵이 없을 경우 기존의 빠른 O(N) 단일 루프 사용
+              for (let i = 0; i < currentFilteredEntries.length; i++) {
+                const e = currentFilteredEntries[i];
+                if (e[yearHeaderLocal] !== year) continue;
+
+                const rawDong = e[dongHeaderLocal];
+                const dongKey = rawDong ? rawDong.replace("사택 ", "").trim() : "";
+                if (!dongsSetLocal.has(dongKey)) continue;
+
+                const wtKey = e[workTypeHeaderLocal];
+                if (!workTypesSetLocal.has(wtKey)) continue;
+
+                countForYear++;
+                poForYear += typeof e.parsedPoAmount === 'number' ? e.parsedPoAmount : 0;
+              }
+            }
+
             cumulativeCount += countForYear;
             // 세대수 미정일 때는 진척률을 N/A로 표시
             const progress = "N/A";
@@ -18901,27 +19069,45 @@
       // [개선] 동-작업유형 비교 차트에서 getGloballyFilteredEntries 사용하여 제외 규칙이 이미 적용된 데이터 사용
       let dataSource = getGloballyFilteredEntries();
 
+      // 1. 단 한 번의 순회로 동-작업유형-연도 단위 데이터 Lookup Map 빌드 (O(N))
+      const lookup = {};
+      const dongsSetLocal = new Set(dongsToDisplay);
+      const workTypesSetLocal = new Set(workTypesToDisplay);
+
+      for (let i = 0; i < dataSource.length; i++) {
+        const e = dataSource[i];
+        
+        const rawDong = e[dongHeaderName];
+        const dongKey = rawDong ? rawDong.replace("사택 ", "").trim() : "";
+        if (!dongsSetLocal.has(dongKey)) continue;
+
+        const workTypeKey = e[workTypeHeaderName];
+        if (!workTypesSetLocal.has(workTypeKey)) continue;
+
+        const yearKey = e[yearHeaderName];
+        const costVal = typeof e.parsedPoAmount === 'number' ? e.parsedPoAmount : 0;
+
+        if (!lookup[dongKey]) lookup[dongKey] = {};
+        if (!lookup[dongKey][workTypeKey]) lookup[dongKey][workTypeKey] = {};
+        if (!lookup[dongKey][workTypeKey][yearKey]) {
+          lookup[dongKey][workTypeKey][yearKey] = { count: 0, cost: 0 };
+        }
+
+        lookup[dongKey][workTypeKey][yearKey].count++;
+        lookup[dongKey][workTypeKey][yearKey].cost += costVal;
+      }
+
       /* ▼▼▼ 개선 사항: 비용 기준 상위 N개 항목만 기본 표시 로직 추가 ▼▼▼ */
       const workTypeTotalCostMap = new Map();
       workTypesToDisplay.forEach((workType) => {
-        const totalCost = dataSource
-          .filter(
-            (e) =>
-              e[workTypeHeaderName] === workType &&
-              dongsToDisplay.includes(
-                e[dongHeaderName]
-                  ? e[dongHeaderName].replace("사택 ", "").trim()
-                  : "",
-              ),
-          )
-          .reduce(
-            (sum, item) =>
-              sum +
-              (parseFloat(
-                String(item[poAmountHeaderName]).replace(/,/g, ""),
-              ) || 0),
-            0,
-          );
+        let totalCost = 0;
+        dongsToDisplay.forEach((dong) => {
+          if (lookup[dong] && lookup[dong][workType]) {
+            Object.values(lookup[dong][workType]).forEach(val => {
+              totalCost += val.cost;
+            });
+          }
+        });
         workTypeTotalCostMap.set(workType, totalCost);
       });
 
@@ -18939,35 +19125,22 @@
           const borderColor = getDongBorderColor(dong);
 
           const amountDataForYears = yearsToDisplay.map((year) => {
-            return dataSource
-              .filter(
-                (e) =>
-                  (e[dongHeaderName]
-                    ? e[dongHeaderName].replace("사택 ", "").trim()
-                    : "") === dong &&
-                  e[workTypeHeaderName] === workType &&
-                  e[yearHeaderName] === year,
-              )
-              .reduce(
-                (sum, item) =>
-                  sum +
-                  (parseFloat(
-                    String(item[poAmountHeaderName]).replace(/,/g, ""),
-                  ) || 0),
-                0,
-              );
+            if (lookup[dong] && lookup[dong][workType] && lookup[dong][workType][year]) {
+              return lookup[dong][workType][year].cost;
+            }
+            return 0;
           });
 
           const countDataForYears = yearsToDisplay.map((year) => {
-            return dataSource.filter(
-              (e) =>
-                (e[dongHeaderName]
-                  ? e[dongHeaderName].replace("사택 ", "").trim()
-                  : "") === dong &&
-                e[workTypeHeaderName] === workType &&
-                e[yearHeaderName] === year,
-            ).length;
+            if (lookup[dong] && lookup[dong][workType] && lookup[dong][workType][year]) {
+              return lookup[dong][workType][year].count;
+            }
+            return 0;
           });
+
+          // 성능 최적화: ChartJS가 1,000개 이상의 데이터셋 범례 및 캔버스 연산으로 얼어버리는 것을 방지하기 위해,
+          // 상위 2개 작업 유형에 포함되지 않는 데이터셋은 아예 생성 및 푸시를 스킵합니다.
+          if (!top2WorkTypes.includes(workType)) return;
 
           if (showCost) {
             datasets.push({
@@ -18979,8 +19152,7 @@
               yAxisID: "yAmount",
               order: 2,
               stack: dong,
-              /* ▼▼▼ 개선 사항: top2WorkTypes에 포함되지 않으면 기본 숨김 처리 ▼▼▼ */
-              hidden: !top2WorkTypes.includes(workType),
+              hidden: false,
             });
           }
 
@@ -18996,8 +19168,7 @@
               tension: 0.1,
               pointRadius: 5,
               pointHoverRadius: 6,
-              /* ▼▼▼ 개선 사항: top2WorkTypes에 포함되지 않으면 기본 숨김 처리 ▼▼▼ */
-              hidden: !top2WorkTypes.includes(workType),
+              hidden: false,
             });
           }
         });
@@ -19474,18 +19645,19 @@
             });
 
             if (dataForYears.some((d) => d > 0)) {
-              datasets.push({
-                label: `${workType} - ${dong}`,
-                data: dataForYears,
-                borderColor: color,
-                backgroundColor: color.replace("0.7", "0.2"),
-                yAxisID: metric === "cost" ? "yAmount" : "yCount",
-                tension: 0.1,
-                pointRadius: 5,
-                pointHoverRadius: 6.5,
-                /* ▼▼▼ 개선 사항: 유형이 top2Groups에 포함되지 않으면 기본 숨김 처리 ▼▼▼ */
-                hidden: !top2Groups.includes(workType),
-              });
+              if (top2Groups.includes(workType)) {
+                datasets.push({
+                  label: `${workType} - ${dong}`,
+                  data: dataForYears,
+                  borderColor: color,
+                  backgroundColor: color.replace("0.7", "0.2"),
+                  yAxisID: metric === "cost" ? "yAmount" : "yCount",
+                  tension: 0.1,
+                  pointRadius: 5,
+                  pointHoverRadius: 6.5,
+                  hidden: false,
+                });
+              }
             }
           });
         });
@@ -19546,19 +19718,20 @@
               )
               : entries.length;
           });
-          datasets.push({
-            label: groupName,
-            data: dataForYears,
-            type: "line",
-            borderColor: borderColor,
-            backgroundColor: color.replace("0.7", "0.2"),
-            yAxisID: metric === "cost" ? "yAmount" : "yCount",
-            tension: 0.1,
-            pointRadius: 6,
-            pointHoverRadius: 7.2,
-            /* ▼▼▼ 개선 사항: 그룹이 top2Groups에 포함되지 않으면 기본 숨김 처리 ▼▼▼ */
-            hidden: !top2Groups.includes(groupName),
-          });
+          if (top2Groups.includes(groupName)) {
+            datasets.push({
+              label: groupName,
+              data: dataForYears,
+              type: "line",
+              borderColor: borderColor,
+              backgroundColor: color.replace("0.7", "0.2"),
+              yAxisID: metric === "cost" ? "yAmount" : "yCount",
+              tension: 0.1,
+              pointRadius: 6,
+              pointHoverRadius: 7.2,
+              hidden: false,
+            });
+          }
         });
       }
 
@@ -20312,6 +20485,7 @@
       const poAmountHeaderName = getHeaderName("PO금액");
       const totalUnitsHeaderName = getHeaderName("전체 세대수");
       const poNumeroHeader = getHeaderName("PO번호");
+      const monthHeaderName = getHeaderName("매입 마감 (월)");
 
       if (rawEntries.length === 0) {
         allYearsGlobal = [];
@@ -20377,6 +20551,15 @@
               "",
             ),
           ) || 0;
+        
+        entry.parsedPoAmount = poAmount;
+        const monthValRaw = entry[monthHeaderName];
+        let parsedMonthInt = 0;
+        if (monthValRaw) {
+          const match = String(monthValRaw).match(/(\d{1,2})월/);
+          if (match) parsedMonthInt = parseInt(match[1], 10);
+        }
+        entry.parsedMonthInt = parsedMonthInt;
 
         const dongName = entry[dongHeaderName]
           ? String(entry[dongHeaderName]).replace("사택 ", "").trim()
