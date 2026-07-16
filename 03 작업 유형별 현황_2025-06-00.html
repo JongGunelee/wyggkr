@@ -29298,7 +29298,8 @@ async function processUploadedData(data, isExcel = false) {
       }, 10); // End of setTimeout
     }
 
-    function setupWorkTypeSelector_v2() {
+    function setupWorkTypeSelector_v2(scenarioValue = null) {
+      const activeScenario = scenarioValue || currentComparisonScenario;
       const selectorContainer = document.getElementById(
         "modalWorkTypeSelector",
       );
@@ -29340,12 +29341,12 @@ async function processUploadedData(data, isExcel = false) {
           }
 
           setTimeout(() => {
-            if (scenarioValue) {
-              setupWorkTypeSelector_v2(scenarioValue);
+            if (activeScenario) {
+              setupWorkTypeSelector_v2(activeScenario);
             }
           }, 100);
 
-          renderPivotedComparisonView_v2(scenarioValue);
+          renderPivotedComparisonView_v2(activeScenario);
         });
         label.appendChild(checkbox);
         label.appendChild(
@@ -29372,12 +29373,12 @@ async function processUploadedData(data, isExcel = false) {
           }
 
           setTimeout(() => {
-            if (scenarioValue) {
-              setupWorkTypeSelector_v2(scenarioValue);
+            if (activeScenario) {
+              setupWorkTypeSelector_v2(activeScenario);
             }
           }, 100);
 
-          renderPivotedComparisonView_v2(scenarioValue);
+          renderPivotedComparisonView_v2(activeScenario);
         });
         label.appendChild(checkbox);
         label.appendChild(
@@ -32451,11 +32452,7 @@ async function processUploadedData(data, isExcel = false) {
             document.getElementById("pivotTableContainer"),
           ),
         );
-        attachListener("collapseAllBtn", "click", () => {
-          try {
-            selectAllWorkTypeCheckboxes();
-          } catch (e) { }
-        });
+        // [피벗 테이블 접기 버튼 클릭 시 전체 작업유형이 다시 켜지는 버그를 해결하기 위해 selectAllWorkTypeCheckboxes 호출 리스너 제거]
         attachListener("expandLevel1Btn", "click", () =>
           toggleHierarchy_v2(
             "expandToLevel",
