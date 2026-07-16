@@ -296,8 +296,10 @@
       }
 
       .main-content-container {
-        max-height: calc(100vh - var(--mobile-header-height));
-        overflow: auto;
+        /* [수정] 모바일 세로 모드: min-height를 보장하여 콘텐츠가 잘리지 않도록 함 */
+        min-height: calc(100vh - var(--mobile-header-height));
+        overflow-y: auto;
+        overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
       }
 
@@ -3981,7 +3983,8 @@
       border: 0px solid #dbeafe;
       border-top: none;
       border-radius: 0 0 0.5rem 0.5rem;
-      /* [v4.59 성능 최적화] 닫힌 아코디언의 렌더링 비용을 0으로 만듦 */
+      /* [수정] content-visibility:auto는 닫힌 상태에서만 적용 */
+      /* 모바일에서 scrollHeight=0 오판 방지를 위해 active 상태에서는 JS로 제어 */
       content-visibility: auto;
       contain-intrinsic-size: 0 500px;
     }
@@ -3989,6 +3992,9 @@
     .analysis-section-container>.section-accordion-content.active {
       padding: 1.5rem 0.5rem 0.5rem 0.5rem;
       border-width: 1px;
+      /* [수정] 열린 상태에서는 content-visibility 해제 — 모바일 scrollHeight 오판 방지 */
+      content-visibility: visible;
+      contain-intrinsic-size: auto;
     }
 
     /* ▼▼▼ [신규] 필터 상태 요약 바 스타일 ▼▼▼ */
@@ -26250,16 +26256,25 @@ async function processUploadedData(data, isExcel = false) {
             }
 
             // 현재 아코디언 펼치기
-            header.classList.add("active");
+            // [수정] content-visibility:auto 상태에서 모바일 scrollHeight=0 오판 방지
+            // active 클래스 추가 전에 content-visibility를 visible로 강제 설정 후 측정
+            content.style.contentVisibility = "visible";
             content.classList.add("active");
-            content.style.maxHeight = content.scrollHeight + "px";
+            header.classList.add("active");
+            // scrollHeight를 정확히 얻기 위해 reflow 강제
+            const _rh1 = content.scrollHeight; // force reflow
+            const targetH1 = _rh1 > 0 ? _rh1 : 3000; // 0이면 충분히 큰 값 사용
+            content.style.maxHeight = targetH1 + "px";
             setTimeout(() => {
               if (content.classList.contains("active")) {
                 content.style.maxHeight = "none";
+                content.style.contentVisibility = "";
               }
             }, 550);
             resizeScopeElements.push(content);
             // 동기화: '건물 동별' / '작업 유형' 중 하나를 열면 서로 함께 열기
+            // [수정] pair 열기 시 __PAIR_SYNC__ 플래그로 hideUpperAccordions 중복 호출 방지
+            // (두 섹션이 서로를 ephemeral-hidden 처리하는 버그 수정)
             try {
               const pairNames = ["건물 동별", "작업 유형"];
               const ht = headerText.trim();
@@ -26271,6 +26286,9 @@ async function processUploadedData(data, isExcel = false) {
                 if (otherHeader) {
                   const otherContent = otherHeader.nextElementSibling;
                   if (!otherHeader.classList.contains("active")) {
+                    // [수정] ephemeral-hidden이 걸려 있으면 먼저 제거
+                    otherHeader.classList.remove("ephemeral-hidden");
+                    if (otherContent) otherContent.classList.remove("ephemeral-hidden");
                     otherHeader.classList.add("active");
                     if (
                       otherContent &&
@@ -26279,12 +26297,16 @@ async function processUploadedData(data, isExcel = false) {
                         "section-accordion-content",
                       )
                     ) {
+                      // [수정] content-visibility:auto 상태 해제 후 scrollHeight 측정
+                      otherContent.style.contentVisibility = "visible";
                       otherContent.classList.add("active");
-                      otherContent.style.maxHeight =
-                        otherContent.scrollHeight + "px";
+                      const _rh2 = otherContent.scrollHeight;
+                      const targetH2 = _rh2 > 0 ? _rh2 : 3000;
+                      otherContent.style.maxHeight = targetH2 + "px";
                       setTimeout(() => {
                         if (otherContent.classList.contains("active")) {
                           otherContent.style.maxHeight = "none";
+                          otherContent.style.contentVisibility = "";
                         }
                       }, 550);
                       resizeScopeElements.push(otherContent);
@@ -26294,6 +26316,8 @@ async function processUploadedData(data, isExcel = false) {
               }
             } catch (_) { }
             // 집중 모드: 열린 섹션 위에 있던 아코디언들을 일시 숨김
+            // [수정] pair 동기화로 함께 열린 섹션(ephemeral-hidden 제거 대상)을 보호하기 위해
+            // '건물 동별'/'작업 유형' 조합은 hideUpperAccordions에서 서로 제외 처리됨
             if (!restoreOnly) {
               hideUpperAccordions(header);
             }
@@ -37116,17 +37140,22 @@ async function processUploadedData(data, isExcel = false) {
               }
 
               // 현재 아코디언 펼치기
+              // [수정] content-visibility:auto 상태에서 모바일 scrollHeight=0 오판 방지
+              content.style.contentVisibility = "visible";
               header.classList.add("active");
               content.classList.add("active");
-              content.style.maxHeight = content.scrollHeight + "px";
+              const _ch1 = content.scrollHeight;
+              content.style.maxHeight = (_ch1 > 0 ? _ch1 : 3000) + "px";
               setTimeout(() => {
                 if (content.classList.contains("active")) {
                   content.style.maxHeight = "none";
+                  content.style.contentVisibility = "";
                 }
               }, 550);
               resizeScopeElements.push(content);
 
               // 동기화: '건물 동별' / '작업 유형' 중 하나를 열면 서로 함께 열기
+              // [수정] ephemeral-hidden 먼저 제거, content-visibility 해제 후 scrollHeight 측정
               try {
                 const pairNames = ["건물 동별", "작업 유형"];
                 const ht = headerText.trim();
@@ -37138,6 +37167,9 @@ async function processUploadedData(data, isExcel = false) {
                   if (otherHeader) {
                     const otherContent = otherHeader.nextElementSibling;
                     if (!otherHeader.classList.contains("active")) {
+                      // [수정] ephemeral-hidden이 걸려 있으면 먼저 제거
+                      otherHeader.classList.remove("ephemeral-hidden");
+                      if (otherContent) otherContent.classList.remove("ephemeral-hidden");
                       otherHeader.classList.add("active");
                       if (
                         otherContent &&
@@ -37146,12 +37178,15 @@ async function processUploadedData(data, isExcel = false) {
                           "section-accordion-content",
                         )
                       ) {
+                        // [수정] content-visibility 해제 후 scrollHeight 측정
+                        otherContent.style.contentVisibility = "visible";
                         otherContent.classList.add("active");
-                        otherContent.style.maxHeight =
-                          otherContent.scrollHeight + "px";
+                        const _ch2 = otherContent.scrollHeight;
+                        otherContent.style.maxHeight = (_ch2 > 0 ? _ch2 : 3000) + "px";
                         setTimeout(() => {
                           if (otherContent.classList.contains("active")) {
                             otherContent.style.maxHeight = "none";
+                            otherContent.style.contentVisibility = "";
                           }
                         }, 550);
                         resizeScopeElements.push(otherContent);
