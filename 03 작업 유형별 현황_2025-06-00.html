@@ -11141,6 +11141,12 @@
 
           // Let the browser perform the native toggle first, then normalize selection state.
           setTimeout(() => {
+            // [수정] 복원 진행 중에는 단일/다중 선택 정규화를 건너뜀 (reClickRestoredWorkTypeRow의 단일선택 덮어쓰기 방지)
+            if (restoreWorkTypesInProgress || window.__WT_MULTI_RESTORE_IN_PROGRESS__) {
+              try { setProcessingIndicator("worktype-sync", false, "", ""); } catch(_){}
+              return;
+            }
+            console.log('[DEBUG-CLICK] wt =', wt, 'isModifier =', isModifier, 'selectedWorkTypesForComparison =', selectedWorkTypesForComparison);
             setProcessingIndicator(
               "worktype-sync",
               true,
@@ -11155,6 +11161,7 @@
                     cb.checked = cb.dataset.workType === wt;
                 });
                 selectedWorkTypesForComparison = [wt];
+                console.log('[DEBUG-CLICK] single-select set to:', selectedWorkTypesForComparison);
                 try {
                   workTypeTable._firstIndividualClickDone = true;
                 } catch (_) { }
@@ -11294,6 +11301,7 @@
       }
     }
     function scheduleDashboardUpdate(immediate = false) {
+      console.log("[TRACE-SCHEDULE] scheduleDashboardUpdate stack:", new Error().stack);
       setProcessingIndicator(
         "dashboard-update-pending",
         true,
@@ -13489,13 +13497,11 @@
         ? workTypeFilterConfig.selectedValues || []
         : [];
 
-      if (!restoreWorkTypesInProgress) {
-        if (
-          selectedWorkTypesForComparison &&
-          selectedWorkTypesForComparison.length > 0
-        ) {
-          selectedWorkTypes = [...selectedWorkTypesForComparison];
-        }
+      if (
+        selectedWorkTypesForComparison &&
+        selectedWorkTypesForComparison.length > 0
+      ) {
+        selectedWorkTypes = [...selectedWorkTypesForComparison];
       }
 
       return {
@@ -13610,6 +13616,7 @@
     }
 
     async function updateDashboard(options = {}) {
+       console.log("[TRACE-DASHBOARD] updateDashboard stack:", new Error().stack);
       // [v5.01] 초기 기동/필터 셋업 단계의 중복 updateDashboard 무시
       if (window.isInitialBootLoading) {
         console.log("[v5.01] Skipping updateDashboard call during initial boot setup");
@@ -13702,14 +13709,11 @@
         }
 
         // [개선] selectedWorkTypesForComparison과 selectedWorkTypes 동기화
-        // 복원 진행 중에는 필터 상태를 우선하여 테이블 축소를 방지
-        if (!restoreWorkTypesInProgress) {
-          if (
-            selectedWorkTypesForComparison &&
-            selectedWorkTypesForComparison.length > 0
-          ) {
-            selectedWorkTypes = [...selectedWorkTypesForComparison];
-          }
+        if (
+          selectedWorkTypesForComparison &&
+          selectedWorkTypesForComparison.length > 0
+        ) {
+          selectedWorkTypes = [...selectedWorkTypesForComparison];
         }
 
         const summaryCacheKey = generateSummaryCacheKey();
@@ -14042,21 +14046,9 @@
             const prevSyncFlag = checkboxFilterSyncEnabled;
             checkboxFilterSyncEnabled = false;
             try {
+              // 복원 중에는 selectedWorkTypesForComparison에 저장된 이전의 체크 항목들을 
+              // 그대로 적용하고 전체 항목으로 덮어쓰지 않음으로써 무결성 유지
               syncWorkTypeCheckboxesToSelection();
-              // 복원 후 체크박스 상태가 필터 상태와 일치하도록 강제 동기화
-              const workTypeHeaderName = getHeaderName("작업유형");
-              const workTypeFilterConfig = activeFilterConfigs.find(
-                (c) => c.headerName === workTypeHeaderName,
-              );
-              if (
-                workTypeFilterConfig &&
-                Array.isArray(workTypeFilterConfig.selectedValues)
-              ) {
-                selectedWorkTypesForComparison = [
-                  ...workTypeFilterConfig.selectedValues,
-                ];
-                syncWorkTypeCheckboxesToSelection();
-              }
             } catch (_) { }
             checkboxFilterSyncEnabled = prevSyncFlag;
             restoreWorkTypesInProgress = false;
@@ -14483,6 +14475,8 @@
       alert("이전 필터 상태로 복원되었습니다.");
 
       restoreWorkTypesInProgress = true;
+      // [수정] 다중 선택 복원 플래그 설정 (외부 스크립트의 단일선택 강제 방지)
+      window.__WT_MULTI_RESTORE_IN_PROGRESS__ = true;
 
       // [신규] 시나리오 상태 복원 (만약 저장된 상태가 있다면)
       if (preservedScenarioState && preservedScenarioState.applied) {
@@ -14703,6 +14697,12 @@
             );
             await updateDashboard();
 
+            // [수정] 대시보드 재구성 후 선택 상태 재동기화 (reClickRestoredWorkTypeRow의 단일선택 덮어쓰기 복구)
+            if (Array.isArray(preservedPreviousWorkTypeSelection) && preservedPreviousWorkTypeSelection.length > 0) {
+              selectedWorkTypesForComparison = [...preservedPreviousWorkTypeSelection];
+              try { syncWorkTypeCheckboxesToSelection(); } catch(_){}
+            }
+
             // [추가] 대시보드 업데이트 후, 시나리오 상태가 복원되었는지 확인하고 필터 바 업데이트
             // (handleRestoreWorkTypes 시작 부분에서 preservedScenarioState를 이용해 activeScenarioApplied를 복구했더라도
             // updateDashboard 내부에서 다시 false로 초기화될 수 있으므로 여기서 재확인)
@@ -14713,6 +14713,8 @@
             console.warn("복원 후 대시보드 업데이트 실패:", e);
           } finally {
             restoreWorkTypesInProgress = false;
+            // [수정] 모든 재클릭 재시도(최장 1000ms)가 끝날 때까지 다중 선택 보호 플래그 유지
+            setTimeout(() => { window.__WT_MULTI_RESTORE_IN_PROGRESS__ = false; }, 1200);
           }
         }, 100);
       } catch (e) {
@@ -38398,6 +38400,9 @@ async function processUploadedData(data, isExcel = false) {
                 ? e.target.closest('input[type="checkbox"]')
                 : null;
               if (!cb) return;
+
+              // [수정] 다중 복원 진행 중에는 단일선택 강제를 건너뜀
+              if (window.__WT_MULTI_RESTORE_IN_PROGRESS__) return;
 
               // If ctrlKey (or metaKey on Mac) is pressed, allow default multi-select behavior
               const isCtrl = e.ctrlKey || e.metaKey;
