@@ -14731,100 +14731,73 @@
       // [수정] preservedPreviousWorkTypeSelection 설정 후에 previousWorkTypeSelectionBeforeAccumulation 초기화
       previousWorkTypeSelectionBeforeAccumulation = null;
 
-      // [개선] 복원 후 자동으로 전체 체크박스 해제 및 이전 선택 복원
-      setTimeout(() => {
-        try {
-          if (
-            preservedPreviousWorkTypeSelection &&
-            preservedPreviousWorkTypeSelection.length > 0
-          ) {
-            const workTypeTable = document.getElementById(
-              "tableWorkTypeSummary",
-            );
-            const selectAllCheckbox =
-              workTypeTable?.querySelector("#selectAllWorkType");
+      // 5. 대시보드 갱신 → 완료 후 체크박스 최종 동기화 (Bug C 경쟁 조건 수정)
+      // [수정] 이전에 500ms 별도 setTimeout으로 분리되어 있던 자동 복원 로직을
+      // updateDashboard() 완료 이후에 실행되도록 통합 —
+      // 누계의 updateDashboard()가 완료되기 전에 복원이 실행되는 경쟁 조건을 원천 차단
+      try {
+        setTimeout(async () => {
+          try {
+            await updateDashboard();
 
-            if (selectAllCheckbox && workTypeTable) {
-              // 전체 체크박스 해제
-              selectAllCheckbox.checked = false;
-              selectAllCheckbox.indeterminate = true;
+            // updateDashboard 완료 후 체크박스/선택 상태 최종 권위적 동기화
+            // (updateDashboard 내부에서 체크박스가 재초기화될 수 있으므로 이후에 강제 적용)
+            const finalSelection = Array.isArray(preservedPreviousWorkTypeSelection)
+              && preservedPreviousWorkTypeSelection.length > 0
+              ? [...preservedPreviousWorkTypeSelection]
+              : null;
 
-              // 모든 체크박스 순회하며 이전 선택 상태 복원
-              const allCheckboxes = workTypeTable.querySelectorAll(
-                'tbody input[type="checkbox"]',
-              );
-              allCheckboxes.forEach((cb) => {
-                if (cb.dataset.workType) {
-                  cb.checked = preservedPreviousWorkTypeSelection.includes(
-                    cb.dataset.workType,
-                  );
+            if (finalSelection) {
+              selectedWorkTypesForComparison = finalSelection;
+
+              // DOM 체크박스 직접 동기화
+              const workTypeTable = document.getElementById("tableWorkTypeSummary");
+              if (workTypeTable) {
+                const selectAllCb = workTypeTable.querySelector("#selectAllWorkType");
+                if (selectAllCb) {
+                  selectAllCb.checked = false;
+                  selectAllCb.indeterminate = true;
                 }
-              });
+                workTypeTable
+                  .querySelectorAll('tbody input[type="checkbox"]')
+                  .forEach((cb) => {
+                    if (cb.dataset.workType) {
+                      cb.checked = finalSelection.includes(cb.dataset.workType);
+                    }
+                  });
+              }
 
-              // 선택 상태 업데이트
-              selectedWorkTypesForComparison = [
-                ...preservedPreviousWorkTypeSelection,
-              ];
-              updateCompareButtonState();
-
-              // [수정] 복원 완료 후 갱신 루프 구동하여 차트 및 상세 테이블 일관성 보증
+              try { syncWorkTypeCheckboxesToSelection(); } catch (_) {}
+              try { updateCompareButtonState(); } catch (_) {}
               try {
                 if (typeof performIncrementalWorkTypeSelectionUpdate === "function") {
                   performIncrementalWorkTypeSelectionUpdate();
                 }
               } catch (_) {}
-              try {
-                updateFilterSummaryBars();
-              } catch (_) {}
-
-              // [JIT-OPT] try { console.log('[DEBUG] Auto-restored previous selection:', preservedPreviousWorkTypeSelection); } catch(_){}
-            }
-          }
-        } catch (err) {
-          try {
-            console.warn("[autoRestore] failed:", err);
-          } catch (_) { }
-        }
-      }, 500); // 복원 완료 후 500ms 후에 자동 실행
-
-      // 5. 모든 상태 복원이 완료된 후, 전체 대시보드를 갱신하여 모든 차트와 테이블에 변경사항을 전파합니다.
-      try {
-        // 체크박스 동기화 완료 후 대시보드 업데이트
-        setTimeout(async () => {
-          try {
-            // 복원 후 체크박스 상태가 필터 상태와 일치하도록 강제 동기화
-            const workTypeHeaderName = getHeaderName("작업유형");
-            const workTypeFilterConfig = activeFilterConfigs.find(
-              (c) => c.headerName === workTypeHeaderName,
-            );
-            await updateDashboard();
-
-            // [수정] 대시보드 재구성 후 선택 상태 재동기화 (reClickRestoredWorkTypeRow의 단일선택 덮어쓰기 복구)
-            if (Array.isArray(preservedPreviousWorkTypeSelection) && preservedPreviousWorkTypeSelection.length > 0) {
-              selectedWorkTypesForComparison = [...preservedPreviousWorkTypeSelection];
-              try { syncWorkTypeCheckboxesToSelection(); } catch(_){}
+              try { updateFilterSummaryBars(); } catch (_) {}
             }
 
-            // [추가] 대시보드 업데이트 후, 시나리오 상태가 복원되었는지 확인하고 필터 바 업데이트
-            // (handleRestoreWorkTypes 시작 부분에서 preservedScenarioState를 이용해 activeScenarioApplied를 복구했더라도
-            // updateDashboard 내부에서 다시 false로 초기화될 수 있으므로 여기서 재확인)
+            // 시나리오 상태 필터 바 업데이트
             if (activeScenarioApplied && activeScenarioName) {
-              updateFilterSummaryBars();
+              try { updateFilterSummaryBars(); } catch (_) {}
             }
+
+            // [수정] 복원 완료 후 __WT_SNAPSHOT__ 초기화
+            // enforceForWindow loop가 더 이상 스냅샷 html로 테이블을 덮어쓰지 않도록 방지
+            window.__WT_SNAPSHOT__ = null;
+
           } catch (e) {
             console.warn("복원 후 대시보드 업데이트 실패:", e);
           } finally {
             restoreWorkTypesInProgress = false;
-            // [수정] 모든 재클릭 재시도(최장 1000ms)가 끝날 때까지 다중 선택 보호 플래그 유지
+            // 외부 단일선택 강제 리스너 보호 플래그 해제 (reClickRestoredWorkTypeRow 후)
             setTimeout(() => { window.__WT_MULTI_RESTORE_IN_PROGRESS__ = false; }, 1200);
           }
         }, 100);
       } catch (e) {
-        // 폴백: 즉시 대시보드 업데이트
         updateDashboard();
-        setTimeout(() => {
-          restoreWorkTypesInProgress = false;
-        }, 150);
+        window.__WT_SNAPSHOT__ = null;
+        setTimeout(() => { restoreWorkTypesInProgress = false; }, 150);
       }
     }
 
@@ -38819,7 +38792,8 @@ async function processUploadedData(data, isExcel = false) {
                 table: tableSnap,
                 time: Date.now(),
               };
-              alertFilterAutoChanges(beforeFilters);
+              // [수정] alertFilterAutoChanges 제거: alert()가 JS 실행을 블록하여
+              // 브라우저별로 타이밍이 달라지는 버그의 원인이었음
             } catch (_) { }
           }
         },
@@ -38840,24 +38814,36 @@ async function processUploadedData(data, isExcel = false) {
           const text = (el.innerText || el.textContent || "").trim();
           if (!(text.includes("유형 복원") || text.includes("유형 원복")))
             return;
+          // [수정] __WT_MULTI_RESTORE_IN_PROGRESS__ 플래그 확인 — handleRestoreWorkTypes가
+          // 이미 내부 복원 로직을 실행 중이라면 외부 스냅샷 복원은 건너뜀 (충돌 방지)
           if (!window.__WT_SNAPSHOT__ || window.__WT_RESTORING__) return;
+          if (window.__WT_MULTI_RESTORE_IN_PROGRESS__) {
+            // 내부 복원 로직이 처리 중이므로 외부 스냅샷 리스너는 아무것도 하지 않음
+            return;
+          }
           window.__WT_RESTORING__ = true;
-          window.__WT_FREEZE_UPDATES__ = true; // 복원 중 외부 자동 갱신에 의한 축소 방지 목적 (비공식 가드)
+          window.__WT_FREEZE_UPDATES__ = true;
           // ① 필터 복원 (이벤트 비발생 방식으로 값만 되돌림)
           try {
             setFilterState(window.__WT_SNAPSHOT__.filters);
           } catch (_) { }
           // ② 테이블 전체 행 강제 표시 (tbody 복원)
           const ok = restoreWorkTypeTable(window.__WT_SNAPSHOT__.table);
-          // ③ 안정화: 외부 비동기 필터링으로 행 축소 시 재적용 (짧은 윈도우)
-          // ③-보강: 2초 동안 주기적으로 축소 감지 시 재적용 (외부 비동기 갱신 대비)
+          // ③-보강: 2초 동안 주기적으로 행 수 축소 감지 시 재적용
+          // [수정] __WT_MULTI_RESTORE_IN_PROGRESS__ 플래그 체크 추가 —
+          // handleRestoreWorkTypes의 updateDashboard가 테이블을 재빌드하는 동안
+          // enforceForWindow loop가 스냅샷 html로 덮어쓰는 것을 방지
           (function enforceForWindow() {
             const started = Date.now();
             const endAt = started + 2000;
             (function loop() {
               try {
+                // 내부 복원이 진행 중이면 loop 즉시 중단
+                if (window.__WT_MULTI_RESTORE_IN_PROGRESS__) return;
+                // 스냅샷이 지워졌으면(복원 완료 후 null 처리) loop 중단
                 const snap =
                   window.__WT_SNAPSHOT__ && window.__WT_SNAPSHOT__.table;
+                if (!snap) return;
                 const table = document.getElementById("tableWorkTypeSummary");
                 if (snap && table) {
                   const tbody =
