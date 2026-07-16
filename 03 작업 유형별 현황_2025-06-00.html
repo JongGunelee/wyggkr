@@ -14653,23 +14653,15 @@
               selectAllCheckbox.checked = false;
               selectAllCheckbox.indeterminate = true;
 
-              // 모든 체크박스 해제
+              // 모든 체크박스 순회하며 이전 선택 상태 복원
               const allCheckboxes = workTypeTable.querySelectorAll(
                 'tbody input[type="checkbox"]',
               );
               allCheckboxes.forEach((cb) => {
                 if (cb.dataset.workType) {
-                  cb.checked = false;
-                }
-              });
-
-              // 이전 선택된 항목만 체크
-              preservedPreviousWorkTypeSelection.forEach((workType) => {
-                const checkbox = workTypeTable.querySelector(
-                  `tbody input[type="checkbox"][data-work-type="${workType}"]`,
-                );
-                if (checkbox) {
-                  checkbox.checked = true;
+                  cb.checked = preservedPreviousWorkTypeSelection.includes(
+                    cb.dataset.workType,
+                  );
                 }
               });
 
@@ -14678,6 +14670,16 @@
                 ...preservedPreviousWorkTypeSelection,
               ];
               updateCompareButtonState();
+
+              // [수정] 복원 완료 후 갱신 루프 구동하여 차트 및 상세 테이블 일관성 보증
+              try {
+                if (typeof performIncrementalWorkTypeSelectionUpdate === "function") {
+                  performIncrementalWorkTypeSelectionUpdate();
+                }
+              } catch (_) {}
+              try {
+                updateFilterSummaryBars();
+              } catch (_) {}
 
               // [JIT-OPT] try { console.log('[DEBUG] Auto-restored previous selection:', preservedPreviousWorkTypeSelection); } catch(_){}
             }
