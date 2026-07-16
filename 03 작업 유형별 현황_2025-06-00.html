@@ -296,11 +296,10 @@
       }
 
       .main-content-container {
-        /* [수정] 모바일 세로 모드: min-height를 보장하여 콘텐츠가 잘리지 않도록 함 */
+        /* [수정] 모바일 세로 모드: 문서 자연 스크롤 사용, overflow 제거 → 터치 제스처 정상 작동 */
         min-height: calc(100vh - var(--mobile-header-height));
-        overflow-y: auto;
-        overflow-x: hidden;
-        -webkit-overflow-scrolling: touch;
+        overflow: visible;
+        /* overflow-y: auto 제거 → 문서 스크롤로 위임 */
       }
 
       /* Mobile loading overlay safety (if present) */
@@ -4460,12 +4459,8 @@
 
     /* [모바일 성능 최적화] 모바일에서 성능 향상을 위한 CSS 최적화 */
     body.is-mobile {
-      /* 모바일에서 GPU 가속 활성화 */
-      transform: translateZ(0);
-      -webkit-transform: translateZ(0);
-      will-change: transform;
+      /* [수정] translateZ(0) 제거: GPU 레이어 분리가 터치 스크롤 이벤트 전파 차단 */
       overscroll-behavior-x: contain;
-      /* [모바일 개선] 가로 스크롤 체이닝은 방지하되, 세로 스크롤은 허용합니다. */
     }
 
     /* [모바일 개선] 전체 문서의 강제 가로 스크롤 방지 및 여백 제거 */
@@ -4535,16 +4530,122 @@
     }
 
     body.is-mobile table {
-      /* 모바일에서 테이블 렌더링 최적화 */
-      table-layout: fixed;
-      width: 100%;
+      /* [수정] table-layout: fixed 제거 → 모바일에서 콘텐츠 겹침 방지 */
+      /* 테이블은 가로 스크롤 래퍼에서 overflow-x로 처리 */
+      table-layout: auto;
+      width: auto;
+      min-width: 100%;
     }
 
     body.is-mobile th,
     body.is-mobile td {
-      /* 모바일에서 셀 렌더링 최적화 */
-      word-break: break-word;
-      hyphens: auto;
+      /* [수정] word-break 최소화: 좌우 스크롤이 있으므로 강제 줄바꿈 제거 */
+      white-space: nowrap;
+      /* 내용이 한 줄로 표시되어 텍스트 겹침 방지 */
+    }
+
+    /* ============================================================
+       [모바일 세로 모드 전용 레이아웃] 핵심 수정 블록
+       - 목표: 건물 동별 / 작업 유형 섹션 독립 표시 + 터치 스크롤 정상화
+       ============================================================ */
+    @media (max-width: 767px) and (orientation: portrait) {
+      /* 문서 기본 스크롤 복원: 어떤 요소도 스크롤을 가로막지 않도록 */
+      html, body {
+        height: auto !important;
+        overflow-y: auto !important;
+        position: static !important;
+      }
+
+      /* [수정] 모바일 세로 모드에서 사이드바가 숨겨졌을 때 강제로 전체 화면을 잠그고 
+         내부 엘리먼트 스크롤을 강제하던 룰(body.is-mobile.sidebar-unpinned)을 완전히 해제합니다.
+         이를 통해 브라우저 네이티브 터치 스크롤 제스처를 즉각 복구합니다. */
+      body.is-mobile.sidebar-unpinned {
+        overflow: auto !important;
+        overflow-y: auto !important;
+        height: auto !important;
+        position: static !important;
+        width: 100% !important;
+      }
+
+      body.is-mobile.sidebar-unpinned .main-content-container {
+        overflow-y: visible !important;
+        max-height: none !important;
+      }
+
+      /* 아코디언 컨테이너: 세로 배치, 전체 폭 */
+      .analysis-section-container {
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+      }
+
+      /* 아코디언 콘텐츠 영역: 닫혔을 때는 숨김 유지, 열렸을 때만 확장 및 스크롤 허용 */
+      .section-accordion-content {
+        width: 100% !important;
+        max-width: 100vw !important;
+        box-sizing: border-box !important;
+      }
+
+      .section-accordion-content.active {
+        width: 100% !important;
+        max-width: 100vw !important;
+        max-height: none !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+        padding: 0.5rem !important;
+      }
+
+      /* 테이블 컨테이너: 가로 스크롤 전용 래퍼 */
+      .table-container,
+      .mb-4.table-container {
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow-x: auto !important;
+        overflow-y: visible !important;
+        -webkit-overflow-scrolling: touch !important;
+        contain: none !important;
+        /* contain: layout이 스크롤 방해하는 경우 해제 */
+      }
+
+      /* 테이블 자체: 콘텐츠 너비 기준 */
+      .table-container table,
+      .mb-4.table-container table {
+        table-layout: auto !important;
+        width: auto !important;
+        min-width: 480px !important;
+        /* 최소 폭 보장: 헤더가 잘리지 않도록 */
+      }
+
+      /* 셀: 한 줄 표시, 적절한 패딩 */
+      .table-container th,
+      .table-container td {
+        white-space: nowrap !important;
+        padding: 0.3rem 0.5rem !important;
+        font-size: 0.75rem !important;
+      }
+
+      /* wt-action-bar: 버튼 영역 세로 스택 */
+      .wt-action-bar {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.4rem !important;
+        padding: 0.4rem 0 !important;
+      }
+
+      .wt-btn-group {
+        flex-wrap: wrap !important;
+        gap: 0.3rem !important;
+        width: 100% !important;
+      }
+
+      /* 차트 컨테이너: 전체 폭 */
+      .chart-container,
+      .chart-canvas-wrapper {
+        width: 100% !important;
+        max-width: 100vw !important;
+        overflow: visible !important;
+      }
     }
 
     /* [모바일 성능 최적화] 애니메이션 최적화 */
@@ -26273,12 +26374,18 @@ async function processUploadedData(data, isExcel = false) {
             }, 550);
             resizeScopeElements.push(content);
             // 동기화: '건물 동별' / '작업 유형' 중 하나를 열면 서로 함께 열기
-            // [수정] pair 열기 시 __PAIR_SYNC__ 플래그로 hideUpperAccordions 중복 호출 방지
-            // (두 섹션이 서로를 ephemeral-hidden 처리하는 버그 수정)
+            // [수정] 모바일 세로 모드(포트레이트):독립 확장, pair sync 제외
+            // pair sync 조건: 데스크탑(가로) 릏 자동 동기화 적용
+            const _isMobilePortrait = (
+              window.innerWidth < 768 &&
+              (typeof screen !== "undefined" && screen.orientation
+                ? screen.orientation.type.startsWith("portrait")
+                : window.innerHeight > window.innerWidth)
+            );
             try {
               const pairNames = ["건물 동별", "작업 유형"];
               const ht = headerText.trim();
-              if (pairNames.includes(ht)) {
+              if (!_isMobilePortrait && pairNames.includes(ht)) {
                 const otherName = pairNames.find((n) => n !== ht);
                 const otherHeader = Array.from(
                   document.querySelectorAll(".section-accordion-header"),
@@ -26420,10 +26527,17 @@ async function processUploadedData(data, isExcel = false) {
             content.style.maxHeight = null;
             resizeScopeElements.push(content);
             // 동기화: '건물 동별' / '작업 유형' 중 하나를 닫으면 서로 함께 닫기
+            // [수정] 모바일 세로 모드에서는 독립 닫기 (데스크탑만 pair sync)
             try {
+              const _isMPortClose = (
+                window.innerWidth < 768 &&
+                (typeof screen !== "undefined" && screen.orientation
+                  ? screen.orientation.type.startsWith("portrait")
+                  : window.innerHeight > window.innerWidth)
+              );
               const pairNames = ["건물 동별", "작업 유형"];
               const ht = headerText || (content && content.id) || "";
-              if (pairNames.includes((ht || "").trim())) {
+              if (!_isMPortClose && pairNames.includes((ht || "").trim())) {
                 const otherName = pairNames.find((n) => n !== ht.trim());
                 const otherHeader = Array.from(
                   document.querySelectorAll(".section-accordion-header"),
@@ -37002,10 +37116,17 @@ async function processUploadedData(data, isExcel = false) {
                 restoreEphemeralHidden();
               }
               // 동기화: '건물 동별' / '작업 유형' 중 하나를 닫으면 서로 함께 닫기 (모든 레이아웃에서 실행)
+              // [수정] 모바일 세로 모드에서는 pair sync 비활성화 → 독립 닫기
               try {
+                const _isMPortC3 = (
+                  window.innerWidth < 768 &&
+                  (typeof screen !== "undefined" && screen.orientation
+                    ? screen.orientation.type.startsWith("portrait")
+                    : window.innerHeight > window.innerWidth)
+                );
                 const pairNames = ["건물 동별", "작업 유형"];
                 const htClose = headerText.trim();
-                if (pairNames.includes(htClose)) {
+                if (!_isMPortC3 && pairNames.includes(htClose)) {
                   const otherName = pairNames.find((n) => n !== htClose);
                   const otherHeader = Array.from(
                     document.querySelectorAll(".section-accordion-header"),
@@ -37156,10 +37277,17 @@ async function processUploadedData(data, isExcel = false) {
 
               // 동기화: '건물 동별' / '작업 유형' 중 하나를 열면 서로 함께 열기
               // [수정] ephemeral-hidden 먼저 제거, content-visibility 해제 후 scrollHeight 측정
+              // [수정] 모바일 세로 모드에서는 pair sync 비활성화 → 독립 확장
               try {
+                const _isMPortO4 = (
+                  window.innerWidth < 768 &&
+                  (typeof screen !== "undefined" && screen.orientation
+                    ? screen.orientation.type.startsWith("portrait")
+                    : window.innerHeight > window.innerWidth)
+                );
                 const pairNames = ["건물 동별", "작업 유형"];
                 const ht = headerText.trim();
-                if (pairNames.includes(ht)) {
+                if (!_isMPortO4 && pairNames.includes(ht)) {
                   const otherName = pairNames.find((n) => n !== ht);
                   const otherHeader = Array.from(
                     document.querySelectorAll(".section-accordion-header"),
