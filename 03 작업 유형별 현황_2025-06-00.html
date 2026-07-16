@@ -10277,6 +10277,16 @@
               ) {
                 originalParent.appendChild(overlay);
               }
+              // [v5.01] 인라인 style 속성을 완전히 제거하여 단독 HTML 저장 시 원본과 완벽하게 동일하도록 보존
+              overlay.removeAttribute("style");
+              
+              // [v5.01] 자동 업로딩 및 매핑 성공 완료 시 화면 상태 메시지 즉시 제거
+              if (isSuccess) {
+                const uploadStatusEl = document.getElementById("uploadStatus");
+                if (uploadStatusEl) {
+                  uploadStatusEl.textContent = "";
+                }
+              }
             } catch (e) {
               console.warn("[mobile] hideMobileLoading cleanup failed", e);
             }
