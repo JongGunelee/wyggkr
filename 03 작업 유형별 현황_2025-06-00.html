@@ -11035,7 +11035,12 @@
           "작업 유형 데이터 초기화 중",
           "요약 테이블을 다시 준비하고 있습니다.",
         );
-        selectedWorkTypesForComparison = [...allWorkTypesGlobal];
+        // [버그 수정] 비교 모달(계층 분석)이 열려있는 동안에는 사용자가 선택한 비교 항목이 덮어쓰이지 않도록 보호
+        const _cmEl = document.getElementById("comparisonModal");
+        const _isModalOpen = _cmEl && (_cmEl.classList.contains("active") || (_cmEl.style && _cmEl.style.display === "flex"));
+        if (!_isModalOpen) {
+          selectedWorkTypesForComparison = [...allWorkTypesGlobal];
+        }
         const workTypeTable = document.getElementById("tableWorkTypeSummary");
         if (workTypeTable) {
           const allCheckboxes = workTypeTable.querySelectorAll(
@@ -13673,7 +13678,16 @@
         // Ensure comparison work types default to all available types when not yet initialized.
         // This prevents an empty selectedWorkTypesForComparison from filtering out all entries
         // and causing the '핵심 요약' Top3 lists to remain as placeholder text.
+        // [버그 수정] 비교 모달이 열려 있는 동안에는 selectedWorkTypesForComparison을 재초기화하지 않음.
+        //             사용자가 모달에서 선택한 비교 항목이 updateDashboard() 호출에 의해 덮어쓰이는 버그 방지.
+        const _comparisonModalIsActive = (() => {
+          try {
+            const _cm = document.getElementById("comparisonModal");
+            return _cm && (_cm.classList.contains("active") || _cm.classList.contains("flex") || (_cm.style && _cm.style.display === "flex"));
+          } catch (_) { return false; }
+        })();
         if (
+          !_comparisonModalIsActive &&
           (!selectedWorkTypesForComparison ||
             selectedWorkTypesForComparison.length === 0) &&
           Array.isArray(allWorkTypesGlobal) &&
@@ -28376,11 +28390,15 @@ async function processUploadedData(data, isExcel = false) {
             const ytdRelevantEntries =
               filterPreviousYearsToPivotYtd(relevantEntries);
             if (shouldApplyPreviousYearYtd) {
+              // YTD 모드: relevantEntries와 displayRelevantEntries 모두 YTD 필터 적용
               relevantEntries = ytdRelevantEntries;
               displayRelevantEntries = relevantEntries;
-            } else if (isPreviousYearFullYearMode) {
+            } else if (!isPreviousYearFullYearMode) {
+              // '이전 연도 전체' 체크박스 OFF + shouldApplyPreviousYearYtd=false 인 경우:
+              // 디스플레이 구조는 YTD 기반으로 표시하되, 지표 계산용 relevantEntries는 유지
               displayRelevantEntries = ytdRelevantEntries;
             }
+            // isPreviousYearFullYearMode=true 이면: displayRelevantEntries = relevantEntries (전체 데이터, 변경 없음)
           }
 
           const groupedDongs = groupDongsForEstimateInputs(
