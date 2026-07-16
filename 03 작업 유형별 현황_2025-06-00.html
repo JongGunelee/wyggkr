@@ -12357,6 +12357,9 @@
             uploadStatusEl.textContent = "⚡ 캐시에서 즉시 로드 완료.";
             uploadStatusEl.style.color = "#16a34a";
           }
+          try {
+            hideProgressBar();
+          } catch (e) {}
         } else {
           // --- CACHE MISS: 전체 파싱 + 처리 파이프라인 ---
           console.log('%c[v5.00] CACHE MISS — 전체 파싱 및 매핑을 진행합니다.', 'color: #d97706; font-weight: bold;');
@@ -12428,6 +12431,9 @@
           hideMobileLoading(false);
           try {
             setProcessingIndicator("xlsb-download", false);
+          } catch (e) {}
+          try {
+            hideProgressBar();
           } catch (e) {}
           
           if (masterRawEntries.length === 0) {
