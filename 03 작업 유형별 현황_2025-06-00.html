@@ -22145,6 +22145,7 @@ async function processUploadedDataTransaction(data, isExcel = false) {
   await initializeDynamicFiltersUI();
   updateYearFilterTexts();
   updateQuickYearFilterButtonText();
+  window.isInitialBootLoading = false; // [v5.01] 업로드 완료 후 최종 렌더링이 이루어지도록 락 해제
   await updateDashboard();
   setProgress(100);
   if (uploadStatusEl) {
