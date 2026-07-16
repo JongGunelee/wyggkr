@@ -12093,6 +12093,35 @@
         }
       }
     }
+    // --- [v4.78] IndexedDB 기반 XLSB 파싱 캐싱 로직 추가 ---
+    const WYGGKR_DB_NAME = "WyggkrCacheDB";
+    const WYGGKR_STORE_NAME = "xlsbDataStore";
+    const WYGGKR_DB_VERSION = 1;
+
+    function initWyggkrCacheDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(WYGGKR_DB_NAME, WYGGKR_DB_VERSION);
+        request.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains(WYGGKR_STORE_NAME)) {
+            db.createObjectStore(WYGGKR_STORE_NAME);
+          }
+        };
+        request.onsuccess = (e) => resolve(e.target.result);
+        request.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    async function hashWyggkrArrayBuffer(buffer) {
+      try {
+        const hashBuffer = await crypto.subtle.digest('SHA-256', buffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      } catch (e) {
+        return null;
+      }
+    }
+    // --------------------------------------------------------
 
     async function fetchXlsbFromGitHub(showStatus = true, retryCount = 0) {
       const uploadStatusEl = document.getElementById("uploadStatus");
@@ -12181,14 +12210,49 @@
         const arrayBuffer = await response.arrayBuffer();
         const data = new Uint8Array(arrayBuffer);
         
-        await updateProgress(80, "XLSB 데이터 파싱 중...");
-        const workbook = XLSX.read(data, {
-          type: "array",
-          cellDates: true,
-        });
-        const firstSheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[firstSheetName];
-        const json = XLSX.utils.sheet_to_json(worksheet);
+        await updateProgress(70, "XLSB 무결성 해시 계산 및 캐시 확인 중...");
+        let json = null;
+        let fileHash = null;
+        let db = null;
+        try {
+          fileHash = await hashWyggkrArrayBuffer(data);
+          if (fileHash) {
+            db = await initWyggkrCacheDB();
+            const tx = db.transaction(WYGGKR_STORE_NAME, "readonly");
+            const store = tx.objectStore(WYGGKR_STORE_NAME);
+            const getRequest = store.get(fileHash);
+            json = await new Promise((resolve) => {
+              getRequest.onsuccess = () => resolve(getRequest.result);
+              getRequest.onerror = () => resolve(null);
+            });
+          }
+        } catch (e) {
+          console.warn("IndexedDB 캐시 조회 실패, 강제 파싱을 진행합니다:", e);
+        }
+
+        if (json) {
+          await updateProgress(80, "캐시된 XLSB 데이터 로드 중 (파싱 생략)...");
+        } else {
+          await updateProgress(80, "최초 XLSB 파싱 중 (데이터 분석에 수 초 소요)...");
+          const workbook = XLSX.read(data, {
+            type: "array",
+            cellDates: true,
+          });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          json = XLSX.utils.sheet_to_json(worksheet);
+
+          if (db && fileHash) {
+            try {
+              const saveTx = db.transaction(WYGGKR_STORE_NAME, "readwrite");
+              const saveStore = saveTx.objectStore(WYGGKR_STORE_NAME);
+              saveStore.clear(); 
+              saveStore.put(json, fileHash);
+            } catch (e) {
+              console.warn("IndexedDB 캐시 저장 실패:", e);
+            }
+          }
+        }
 
         await updateProgress(90, "데이터 매핑 및 로드 중...");
         

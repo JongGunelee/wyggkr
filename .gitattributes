@@ -1,1 +1,2 @@
-﻿*.html binary
+*.xlsb binary
+*.xlsb filter=lfs diff=lfs merge=lfs -text
