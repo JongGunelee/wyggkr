@@ -5023,6 +5023,9 @@
     </div>
   </div>
   <script>
+    // [v5.01] 부팅 단계에서 중복 렌더링(updateDashboard)을 건너뛰기 위한 제어 플래그
+    window.isInitialBootLoading = true;
+    
     // Dashboard guide modal: 안전한 연결 (원본 코드 구조를 변경하지 않음)
     (function () {
       function $(id) {
@@ -10223,6 +10226,13 @@
     }
 
     function hideMobileLoading(isSuccess = true) {
+      // [v5.01] 성공적으로 완료되었을 때, 로딩 종료 진입 즉시 상태바의 메시지(성공 완료 문구 포함)를 화면에서 지움
+      if (isSuccess) {
+        const uploadStatusEl = document.getElementById("uploadStatus");
+        if (uploadStatusEl) {
+          uploadStatusEl.textContent = "";
+        }
+      }
       const overlay = document.getElementById("mobileLoadingOverlay");
       if (!overlay || !overlay.classList.contains("active")) return;
 
@@ -12360,6 +12370,7 @@
           updateQuickYearFilterButtonText();
 
           await updateProgress(90, "대시보드 렌더링 중...");
+          window.isInitialBootLoading = false; // [v5.01] 캐시 히트 복원 완료 후 렌더링 락 해제
           await applyYearFilter(3);
 
           setProgress(100);
@@ -12424,6 +12435,7 @@
           setProcessingIndicator("xlsb-download", false);
         } catch (e) {}
       } catch (error) {
+        window.isInitialBootLoading = false; // [v5.01] 실패 예외 발생 시 필터 조작이 가능하도록 락 해제
         console.error("XLSB 자동 로딩 실패:", error);
         if (retryCount < MAX_RETRIES) {
           if (uploadStatusEl) {
@@ -13593,6 +13605,12 @@
     }
 
     async function updateDashboard(options = {}) {
+      // [v5.01] 초기 기동/필터 셋업 단계의 중복 updateDashboard 무시
+      if (window.isInitialBootLoading) {
+        console.log("[v5.01] Skipping updateDashboard call during initial boot setup");
+        return;
+      }
+      
       // ▼▼▼ 개선 사항: 연계 필터링으로 인해 선택이 변경되었는지 추적하는 플래그 ▼▼▼
       let selectionsChanged = false; // eslint-disable-line no-unused-vars
       // ▲▲▲ 개선 사항 끝 ▲▲▲
@@ -14044,47 +14062,26 @@
           // selectAllWorkType 체크박스는 document.addEventListener('change', ...)에서 처리됨
         }, 50);
 
-        // [성능 최적화] 차트 업데이트를 비동기로 처리하여 UI 블로킹 방지
-        requestAnimationFrame(() => {
-          console.time("[v5.00] updateDashboard - RequestAnimationFrame Charts (Async)");
-          try {
-            updateBuildingCharts(dataBuildingSummaryRaw, generalTitleSuffix);
-            updateDongWorkTypeProgressChart(
-              selectedDongs,
-              selectedWorkTypes,
-              selectedYears,
-            );
-            updateWorkTypeCharts(
-              dataWorkTypeSummaryRaw,
-              selectedDongs,
-              selectedWorkTypes,
-              generalTitleSuffix,
-            );
-            updateWorkTypeAnnualTrendChart(
-              currentFilteredEntries,
-              generalTitleSuffix,
-            );
-          } catch (e) {
-            console.warn("[대시보드] 차트 업데이트 실패:", e);
-          }
-          console.timeEnd("[v5.00] updateDashboard - RequestAnimationFrame Charts (Async)");
-        });
+        // [v5.01] 차트 업데이트를 여러 애니메이션 프레임으로 분할하여 UI 스레드 정지 현상 방지
+        const runInNextFrame = (fn) => new Promise(resolve => requestAnimationFrame(() => { 
+          try { fn(); } catch(e) { console.warn("[대시보드] 차트 개별 업데이트 실패:", e); }
+          resolve(); 
+        }));
 
-        console.time("[v5.00] updateDashboard - Finance & Count Chart");
-        updateDongWorkTypeFinanceAndCountChart(
-          dataForDongFinanceCountChart,
-          generalTitleSuffix,
-        );
-        console.timeEnd("[v5.00] updateDashboard - Finance & Count Chart");
-        await updateProgressAndYield(98, "차트 생성...");
-
-        console.time("[v5.00] updateDashboard - Comparison Chart");
-        updateBuildingWorktypeComparisonChart(
-          selectedDongs,
-          selectedWorkTypes,
-          orderedSelectedYears,
-        );
-        console.timeEnd("[v5.00] updateDashboard - Comparison Chart");
+        await (async () => {
+          console.time("[v5.01] updateDashboard - Sequential Frame Charts (Async)");
+          await runInNextFrame(() => updateBuildingCharts(dataBuildingSummaryRaw, generalTitleSuffix));
+          await runInNextFrame(() => updateDongWorkTypeProgressChart(selectedDongs, selectedWorkTypes, selectedYears));
+          await runInNextFrame(() => updateWorkTypeCharts(dataWorkTypeSummaryRaw, selectedDongs, selectedWorkTypes, generalTitleSuffix));
+          await runInNextFrame(() => updateWorkTypeAnnualTrendChart(currentFilteredEntries, generalTitleSuffix));
+          
+          await updateProgressAndYield(95, "금융 차트 생성...");
+          await runInNextFrame(() => updateDongWorkTypeFinanceAndCountChart(dataForDongFinanceCountChart, generalTitleSuffix));
+          
+          await updateProgressAndYield(98, "비교 차트 생성...");
+          await runInNextFrame(() => updateBuildingWorktypeComparisonChart(selectedDongs, selectedWorkTypes, orderedSelectedYears));
+          console.timeEnd("[v5.01] updateDashboard - Sequential Frame Charts (Async)");
+        })().catch(e => console.warn("[대시보드] 차트 비동기 업데이트 오류:", e));
 
         console.time("[v5.00] updateDashboard - Populate Filters & Dropdowns");
         const selectionsWerePruned = populateDynamicFilterOptions();
@@ -20560,29 +20557,33 @@
 
       for (let i = 0; i < rawEntries.length; i++) {
         const entry = rawEntries[i];
-        const poAmount =
-          parseFloat(
-            String(entry[poAmountHeaderNameLocal]).replace(
-              regexCommaLocal,
-              "",
-            ),
-          ) || 0;
+        
+        // [v5.01] XLSB 숫자 셀 타입 최적화 (불필요한 문자열 변환 및 정규식 제거)
+        const poAmountVal = entry[poAmountHeaderNameLocal];
+        const poAmount = typeof poAmountVal === "number"
+          ? poAmountVal
+          : (poAmountVal ? parseFloat(String(poAmountVal).replace(regexCommaLocal, "")) || 0 : 0);
         
         entry.parsedPoAmount = poAmount;
+        
+        // [v5.01] 정규식 매칭 대신 parseInt를 직접 사용하여 월 값 추출 최적화
         const monthValRaw = entry[monthHeaderName];
         let parsedMonthInt = 0;
         if (monthValRaw) {
-          const match = String(monthValRaw).match(/(\d{1,2})월/);
-          if (match) parsedMonthInt = parseInt(match[1], 10);
+          parsedMonthInt = parseInt(monthValRaw, 10) || 0;
         }
         entry.parsedMonthInt = parsedMonthInt;
 
-        const dongName = entry[dongHeaderName]
-          ? String(entry[dongHeaderName]).replace("사택 ", "").trim()
+        // [v5.01] 문자열 replace 대신 startsWith 최적화
+        const rawDong = entry[dongHeaderName];
+        const dongName = rawDong 
+          ? (typeof rawDong === "string" && rawDong.startsWith("사택 ") 
+              ? rawDong.slice(3).trim() 
+              : String(rawDong).trim()) 
           : "";
         const workType = entry[workTypeHeaderName];
         const year = entry[yearHeaderName]
-          ? String(entry[yearHeaderName]).trim()
+          ? (typeof entry[yearHeaderName] === "string" ? entry[yearHeaderName].trim() : String(entry[yearHeaderName]).trim())
           : "";
 
         if (year) yearsSet.add(year);
@@ -22204,6 +22205,7 @@ async function processUploadedData(data, isExcel = false) {
     yearDongBaseAmounts: window.yearDongBaseAmounts,
   };
   try {
+    window.isInitialBootLoading = true; // [v5.01] 업로드 트랜잭션 중 중복 updateDashboard 무시
     return await processUploadedDataTransaction(data, isExcel);
   } catch (error) {
     masterRawEntries = previousState.masterRawEntries;
@@ -31090,6 +31092,7 @@ async function processUploadedData(data, isExcel = false) {
         };
 
         const finalizeInitialDashboardRender = async (renderOptions = {}) => {
+          window.isInitialBootLoading = false; // [v5.01] 초기 렌더링 강제 잠금 해제
           await updateDashboard(renderOptions);
           applySavedChartVisibility();
           try {
