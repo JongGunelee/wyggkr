@@ -4986,6 +4986,109 @@
       #tableFullScreenModal { padding: 6px; }
     }
   </style>
+  <style id="wtActionBarMobileStyles">
+    /* ===== [모바일 최적화] 작업 유형 섹션 액션 바 반응형 레이아웃 ===== */
+
+    /* 기본(데스크톱): 가로 한 줄 레이아웃 */
+    .wt-action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+
+    /* 요약 바: 남은 공간을 채우되 최소 너비 보장 */
+    .wt-action-bar > .filter-summary-bar {
+      flex: 1 1 200px;
+      min-width: 0;
+      margin: 0;           /* 부모 margin 재정의 */
+      position: static;    /* sticky 해제하여 반응형 흐름 유지 */
+    }
+
+    /* 버튼 그룹: 축소 금지, 줄바꿈 허용 */
+    .wt-btn-group {
+      display: flex;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.375rem;
+    }
+
+    /* compareWorkTypesButton: 데스크톱에서 margin-left 적용 */
+    .wt-btn-group #compareWorkTypesButton {
+      margin-left: 0.25rem; /* 기존 1rem → 그룹 내부에서 gap으로 처리 */
+    }
+
+    /* ── 모바일 세로 모드 (≤ 767px) ── */
+    @media (max-width: 767px) {
+      /* 전체 바를 세로로 쌓기 */
+      .wt-action-bar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+      }
+
+      /* 요약 바: 전체 너비 */
+      .wt-action-bar > .filter-summary-bar {
+        flex: 0 0 auto;
+        width: 100%;
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+        flex-wrap: wrap;
+      }
+
+      /* 버튼 그룹: 가로로 펼치되 화면 가득 채우기 */
+      .wt-btn-group {
+        width: 100%;
+        flex-shrink: 0;
+        flex-wrap: wrap;
+        gap: 0.375rem;
+      }
+
+      /* 각 버튼: 동등하게 공간 분배, 터치 타깃 확보 */
+      .wt-btn-group > button {
+        flex: 1 1 auto;
+        min-width: 0;
+        text-align: center;
+        padding: 0.5rem 0.5rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+        margin-left: 0 !important; /* compareWorkTypesButton 의 margin-left 제거 */
+      }
+
+      /* 유형 복원 버튼 */
+      #restoreWorkTypesButton {
+        background-color: #f97316 !important;
+      }
+
+      /* 유형 누계 버튼 */
+      #accumulateWorkTypesButton {
+        background-color: #14b8a6 !important;
+      }
+
+      /* 선택 항목 비교하기 버튼 */
+      #compareWorkTypesButton {
+        background-color: #1d4ed8;
+        margin-left: 0 !important;
+      }
+
+      /* 비활성화 버튼도 레이아웃은 유지 */
+      .wt-btn-group > button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+    }
+
+    /* ── 초소형 화면 (≤ 400px): 버튼 세로 배치 ── */
+    @media (max-width: 400px) {
+      .wt-btn-group > button {
+        flex: 0 0 100%;
+        text-align: center;
+      }
+    }
+  </style>
 </head>
 
 <body class="bg-slate-50 text-slate-800">
@@ -6043,10 +6146,10 @@
       <div class="analysis-section-container">
         <h2 class="section-accordion-header">작업 유형</h2>
         <section id="workTypeAnalysis" class="section-accordion-content p-4 bg-white rounded-lg shadow-lg">
-          <!-- [수정] 요약 바와 버튼을 flex 컨테이너로 묶어 겹침 문제 해결 -->
-          <div class="flex justify-between items-center mb-4 gap-4">
+          <!-- [수정] 요약 바와 버튼을 flex 컨테이너로 묶어 겹침 문제 해결 / [모바일] wt-action-bar 클래스로 반응형 제어 -->
+          <div class="wt-action-bar">
             <div class="filter-summary-bar" id="summary-bar-worktype"></div>
-            <div class="flex-shrink-0 flex items-center gap-2">
+            <div class="wt-btn-group">
               <button id="restoreWorkTypesButton"
                 class="px-3 py-1 text-sm bg-orange-500 text-white rounded hover:bg-orange-600 transition-colors"
                 disabled>
@@ -6057,8 +6160,7 @@
                 <span class="menu-circle-icon inactive">●</span>유형 누계
               </button>
               <button id="compareWorkTypesButton" disabled>
-                <span class="menu-circle-icon inactive">●</span>선택 항목
-                비교하기
+                <span class="menu-circle-icon inactive">●</span>선택 항목 비교하기
               </button>
             </div>
           </div>
