@@ -3304,6 +3304,13 @@
             color: #fff !important;
         }
 
+        .focused-editor-exit-notice {
+            color: #526273;
+            font-size: 12px;
+            line-height: 1.4;
+            text-align: right;
+        }
+
         #flowChipToolbar {
             position: fixed;
             left: 16px;
@@ -3482,6 +3489,11 @@
             #focusedEditorFlowActions,
             .focused-editor-flow-group {
                 width: 100%;
+            }
+
+            .focused-editor-exit-notice {
+                flex: 1 1 100%;
+                text-align: center;
             }
 
             .focused-editor-flow-group {
@@ -4334,10 +4346,10 @@
         </div>
 
         <div id="focusedEditorOverlay" aria-hidden="true">
-            <div id="focusedEditorDialog" role="dialog" aria-modal="true" aria-labelledby="focusedEditorTitle">
+            <div id="focusedEditorDialog" role="dialog" aria-modal="true" aria-labelledby="focusedEditorTitle" aria-describedby="focusedEditorExitNotice">
                 <div id="focusedEditorHeader">
                     <span id="focusedEditorTitle">입력 내용 확대 편집</span>
-                    <button type="button" id="focusedEditorCloseBtn" title="닫기">닫기</button>
+                    <button type="button" id="focusedEditorCloseBtn" title="편집 내용 저장 후 닫기">닫기</button>
                 </div>
                 <div id="focusedEditorBody">
                     <div id="focusedEditorSurface" contenteditable="true" spellcheck="false"></div>
@@ -4372,8 +4384,8 @@
                     </div>
                     <button type="button" id="focusedEditorInsertImageBtn" style="margin-right: auto; background: #fff; color: #1d4ed8; border-color: #2f6fed;">이미지 삽입</button>
                     <input type="file" id="focusedEditorImageFileInput" accept="image/*" style="display: none;" multiple>
-                    <button type="button" id="focusedEditorCancelBtn">취소</button>
-                    <button type="button" id="focusedEditorApplyBtn">적용</button>
+                    <span id="focusedEditorExitNotice" class="focused-editor-exit-notice">편집 내용은 ‘닫기’ 또는 ‘적용’ 시 저장됩니다.</span>
+                    <button type="button" id="focusedEditorApplyBtn" title="편집 내용 저장 후 닫기">적용</button>
                 </div>
             </div>
         </div>
@@ -11458,6 +11470,7 @@ function clampImagesToContainers(scope = contentArea) {
                 function hideFlowChipToolbar(shouldRelease = true) {
                     const toolbar = document.getElementById('flowChipToolbar');
                     if (!toolbar) return;
+                    if (toolbar.contains(document.activeElement)) document.activeElement.blur();
                     toolbar.classList.remove('visible', 'is-dragging');
                     toolbar.setAttribute('aria-hidden', 'true');
                     document.body.classList.remove('flow-chip-toolbar-active');
@@ -11968,13 +11981,16 @@ function clampImagesToContainers(scope = contentArea) {
                     }
                     const index = siblings.indexOf(targetToDelete);
                     const nextTarget = siblings[index + 1] || siblings[index - 1] || null;
-                    closeFocusedEditor(false);
+                    releaseFocusedFlowContainer();
                     targetToDelete.remove();
                     if (nextTarget) {
                         focusedEditorTarget = nextTarget;
-                        showFlowChipToolbar(nextTarget);
+                        clearFlowChipSelection();
+                        selectedFlowChips = [nextTarget];
+                        setFlowChipSelected(nextTarget, true);
+                        openFocusedEditor(nextTarget);
                     }
-                    showMessage('흐름 항목이 삭제되었습니다.', 'success', 1600);
+                    showMessage('흐름 항목이 삭제되었습니다. 확대 편집은 계속됩니다.', 'success', 1800);
                 }
 
                 function openFocusedEditor(target = focusedEditorTarget) {
@@ -12030,33 +12046,34 @@ function clampImagesToContainers(scope = contentArea) {
                     }, 0);
                 }
 
-                function closeFocusedEditor(shouldApply = true) {
-                    const overlay = document.getElementById('focusedEditorOverlay');
-                    const surface = document.getElementById('focusedEditorSurface');
-                    if (!overlay || !surface) return;
-
-                    if (shouldApply && multiFlowChipEditTargets.length > 0) {
-                        applyMultiFlowChipEditor(surface);
-                    } else if (shouldApply && focusedEditorTarget && document.contains(focusedEditorTarget)) {
-                        const wasFlowSpan = isFocusedFlowSpan();
-                        cleanEditableCloneForFocusedEditor(surface);
-                        focusedEditorTarget.innerHTML = surface.innerHTML;
-                        if (wasFlowSpan) {
-                            applyFlowStyleToTarget(focusedEditorTarget, surface);
-                        }
-                        focusedEditorTarget.querySelectorAll('script').forEach(el => el.remove());
-                        processPastedImages(focusedEditorTarget);
-                        normalizeMonthlyEditingLayout(focusedEditorTarget);
-                        clampImagesToContainers(focusedEditorTarget);
-                        generateItemControls(focusedEditorTarget);
-                        
-                        // *** 개선 사항 2: 모달 저장 후 일반 화면의 기존 주석들에 드래그 기능 다시 바인딩 ***
-                        focusedEditorTarget.querySelectorAll('.image-annotation-text').forEach(makeAnnotationDraggable);
-                        
-                        focusedEditorTarget.focus();
-                        showMessage('확대 편집 내용이 적용되었습니다.', 'success', 1800);
+                function persistFocusedEditorContent(surface) {
+                    if (multiFlowChipEditTargets.length > 0) {
+                        return applyMultiFlowChipEditor(surface);
                     }
+                    if (!focusedEditorTarget || !document.contains(focusedEditorTarget)) return false;
 
+                    const wasFlowSpan = isFocusedFlowSpan();
+                    cleanEditableCloneForFocusedEditor(surface);
+                    focusedEditorTarget.innerHTML = surface.innerHTML;
+                    if (wasFlowSpan) {
+                        applyFlowStyleToTarget(focusedEditorTarget, surface);
+                    }
+                    focusedEditorTarget.querySelectorAll('script').forEach(el => el.remove());
+                    processPastedImages(focusedEditorTarget);
+                    normalizeMonthlyEditingLayout(focusedEditorTarget);
+                    clampImagesToContainers(focusedEditorTarget);
+                    generateItemControls(focusedEditorTarget);
+
+                    // *** 개선 사항 2: 모달 저장 후 일반 화면의 기존 주석들에 드래그 기능 다시 바인딩 ***
+                    focusedEditorTarget.querySelectorAll('.image-annotation-text').forEach(makeAnnotationDraggable);
+                    return true;
+                }
+
+                function finishFocusedEditorSession(overlay, surface) {
+                    const returnFocusTarget = focusedEditorTarget && document.contains(focusedEditorTarget)
+                        ? focusedEditorTarget
+                        : null;
+                    if (overlay.contains(document.activeElement)) document.activeElement.blur();
                     overlay.classList.remove('active');
                     overlay.setAttribute('aria-hidden', 'true');
                     document.body.classList.remove('focused-editor-active', 'focused-editor-multi-flow-mode');
@@ -12069,18 +12086,44 @@ function clampImagesToContainers(scope = contentArea) {
                     if (menuPanel) {
                         menuPanel.style.zIndex = '';
                     }
-                    if (focusedEditorTarget && document.contains(focusedEditorTarget)) {
-                        showFocusedEditorButton(focusedEditorTarget);
+                    if (returnFocusTarget) {
+                        returnFocusTarget.focus({ preventScroll: true });
+                        showFocusedEditorButton(returnFocusTarget);
                     }
                     hideTextFormatToolbar();
                     restoreAllItemControlsToOwners();
+                }
+
+                function saveAndCloseFocusedEditor() {
+                    const overlay = document.getElementById('focusedEditorOverlay');
+                    const surface = document.getElementById('focusedEditorSurface');
+                    if (!overlay || !surface || !overlay.classList.contains('active')) return false;
+
+                    const wasMultiFlowEditor = multiFlowChipEditTargets.length > 0;
+                    try {
+                        if (!persistFocusedEditorContent(surface)) {
+                            showMessage('편집 내용을 저장하지 못했습니다. 편집창을 유지합니다.', 'warning', 2400);
+                            surface.focus();
+                            return false;
+                        }
+                    } catch (error) {
+                        console.error('확대 편집 내용 저장 실패:', error);
+                        showMessage('편집 내용을 저장하지 못했습니다. 편집창을 유지합니다.', 'error', 2600);
+                        surface.focus();
+                        return false;
+                    }
+
+                    finishFocusedEditorSession(overlay, surface);
+                    if (!wasMultiFlowEditor) {
+                        showMessage('확대 편집 내용이 저장되었습니다.', 'success', 1800);
+                    }
+                    return true;
                 }
 
                 function initializeFocusedEditorFeature() {
                     const openBtn = document.getElementById('openFocusedEditorBtn');
                     const overlay = document.getElementById('focusedEditorOverlay');
                     const applyBtn = document.getElementById('focusedEditorApplyBtn');
-                    const cancelBtn = document.getElementById('focusedEditorCancelBtn');
                     const closeBtn = document.getElementById('focusedEditorCloseBtn');
                     const addBeforeBtn = document.getElementById('focusedEditorAddBeforeBtn');
                     const addAfterBtn = document.getElementById('focusedEditorAddAfterBtn');
@@ -12122,9 +12165,8 @@ function clampImagesToContainers(scope = contentArea) {
                             openFocusedEditor();
                         });
                     }
-                    cancelBtn?.addEventListener('click', () => closeFocusedEditor(false));
-                    closeBtn?.addEventListener('click', () => closeFocusedEditor(true));
-                    applyBtn?.addEventListener('click', () => closeFocusedEditor(true));
+                    closeBtn?.addEventListener('click', saveAndCloseFocusedEditor);
+                    applyBtn?.addEventListener('click', saveAndCloseFocusedEditor);
                     moveBeforeBtn?.addEventListener('click', () => isMultiFlowChipEditorActive() ? moveActiveMultiFlowChipEditorItem('before') : moveFocusedFlowSpan('before'));
                     moveAfterBtn?.addEventListener('click', () => isMultiFlowChipEditorActive() ? moveActiveMultiFlowChipEditorItem('after') : moveFocusedFlowSpan('after'));
                     addBeforeBtn?.addEventListener('click', () => isMultiFlowChipEditorActive() ? insertMultiFlowChipEditorItem('before') : insertFlowSpanRelative('before'));
@@ -12159,10 +12201,6 @@ function clampImagesToContainers(scope = contentArea) {
                         control?.addEventListener('input', previewFlowStyleOnTarget);
                         control?.addEventListener('change', previewFlowStyleOnTarget);
                     });
-                    overlay?.addEventListener('pointerdown', e => {
-                        if (e.target === overlay) closeFocusedEditor(true);
-                    });
-
                     surface?.addEventListener('dblclick', e => {
                         const img = e.target.closest('img');
                         if (img?.src) {
@@ -12460,12 +12498,13 @@ function clampImagesToContainers(scope = contentArea) {
 
                     document.addEventListener('keydown', e => {
                         const isOverlayActive = overlay?.classList.contains('active');
-                        if (isOverlayActive && e.key === 'Escape') {
+                        const isKeyboardExitAttempt = e.key === 'Escape'
+                            || ((e.ctrlKey || e.metaKey) && e.key === 'Enter');
+                        if (isOverlayActive && isKeyboardExitAttempt) {
                             e.preventDefault();
-                            closeFocusedEditor(false);
-                        } else if (isOverlayActive && (e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                            e.preventDefault();
-                            closeFocusedEditor(true);
+                            e.stopImmediatePropagation();
+                            showMessage('확대 편집은 ‘닫기’ 또는 ‘적용’ 버튼으로 저장 후 닫을 수 있습니다.', 'info', 2200);
+                            surface?.focus();
                         } else if (!isOverlayActive && (e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                             const target = getFocusedEditableTarget(document.activeElement);
                             if (target) {
@@ -12473,7 +12512,7 @@ function clampImagesToContainers(scope = contentArea) {
                                 openFocusedEditor(target);
                             }
                         }
-                    });
+                    }, true);
 
                     window.addEventListener('resize', () => {
                         clampImagesToContainers(contentArea);
