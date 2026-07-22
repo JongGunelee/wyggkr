@@ -428,6 +428,17 @@
             try { document.addEventListener(type, catchEarlyCancel, { capture: true, passive: false }); } catch (e2) { }
         });
     })();
+    (function installDependencyEscapeHandler() {
+        if (window.__codexDependencyEscapeHandler) return;
+        window.__codexDependencyEscapeHandler = function (event) {
+            if (!event || event.key !== 'Escape') return;
+            const dependencyModal = document.getElementById('dependencyModal');
+            if (dependencyModal && !dependencyModal.classList.contains('hidden') && typeof window.closeDependencyModal === 'function') {
+                window.closeDependencyModal();
+            }
+        };
+        document.addEventListener('keydown', window.__codexDependencyEscapeHandler);
+    })();
     window.__buildingFieldKeyCache = window.__buildingFieldKeyCache || (typeof WeakMap === 'function' ? new WeakMap() : null);
     window.resolveBuildingText = function(p) {
         if (!p) return "";
@@ -479,10 +490,45 @@
             });
             
             const origMO = window.MutationObserver;
+            const tailwindRuntimeObservers = window.__codexTailwindRuntimeObservers = [];
             window.MutationObserver = function(cb) {
-                return new origMO((m, o) => { if (!isHidden && !window.__codexCredentialPromptActive) cb(m, o); });
+                const observer = new origMO((m, o) => { if (!isHidden && !window.__codexCredentialPromptActive) cb(m, o); });
+                try {
+                    const creationStack = String(new Error().stack || '');
+                    if (/cdn\.tailwindcss\.com|codex-offline-tailwind|codex-user-library-tailwind/i.test(creationStack)) {
+                        tailwindRuntimeObservers.push(observer);
+                    }
+                } catch (e) { }
+                return observer;
             };
             window.MutationObserver.prototype = origMO.prototype;
+
+            // Tailwind Play CDN recompiles the whole utility sheet for every large Gantt DOM mutation.
+            // Keep its initial utility output, then stop only Tailwind-owned observers after parsing.
+            window.__codexQuiesceTailwindRuntime = function(reason) {
+                if (window.__codexTailwindRuntimeQuiesced) return window.__codexTailwindRuntimeDiagnostics;
+                let disconnected = 0;
+                let discardedRecords = 0;
+                tailwindRuntimeObservers.forEach(function(observer) {
+                    if (!observer) return;
+                    try {
+                        const records = typeof observer.takeRecords === 'function' ? observer.takeRecords() : [];
+                        discardedRecords += records && records.length ? records.length : 0;
+                    } catch (e) { }
+                    try {
+                        observer.disconnect();
+                        disconnected++;
+                    } catch (e) { }
+                });
+                window.__codexTailwindRuntimeQuiesced = true;
+                window.__codexTailwindRuntimeDiagnostics = {
+                    reason: String(reason || 'initial-css-ready'),
+                    disconnected,
+                    discardedRecords,
+                    at: Date.now()
+                };
+                return window.__codexTailwindRuntimeDiagnostics;
+            };
             
             window.__codexShowCrashOverlay = function(message) {
                 if (!document.body || document.getElementById('zdr-crash-overlay')) return;
@@ -1726,7 +1772,30 @@
         }
         @media (min-width: 768px) { .md\:p-8 { padding: 2rem !important; } }
     </style>
-    <script>window.CodexOfflineLibraries&&window.CodexOfflineLibraries.loadScriptCandidates('tailwind',['https://cdn.tailwindcss.com'],function(){return typeof window.tailwind!=='undefined';});</script>
+    <script>
+        (function loadTailwindOnce() {
+            if (!window.CodexOfflineLibraries) return;
+            window.__codexTailwindReadyPromise = window.CodexOfflineLibraries
+                .loadScriptCandidates('tailwind', ['https://cdn.tailwindcss.com'], function() { return typeof window.tailwind !== 'undefined'; })
+                .then(function(ready) {
+                    const quiesceAfterInitialPaint = function() {
+                        requestAnimationFrame(function() {
+                            requestAnimationFrame(function() {
+                                if (typeof window.__codexQuiesceTailwindRuntime === 'function') {
+                                    window.__codexQuiesceTailwindRuntime(ready ? 'initial-css-ready' : 'tailwind-unavailable');
+                                }
+                            });
+                        });
+                    };
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', quiesceAfterInitialPaint, { once: true });
+                    } else {
+                        quiesceAfterInitialPaint();
+                    }
+                    return ready;
+                });
+        })();
+    </script>
     <style id="codex-local-font-face">
         @font-face {
   font-family: 'Noto Sans KR';
@@ -3658,17 +3727,28 @@
                 // [v4.36] \ube44\ub3d9\uae30 cleanupStale (\uccad\ud06c \ucc98\ub9ac, \uba54\uc778 \uc2a4\ub808\ub4dc \ube14\ub85c\ud0b9 \ubc29\uc9c0)
                 // \uc6d0\ub9ac: 40+ Observer \uc815\ub9ac \uc2dc 10\uac1c\uc529 \ub098\ub220 requestIdleCallback/setTimeout\uc73c\ub85c \ubd84\uc0b0
                 OP.cleanupStaleAsync = function (callback) {
-                    const entries = Array.from(this.perElementObservers.entries());
-                    if (entries.length === 0) { if (callback) callback(0); return; }
+                    this._cleanupStaleAsyncCallbacks = this._cleanupStaleAsyncCallbacks || [];
+                    if (callback) this._cleanupStaleAsyncCallbacks.push(callback);
+                    if (this._cleanupStaleAsyncRunning) return;
+                    this._cleanupStaleAsyncRunning = true;
+                    const ids = Array.from(this.perElementObservers.keys());
+                    const finish = (cleaned) => {
+                        this._cleanupStaleAsyncRunning = false;
+                        const callbacks = this._cleanupStaleAsyncCallbacks.splice(0);
+                        callbacks.forEach(fn => { try { fn(cleaned); } catch (e) { } });
+                    };
+                    if (ids.length === 0) { finish(0); return; }
                     const CHUNK = 10;
                     const now = Date.now();
                     const MAX_AGE = 30000, PROGRESS_MAX_AGE = 30000; // [v4.42] \ub3d9\uae30\ud654 (1\ubd84\u219230\ucd08)
                     let idx = 0, cleaned = 0;
                     const self = this;
                     const processChunk = () => {
-                        const end = Math.min(idx + CHUNK, entries.length);
+                        const end = Math.min(idx + CHUNK, ids.length);
                         for (let i = idx; i < end; i++) {
-                            const [id, entry] = entries[i];
+                            const id = ids[i];
+                            const entry = self.perElementObservers.get(id);
+                            if (!entry) continue;
                             let shouldRemove = !entry.target || !entry.target.isConnected ||
                                 entry.target.classList?.contains('hidden') ||
                                 (id.startsWith('progress-') && entry.created && (now - entry.created) > PROGRESS_MAX_AGE) ||
@@ -3679,15 +3759,15 @@
                             }
                         }
                         idx = end;
-                        if (idx < entries.length) {
-                            if (typeof requestIdleCallback === 'function') requestIdleCallback(processChunk);
+                        if (idx < ids.length) {
+                            if (typeof requestIdleCallback === 'function') requestIdleCallback(processChunk, { timeout: 250 });
                             else setTimeout(processChunk, 16);
                         } else {
                             cleaned += self.prunePausedObservers();
-                            if (callback) callback(cleaned);
+                            finish(cleaned);
                         }
                     };
-                    if (typeof requestIdleCallback === 'function') requestIdleCallback(processChunk);
+                    if (typeof requestIdleCallback === 'function') requestIdleCallback(processChunk, { timeout: 250 });
                     else setTimeout(processChunk, 0);
                 };
 
@@ -36682,16 +36762,30 @@
         // [\uc131\ub2a5 \ucd5c\uc801\ud654] localStorage \uc800\uc7a5 \ub514\ubc14\uc6b4\uc2f1
         let saveRevisionHistoryTimeout = null;
         let saveRevisionHistoryIdleId = null;
+        let saveRevisionHistoryGeneration = 0;
         function debouncedSaveRevisionHistory() {
+            const generation = ++saveRevisionHistoryGeneration;
             if (saveRevisionHistoryTimeout) {
                 clearTimeout(saveRevisionHistoryTimeout);
+                saveRevisionHistoryTimeout = null;
             }
             if (saveRevisionHistoryIdleId && window.cancelIdleCallback) {
                 try { cancelIdleCallback(saveRevisionHistoryIdleId); } catch (e) { }
                 saveRevisionHistoryIdleId = null;
             }
+            let completed = false;
             const run = () => {
-                try { debouncedSaveRevisionHistory(); } catch (e) { }
+                if (completed || generation !== saveRevisionHistoryGeneration) return;
+                completed = true;
+                if (saveRevisionHistoryTimeout) {
+                    clearTimeout(saveRevisionHistoryTimeout);
+                    saveRevisionHistoryTimeout = null;
+                }
+                if (saveRevisionHistoryIdleId && window.cancelIdleCallback) {
+                    try { cancelIdleCallback(saveRevisionHistoryIdleId); } catch (e) { }
+                    saveRevisionHistoryIdleId = null;
+                }
+                try { saveRevisionHistoryToStorage(); } catch (e) { }
                 saveRevisionHistoryTimeout = null;
                 saveRevisionHistoryIdleId = null;
             };
@@ -52609,13 +52703,19 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
             try { if (mappingModal) mappingModal.classList.add('hidden'); } catch (e) { }
             try { if (window.RefactoringSuite2025 && typeof window.RefactoringSuite2025.markDataStatsDirty === 'function') window.RefactoringSuite2025.markDataStatsDirty(); } catch (e) { }
-            // [PERF-FIX] defer heavy rendering to give E2E polling a gap on the main thread
-            try { if (typeof renderMilestoneModal === 'function') setTimeout(() => renderMilestoneModal(), 0); } catch (e) { }
-            try {
-                if (typeof requestCoalescedMainRender === 'function') setTimeout(() => requestCoalescedMainRender('milestone-fast-apply'), 0);
-                else if (typeof render === 'function') setTimeout(() => render(), 0);
-            } catch (e) { }
-            try { if (typeof updateAndApplyDateRange === 'function') setTimeout(() => updateAndApplyDateRange(), 0); } catch (e) { }
+            // Refresh the visible surface once; the milestone manager renders on open.
+            setTimeout(() => {
+                try { if (typeof updateAndApplyDateRange === 'function') updateAndApplyDateRange(); } catch (e) { }
+                try {
+                    if (typeof milestoneModal !== 'undefined' && milestoneModal && !milestoneModal.classList.contains('hidden') && typeof renderMilestoneModal === 'function') {
+                        renderMilestoneModal();
+                    }
+                } catch (e) { }
+                try {
+                    if (typeof requestCoalescedMainRender === 'function') requestCoalescedMainRender('milestone-fast-apply');
+                    else if (typeof render === 'function') render();
+                } catch (e) { }
+            }, 0);
             try { if (typeof showToast === 'function' && !options.silent) showToast(`${processed.length}\uac1c\uc758 \ub9c8\uc77c\uc2a4\ud1a4\uc774 \uc131\uacf5\uc801\uc73c\ub85c \ub85c\ub4dc\ub418\uc5c8\uc2b5\ub2c8\ub2e4.`, 'success'); } catch (e) { }
             return { applied: processed.length, mode: 'fast', idxDate, idxName, idxStatus };
         }
@@ -60563,6 +60663,59 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const todayTime = today.getTime();
             const tomorrowTime = tomorrow.getTime();
 
+            // Build project flags in O(projects + work rows), once per summary refresh.
+            const summaryWorkFlagsByProject = new Map();
+            const ensureSummaryWorkFlags = (projectId) => {
+                const key = String(projectId == null ? '' : projectId).trim();
+                if (!summaryWorkFlagsByProject.has(key)) {
+                    summaryWorkFlagsByProject.set(key, { today: false, tomorrow: false, thisWeek: false, nextWeek: false });
+                }
+                return summaryWorkFlagsByProject.get(key);
+            };
+            const formatSummaryDate = (value) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+            const thisWeekDates = new Set();
+            const nextWeekDates = new Set();
+            const thisWeekMonday = new Date(todayTime);
+            const todayWeekday = thisWeekMonday.getDay();
+            thisWeekMonday.setDate(thisWeekMonday.getDate() + (todayWeekday === 0 ? -6 : 1 - todayWeekday));
+            const nextWeekMonday = new Date(todayTime);
+            nextWeekMonday.setDate(nextWeekMonday.getDate() + (todayWeekday === 0 ? 1 : 8 - todayWeekday));
+            for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
+                const thisWeekDate = new Date(thisWeekMonday);
+                thisWeekDate.setDate(thisWeekMonday.getDate() + dayOffset);
+                thisWeekDates.add(formatSummaryDate(thisWeekDate));
+                const nextWeekDate = new Date(nextWeekMonday);
+                nextWeekDate.setDate(nextWeekMonday.getDate() + dayOffset);
+                nextWeekDates.add(formatSummaryDate(nextWeekDate));
+            }
+            const registerSummaryWorkDate = (projectId, rawDate) => {
+                const dateText = String(rawDate == null ? '' : rawDate).trim();
+                if (!dateText) return;
+                const flags = ensureSummaryWorkFlags(projectId);
+                if (dateText.startsWith(todayStr)) flags.today = true;
+                if (dateText.startsWith(tomorrowStr)) flags.tomorrow = true;
+                const dateKey = dateText.slice(0, 10);
+                if (thisWeekDates.has(dateKey)) flags.thisWeek = true;
+                if (nextWeekDates.has(dateKey)) flags.nextWeek = true;
+            };
+            try {
+                const store = window.workDate && window.workDate.store;
+                if (store && typeof store.forEach === 'function') {
+                    store.forEach((stored, projectId) => {
+                        if (!stored || !Array.isArray(stored.dates)) return;
+                        stored.dates.forEach(item => registerSummaryWorkDate(projectId, item && item.date));
+                    });
+                }
+            } catch (e) { }
+            try {
+                const items = Array.isArray(window.workItems) ? window.workItems : [];
+                for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
+                    const item = items[itemIndex];
+                    if (!item) continue;
+                    registerSummaryWorkDate(item.projectId, item.workDate);
+                }
+            } catch (e) { }
+
             // \ub2e8\uc77c \ub8e8\ud504\ub85c \ubaa8\ub4e0 \ud1b5\uacc4 \uacc4\uc0b0
             for (let i = 0; i < data.length; i++) {
                 const p = data[i];
@@ -60586,25 +60739,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                 // \ub0a0\uc9dc \uae30\ubc18 \uce74\uc6b4\ud2b8
                 // [\uc624\ub298 \uc791\uc5c5/\ub0b4\uc77c \uc791\uc5c5] \uc5c4\uaca9\ud55c \uc791\uc5c5\uc77c \uae30\uc900 \uce74\uc6b4\ud2b8
-                let hasTodayWork = false;
-                let hasTomorrowWork = false;
                 const pid = String(p.id).trim();
-
-                if (window.workDate && window.workDate.store && window.workDate.store.has(pid)) {
-                    const stored = window.workDate.store.get(pid);
-                    if (stored && stored.dates && Array.isArray(stored.dates)) {
-                        hasTodayWork = stored.dates.some(d => d && d.date && d.date.startsWith(todayStr));
-                        hasTomorrowWork = stored.dates.some(d => d && d.date && d.date.startsWith(tomorrowStr));
-                    }
-                }
-                if (!hasTodayWork && Array.isArray(window.workItems)) {
-                    hasTodayWork = window.workItems.some(w => String(w.projectId).trim() === pid && String(w.workDate || '').trim().startsWith(todayStr));
-                }
-                if (!hasTomorrowWork && Array.isArray(window.workItems)) {
-                    hasTomorrowWork = window.workItems.some(w => String(w.projectId).trim() === pid && String(w.workDate || '').trim().startsWith(tomorrowStr));
-                }
-                if (hasTodayWork) todayWorkCount++;
-                if (hasTomorrowWork) tomorrowWorkCount++;
+                const workFlags = summaryWorkFlagsByProject.get(pid);
+                if (workFlags && workFlags.today) todayWorkCount++;
+                if (workFlags && workFlags.tomorrow) tomorrowWorkCount++;
 
                 if (p.startDate) {
                     const startDate = new Date(p.startDate);
@@ -60615,61 +60753,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 }
 
                 // [THIS-WEEK-COUNT] \uc774\ubc88\uc8fc \uc6d4~\uc77c(7\uc77c) \uc791\uc5c5 \ub9c8\ucee4 \ud655\uc778
-                let t_hasThisWeekWork = false;
-                {
-                    const t_pid = String(p.id).trim();
-                    const t_ref = new Date(todayTime);
-                    const t_day = t_ref.getDay();
-                    const t_diffToMonday = (t_day === 0 ? -6 : 1 - t_day);
-                    const t_monday = new Date(t_ref);
-                    t_monday.setDate(t_ref.getDate() + t_diffToMonday);
-                    for (let d = 0; d < 7 && !t_hasThisWeekWork; d++) {
-                        const t_checkDate = new Date(t_monday);
-                        t_checkDate.setDate(t_monday.getDate() + d);
-                        const t_str = `${t_checkDate.getFullYear()}-${String(t_checkDate.getMonth() + 1).padStart(2, '0')}-${String(t_checkDate.getDate()).padStart(2, '0')}`;
-                        if (window.workDate && window.workDate.store && window.workDate.store.has(t_pid)) {
-                            const stored = window.workDate.store.get(t_pid);
-                            if (stored && stored.dates && Array.isArray(stored.dates)) {
-                                if (stored.dates.some(dt => dt && dt.date && dt.date.startsWith(t_str))) {
-                                    t_hasThisWeekWork = true; break;
-                                }
-                            }
-                        }
-                        if (!t_hasThisWeekWork && Array.isArray(window.workItems)) {
-                            if (window.workItems.some(w => String(w.projectId).trim() === t_pid && String(w.workDate || '').trim().startsWith(t_str))) {
-                                t_hasThisWeekWork = true; break;
-                            }
-                        }
-                    }
-                }
-                if (t_hasThisWeekWork) thisWeekWorkCount++;
+                if (workFlags && workFlags.thisWeek) thisWeekWorkCount++;
 
                 // [NEXT-WEEK-COUNT] \ucc28\uc8fc \uc6d4~\uc77c \uc791\uc5c5 \ub9c8\ucee4 \ud655\uc778
-                let b_hasNextWeekWork = false;
-                const b_pid = String(p.id).trim();
-                const b_refDate = new Date(todayTime);
-                const b_day = b_refDate.getDay();
-                const b_diffToMonday = (b_day === 0 ? 1 : 8 - b_day);
-                
-                for (let d = 0; d < 7; d++) {
-                    const b_checkDate = new Date(b_refDate);
-                    b_checkDate.setDate(b_refDate.getDate() + b_diffToMonday + d);
-                    const b_targetStr = `${b_checkDate.getFullYear()}-${String(b_checkDate.getMonth() + 1).padStart(2, '0')}-${String(b_checkDate.getDate()).padStart(2, '0')}`;
-                    if (window.workDate && window.workDate.store && window.workDate.store.has(b_pid)) {
-                        const stored = window.workDate.store.get(b_pid);
-                        if (stored && stored.dates && Array.isArray(stored.dates)) {
-                            if (stored.dates.some(dt => dt && dt.date && dt.date.startsWith(b_targetStr))) {
-                                b_hasNextWeekWork = true; break;
-                            }
-                        }
-                    }
-                    if (!b_hasNextWeekWork && Array.isArray(window.workItems)) {
-                        if (window.workItems.some(w => String(w.projectId).trim() === b_pid && String(w.workDate || '').trim().startsWith(b_targetStr))) {
-                            b_hasNextWeekWork = true; break;
-                        }
-                    }
-                }
-                if (b_hasNextWeekWork) nextWeekWorkCount++;
+                if (workFlags && workFlags.nextWeek) nextWeekWorkCount++;
             }
 
             const totalCount = data.length;
@@ -64765,6 +64852,30 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const existingToggleBtn = existingGanttEl && existingGanttEl.querySelector('.header-toggle-btn');
             const wasToggleBtnActive = existingToggleBtn && existingToggleBtn.classList.contains('active');
 
+            // Release observers and handlers that own nodes inside the chart being replaced.
+            // Native observers remain rooted until disconnect(), even after replaceChildren().
+            if (existingGanttEl) {
+                try {
+                    if (typeof existingGanttEl._titlesTouchForwarderCleanup === 'function') {
+                        existingGanttEl._titlesTouchForwarderCleanup();
+                    }
+                } catch (e) { }
+                try {
+                    if (existingGanttEl.__codexFloatingScrollbarResizeObserver) {
+                        existingGanttEl.__codexFloatingScrollbarResizeObserver.disconnect();
+                        existingGanttEl.__codexFloatingScrollbarResizeObserver = null;
+                    }
+                } catch (e) { }
+                try {
+                    const observedWorkdateBody = window._workDateResizeObserverTarget;
+                    if (window._workDateResizeObserver && observedWorkdateBody && existingGanttEl.contains(observedWorkdateBody)) {
+                        window._workDateResizeObserver.disconnect();
+                        window._workDateResizeObserver = null;
+                        window._workDateResizeObserverTarget = null;
+                    }
+                } catch (e) { }
+            }
+
             // [PERF] DOM clear \ucd5c\uc801\ud654: innerHTML \ud30c\uc2f1 \ube44\uc6a9/GC \uac10\uc18c
             try {
                 if (typeof currentGanttContainer.replaceChildren === 'function') currentGanttContainer.replaceChildren();
@@ -66767,6 +66878,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         const floatingScrollbarResizeObserver = new ResizeObserver(() => {
                             requestAnimationFrame(updateGanttFloatingScrollbarMetrics);
                         });
+                        ganttEl.__codexFloatingScrollbarResizeObserver = floatingScrollbarResizeObserver;
                         floatingScrollbarResizeObserver.observe(finalTimelineBodyWrapper);
                         const ganttBodyNode = finalTimelineBodyWrapper.querySelector('.gantt-body');
                         if (ganttBodyNode) floatingScrollbarResizeObserver.observe(ganttBodyNode);
@@ -67955,15 +68067,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             // \ud568\uc218 \uc815\uc758 \uc9c1\ud6c4 \uc989\uc2dc \uc804\uc5ed\uc5d0 \ub178\ucd9c
             window.closeDependencyModal = closeDependencyModal;
 
-            // ESC \ud0a4\ub85c \uc758\uc874\uc131 \ubaa8\ub2ec \ub2eb\uae30
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    const dependencyModal = document.getElementById('dependencyModal');
-                    if (dependencyModal && !dependencyModal.classList.contains('hidden')) {
-                        closeDependencyModal();
-                    }
-                }
-            });
+            // The singleton ESC handler is installed during bootstrap so this render scope is never captured.
 
             function selectDependencyType(type) {
                 selectedDependencyType = type;
@@ -73462,7 +73566,24 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 return raw === undefined || raw === null ? '' : String(raw).trim();
             };
 
-            const getWorkdateAuditEntries = (project) => {
+            const buildWorkdateAuditItemIndex = () => {
+                const index = new Map();
+                const items = Array.isArray(window.workItems) ? window.workItems : [];
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (!item || item.projectId === undefined || item.projectId === null) continue;
+                    const projectId = String(item.projectId).trim();
+                    let bucket = index.get(projectId);
+                    if (!bucket) {
+                        bucket = [];
+                        index.set(projectId, bucket);
+                    }
+                    bucket.push(item);
+                }
+                return index;
+            };
+
+            const getWorkdateAuditEntries = (project, workItemsByProject) => {
                 const entries = [];
                 const seen = new Set();
                 const pid = getWorkdateAuditProjectId(project);
@@ -73484,7 +73605,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 } catch (e) { /* audit must not block filtering */ }
 
                 try {
-                    if (pid && Array.isArray(window.workItems)) {
+                    if (pid && workItemsByProject && typeof workItemsByProject.get === 'function') {
+                        const indexedItems = workItemsByProject.get(pid) || [];
+                        indexedItems.forEach(item => pushEntry(item && item.workDate, item && item.workDetail, 'workItems'));
+                    } else if (pid && Array.isArray(window.workItems)) {
                         window.workItems.forEach(item => {
                             if (!item || String(item.projectId).trim() !== pid) return;
                             pushEntry(item.workDate, item.workDetail, 'workItems');
@@ -73526,7 +73650,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 return entries;
             };
 
-            const getWorkdatePlanPinIssue = (project) => {
+            const getWorkdatePlanPinIssue = (project, workItemsByProject) => {
                 const pid = getWorkdateAuditProjectId(project);
                 if (!project || !pid) return null;
                 const planStart = normalizeDate(project.startDate || project.startDateStr);
@@ -73534,7 +73658,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 if (!planStart || !planEnd || isNaN(planStart.getTime()) || isNaN(planEnd.getTime())) return null;
                 const minPlan = planStart <= planEnd ? planStart : planEnd;
                 const maxPlan = planStart <= planEnd ? planEnd : planStart;
-                const entries = getWorkdateAuditEntries(project);
+                const entries = getWorkdateAuditEntries(project, workItemsByProject);
                 const outOfPlanEntries = entries.filter(item => {
                     const parsed = normalizeDate(item.date);
                     return parsed && !isNaN(parsed.getTime()) && (parsed < minPlan || parsed > maxPlan);
@@ -73572,9 +73696,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const issues = [];
                 let outOfPlanPins = 0;
                 let missingPinProjects = 0;
+                const workItemsByProject = buildWorkdateAuditItemIndex();
                 try {
                     source.forEach(project => {
-                        const issue = getWorkdatePlanPinIssue(project);
+                        const issue = getWorkdatePlanPinIssue(project, workItemsByProject);
                         if (!issue) return;
                         issues.push(issue);
                         outOfPlanPins += issue.outOfPlanEntries ? issue.outOfPlanEntries.length : 0;
@@ -73638,12 +73763,16 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const summary = collectWorkdatePlanPinIssues();
                 const markers = getActiveOutOfPlanMarkers(container);
                 const count = Math.max(summary.total || 0, markers.length || 0);
-                countEl.textContent = String(count);
-                button.classList.toggle('hidden', count === 0);
-                button.setAttribute('aria-hidden', count === 0 ? 'true' : 'false');
-                button.title = count > 0
+                const countText = String(count);
+                const shouldHide = count === 0;
+                const ariaHidden = shouldHide ? 'true' : 'false';
+                const title = count > 0
                     ? `기간 밖 작업일 핀 ${summary.outOfPlanPins || markers.length}건, 작업기간 내 핀 없음 ${summary.missingPinProjects || 0}건을 표시합니다.`
                     : '기간 밖 작업일 핀 또는 작업기간 내 핀 없음 항목 없음';
+                if (countEl.textContent !== countText) countEl.textContent = countText;
+                if (button.classList.contains('hidden') !== shouldHide) button.classList.toggle('hidden', shouldHide);
+                if (button.getAttribute('aria-hidden') !== ariaHidden) button.setAttribute('aria-hidden', ariaHidden);
+                if (button.title !== title) button.title = title;
                 if (!workdateOutOfPlanNoticeBound) {
                     workdateOutOfPlanNoticeBound = true;
                     button.addEventListener('click', () => {
@@ -73654,6 +73783,45 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 }
             };
             window.updateWorkdateOutOfPlanNotice = updateWorkdateOutOfPlanNotice;
+
+            const bindWorkdateMarkerTooltipDelegation = (markerLayer) => {
+                if (!markerLayer || markerLayer.dataset.tooltipDelegated === '1') return;
+                markerLayer.dataset.tooltipDelegated = '1';
+                const getMarker = (event) => {
+                    const target = event && event.target;
+                    const marker = target && target.closest ? target.closest('.workdate-marker') : null;
+                    return marker && markerLayer.contains(marker) ? marker : null;
+                };
+                const getTooltipHtml = (marker) => {
+                    if (!marker) return '';
+                    if (typeof marker.__workdateTooltipHtml === 'string') return marker.__workdateTooltipHtml;
+                    try {
+                        marker.__workdateTooltipHtml = decodeURIComponent(marker.dataset.tooltip || '');
+                    } catch (e) {
+                        marker.__workdateTooltipHtml = '';
+                    }
+                    return marker.__workdateTooltipHtml;
+                };
+                markerLayer.addEventListener('mouseover', (event) => {
+                    const marker = getMarker(event);
+                    if (!marker || (event.relatedTarget && marker.contains(event.relatedTarget))) return;
+                    marker.dataset.active = 'true';
+                    const html = getTooltipHtml(marker);
+                    if (html) showTooltip(html, event.clientX, event.clientY);
+                });
+                markerLayer.addEventListener('mousemove', (event) => {
+                    const marker = getMarker(event);
+                    if (!marker) return;
+                    const html = getTooltipHtml(marker);
+                    if (html) showTooltip(html, event.clientX, event.clientY);
+                });
+                markerLayer.addEventListener('mouseout', (event) => {
+                    const marker = getMarker(event);
+                    if (!marker || (event.relatedTarget && marker.contains(event.relatedTarget))) return;
+                    marker.dataset.active = 'false';
+                    hideTooltip();
+                });
+            };
 
             const updateGanttWithWorkDates = () => {
                 const container = getActiveGanttViewportContainer();
@@ -73692,6 +73860,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 markerLayer.style.width = `${ganttBody.scrollWidth}px`;
                 markerLayer.style.height = `${ganttBody.scrollHeight}px`;
                 markerLayer.style.pointerEvents = 'none';
+                bindWorkdateMarkerTooltipDelegation(markerLayer);
                 // [REFACTOR] \ub9c8\ucee4\ub294 \uac04\ud2b8 \ub9c9\ub300(z-index: 2) \uc704\uc5d0 \ud45c\uc2dc\ub418\uc9c0\ub9cc milestone \ud5e4\ub354(z-index: 50-51) \uc544\ub798\ub85c \uc720\uc9c0
                 // \uc2a4\ud06c\ub864 \uc2dc 70% \uc624\ubc84\ub7a9 \uac10\uc9c0 \ub85c\uc9c1\uc774 \ub9c8\ucee4\ub97c \uc228\uae40 \ucc98\ub9ac
                 markerLayer.style.zIndex = '10'; // [REFACTOR] Increased to 10 to stay above gantt-bars but below milestone headers
@@ -73995,17 +74164,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     `;
                         // store tooltip content on dataset so external sync/scroll handlers can re-show it
                         try { marker.dataset.tooltip = encodeURIComponent(tooltipHtml); } catch (e) { /* ignore */ }
-                        marker.addEventListener('mouseenter', (e) => {
-                            marker.dataset.active = 'true';
-                            showTooltip(tooltipHtml, e.clientX, e.clientY);
-                        });
-                        marker.addEventListener('mousemove', (e) => {
-                            showTooltip(tooltipHtml, e.clientX, e.clientY);
-                        });
-                        marker.addEventListener('mouseleave', () => {
-                            marker.dataset.active = 'false';
-                            hideTooltip();
-                        });
                     });
                 });
 
@@ -74045,15 +74203,24 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 } catch (e) { console.warn('[workdate] debug failed', e); }
 
                 // \ub9c8\ucee4 \ub808\uc774\uc5b4 \ud06c\uae30\ub97c ganttBody \ubcc0\ud654\uc5d0 \ub9de\ucd94\uae30 \uc704\ud55c ResizeObserver
-                if (typeof ResizeObserver !== 'undefined' && !window._workDateResizeObserver) {
+                if (typeof ResizeObserver !== 'undefined') {
                     try {
-                        window._workDateResizeObserver = new ResizeObserver(() => {
-                            const ml = ganttBody.querySelector('#workdate-markers');
-                            if (ml) {
-                                ml.style.width = `${ganttBody.scrollWidth}px`;
-                                ml.style.height = `${ganttBody.scrollHeight}px`;
-                            }
-                        });
+                        if (window._workDateResizeObserver && window._workDateResizeObserverTarget !== ganttBody) {
+                            window._workDateResizeObserver.disconnect();
+                            window._workDateResizeObserver = null;
+                        }
+                        if (!window._workDateResizeObserver) {
+                            window._workDateResizeObserver = new ResizeObserver(() => {
+                                const liveBody = window._workDateResizeObserverTarget;
+                                if (!liveBody || !liveBody.isConnected) return;
+                                const ml = liveBody.querySelector('#workdate-markers');
+                                if (ml) {
+                                    ml.style.width = `${liveBody.scrollWidth}px`;
+                                    ml.style.height = `${liveBody.scrollHeight}px`;
+                                }
+                            });
+                        }
+                        window._workDateResizeObserverTarget = ganttBody;
                         window._workDateResizeObserver.observe(ganttBody);
                     } catch (e) {
                         console.warn('[workdate] ResizeObserver setup failed', e);
@@ -74074,13 +74241,11 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 if (typeof window.syncWorkdateMarkers === 'function') {
                     // requestAnimationFrame\uc744 \uc0ac\uc6a9\ud558\uc5ec DOM\uc774 \uc644\uc804\ud788 \ub80c\ub354\ub9c1\ub41c \ud6c4 \uc2e4\ud589
                     requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            try {
-                                window.syncWorkdateMarkers();
-                            } catch (e) {
-                                console.warn('[workdate] syncWorkdateMarkers failed after marker creation', e);
-                            }
-                        });
+                        try {
+                            window.syncWorkdateMarkers();
+                        } catch (e) {
+                            console.warn('[workdate] syncWorkdateMarkers failed after marker creation', e);
+                        }
                     });
                 }
             };
@@ -74111,6 +74276,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     }
                     ganttBody.appendChild(markerLayer);
                 }
+                bindWorkdateMarkerTooltipDelegation(markerLayer);
                 markerLayer.style.width = `${ganttBody.scrollWidth}px`;
                 markerLayer.style.height = `${ganttBody.scrollHeight}px`;
 
@@ -74262,19 +74428,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             <div><strong>프로젝트:</strong> ${project.name || ''}</div>
                             ${outOfPlanNotice}
                         </div>
-                    `;
+                        `;
                         try { marker.dataset.tooltip = encodeURIComponent(tooltipHtml); } catch (e) { }
-                        marker.addEventListener('mouseenter', (e) => {
-                            marker.dataset.active = 'true';
-                            showTooltip(tooltipHtml, e.clientX, e.clientY);
-                        });
-                        marker.addEventListener('mousemove', (e) => {
-                            showTooltip(tooltipHtml, e.clientX, e.clientY);
-                        });
-                        marker.addEventListener('mouseleave', () => {
-                            marker.dataset.active = 'false';
-                            hideTooltip();
-                        });
                         fragment.appendChild(marker);
                     });
                 });
@@ -74319,11 +74474,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     rafId = requestAnimationFrame(() => {
                         rafId = 0;
                         rebuild();
-                        sync();
-                        requestAnimationFrame(sync);
                     });
-                    timers.push(setTimeout(rebuild, 140));
-                    timers.push(setTimeout(sync, 280));
+                    // One post-layout sync is sufficient after the marker layer is rebuilt.
+                    // Rebuilding again on a timer multiplied DOM churn during rapid Gantt actions.
+                    timers.push(setTimeout(sync, 140));
                 };
             })();
             window.scheduleReliableWorkdateMarkerRefresh = scheduleReliableWorkdateMarkerRefresh;
@@ -74351,7 +74505,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 if (!window._workdateSyncRaf) window._workdateSyncRaf = null;
 
                 const scheduleWorkdateSync = () => {
-                    if (window._workdateSyncRaf) cancelAnimationFrame(window._workdateSyncRaf);
+                    if (window._workdateSyncRaf) return;
                     window._workdateSyncRaf = requestAnimationFrame(() => {
                         try { syncWorkdateMarkers(); } catch (e) { console.warn('syncWorkdateMarkers failed', e); }
                         window._workdateSyncRaf = null;
@@ -74413,71 +74567,65 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                         // [PERF-OPT][v4.80] \uc131\ub215 \ucd5c\uc801\ud654: \ub8e8\ud504 \uc804 \ubaa8\ub4e0 \ubc14 \ub85c\uc6b0\ub97c Map\uc5d0 \uce90\uc2f1
                      // [FIX] Duplicated block removed
                     
+                    const rowRectMap = new Map();
+                    const setMarkerStyleIfChanged = (marker, name, value) => {
+                        if (marker.style[name] !== value) marker.style[name] = value;
+                    };
+                    const setMarkerVisibility = (marker, hidden) => {
+                        const hiddenValue = hidden ? '1' : '0';
+                        if (marker.dataset && marker.dataset.syncHidden !== hiddenValue) marker.dataset.syncHidden = hiddenValue;
+                        setMarkerStyleIfChanged(marker, 'display', hidden ? 'none' : 'block');
+                        setMarkerStyleIfChanged(marker, 'opacity', hidden
+                            ? '0'
+                            : ((marker.classList.contains('marker-past') && !marker.classList.contains('marker-out-of-plan')) ? '0.48' : '1'));
+                        setMarkerStyleIfChanged(marker, 'pointerEvents', hidden ? 'none' : 'auto');
+                    };
+
                     Array.from(markerLayer.querySelectorAll('.workdate-marker')).forEach(marker => {
                         try {
                             const projectId = marker.dataset && marker.dataset.projectId;
                             const dateStr = marker.dataset && marker.dataset.date;
                             if (!projectId || !dateStr) {
-                                if (marker.dataset) marker.dataset.syncHidden = '1';
-                                // ensure not inside header
-                                if (marker.parentNode && headerRect) {
-                                    const mRect = marker.getBoundingClientRect();
-                                    if (mRect.top < headerRect.bottom) {
-                                        marker.style.display = 'none';
-                                        marker.style.opacity = '0';
-                                        marker.style.pointerEvents = 'none';
-                                    }
-                                }
+                                setMarkerVisibility(marker, true);
                                 return;
                             }
 
                             const row = rowMap.get(String(projectId));
                             if (!row) {
-                                marker.style.display = 'none';
-                                if (marker.dataset) marker.dataset.syncHidden = '1';
-                                marker.style.opacity = '0';
-                                marker.style.pointerEvents = 'none';
+                                setMarkerVisibility(marker, true);
                                 return;
                             }
 
                             // [PERF-OPT] hide marker if the row is hidden - classList \uccb4\ud06c \uc6b0\uc120 (getComputedStyle \ud638\ucd9c \ucd5c\uc18c\ud654)
                             if (row.classList.contains('hidden')) {
-                                if (marker.dataset) marker.dataset.syncHidden = '1';
-                                marker.style.display = 'none';
-                                marker.style.opacity = '0';
-                                marker.style.pointerEvents = 'none';
+                                setMarkerVisibility(marker, true);
                                 return;
                             }
                             // display:none \uccb4\ud06c\ub294 hidden \ud074\ub798\uc2a4\uac00 \uc5c6\uc744 \ub54c\ub9cc \uc218\ud589
                             if (row.style.display === 'none') {
-                                if (marker.dataset) marker.dataset.syncHidden = '1';
-                                marker.style.display = 'none';
-                                marker.style.opacity = '0';
-                                marker.style.pointerEvents = 'none';
+                                setMarkerVisibility(marker, true);
                                 return;
                             }
 
                             // compute top relative to markerLayer using bounding rects (handles transforms/scroll)
-                            const rowRect = row.getBoundingClientRect();
-                            const markerHeight = marker.offsetHeight || Math.max(12, parseFloat(window.getComputedStyle(marker).fontSize) || 14);
+                            let rowRect = rowRectMap.get(String(projectId));
+                            if (!rowRect) {
+                                rowRect = row.getBoundingClientRect();
+                                rowRectMap.set(String(projectId), rowRect);
+                            }
+                            const markerHeight = 14;
                             let top = rowRect.top - layerRect.top + Math.max(0, (rowRect.height - markerHeight) / 2);
 
                             // remove or hide if overlapping the timeline header
                             if (headerRect && rowRect.top < headerRect.bottom) {
-                                if (marker.dataset) marker.dataset.syncHidden = '1';
-                                marker.style.display = 'none';
-                                marker.style.opacity = '0';
-                                marker.style.pointerEvents = 'none';
+                                setMarkerVisibility(marker, true);
                                 return;
                             }
 
                             // compute left by date string to precisely align with day grid (\uba3c\uc800 \uc704\uce58 \uacc4\uc0b0)
                             const parsed = normalizeDate(dateStr);
                             if (!parsed) {
-                                if (marker.dataset) marker.dataset.syncHidden = '1';
-                                marker.style.display = 'none';
-                                marker.style.opacity = '0';
-                                marker.style.pointerEvents = 'none';
+                                setMarkerVisibility(marker, true);
                                 return;
                             }
                             // [FIX] \uadf8\ub9ac\ub4dc \ub77c\uc778\uc744 \uae30\uc900\uc73c\ub85c \uc815\ud655\ud55c \uc911\uc559 \uc815\ub82c (\uac04\ud2b8 \ub9c9\ub300\uc640 \ub3d9\uc77c\ud55c \uae30\uc900 \uc0ac\uc6a9)
@@ -74492,9 +74640,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             left = Math.max(0, Math.min(left, maxLeft));
 
                             // [FIX] \ub9c8\ucee4 \uc704\uce58\ub97c \uba3c\uc800 \uc124\uc815
-                            if (marker.dataset) marker.dataset.syncHidden = '0';
-                            marker.style.left = `${left}px`;
-                            marker.style.top = `${top}px`;
+                            setMarkerStyleIfChanged(marker, 'left', `${left}px`);
+                            setMarkerStyleIfChanged(marker, 'top', `${top}px`);
 
                             // [PERF-OPT] \ub9c8\uc77c\uc2a4\ud1a4 \ud5e4\ub354\uc640 \uacb9\uce58\ub294\uc9c0 \ud655\uc778 - \uce90\uc2f1\ub41c milestoneHeaderRect \uc0ac\uc6a9
                             let isUnderMilestoneHeader = false;
@@ -74508,21 +74655,20 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                             // [FIX] \ub9c8\uc77c\uc2a4\ud1a4 \ud5e4\ub354 \uc544\ub798\ub85c \ub4e4\uc5b4\uac00\uba74 \uc228\uae30\uace0, \ube60\uc838\ub098\uc624\uba74 \ub2e4\uc2dc \ubcf4\uc774\uae30
                             if (isUnderMilestoneHeader) {
-                                if (marker.dataset) marker.dataset.syncHidden = '1';
-                                marker.style.display = 'none';
-                                marker.style.opacity = '0';
-                                marker.style.pointerEvents = 'none';
+                                setMarkerVisibility(marker, true);
                             } else {
-                                if (marker.dataset) marker.dataset.syncHidden = '0';
-                                marker.style.display = 'block';
-                                marker.style.opacity = (marker.classList.contains('marker-past') && !marker.classList.contains('marker-out-of-plan')) ? '0.48' : '1';
-                                marker.style.pointerEvents = 'auto';
+                                setMarkerVisibility(marker, false);
                             }
                         } catch (e) {
                             console.warn('workdate marker sync error', e);
                         }
                     });
                     updateWorkdateOutOfPlanNotice(container);
+                    // Discard only the marker/style records produced by this synchronous pass.
+                    // Relevant row mutations that triggered the pass were already delivered.
+                    if (window._workdateMarkerObserver && typeof window._workdateMarkerObserver.takeRecords === 'function') {
+                        window._workdateMarkerObserver.takeRecords();
+                    }
                 };
 
                 // DOM mutations that can change layout (reorder/collapse/expand) should trigger sync.
@@ -74552,6 +74698,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             if (node.matches && node.matches('.title-item[data-project-id], .gantt-bar-row[data-project-id], .group-item-container, .group-header')) return true;
                             return !!(node.querySelector && node.querySelector('.title-item[data-project-id], .gantt-bar-row[data-project-id], .group-item-container, .group-header'));
                         };
+                        const isGanttLayoutTarget = (node) => {
+                            if (!node || node.nodeType !== 1 || isMarkerNode(node)) return false;
+                            return !!(node.matches && node.matches(
+                                '#ganttChartWrapper, #ganttViewContent, .gantt-body, .gantt-timeline, .gantt-timeline-header, .gantt-titles, .gantt-titles-body, .milestone-title-row'
+                            ));
+                        };
                         const collectProjectIdsFromNode = (node, bucket) => {
                             if (!node || node.nodeType !== 1 || isMarkerNode(node)) return;
                             if (node.matches && node.matches('.title-item[data-project-id], .gantt-bar-row[data-project-id]') && node.dataset.projectId) {
@@ -74565,6 +74717,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         };
                         window._workdateMarkerObserver = new MutationObserver((mutations) => {
                             let needsRebuild = false;
+                            let needsSync = false;
                             const affectedProjectIds = new Set();
                             for (let i = 0; i < mutations.length; i++) {
                                 const mutation = mutations[i];
@@ -74575,6 +74728,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                         needsRebuild = true;
                                         break;
                                     }
+                                    if (isGanttLayoutTarget(mutation.target)) needsSync = true;
                                     continue;
                                 }
                                 if (mutation.type === 'childList') {
@@ -74586,6 +74740,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                         needsRebuild = true;
                                         break;
                                     }
+                                    if (isGanttLayoutTarget(mutation.target) || changedNodes.some(isGanttLayoutTarget)) needsSync = true;
                                 }
                             }
                             if (needsRebuild && typeof window.scheduleReliableWorkdateMarkerRefresh === 'function') {
@@ -74599,7 +74754,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                     }
                                 }
                                 window.scheduleReliableWorkdateMarkerRefresh('visible-row-mutation');
-                            } else {
+                            } else if (needsSync) {
                                 scheduleWorkdateSync();
                             }
                         });
@@ -74622,15 +74777,18 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             }, { passive: true });
                         }
 
-                        // window resize
-                        let resizeTimer = null;
-                        window.addEventListener('resize', () => {
-                            if (resizeTimer) clearTimeout(resizeTimer);
-                            resizeTimer = setTimeout(() => {
-                                scheduleWorkdateSync();
-                                refreshWorkdateTooltip();
-                            }, 120);
-                        });
+                        // Window resize is global; bind it once while body scroll handlers rebind per render.
+                        if (!window.__workdateWindowResizeHandler) {
+                            window.__workdateWindowResizeHandler = () => {
+                                if (window.__workdateWindowResizeTimer) clearTimeout(window.__workdateWindowResizeTimer);
+                                window.__workdateWindowResizeTimer = setTimeout(() => {
+                                    window.__workdateWindowResizeTimer = 0;
+                                    scheduleWorkdateSync();
+                                    refreshWorkdateTooltip();
+                                }, 120);
+                            };
+                            window.addEventListener('resize', window.__workdateWindowResizeHandler, { passive: true });
+                        }
 
                         // also observe style attribute changes on ganttChartWrapper (for zoom via transform)
                         const chart = document.getElementById('ganttChartWrapper');
@@ -74653,6 +74811,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 ['DOMContentLoaded', 'gantt-rendered', 'render:complete', 'data:loaded'].forEach((eventName) => {
                     document.addEventListener(eventName, () => {
                         try { attachMutationObserver(); } catch (e) { }
+                        try { attachScrollResizeHandlers(); } catch (e) { }
                     }, { passive: true });
                 });
 
@@ -75031,6 +75190,11 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     url: urlInput ? (urlInput.value || '') : ''
                 });
                 const markWorkdateUrlDirty = (beforeUrl, afterUrl) => {
+                    try {
+                        if (window.WebSavePlugin && typeof window.WebSavePlugin.recordLinkChange === 'function') {
+                            window.WebSavePlugin.recordLinkChange(normalizedProjectId, beforeUrl, afterUrl, 'workdate-url');
+                        }
+                    } catch (linkDeltaError) { }
                     try {
                         if (beforeUrl !== afterUrl && typeof window.createRevisionEntry === 'function') {
                             window.createRevisionEntry(normalizedProjectId, 'link', beforeUrl || '\uc5c6\uc74c', afterUrl || '\uc5c6\uc74c');
@@ -76422,6 +76586,11 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             window.createRevisionEntry(projectId, 'link', beforeUrl || '\uc5c6\uc74c', afterUrl);
                         }
                         setProjectLink(projectId, url);
+                        try {
+                            if (window.WebSavePlugin && typeof window.WebSavePlugin.recordLinkChange === 'function') {
+                                window.WebSavePlugin.recordLinkChange(projectId, beforeUrl, afterUrl, 'project-link-modal');
+                            }
+                        } catch (linkDeltaError) { }
                         notify('\ud504\ub85c\uc81d\ud2b8 \ub9c1\ud06c\uac00 \uc800\uc7a5\ub418\uc5c8\uc2b5\ub2c8\ub2e4', 'success');
                         try { attachWorkDateToButton(); } catch (e) { }
                         close();
@@ -76435,6 +76604,11 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             window.createRevisionEntry(projectId, 'link', beforeUrl, '\uc5c6\uc74c');
                         }
                         setProjectLink(projectId, '');
+                        try {
+                            if (window.WebSavePlugin && typeof window.WebSavePlugin.recordLinkChange === 'function') {
+                                window.WebSavePlugin.recordLinkChange(projectId, beforeUrl, afterUrl, 'project-link-modal-remove');
+                            }
+                        } catch (linkDeltaError) { }
                         inputEl.value = '';
                         notify('\ud504\ub85c\uc81d\ud2b8 \ub9c1\ud06c\uac00 \uc81c\uac70\ub418\uc5c8\uc2b5\ub2c8\ub2e4', 'info');
                         try { attachWorkDateToButton(); } catch (e) { }
@@ -76482,6 +76656,13 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             try {
                                 const result = linkStore.clearAllProjectLinks();
                                 if (result.success) {
+                                    try {
+                                        window.__codexWebSaveRecentLinkTouchedIds = window.__codexWebSaveRecentLinkTouchedIds || {};
+                                        window.__codexWebSaveRecentLinkTouchedIds.__all__ = Date.now();
+                                        if (window.WebSavePlugin && typeof window.WebSavePlugin.recordLinkChange === 'function') {
+                                            window.WebSavePlugin.recordLinkChange('__all__', String(linkCount), '', 'project-link-reset-all');
+                                        }
+                                    } catch (linkDeltaError) { }
                                     notify(`\uc804\uccb4 \ub9c1\ud06c ${result.clearedCount}\uac1c\uac00 \uc644\uc804\ud788 \ucd08\uae30\ud654\ub418\uc5c8\uc2b5\ub2c8\ub2e4`, 'success');
                                     inputEl.value = '';
                                     close();
@@ -78198,13 +78379,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                 modalContent.style.maxHeight = '80vh'; // \ud654\uba74 \ub192\uc774\uc758 80%\ub85c \uc81c\ud55c
 
                                 // \ud654\uba74 \uc911\uc559\uc5d0 \uc704\uce58
-                                const rect = modalContent.getBoundingClientRect();
-                                const centerX = (window.innerWidth - rect.width) / 2;
-                                const centerY = (window.innerHeight - rect.height) / 2;
-
-                                modalContent.style.left = Math.max(0, centerX) + 'px';
-                                modalContent.style.top = Math.max(0, centerY) + 'px';
-                                modalContent.style.transform = 'none';
+                                // Avoid forcing layout on every open; drag/resize converts this to pixel coordinates.
+                                modalContent.style.left = '50%';
+                                modalContent.style.top = '50%';
+                                modalContent.style.transform = 'translate(-50%, -50%)';
                             }
                         }
                     });
@@ -95449,12 +95627,13 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const LOG = '[SettlementObserver v1.0]';
 
             let debounceTimer = null;
-            const container = document.querySelector('.gantt-titles');
+            // Observe the stable chart host, not a replaceable .gantt-titles subtree.
+            const container = document.getElementById('ganttChart') || document.getElementById('ganttChartWrapper');
             if (!container) {
                 console.warn(LOG, '\u26a0\ufe0f .gantt-titles \ucee8\ud14c\uc774\ub108 \uc5c6\uc74c - \uc9c0\uc5f0 \ucd08\uae30\ud654');
                 // DOM \uc900\ube44 \ud6c4 \uc7ac\uc2dc\ub3c4
                 document.addEventListener('DOMContentLoaded', function () {
-                    const c = document.querySelector('.gantt-titles');
+                    const c = document.getElementById('ganttChart') || document.getElementById('ganttChartWrapper');
                     if (c) initObserver(c);
                 });
                 return;
@@ -100952,6 +101131,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     });
                 });
                 skeletonGuard.observe(target, { childList: true, subtree: true });
+                if (this.__skeletonGuard) {
+                    try { this.__skeletonGuard.disconnect(); } catch (e) { }
+                }
+                this.__skeletonGuard = skeletonGuard;
 
                 if (window.gantt) {
                     origScrollSize = gantt.config.scroll_size || 0;
@@ -101278,6 +101461,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const closingToken = Controller.beginSession();
                 fullViewButtonLockUntil = 0;
                 window.removeEventListener('resize', this.onResize);
+                if (this.__skeletonGuard) {
+                    try { this.__skeletonGuard.disconnect(); } catch (e) { }
+                    this.__skeletonGuard = null;
+                }
                 if (this.__fullViewRenderHandler) {
                     document.removeEventListener('gantt-rendered', this.__fullViewRenderHandler, true);
                     document.removeEventListener('gantt:rendered', this.__fullViewRenderHandler, true);
@@ -105817,13 +106004,19 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
     }
     function observe() {
         const vp = el('overviewSankeyViewport');
-        if (!vp || state.observer || typeof window.ResizeObserver !== 'function') return;
+        if (!vp || typeof window.ResizeObserver !== 'function') return;
+        if (state.observer && state.observerTarget === vp) return;
+        if (state.observer) {
+            try { state.observer.disconnect(); } catch (e) { }
+        }
         state.observer = new ResizeObserver(() => {
             const modal = el('overviewSankeyModal');
             if (modal && !modal.classList.contains('hidden')) fit();
         });
+        state.observerTarget = vp;
         state.observer.observe(vp);
     }
+    window.__overviewSankeyRebindResizeObserver = observe;
     function init() {
         if (state.ready) return;
         bind();
@@ -106215,6 +106408,9 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     replacement.dataset.sankeyHotfixCloned = '1';
                     viewport.replaceWith(replacement);
                     viewport = replacement;
+                    if (typeof window.__overviewSankeyRebindResizeObserver === 'function') {
+                        window.__overviewSankeyRebindResizeObserver();
+                    }
                 }
 
                 svg.style.overflow = 'visible';
@@ -107194,15 +107390,19 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
     }
 
     function getWrapperWidth(chartWrapper) {
+        var clientWidth = chartWrapper.clientWidth || 0;
+        if (clientWidth > 0) return Math.max(320, Math.round(clientWidth));
         var rectWidth = 0;
         try { rectWidth = chartWrapper.getBoundingClientRect().width || 0; } catch (e) { rectWidth = 0; }
-        return Math.max(320, Math.round(chartWrapper.clientWidth || rectWidth || window.innerWidth || 320));
+        return Math.max(320, Math.round(rectWidth || window.innerWidth || 320));
     }
 
     function getWrapperHeight(chartWrapper) {
+        var clientHeight = chartWrapper.clientHeight || 0;
+        if (clientHeight > 0) return Math.max(48, Math.round(clientHeight));
         var rectHeight = 0;
         try { rectHeight = chartWrapper.getBoundingClientRect().height || 0; } catch (e) { rectHeight = 0; }
-        return Math.max(48, Math.round(chartWrapper.clientHeight || rectHeight || 48));
+        return Math.max(48, Math.round(rectHeight || 48));
     }
 
     function getRightMinimumWidth(wrapperWidth) {
@@ -109408,26 +109608,11 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         }
 
         function isVisibleGanttMeasureNode(node) {
-            if (!node || !node.getBoundingClientRect) return false;
-            var rect = node.getBoundingClientRect();
-            if (rect.width <= 0.5 || rect.height <= 0.5) return false;
-            var style = window.getComputedStyle(node);
-            return style.display !== 'none' && style.visibility !== 'hidden';
-        }
-
-        function isMeaningfulDesktopGanttMeasureNode(node) {
-            if (!isVisibleGanttMeasureNode(node)) return false;
-            if (!node.matches) return true;
-            if (node.matches('.group-header .project-po, .group-header .project-settlement')) {
-                var text = String(node.textContent || '').replace(/\s+/g, '').trim();
-                var hasInput = !!(node.querySelector && node.querySelector('input, select, button'));
-                return !!text || hasInput;
-            }
-            if (node.matches('.group-header .project-progress-summary')) {
-                var bar = node.querySelector ? node.querySelector('[style*="width"], .progress-bar, div > div') : null;
-                var text2 = String(node.textContent || '').replace(/\s+/g, '').trim();
-                return !!text2 || !!bar;
-            }
+            if (!node || !node.isConnected) return false;
+            if (node.hidden || node.getAttribute('aria-hidden') === 'true') return false;
+            if (node.classList && node.classList.contains('hidden')) return false;
+            if (node.closest && node.closest('.hidden, [hidden], [aria-hidden="true"]')) return false;
+            if (node.style && (node.style.display === 'none' || node.style.visibility === 'hidden')) return false;
             return true;
         }
 
@@ -109470,48 +109655,15 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             return true;
         }
 
-        function getDesktopGanttSummaryLiveWidth(pane) {
-            if (!pane || !pane.getBoundingClientRect) return 0;
-            var paneRect = pane.getBoundingClientRect();
-            if (!paneRect || paneRect.width <= 0) return 0;
-            var nodes = [];
-            [
-                '.header > .gantt-name-header-col',
-                '.header > .header-col',
-                '.group-header > div:first-child',
-                '.group-header > .flex.items-center.flex-shrink-0 > *',
-                '.title-item > :not(.resizer)'
-            ].forEach(function(selector) {
-                pane.querySelectorAll(selector).forEach(function(node) {
-                    if (isVisibleGanttMeasureNode(node)) nodes.push(node);
-                });
-            });
-            var maxRight = paneRect.left;
-            nodes.forEach(function(node) {
-                maxRight = Math.max(maxRight, node.getBoundingClientRect().right);
-            });
-            return Math.max(0, Math.ceil(maxRight - paneRect.left));
+        function getDesktopGanttSummaryLiveWidth(pane, paneStyle, fixedWidth, resizerAllowance) {
+            if (!pane) return 0;
+            var fallbackNameWidth = readCssPixels(paneStyle, '--name-col-width', 360);
+            var summaryNameWidth = readCssPixels(paneStyle, '--codex-summary-name-width', fallbackNameWidth);
+            return Math.ceil(summaryNameWidth + fixedWidth + resizerAllowance + 12);
         }
 
-        function getDesktopGanttVisibleRowLiveWidth(pane) {
-            if (!pane || !pane.getBoundingClientRect) return 0;
-            var paneRect = pane.getBoundingClientRect();
-            if (!paneRect || paneRect.width <= 0) return 0;
-            var nodes = [];
-            [
-                '.title-item > :not(.resizer)',
-                '.group-header > div:first-child',
-                '.group-header > .flex.items-center.flex-shrink-0 > *'
-            ].forEach(function(selector) {
-                pane.querySelectorAll(selector).forEach(function(node) {
-                    if (isMeaningfulDesktopGanttMeasureNode(node)) nodes.push(node);
-                });
-            });
-            var maxRight = paneRect.left;
-            nodes.forEach(function(node) {
-                maxRight = Math.max(maxRight, node.getBoundingClientRect().right);
-            });
-            return Math.max(0, Math.ceil(maxRight - paneRect.left));
+        function getDesktopGanttVisibleRowLiveWidth(nameWidth, fixedWidth, resizerAllowance) {
+            return Math.ceil(Math.max(0, nameWidth) + fixedWidth + resizerAllowance + 12);
         }
 
         function applyDesktopGanttAutoTitleWidth(reason) {
@@ -109570,8 +109722,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             }
             var targetWidth = Math.ceil(nameWidth + fixedWidth + resizerAllowance + 28);
             targetWidth = Math.max(400, Math.min(viewportCap, targetWidth));
-            var summaryLiveWidth = getDesktopGanttSummaryLiveWidth(pane);
-            var visibleRowLiveWidth = getDesktopGanttVisibleRowLiveWidth(pane);
+            var summaryLiveWidth = getDesktopGanttSummaryLiveWidth(pane, paneStyle, fixedWidth, resizerAllowance);
+            var visibleRowLiveWidth = getDesktopGanttVisibleRowLiveWidth(nameWidth, fixedWidth, resizerAllowance);
             var bottomVisibleRowWidth = isBottomHierarchy ? visibleRowLiveWidth : 0;
             if (pane.dataset.codexDesktopSummaryCompact === '1' && summaryLiveWidth > 0) {
                 var compactTargetWidth = Math.ceil(Math.min(summaryLiveWidth, visibleRowLiveWidth || summaryLiveWidth) + 16);
@@ -109780,12 +109932,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             var modal = document.getElementById('dataDetailModal');
             if (!modal) return;
             if (!isDesktop()) {
-                modal.classList.remove('codex-fit-detail-modal');
+                if (modal.classList.contains('codex-fit-detail-modal')) modal.classList.remove('codex-fit-detail-modal');
                 return;
             }
             var visible = !modal.classList.contains('hidden') && window.getComputedStyle(modal).display !== 'none';
             if (!visible) {
-                modal.classList.remove('codex-fit-detail-modal');
+                if (modal.classList.contains('codex-fit-detail-modal')) modal.classList.remove('codex-fit-detail-modal');
                 return;
             }
             var titleText = '';
@@ -109793,14 +109945,25 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             if (titleNode) titleText = titleNode.textContent || '';
             var hasTable = !!modal.querySelector('#dataDetailTableContainer table, #dataDetailTableContainer .detail-table');
             var shouldFit = hasTable || /상세|현황|내역|목록/.test(titleText);
-            modal.classList.toggle('codex-fit-detail-modal', shouldFit);
+            if (modal.classList.contains('codex-fit-detail-modal') !== shouldFit) {
+                modal.classList.toggle('codex-fit-detail-modal', shouldFit);
+            }
         }
 
         var dataDetailModal = document.getElementById('dataDetailModal');
         if (dataDetailModal) {
-            new MutationObserver(function() {
-                requestAnimationFrame(syncDataDetailModalFit);
-            }).observe(dataDetailModal, { attributes: true, attributeFilter: ['class', 'style'], childList: true, subtree: true });
+            var dataDetailFitRaf = 0;
+            var scheduleDataDetailModalFit = function() {
+                if (dataDetailFitRaf) return;
+                dataDetailFitRaf = requestAnimationFrame(function() {
+                    dataDetailFitRaf = 0;
+                    syncDataDetailModalFit();
+                });
+            };
+            var dataDetailFitObserver = new MutationObserver(scheduleDataDetailModalFit);
+            dataDetailFitObserver.observe(dataDetailModal, { attributes: true, attributeFilter: ['class', 'style'] });
+            var dataDetailTableRoot = document.getElementById('dataDetailTableContainer');
+            if (dataDetailTableRoot) dataDetailFitObserver.observe(dataDetailTableRoot, { childList: true, subtree: true });
         }
         document.addEventListener('click', function() {
             setTimeout(syncDataDetailModalFit, 80);
@@ -116195,6 +116358,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 target.specialNote = target.note;
                 target.SpecialNote = target.note;
                 target.Note = target.note;
+                target.settlementNote = target.note;
                 target['유지관리번호'] = target.maintenanceCode;
                 target['유지관리명'] = target.name;
                 target['작업유형'] = target.taskType;
@@ -118145,6 +118309,7 @@ window.openAddNewProjectModal = function(editProject) {
                     projObj.specialNote = data.note;
                     projObj.SpecialNote = data.note;
                     projObj.Note = data.note;
+                    projObj.settlementNote = data.note;
                     
                     projObj['유지관리번호'] = data.maintenanceCode;
                     projObj['유지관리명'] = data.name;
@@ -118444,7 +118609,7 @@ window.openAddNewProjectModal = function(editProject) {
             if (window.WebSavePlugin && window.WebSavePlugin.__installed20260529) return;
 
             var LOG = '[WebSavePlugin]';
-            var INTEGRITY_BUILD = '2026.07.11.2';
+            var INTEGRITY_BUILD = '2026.07.22.3';
             try { window.__codexWebSaveIntegrityBuild = INTEGRITY_BUILD; } catch (integrityBuildError) { }
             var CONFIG = {
                 apiBase: 'https://api.github.com/repos/jonggunelee/wyggkr04/contents/',
@@ -118921,8 +119086,6 @@ window.openAddNewProjectModal = function(editProject) {
                 var touched = null;
                 try { touched = window.__codexWebSaveRecentWorkDateTouchedIds || null; } catch (e) { touched = null; }
                 if (!touched || typeof touched !== 'object') return false;
-                var now = Date.now();
-                var maxAge = 10 * 60 * 1000;
                 var keys = new Set();
                 (projects || []).forEach(function (project) {
                     if (!project) return;
@@ -118934,25 +119097,137 @@ window.openAddNewProjectModal = function(editProject) {
                 keys.forEach(function (key) {
                     if (found) return;
                     var time = Number(touched[key]);
-                    if (isFinite(time) && now - time >= 0 && now - time <= maxAge) found = true;
+                    if (isFinite(time) && time > 0) found = true;
                 });
                 return found;
             }
 
-            function clearRecentWorkDateUserChangeForWebSave() {
-                try { window.__codexWebSaveRecentWorkDateTouchedIds = {}; } catch (e) { }
+            function hasRecentLinkUserChangeForWebSave() {
+                try {
+                    var touched = window.__codexWebSaveRecentLinkTouchedIds || {};
+                    return Object.keys(touched).some(function(key) { return !!String(key || '').trim(); });
+                } catch (e) {
+                    return false;
+                }
             }
 
-            function buildWorkRowsFromRawSheet(projects, maps) {
-                var rawRows = null;
-                try { rawRows = window.__codexDataFlowRawSheets && window.__codexDataFlowRawSheets.work; } catch (e) { rawRows = null; }
+            function markLinkProjectTouchedForWebSave(projectOrId, reason) {
+                try {
+                    var ids = [];
+                    if (projectOrId && typeof projectOrId === 'object') {
+                        if (projectOrId.id != null) ids.push(String(projectOrId.id).trim());
+                        var code = getMaintenanceCode(projectOrId);
+                        if (code) ids.push(String(code).trim());
+                    } else if (projectOrId != null) {
+                        ids.push(String(projectOrId).trim());
+                    }
+                    ids = ids.filter(function(value, index, list) { return value && list.indexOf(value) === index; });
+                    if (!ids.length) return false;
+                    window.__codexWebSaveRecentLinkTouchedIds = window.__codexWebSaveRecentLinkTouchedIds || {};
+                    ids.forEach(function(id) { window.__codexWebSaveRecentLinkTouchedIds[id] = Date.now(); });
+                    window.__codexLastWebSaveLinkTouch = { ids: ids, reason: reason || 'link:updated', at: new Date().toISOString() };
+                    return true;
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            function recordLinkChangeForWebSave(projectOrId, before, after, reason) {
+                if (String(before == null ? '' : before).trim() === String(after == null ? '' : after).trim()) return false;
+                var marked = markLinkProjectTouchedForWebSave(projectOrId, reason || 'link:updated');
+                if (marked) {
+                    try {
+                        window.__codexWebSaveRecentLinkValues = window.__codexWebSaveRecentLinkValues || {};
+                        var touchedIds = window.__codexLastWebSaveLinkTouch && window.__codexLastWebSaveLinkTouch.ids || [];
+                        touchedIds.forEach(function(id) {
+                            window.__codexWebSaveRecentLinkValues[id] = String(after == null ? '' : after).trim();
+                        });
+                    } catch (linkValueJournalError) { }
+                    state.dirty = true;
+                    state.remoteDirty = true;
+                    state.status = 'dirty';
+                    state.dirtyReasons = state.dirtyReasons || {};
+                    state.dirtyReasons['link:url-updated'] = Date.now();
+                    updateButton();
+                }
+                return marked;
+            }
+
+            function clearRecentWorkDateUserChangeForWebSave() {
+                try { window.__codexWebSaveRecentWorkDateTouchedIds = {}; } catch (e) { }
+                try { window.__codexWebSaveRecentLinkTouchedIds = {}; } catch (e2) { }
+                try { window.__codexWebSaveRecentLinkValues = {}; } catch (e3) { }
+                try { window.__codexWebSaveFrozenEntityDeltas = null; } catch (e4) { }
+            }
+
+            function applyExplicitLinkValuesForWebSave(projects, maps, runtimeRows) {
+                var rows = Array.isArray(runtimeRows) ? runtimeRows.slice() : [];
+                var touched = window.__codexWebSaveRecentLinkTouchedIds || {};
+                var values = window.__codexWebSaveRecentLinkValues || {};
+                if (Object.prototype.hasOwnProperty.call(values, '__all__') && values.__all__ === '') return [];
+                var byId = {};
+                var byCode = {};
+                (projects || []).forEach(function(project) {
+                    if (!project) return;
+                    var id = project.id != null ? String(project.id).trim() : '';
+                    var code = getMaintenanceCode(project);
+                    if (id) byId[id] = project;
+                    if (code) byCode[code] = project;
+                });
+                Object.keys(touched).filter(function(key) { return key !== '__all__'; }).forEach(function(key) {
+                    if (!Object.prototype.hasOwnProperty.call(values, key)) return;
+                    rows = rows.filter(function(row) { return linkRowScopeKeysForWebSave(row).indexOf(key) === -1; });
+                    var url = String(values[key] == null ? '' : values[key]).trim();
+                    if (!url) return;
+                    var project = byId[key] || byCode[key] || null;
+                    var id = project && project.id != null ? String(project.id).trim() : ((maps && maps.toId && maps.toId.get(key)) || key);
+                    var code = project ? getMaintenanceCode(project) : ((maps && maps.byId && maps.byId.get(id)) || '');
+                    rows.push({
+                        'Project ID': id,
+                        '유지관리번호': code,
+                        'Project Name': project && project.name ? String(project.name) : '',
+                        'Link URL': url
+                    });
+                });
+                return dedupeLinkRowsForWebSave(rows);
+            }
+
+            function captureExplicitEntityDeltasForWebSave() {
+                var projects = getProjects();
+                var maps = buildMaintenanceMaps(projects);
+                var frozen = { at: new Date().toISOString() };
+                try {
+                    if (Object.keys(window.__codexWebSaveRecentWorkDateTouchedIds || {}).length) {
+                        frozen.workRows = deepCloneForShaRecord(buildRuntimeWorkRowsForWebSaveSnapshot(projects, maps));
+                    }
+                } catch (workFreezeError) { }
+                try {
+                    if (Object.keys(window.__codexWebSaveRecentLinkTouchedIds || {}).length) {
+                        frozen.linkRows = deepCloneForShaRecord(applyExplicitLinkValuesForWebSave(projects, maps, buildLinkRows(projects, maps)));
+                    }
+                } catch (linkFreezeError) { }
+                if (dirtyReasonMatches(/dependency|depend|의존/i)) {
+                    frozen.dependencyRows = deepCloneForShaRecord(buildDependencyRows(projects));
+                }
+                if (dirtyReasonMatches(/milestone|마일스톤/i)) {
+                    frozen.milestones = deepCloneForShaRecord(getMilestones());
+                }
+                window.__codexWebSaveFrozenEntityDeltas = frozen;
+                return frozen;
+            }
+
+            function buildWorkRowsFromRawSheet(projects, maps, rawRowsOverride) {
+                var rawRows = Array.isArray(rawRowsOverride) ? rawRowsOverride : null;
+                try { if (!rawRows) rawRows = window.__codexDataFlowRawSheets && window.__codexDataFlowRawSheets.work; } catch (e) { rawRows = null; }
                 if (!Array.isArray(rawRows) || rawRows.length < 2) return [];
                 try { window.__codexWebSaveDroppedOrphanWorkRows = []; } catch (resetOrphanWorkLogError) { }
                 var headers = rawRows[0] || [];
-                var codeIdx = headerIndexLoose(headers, ['유지관리번호', '관리번호', 'maintenance', 'projectid'], 0);
+                var idIdx = headerIndexLoose(headers, ['projectid', '프로젝트id', '프로젝트아이디'], -1);
+                var codeIdx = headerIndexLoose(headers, ['유지관리번호', '관리번호', 'maintenance'], -1);
                 var nameIdx = headerIndexLoose(headers, ['유지관리명', '작업명', 'projectname', 'name'], 1);
                 var dateIdx = headerIndexLoose(headers, ['작업일', '작업날짜', 'workdate', 'date'], 2);
                 var detailIdx = headerIndexLoose(headers, ['작업내용', 'workdetail', 'detail', '내용'], 3);
+                var byId = new Map();
                 var byCode = new Map();
                 var byName = new Map();
                 (projects || []).forEach(function (project) {
@@ -118960,6 +119235,7 @@ window.openAddNewProjectModal = function(editProject) {
                     var id = project.id != null ? String(project.id) : '';
                     var code = getMaintenanceCode(project);
                     var name = String(project.name || '').trim();
+                    if (id) byId.set(id, project);
                     if (code) byCode.set(code, project);
                     if (name) byName.set(name, project);
                     if (maps && maps.byId && id && maps.byId.get(id)) byCode.set(maps.byId.get(id), project);
@@ -118967,18 +119243,21 @@ window.openAddNewProjectModal = function(editProject) {
                 var rows = [];
                 for (var i = 1; i < rawRows.length; i += 1) {
                     var row = rawRows[i] || [];
-                    var code = String(row[codeIdx] == null ? '' : row[codeIdx]).trim();
+                    var rawProjectId = idIdx > -1 ? String(row[idIdx] == null ? '' : row[idIdx]).trim() : '';
+                    var code = codeIdx > -1 ? String(row[codeIdx] == null ? '' : row[codeIdx]).trim() : '';
+                    if (!code && idIdx < 0 && row.length) code = String(row[0] == null ? '' : row[0]).trim();
                     var rawName = String(row[nameIdx] == null ? '' : row[nameIdx]).trim();
                     var date = row[dateIdx];
                     var detail = row[detailIdx];
-                    if (!String(code || rawName || date || detail).trim()) continue;
+                    if (!String(rawProjectId || code || rawName || date || detail).trim()) continue;
                     if (!String(date == null ? '' : date).trim()) continue;
-                    var project = (code && byCode.get(code)) || (rawName && byName.get(rawName)) || null;
+                    var project = (code && byCode.get(code)) || (rawProjectId && byId.get(rawProjectId)) || (rawName && byName.get(rawName)) || null;
                     if (!project) {
                         try {
                             window.__codexWebSaveDroppedOrphanWorkRows = window.__codexWebSaveDroppedOrphanWorkRows || [];
                             window.__codexWebSaveDroppedOrphanWorkRows.push({
                                 code: code,
+                                projectId: rawProjectId,
                                 name: rawName,
                                 date: typeof date === 'number' ? date : safeDate(date),
                                 detail: detail == null ? '' : String(detail)
@@ -118987,10 +119266,11 @@ window.openAddNewProjectModal = function(editProject) {
                         continue;
                     }
                     var projectId = project && project.id != null ? String(project.id) : '';
+                    var canonicalCode = project ? getMaintenanceCode(project) : code;
                     var projectName = project && project.name ? String(project.name) : rawName;
                     rows.push({
                         'Project ID': projectId,
-                        '유지관리번호': code || (project ? getMaintenanceCode(project) : ''),
+                        '유지관리번호': canonicalCode || code,
                         '유지관리명': projectName,
                         '작업일': typeof date === 'number' ? date : safeDate(date),
                         '작업내용': detail == null ? '' : String(detail)
@@ -118999,15 +119279,112 @@ window.openAddNewProjectModal = function(editProject) {
                 return rows;
             }
 
+            var workbookReadCacheForWebSave = typeof WeakMap === 'function' ? new WeakMap() : null;
+
+            function workbookReadCacheEntryForWebSave(workbook) {
+                if (!workbookReadCacheForWebSave || !workbook || typeof workbook !== 'object') return null;
+                var entry = workbookReadCacheForWebSave.get(workbook);
+                if (!entry) {
+                    entry = {};
+                    workbookReadCacheForWebSave.set(workbook, entry);
+                }
+                return entry;
+            }
+
+            function workSheetAoAForWebSave(workbook) {
+                try {
+                    var cache = workbookReadCacheEntryForWebSave(workbook);
+                    if (cache && Object.prototype.hasOwnProperty.call(cache, 'workAoA')) return cache.workAoA;
+                    var name = findWorkbookSheetName(workbook, ['Work', 'WorkDate', '작업일'], false);
+                    var sheet = workbook && workbook.Sheets && name ? workbook.Sheets[name] : null;
+                    if (!sheet || !window.XLSX || !window.XLSX.utils) return null;
+                    var rows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
+                    if (cache) cache.workAoA = rows;
+                    return rows;
+                } catch (e) {
+                    return null;
+                }
+            }
+
+            function baselineWorkRowsForWebSave() {
+                return parseWebSaveBaselineArray('work').map(function(row) {
+                    return {
+                        'Project ID': String(row && row.id || ''),
+                        '유지관리번호': String(row && row.code || ''),
+                        '유지관리명': '',
+                        '작업일': row && row.date || '',
+                        '작업내용': row && row.detail || ''
+                    };
+                });
+            }
+
+            function workRowScopeKeysForWebSave(row) {
+                return [String(row && row['Project ID'] || '').trim(), String(row && row['유지관리번호'] || '').trim()].filter(Boolean);
+            }
+
+            function collectWorkTouchedKeysForWebSave(runtimeRows) {
+                var touched = {};
+                try {
+                    Object.keys(window.__codexWebSaveRecentWorkDateTouchedIds || {}).forEach(function(key) {
+                        key = String(key || '').trim();
+                        if (key) touched[key] = true;
+                    });
+                } catch (e) { }
+                // When an editor supplied an authoritative touch journal, do not
+                // promote unrelated stale runtime/cache differences to user edits.
+                if (Object.keys(touched).length) return touched;
+                var baselineRows = baselineWorkRowsForWebSave();
+                var allKeys = {};
+                baselineRows.concat(runtimeRows || []).forEach(function(row) {
+                    workRowScopeKeysForWebSave(row).forEach(function(key) { allKeys[key] = true; });
+                });
+                Object.keys(allKeys).forEach(function(key) {
+                    var before = baselineRows.filter(function(row) { return workRowScopeKeysForWebSave(row).indexOf(key) > -1; });
+                    var after = (runtimeRows || []).filter(function(row) { return workRowScopeKeysForWebSave(row).indexOf(key) > -1; });
+                    if (!sameWorkRowSet(before, after)) touched[key] = true;
+                });
+                return touched;
+            }
+
+            function workRowInTouchedScopeForWebSave(row, touched) {
+                return workRowScopeKeysForWebSave(row).some(function(key) { return !!touched[key]; });
+            }
+
+            function mergeRuntimeWorkRowsWithRawRowsByTouchedForWebSave(rawRows, runtimeRows) {
+                rawRows = Array.isArray(rawRows) ? rawRows : [];
+                runtimeRows = Array.isArray(runtimeRows) ? runtimeRows : [];
+                var touched = collectWorkTouchedKeysForWebSave(runtimeRows);
+                var touchedKeys = Object.keys(touched);
+                if (!touchedKeys.length) return rawRows.length ? rawRows : runtimeRows;
+                var merged = rawRows.filter(function(row) { return !workRowInTouchedScopeForWebSave(row, touched); });
+                runtimeRows.forEach(function(row) {
+                    if (workRowInTouchedScopeForWebSave(row, touched)) merged.push(row);
+                });
+                try {
+                    window.__codexWebSaveWorkDeltaScope = {
+                        touchedKeys: touchedKeys,
+                        remoteRows: rawRows.length,
+                        runtimeRows: runtimeRows.length,
+                        mergedRows: merged.length,
+                        at: new Date().toISOString()
+                    };
+                } catch (e) { }
+                return merged;
+            }
+
             function webSaveWorkRowProjectId(row) {
                 return String(row && row['Project ID'] != null ? row['Project ID'] : '').trim();
             }
 
             function webSaveWorkRowKey(row) {
+                var workDateValue = row && row['작업일'];
+                var normalizedWorkDate = typeof workDateValue === 'number'
+                    ? (excelSerialDateToYMDForWebSave(workDateValue) || String(workDateValue))
+                    : safeDate(workDateValue);
                 return [
                     webSaveWorkRowProjectId(row),
                     safeString(row && row['유지관리번호']),
-                    safeDate(row && row['작업일']),
+                    normalizedWorkDate,
                     safeString(row && row['작업내용'])
                 ].join('|');
             }
@@ -119183,16 +119560,17 @@ window.openAddNewProjectModal = function(editProject) {
             }
 
             function projectIdentityForShaRecord(project) {
-                var code = getMaintenanceCode(project);
-                if (code) return code;
                 var id = project && project.id != null ? String(project.id).trim() : '';
                 if (id) return id;
+                var code = getMaintenanceCode(project);
+                if (code) return code;
                 var name = project && (project.name || project.maintenanceName || project.projectName || project.Name || project['유지관리명']);
                 return name != null ? String(name).trim() : '';
             }
 
             function recordModifiedProjectForWebSave(project, reason, meta) {
                 if (!project || typeof project !== 'object') return false;
+                try { if (window.__codexWebSaveApplyingRemoteRebase) return false; } catch (rebaseGuardError) { }
                 var key = projectIdentityForShaRecord(project);
                 if (!key) return false;
                 var records = ensureShaConcurrencyGlobals();
@@ -119206,9 +119584,34 @@ window.openAddNewProjectModal = function(editProject) {
                     cloned['유지관리명'] = clonedName;
                 }
                 meta = Object.assign({}, meta || {});
-                if (Array.isArray(meta.changedFields)) {
-                    meta.changedFields = meta.changedFields.map(function(field) { return String(field || '').trim(); })
-                        .filter(function(field, index, list) { return field && list.indexOf(field) === index; });
+                var existingRecord = records.get('project:' + key);
+                var candidateFields = [];
+                if (existingRecord && existingRecord.meta && Array.isArray(existingRecord.meta.changedFields)) {
+                    candidateFields = candidateFields.concat(existingRecord.meta.changedFields);
+                }
+                if (Array.isArray(meta.changedFields)) candidateFields = candidateFields.concat(meta.changedFields);
+                candidateFields = candidateFields.map(function(field) { return String(field || '').trim(); })
+                    .filter(function(field, index, list) { return field && list.indexOf(field) === index; });
+                var created = !!meta.created || !!(existingRecord && existingRecord.meta && existingRecord.meta.created);
+                if (!created && candidateFields.length) {
+                    var baselineToken = findBaselineProjectTokenForWebSave(cloned);
+                    if (baselineToken) {
+                        var localToken = projectValueTokenForWebSave(cloned);
+                        candidateFields = candidateFields.filter(function(field) {
+                            return !sameWebSaveComparableValue(
+                                projectTokenChangedFieldValueForWebSave(baselineToken, field),
+                                projectTokenChangedFieldValueForWebSave(localToken, field)
+                            );
+                        });
+                    }
+                }
+                meta.created = created;
+                meta.changedFields = candidateFields;
+                if (candidateFields.indexOf('webLink') > -1) markLinkProjectTouchedForWebSave(cloned, reason || 'project:updated');
+                if (!created && !meta.deleted && !candidateFields.length) {
+                    records.delete('project:' + key);
+                    persistModifiedProjectRecordsForWebSave();
+                    return true;
                 }
                 records.set('project:' + key, {
                     type: 'project',
@@ -119234,11 +119637,26 @@ window.openAddNewProjectModal = function(editProject) {
             }
 
             function recordDeletedProjectForWebSave(project, reason, meta) {
+                try {
+                    var deletedId = project && project.id != null ? String(project.id).trim() : '';
+                    var deletedCode = getMaintenanceCode(project);
+                    window.__codexWebSaveRecentWorkDateTouchedIds = window.__codexWebSaveRecentWorkDateTouchedIds || {};
+                    window.__codexWebSaveRecentWorkDateByProject = window.__codexWebSaveRecentWorkDateByProject || {};
+                    if (deletedId) {
+                        window.__codexWebSaveRecentWorkDateTouchedIds[deletedId] = Date.now();
+                        window.__codexWebSaveRecentWorkDateByProject[deletedId] = [];
+                    }
+                    if (deletedCode) {
+                        window.__codexWebSaveRecentWorkDateTouchedIds[deletedCode] = Date.now();
+                        window.__codexWebSaveRecentWorkDateByProject[deletedCode] = [];
+                    }
+                    markLinkProjectTouchedForWebSave(project, reason || 'project:deleted');
+                } catch (touchDeleteError) { }
                 meta = Object.assign({}, meta || {}, { deleted: true });
                 return recordModifiedProjectForWebSave(project, reason || 'project:deleted', meta);
             }
 
-            function buildWorkRows(projects, maps) {
+            function buildWorkRows(projects, maps, sourceWorkbook) {
                 var rows = [];
                 var collectionAudit = [];
                 (projects || []).forEach(function (project) {
@@ -119261,9 +119679,13 @@ window.openAddNewProjectModal = function(editProject) {
                     });
                 });
                 try { window.__codexWebSaveWorkCollectionAudit = collectionAudit; } catch (auditError) { }
-                if (!hasWorkDateDirtyReason()) {
-                    var rawPreservedRows = buildWorkRowsFromRawSheet(projects, maps);
-                    if (rawPreservedRows.length > rows.length) return mergeRuntimeWorkRowsWithRawRows(rawPreservedRows, rows);
+                var sourceRawRows = sourceWorkbook ? workSheetAoAForWebSave(sourceWorkbook) : null;
+                var rawPreservedRows = buildWorkRowsFromRawSheet(projects, maps, sourceRawRows);
+                if (hasWorkDateDirtyReason() || hasRecentWorkDateUserChangeForWebSave(projects)) {
+                    return mergeRuntimeWorkRowsWithRawRowsByTouchedForWebSave(rawPreservedRows, rows);
+                }
+                if (rawPreservedRows.length > rows.length) {
+                    return mergeRuntimeWorkRowsWithRawRows(rawPreservedRows, rows);
                 }
                 return rows;
             }
@@ -119311,6 +119733,206 @@ window.openAddNewProjectModal = function(editProject) {
                 return dedupeLinkRowsForWebSave(rows);
             }
 
+            function linkRowsFromWorkbookForWebSave(workbook) {
+                try {
+                    var cache = workbookReadCacheEntryForWebSave(workbook);
+                    if (cache && Object.prototype.hasOwnProperty.call(cache, 'linkRows')) return cache.linkRows;
+                    var name = findWorkbookSheetName(workbook, ['Links', 'WebLinks', '웹링크'], false);
+                    var sheet = workbook && workbook.Sheets && name ? workbook.Sheets[name] : null;
+                    if (!sheet || !window.XLSX || !window.XLSX.utils) return [];
+                    var rawRows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
+                    if (!Array.isArray(rawRows) || rawRows.length < 2) return [];
+                    var headers = rawRows[0] || [];
+                    var idIdx = headerIndexLoose(headers, ['projectid', 'id'], 0);
+                    var codeIdx = headerIndexLoose(headers, ['유지관리번호', '관리번호', 'maintenance'], 1);
+                    var nameIdx = headerIndexLoose(headers, ['projectname', '유지관리명', 'name'], 2);
+                    var urlIdx = headerIndexLoose(headers, ['linkurl', 'url', '링크'], 3);
+                    var rows = rawRows.slice(1).map(function(row) {
+                        return {
+                            'Project ID': String(row && row[idIdx] || '').trim(),
+                            '유지관리번호': String(row && row[codeIdx] || '').trim(),
+                            'Project Name': String(row && row[nameIdx] || '').trim(),
+                            'Link URL': String(row && row[urlIdx] || '').trim()
+                        };
+                    }).filter(function(row) { return !!row['Link URL']; });
+                    if (cache) cache.linkRows = rows;
+                    return rows;
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function baselineLinkRowsForWebSave() {
+                return parseWebSaveBaselineArray('links').map(function(row) {
+                    return {
+                        'Project ID': String(row && row.id || ''),
+                        '유지관리번호': String(row && row.code || ''),
+                        'Project Name': String(row && row.name || ''),
+                        'Link URL': String(row && row.url || '')
+                    };
+                });
+            }
+
+            function linkRowScopeKeysForWebSave(row) {
+                return [String(row && row['Project ID'] || '').trim(), String(row && row['유지관리번호'] || '').trim()].filter(Boolean);
+            }
+
+            function linkRowSetKeyForWebSave(row) {
+                return [String(row && row['Project ID'] || '').trim(), String(row && row['유지관리번호'] || '').trim(), String(row && row['Link URL'] || '').trim()].join('|');
+            }
+
+            function sameLinkRowSetForWebSave(left, right) {
+                return (left || []).map(linkRowSetKeyForWebSave).sort().join('\n') === (right || []).map(linkRowSetKeyForWebSave).sort().join('\n');
+            }
+
+            function collectLinkTouchedKeysForWebSave(runtimeRows) {
+                var touched = {};
+                try {
+                    Object.keys(window.__codexWebSaveRecentLinkTouchedIds || {}).forEach(function(key) {
+                        key = String(key || '').trim();
+                        if (key) touched[key] = true;
+                    });
+                } catch (e) { }
+                // Explicit link edits/deletions are the complete delta scope. The
+                // fallback comparison is only for legacy paths without a journal.
+                if (Object.keys(touched).length) return touched;
+                var baselineRows = baselineLinkRowsForWebSave();
+                var allKeys = {};
+                baselineRows.concat(runtimeRows || []).forEach(function(row) {
+                    linkRowScopeKeysForWebSave(row).forEach(function(key) { allKeys[key] = true; });
+                });
+                Object.keys(allKeys).forEach(function(key) {
+                    var before = baselineRows.filter(function(row) { return linkRowScopeKeysForWebSave(row).indexOf(key) > -1; });
+                    var after = (runtimeRows || []).filter(function(row) { return linkRowScopeKeysForWebSave(row).indexOf(key) > -1; });
+                    if (!sameLinkRowSetForWebSave(before, after)) touched[key] = true;
+                });
+                return touched;
+            }
+
+            function linkRowInTouchedScopeForWebSave(row, touched) {
+                return !!touched.__all__ || linkRowScopeKeysForWebSave(row).some(function(key) { return !!touched[key]; });
+            }
+
+            function mergeRuntimeLinkRowsWithSourceForWebSave(sourceWorkbook, runtimeRows) {
+                runtimeRows = Array.isArray(runtimeRows) ? runtimeRows : [];
+                var sourceRows = linkRowsFromWorkbookForWebSave(sourceWorkbook);
+                var touched = collectLinkTouchedKeysForWebSave(runtimeRows);
+                var touchedKeys = Object.keys(touched);
+                if (!touchedKeys.length) return sourceRows.length ? sourceRows : runtimeRows;
+                var merged = sourceRows.filter(function(row) { return !linkRowInTouchedScopeForWebSave(row, touched); });
+                runtimeRows.forEach(function(row) {
+                    if (linkRowInTouchedScopeForWebSave(row, touched)) merged.push(row);
+                });
+                merged = dedupeLinkRowsForWebSave(merged);
+                try {
+                    window.__codexWebSaveLinkDeltaScope = {
+                        touchedKeys: touchedKeys,
+                        remoteRows: sourceRows.length,
+                        runtimeRows: runtimeRows.length,
+                        mergedRows: merged.length,
+                        at: new Date().toISOString()
+                    };
+                } catch (e) { }
+                return merged;
+            }
+
+            function rowsForScopeKeyForWebSave(rows, key, keyReader) {
+                return (rows || []).filter(function(row) { return keyReader(row).indexOf(key) > -1; });
+            }
+
+            function detectConcurrentEntityConflictsForWebSave(latestWorkbook) {
+                var conflicts = [];
+                var runtimeProjects = getProjects();
+                var runtimeMaps = buildMaintenanceMaps(runtimeProjects);
+                var remoteProjects = readProjectDataProjectsFromWorkbookForWebSave(latestWorkbook);
+                var remoteMaps = buildMaintenanceMaps(remoteProjects);
+                var frozen = null;
+                try { frozen = window.__codexWebSaveFrozenEntityDeltas || null; } catch (frozenReadError) { frozen = null; }
+
+                var explicitWorkTouches = Object.keys(window.__codexWebSaveRecentWorkDateTouchedIds || {});
+                if (explicitWorkTouches.length) {
+                    var localWork = frozen && Array.isArray(frozen.workRows) ? frozen.workRows : buildRuntimeWorkRowsForWebSaveSnapshot(runtimeProjects, runtimeMaps);
+                    var baseWork = baselineWorkRowsForWebSave();
+                    var latestWork = buildWorkRowsFromRawSheet(remoteProjects, remoteMaps, workSheetAoAForWebSave(latestWorkbook));
+                    var workTouched = collectWorkTouchedKeysForWebSave(localWork);
+                    Object.keys(workTouched).forEach(function(key) {
+                        var before = rowsForScopeKeyForWebSave(baseWork, key, workRowScopeKeysForWebSave);
+                        var latest = rowsForScopeKeyForWebSave(latestWork, key, workRowScopeKeysForWebSave);
+                        var local = rowsForScopeKeyForWebSave(localWork, key, workRowScopeKeysForWebSave);
+                        if (!sameWorkRowSet(before, latest) && !sameWorkRowSet(before, local) && !sameWorkRowSet(latest, local)) {
+                            conflicts.push({
+                                key: key,
+                                field: 'Work',
+                                reason: 'same-project-work-diverged',
+                                sample: {
+                                    before: before.slice(0, 3).map(webSaveWorkRowKey),
+                                    latest: latest.slice(0, 3).map(webSaveWorkRowKey),
+                                    local: local.slice(0, 3).map(webSaveWorkRowKey)
+                                }
+                            });
+                        }
+                    });
+                }
+
+                var explicitLinkTouches = Object.keys(window.__codexWebSaveRecentLinkTouchedIds || {});
+                if (explicitLinkTouches.length) {
+                    var localLinks = frozen && Array.isArray(frozen.linkRows) ? frozen.linkRows : applyExplicitLinkValuesForWebSave(runtimeProjects, runtimeMaps, buildLinkRows(runtimeProjects, runtimeMaps));
+                    var baseLinks = baselineLinkRowsForWebSave();
+                    var latestLinks = linkRowsFromWorkbookForWebSave(latestWorkbook);
+                    var linkTouched = collectLinkTouchedKeysForWebSave(localLinks);
+                    var linkKeys = Object.keys(linkTouched);
+                    if (linkTouched.__all__) {
+                        var allLinkKeys = {};
+                        baseLinks.concat(latestLinks).forEach(function(row) {
+                            linkRowScopeKeysForWebSave(row).forEach(function(key) { allLinkKeys[key] = true; });
+                        });
+                        linkKeys = Object.keys(allLinkKeys);
+                    }
+                    linkKeys.filter(function(key) { return key !== '__all__'; }).forEach(function(key) {
+                        var before = rowsForScopeKeyForWebSave(baseLinks, key, linkRowScopeKeysForWebSave);
+                        var latest = rowsForScopeKeyForWebSave(latestLinks, key, linkRowScopeKeysForWebSave);
+                        var local = rowsForScopeKeyForWebSave(localLinks, key, linkRowScopeKeysForWebSave);
+                        if (!sameLinkRowSetForWebSave(before, latest) && !sameLinkRowSetForWebSave(before, local) && !sameLinkRowSetForWebSave(latest, local)) {
+                            conflicts.push({ key: key, field: 'Links', reason: 'same-project-link-diverged' });
+                        }
+                    });
+                }
+
+                if (dirtyReasonMatches(/dependency|depend|의존/i)) {
+                    var localDependencies = frozen && Array.isArray(frozen.dependencyRows) ? frozen.dependencyRows : buildDependencyRows(runtimeProjects);
+                    var baseDependencies = baselineDependencyRowsForWebSave();
+                    var latestDependencies = dependencyRowsFromWorkbookForWebSave(latestWorkbook);
+                    var dependencyTouched = collectDependencyTouchedKeysForWebSave(localDependencies);
+                    Object.keys(dependencyTouched).forEach(function(key) {
+                        var before = baseDependencies.filter(function(row) { return dependencyScopeKeyForWebSave(row) === key; });
+                        var latest = latestDependencies.filter(function(row) { return dependencyScopeKeyForWebSave(row) === key; });
+                        var local = localDependencies.filter(function(row) { return dependencyScopeKeyForWebSave(row) === key; });
+                        if (!sameDependencyRowSetForWebSave(before, latest) && !sameDependencyRowSetForWebSave(before, local) && !sameDependencyRowSetForWebSave(latest, local)) {
+                            conflicts.push({ key: key, field: 'Links(Work-Work)', reason: 'same-successor-dependency-diverged' });
+                        }
+                    });
+                }
+
+                if (dirtyReasonMatches(/milestone|마일스톤/i)) {
+                    var localMilestoneModels = frozen && Array.isArray(frozen.milestones) ? frozen.milestones : getMilestones();
+                    var localMilestones = (localMilestoneModels || []).map(makeMilestoneExportRowForWebSave);
+                    var baseMilestones = baselineMilestoneRowsForWebSave();
+                    var latestMilestones = readSourceMilestoneRowsForWebSave(latestWorkbook);
+                    var milestoneTouched = collectMilestoneTouchedKeysForWebSave(localMilestones);
+                    Object.keys(milestoneTouched).forEach(function(key) {
+                        var before = baseMilestones.filter(function(row) { return milestoneScopeKeyForWebSave(row) === key; });
+                        var latest = latestMilestones.filter(function(row) { return milestoneScopeKeyForWebSave(row) === key; });
+                        var local = localMilestones.filter(function(row) { return milestoneScopeKeyForWebSave(row) === key; });
+                        if (!sameMilestoneRowSetForWebSave(before, latest) && !sameMilestoneRowSetForWebSave(before, local) && !sameMilestoneRowSetForWebSave(latest, local)) {
+                            conflicts.push({ key: key, field: 'Milestone', reason: 'same-milestone-diverged' });
+                        }
+                    });
+                }
+                return conflicts.filter(function(item, index, list) {
+                    return list.findIndex(function(candidate) { return candidate.key === item.key && candidate.field === item.field; }) === index;
+                });
+            }
+
             function dedupeLinkRowsForWebSave(rows) {
                 var out = [];
                 var seen = {};
@@ -119345,6 +119967,80 @@ window.openAddNewProjectModal = function(editProject) {
                     });
                 });
                 return rows;
+            }
+
+            function dependencyRowsFromWorkbookForWebSave(workbook) {
+                try {
+                    var cache = workbookReadCacheEntryForWebSave(workbook);
+                    if (cache && Object.prototype.hasOwnProperty.call(cache, 'dependencyRows')) return cache.dependencyRows;
+                    var name = findWorkbookSheetName(workbook, ['Links(Work-Work)', 'Dependencies', 'Dependency', '의존성'], false);
+                    var sheet = workbook && workbook.Sheets && name ? workbook.Sheets[name] : null;
+                    if (!sheet || !window.XLSX || !window.XLSX.utils) return [];
+                    var rawRows = window.XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: true });
+                    if (!Array.isArray(rawRows) || rawRows.length < 2) return [];
+                    var headers = rawRows[0] || [];
+                    var preIdx = headerIndexLoose(headers, ['predecessorid', 'predecessor', '선행'], 0);
+                    var sucIdx = headerIndexLoose(headers, ['successorid', 'successor', '후행'], 1);
+                    var typeIdx = headerIndexLoose(headers, ['type', '유형'], 2);
+                    var lagIdx = headerIndexLoose(headers, ['lag', '지연'], 3);
+                    var rows = rawRows.slice(1).map(function(row) {
+                        return {
+                            'Predecessor_ID': String(row && row[preIdx] || '').trim(),
+                            'Successor_ID': String(row && row[sucIdx] || '').trim(),
+                            'Type': String(row && row[typeIdx] || '').trim() || 'FS',
+                            'Lag': Number(row && row[lagIdx] || 0) || 0
+                        };
+                    }).filter(function(row) { return !!(row.Predecessor_ID && row.Successor_ID); });
+                    if (cache) cache.dependencyRows = rows;
+                    return rows;
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function baselineDependencyRowsForWebSave() {
+                return parseWebSaveBaselineArray('dependencies').map(function(row) {
+                    return {
+                        'Predecessor_ID': String(row && row.pre || ''),
+                        'Successor_ID': String(row && row.suc || ''),
+                        'Type': String(row && row.type || '') || 'FS',
+                        'Lag': Number(row && row.lag || 0) || 0
+                    };
+                });
+            }
+
+            function dependencyRowKeyForWebSave(row) {
+                return [String(row && row.Predecessor_ID || '').trim(), String(row && row.Successor_ID || '').trim(), String(row && row.Type || '').trim(), Number(row && row.Lag || 0) || 0].join('|');
+            }
+
+            function sameDependencyRowSetForWebSave(left, right) {
+                return (left || []).map(dependencyRowKeyForWebSave).sort().join('\n') === (right || []).map(dependencyRowKeyForWebSave).sort().join('\n');
+            }
+
+            function dependencyScopeKeyForWebSave(row) {
+                return String(row && row.Successor_ID || '').trim();
+            }
+
+            function collectDependencyTouchedKeysForWebSave(runtimeRows) {
+                var baseline = baselineDependencyRowsForWebSave();
+                var keys = {};
+                baseline.concat(runtimeRows || []).forEach(function(row) { var key = dependencyScopeKeyForWebSave(row); if (key) keys[key] = true; });
+                var touched = {};
+                Object.keys(keys).forEach(function(key) {
+                    var before = baseline.filter(function(row) { return dependencyScopeKeyForWebSave(row) === key; });
+                    var after = (runtimeRows || []).filter(function(row) { return dependencyScopeKeyForWebSave(row) === key; });
+                    if (!sameDependencyRowSetForWebSave(before, after)) touched[key] = true;
+                });
+                return touched;
+            }
+
+            function mergeRuntimeDependencyRowsWithSourceForWebSave(sourceWorkbook, runtimeRows) {
+                var sourceRows = dependencyRowsFromWorkbookForWebSave(sourceWorkbook);
+                var touched = collectDependencyTouchedKeysForWebSave(runtimeRows);
+                if (!Object.keys(touched).length) return sourceRows.length ? sourceRows : runtimeRows;
+                var merged = sourceRows.filter(function(row) { return !touched[dependencyScopeKeyForWebSave(row)]; });
+                (runtimeRows || []).forEach(function(row) { if (touched[dependencyScopeKeyForWebSave(row)]) merged.push(row); });
+                return merged;
             }
 
             function appendAoASheet(workbook, name, header, rows) {
@@ -119763,8 +120459,13 @@ window.openAddNewProjectModal = function(editProject) {
                 var sheetKey = normalizeSheetNameForSave(String((candidates || []).join('|')) + '|' + String(fallbackName || ''));
                 var knownTwoRowSheet = sheetKey.indexOf('project') > -1 || sheetKey.indexOf('\ub9c8\uc77c\uc2a4\ud1a4') > -1 || sheetKey.indexOf('milestone') > -1;
                 var secondBlank = !(second || []).some(function (cell) { return String(cell == null ? '' : cell).trim(); });
+                var secondNonEmpty = (second || []).filter(function(cell) { return String(cell == null ? '' : cell).trim(); }).length;
+                var secondHeaderDensity = secondNonEmpty ? secondHits / secondNonEmpty : 0;
                 if (knownTwoRowSheet && secondBlank && firstHits >= 2) return 2;
-                if (knownTwoRowSheet && (secondHits >= 2 || (combinedHits >= 3 && combinedHits > firstHits))) return 2;
+                // Data rows can contain values that resemble one or two headers.
+                // Require header density before row 2 is locked as a header row.
+                if (knownTwoRowSheet && ((secondHits >= 3 && secondHeaderDensity >= 0.5) ||
+                    (combinedHits >= 3 && combinedHits > firstHits))) return 2;
                 return 1;
             }
 
@@ -120021,6 +120722,7 @@ window.openAddNewProjectModal = function(editProject) {
                     specialNote: safeString(noteValue),
                     SpecialNote: safeString(noteValue),
                     Note: safeString(noteValue),
+                    settlementNote: safeString(noteValue),
                     DOC_URL: safeString(docValue),
                     docUrl: safeString(docValue),
                     doc_url: safeString(docValue),
@@ -120066,7 +120768,25 @@ window.openAddNewProjectModal = function(editProject) {
                 return project;
             }
 
+            var projectDataWorkbookParseCacheForWebSave = typeof WeakMap === 'function' ? new WeakMap() : null;
+
+            function publishProjectDataParseAuditForWebSave(audit, cached) {
+                try {
+                    window.__codexWebSaveRemoteProjectParseAudit = Object.assign({}, audit || {}, {
+                        cached: !!cached,
+                        at: new Date().toISOString()
+                    });
+                } catch (parseAuditError) { }
+            }
+
             function readProjectDataProjectsFromWorkbookForWebSave(workbook) {
+                if (projectDataWorkbookParseCacheForWebSave && workbook && typeof workbook === 'object') {
+                    var cached = projectDataWorkbookParseCacheForWebSave.get(workbook);
+                    if (cached) {
+                        publishProjectDataParseAuditForWebSave(cached.audit, true);
+                        return cached.projects;
+                    }
+                }
                 var sheetName = findWorkbookSheetName(workbook, ['Project Data', 'ProjectData', '프로젝트'], true);
                 var sheet = workbook && workbook.Sheets && sheetName ? workbook.Sheets[sheetName] : null;
                 if (!sheet || !window.XLSX || !window.XLSX.utils) return [];
@@ -120092,62 +120812,240 @@ window.openAddNewProjectModal = function(editProject) {
                     if (!meaningful) continue;
                     projects.push(projectFromProjectDataRowForWebSave(row));
                 }
+                var audit = {
+                    sheetName: sheetName,
+                    ref: sheet['!ref'] || '',
+                    lockedHeaderRows: lockedHeaderRows,
+                    keyOrder: keyOrder.slice(0, 32),
+                    count: projects.length,
+                    ids: projects.slice(0, 20).map(function(project) { return projectIdentityForShaRecord(project); })
+                };
+                if (projectDataWorkbookParseCacheForWebSave && workbook && typeof workbook === 'object') {
+                    projectDataWorkbookParseCacheForWebSave.set(workbook, { projects: projects, audit: audit });
+                }
+                publishProjectDataParseAuditForWebSave(audit, false);
                 return projects;
+            }
+
+            function projectRecordFieldsForWebSave(record, baselineToken, localToken) {
+                var fields = record && record.meta && Array.isArray(record.meta.changedFields) ? record.meta.changedFields.slice() : [];
+                var known = ['maintenanceCode', 'taskType', 'contractor', 'client', 'building', 'name', 'progress', 'startDate', 'endDate', 'status', 'orderType', 'poAmount', 'prAmount', 'manualSettlementDate', 'webLink', 'docUrl', 'note'];
+                if (record && record.meta && record.meta.created && !fields.length) fields = known.slice();
+                if (!fields.length && baselineToken) {
+                    fields = known.filter(function(field) {
+                        return !sameWebSaveComparableValue(
+                            projectTokenChangedFieldValueForWebSave(baselineToken, field),
+                            projectTokenChangedFieldValueForWebSave(localToken, field)
+                        );
+                    });
+                }
+                return fields.map(function(field) { return String(field || '').trim(); })
+                    .filter(function(field, index, list) { return field && list.indexOf(field) === index; });
+            }
+
+            function projectTokenMeaningfullyEqualForWebSave(left, right) {
+                var fields = ['id', 'maintenanceCode', 'name', 'start', 'end', 'progress', 'taskType', 'building', 'client', 'status', 'poAmount', 'prAmount', 'orderType', 'contractor', 'settlementMonth', 'docUrl', 'note'];
+                return fields.every(function(field) { return sameWebSaveComparableValue(left && left[field], right && right[field]); });
+            }
+
+            function applyProjectFieldDeltaForWebSave(target, localToken, field) {
+                target = target || {};
+                localToken = localToken || {};
+                var custom = Object.assign({}, target.customFields || {});
+                var header = projectDataHeaderForChangedFieldForWebSave(field);
+                var value = projectTokenChangedFieldValueForWebSave(localToken, field);
+                if (String(field || '') === 'webLink' || String(field || '') === 'link') {
+                    target.link = value || '';
+                    target.webLink = value || '';
+                    target.webLinkUrl = value || '';
+                    target['웹 링크'] = value || '';
+                    custom['웹 링크'] = value || '';
+                } else if (header === 'ID') {
+                    target.id = value || '';
+                    target.ID = value || '';
+                } else if (header === '유지관리번호') {
+                    target.maintenanceCode = value || '';
+                    target.maintenanceNumber = value || '';
+                    target['유지관리번호'] = value || '';
+                    custom['유지관리번호'] = value || '';
+                } else if (header === 'Name') {
+                    target.name = value || '';
+                    target.projectName = value || '';
+                    target['유지관리명'] = value || '';
+                } else if (header === 'Start') {
+                    target.startDate = value || '';
+                    target.startDateStr = value || '';
+                    target.start = value || '';
+                    target['시작일'] = value || '';
+                } else if (header === 'End') {
+                    target.endDate = value || '';
+                    target.endDateStr = value || '';
+                    target.end = value || '';
+                    target['종료일'] = value || '';
+                } else if (header === 'Progress') {
+                    target.progress = Number(value) || 0;
+                    target['진척률'] = target.progress;
+                } else if (header === 'Task Type') {
+                    target.taskType = value || '';
+                    target['작업유형'] = value || '';
+                } else if (header === 'Building') {
+                    target.building = value || '';
+                    target['건물동'] = value || '';
+                } else if (header === 'Client') {
+                    target.client = value || '';
+                    target['고객사'] = value || '';
+                    custom['고객사'] = value || '';
+                } else if (header === 'Status') {
+                    target.status = value || '';
+                    target.costAccount = value || '';
+                    target['비용계정'] = value || '';
+                    custom['비용계정'] = value || '';
+                } else if (header === 'PO Amount') {
+                    target.poAmount = Number(value) || 0;
+                    target['PO금액'] = target.poAmount;
+                } else if (header === 'PR Amount') {
+                    target.prAmount = Number(value) || 0;
+                    target.budget = target.prAmount;
+                    target['PR금액'] = target.prAmount;
+                } else if (header === 'Order Type') {
+                    target.orderType = value || '';
+                    target.costAllocation = value || '';
+                    target['비용배분'] = value || '';
+                    custom['비용배분'] = value || '';
+                } else if (header === 'Contractor') {
+                    target.contractor = value || '';
+                    target['시공사'] = value || '';
+                } else if (header === 'Settlement Month') {
+                    target.manualSettlementDate = value || '';
+                    target.settlementMonth = value || '';
+                    target['정산 월'] = value || '';
+                    custom['정산 월'] = value || '';
+                } else if (header === 'DOC_URL') {
+                    target.docUrl = value || '';
+                    target.DOC_URL = value || '';
+                    target.doc_url = value || '';
+                    target.documentUrl = value || '';
+                    custom.DOC_URL = value || '';
+                } else if (header === 'Note') {
+                    ['note', 'memo', 'remarks', 'Remarks', 'remark', 'Remark', 'specialNote', 'SpecialNote', 'Note', 'settlementNote', '특이사항', '비고', '메모'].forEach(function(key) { target[key] = value || ''; });
+                    ['특이사항', '비고', '메모', 'remarks', 'note'].forEach(function(key) { custom[key] = value || ''; });
+                }
+                target.customFields = custom;
+                return target;
             }
 
             function buildSmartMergedProjectsForWebSave(remoteWorkbook) {
                 var records = ensureShaConcurrencyGlobals();
                 var remoteProjects = readProjectDataProjectsFromWorkbookForWebSave(remoteWorkbook);
                 if (!records || typeof records.forEach !== 'function' || !records.size) {
-                    return { projects: remoteProjects, modifiedCount: 0, remoteCount: remoteProjects.length, appended: 0, deleted: 0 };
+                    return { projects: remoteProjects, modifiedCount: 0, remoteCount: remoteProjects.length, appended: 0, deleted: 0, conflicts: [] };
                 }
                 var merged = remoteProjects.map(deepCloneForShaRecord);
                 var indexByKey = {};
-                merged.forEach(function (project, index) {
-                    var key = projectIdentityForShaRecord(project);
-                    if (key) indexByKey[key] = index;
-                });
+                function rebuildIndex() {
+                    indexByKey = {};
+                    merged.forEach(function(project, index) {
+                        var token = projectValueTokenForWebSave(project);
+                        [token.maintenanceCode, token.id, token.name, projectIdentityForShaRecord(project)].forEach(function(key) {
+                            key = String(key == null ? '' : key).trim();
+                            if (key && indexByKey[key] == null) indexByKey[key] = index;
+                        });
+                    });
+                }
+                rebuildIndex();
                 var appended = 0;
                 var deleted = 0;
                 var modifiedCount = 0;
+                var conflicts = [];
                 records.forEach(function (record) {
                     if (!record || record.type !== 'project') return;
                     var key = record.key || projectIdentityForShaRecord(record.data);
                     if (!key) return;
                     modifiedCount += 1;
-                    var currentIndex = indexByKey[key];
+                    var baselineToken = findBaselineProjectTokenForWebSave(record.data);
+                    var localToken = projectValueTokenForWebSave(record.data || {});
+                    var lookupKeys = [key, localToken.maintenanceCode, localToken.id, localToken.name];
+                    if (baselineToken) lookupKeys = lookupKeys.concat([baselineToken.maintenanceCode, baselineToken.id, baselineToken.name]);
+                    var currentIndex = -1;
+                    lookupKeys.some(function(lookupKey) {
+                        lookupKey = String(lookupKey == null ? '' : lookupKey).trim();
+                        if (lookupKey && indexByKey[lookupKey] != null) {
+                            currentIndex = indexByKey[lookupKey];
+                            return true;
+                        }
+                        return false;
+                    });
+                    var remoteProject = currentIndex > -1 ? merged[currentIndex] : null;
+                    var remoteToken = remoteProject ? projectValueTokenForWebSave(remoteProject) : null;
                     if (record.deleted) {
-                        if (currentIndex != null && currentIndex > -1) {
+                        if (remoteProject && baselineToken && !projectTokenMeaningfullyEqualForWebSave(baselineToken, remoteToken)) {
+                            conflicts.push({ key: key, field: '__delete', reason: 'remote-changed-local-delete' });
+                            return;
+                        }
+                        if (currentIndex > -1) {
                             merged.splice(currentIndex, 1);
                             deleted += 1;
-                            indexByKey = {};
-                            merged.forEach(function (project, index) {
-                                var nextKey = projectIdentityForShaRecord(project);
-                                if (nextKey) indexByKey[nextKey] = index;
-                            });
+                            rebuildIndex();
                         }
                         return;
                     }
-                    var nextProject = deepCloneForShaRecord(record.data);
-                    if (currentIndex != null && currentIndex > -1) {
-                        // [DELTA-MERGE-20260710] 원격 최신 행의 미지정 필드를 보존하고
-                        // 사용자 변경 스냅샷에 실제 존재하는 속성만 덮어쓴다.
-                        var previousProject = merged[currentIndex] || {};
-                        var nextCustomFields = Object.assign({}, previousProject.customFields || {}, nextProject.customFields || {});
-                        merged[currentIndex] = Object.assign({}, previousProject, nextProject);
-                        merged[currentIndex].customFields = nextCustomFields;
+                    var fields = projectRecordFieldsForWebSave(record, baselineToken, localToken);
+                    if (!remoteProject && !(record.meta && record.meta.created)) {
+                        conflicts.push({ key: key, field: fields.join(',') || '*', reason: 'remote-deleted-local-edit' });
+                        return;
+                    }
+                    if (remoteProject && record.meta && record.meta.created && !baselineToken) {
+                        conflicts.push({ key: key, field: '*', reason: 'remote-created-same-identity' });
+                        return;
+                    }
+                    if (remoteProject && baselineToken) {
+                        fields.forEach(function(field) {
+                            if (field === 'webLink' || field === 'link') return;
+                            var baseValue = projectTokenChangedFieldValueForWebSave(baselineToken, field);
+                            var remoteValue = projectTokenChangedFieldValueForWebSave(remoteToken, field);
+                            var localValue = projectTokenChangedFieldValueForWebSave(localToken, field);
+                            if (!sameWebSaveComparableValue(remoteValue, baseValue) &&
+                                !sameWebSaveComparableValue(localValue, baseValue) &&
+                                !sameWebSaveComparableValue(remoteValue, localValue)) {
+                                conflicts.push({ key: key, field: field, reason: 'same-field-diverged' });
+                            }
+                        });
+                    }
+                    if (conflicts.some(function(item) { return item.key === key; })) return;
+                    if (remoteProject) {
+                        var nextProject = deepCloneForShaRecord(remoteProject);
+                        fields.forEach(function(field) { applyProjectFieldDeltaForWebSave(nextProject, localToken, field); });
+                        merged[currentIndex] = nextProject;
+                        rebuildIndex();
                     } else {
-                        merged.push(nextProject);
+                        merged.push(deepCloneForShaRecord(record.data));
                         appended += 1;
-                        indexByKey[key] = merged.length - 1;
+                        rebuildIndex();
                     }
                 });
-                return { projects: merged, modifiedCount: modifiedCount, remoteCount: remoteProjects.length, appended: appended, deleted: deleted };
+                var runtimeByKey = {};
+                (getProjects() || []).forEach(function(project) {
+                    var token = projectValueTokenForWebSave(project);
+                    [token.id, token.maintenanceCode, token.name].forEach(function(runtimeKey) {
+                        runtimeKey = String(runtimeKey == null ? '' : runtimeKey).trim();
+                        if (runtimeKey && !runtimeByKey[runtimeKey]) runtimeByKey[runtimeKey] = project;
+                    });
+                });
+                merged.forEach(function(project) {
+                    var token = projectValueTokenForWebSave(project);
+                    var runtimeProject = runtimeByKey[String(token.id || '').trim()] || runtimeByKey[String(token.maintenanceCode || '').trim()] || runtimeByKey[String(token.name || '').trim()] || null;
+                    if (!runtimeProject) return;
+                    ['workDate', 'workDetail', 'dependsOn', 'dependency'].forEach(function(field) {
+                        if (Object.prototype.hasOwnProperty.call(runtimeProject, field)) project[field] = deepCloneForShaRecord(runtimeProject[field]);
+                    });
+                });
+                return { projects: merged, modifiedCount: modifiedCount, remoteCount: remoteProjects.length, appended: appended, deleted: deleted, conflicts: conflicts };
             }
 
             function applySmartMergedProjectsToStoresForWebSave(projects, reason) {
                 projects = Array.isArray(projects) ? projects : [];
                 try {
+                    window.__codexWebSaveApplyingRemoteRebase = true;
                     if (typeof window.__codexCommitProjectStoreState === 'function') {
                         window.__codexCommitProjectStoreState(projects, reason || 'websave:smart-merge');
                     } else {
@@ -120167,6 +121065,8 @@ window.openAddNewProjectModal = function(editProject) {
                     if (typeof window.invalidateFilteredDataCache === 'function') window.invalidateFilteredDataCache();
                 } catch (e) {
                     try { console.warn(LOG, 'smart-merged project store apply failed', e); } catch (e2) { }
+                } finally {
+                    try { window.__codexWebSaveApplyingRemoteRebase = false; } catch (rebaseGuardResetError) { }
                 }
             }
 
@@ -120542,7 +121442,7 @@ window.openAddNewProjectModal = function(editProject) {
                     var delta = {
                         deleted: !!record.deleted,
                         created: !!(record.meta && record.meta.created),
-                        allFields: !changedFields.length,
+                        allFields: !!(record.meta && record.meta.created && !changedFields.length),
                         fields: fields,
                         reason: String(record.reason || ''),
                         source: String(record.meta && record.meta.source || '')
@@ -120584,6 +121484,7 @@ window.openAddNewProjectModal = function(editProject) {
                 var maxC = Math.max(range.e.c, keyOrder.length - 1);
                 var nextSheet = cloneSheetForWebSave(existingSheet);
                 var deltaIndex = buildProjectDeltaIndexForWebSave();
+                var explicitDeltaMode = !!state.baselineValueSnapshot;
                 var rowsByMaintenance = {};
                 var activeMaintenance = {};
                 (rows || []).forEach(function (row, index) {
@@ -120622,7 +121523,7 @@ window.openAddNewProjectModal = function(editProject) {
                     if (delta && delta.deleted) return;
                     // 명시적 변경 레코드가 하나라도 있으면 해당 좌표만 갱신한다.
                     // 다른 행의 값 차이를 추측해 쓰면 날짜 표현 차이 등이 비대상 변경으로 번질 수 있다.
-                    if (deltaIndex.count > 0 && !delta) return;
+                    if ((deltaIndex.count > 0 || explicitDeltaMode) && !delta) return;
                     if (isAppend && !delta) return;
                     if (isAppend) {
                         rowIndex = lastRow + 1;
@@ -120640,6 +121541,7 @@ window.openAddNewProjectModal = function(editProject) {
                         if (!isAppend) {
                             var explicitFieldChange = !!(delta && (delta.allFields || delta.fields[key]));
                             if (!explicitFieldChange) {
+                                if (explicitDeltaMode) continue;
                                 // 레코드가 없는 레거시 편집은 비공란의 실제 차이만 보수적으로 포착한다.
                                 // 공란 삭제는 변경 필드 기록 없이는 실행하지 않아 원본 특이사항/DOC_URL 유실을 막는다.
                                 var hasGeneratedValue = generatedCell && generatedCell.v != null && String(generatedCell.v).trim() !== '';
@@ -120855,29 +121757,50 @@ window.openAddNewProjectModal = function(editProject) {
                 return true;
             }
 
+            function baselineMilestoneRowsForWebSave() {
+                return parseWebSaveBaselineArray('milestones').map(function(row, index) {
+                    return { No: index + 1, '마일스톤': row && row.name || '', '날짜': row && row.date || '', '현황': row && row.status || '' };
+                });
+            }
+
+            function milestoneScopeKeyForWebSave(row) {
+                var name = pickFirstNonEmpty(row, ['마일스톤', 'name', 'milestone', 'title', 'description', '제목', '이름', '내용']);
+                return String(name == null ? '' : name).trim().replace(/\s+/g, ' ') || milestoneIdentityForWebSave(row);
+            }
+
+            function sameMilestoneRowSetForWebSave(left, right) {
+                return (left || []).map(milestoneIdentityForWebSave).sort().join('\n') === (right || []).map(milestoneIdentityForWebSave).sort().join('\n');
+            }
+
+            function collectMilestoneTouchedKeysForWebSave(runtimeRows) {
+                var baseline = baselineMilestoneRowsForWebSave();
+                var keys = {};
+                baseline.concat(runtimeRows || []).forEach(function(row) { var key = milestoneScopeKeyForWebSave(row); if (key) keys[key] = true; });
+                var touched = {};
+                Object.keys(keys).forEach(function(key) {
+                    var before = baseline.filter(function(row) { return milestoneScopeKeyForWebSave(row) === key; });
+                    var after = (runtimeRows || []).filter(function(row) { return milestoneScopeKeyForWebSave(row) === key; });
+                    if (!sameMilestoneRowSetForWebSave(before, after)) touched[key] = true;
+                });
+                return touched;
+            }
+
             function buildMilestoneRowsForWebSave(sourceWorkbook, runtimeMilestones) {
                 var sourceRows = sourceWorkbook ? readSourceMilestoneRowsForWebSave(sourceWorkbook) : [];
                 var runtimeRows = (Array.isArray(runtimeMilestones) ? runtimeMilestones : []).map(makeMilestoneExportRowForWebSave);
                 if (!sourceRows.length) return runtimeRows;
-                if (!runtimeRows.length) return sourceRows.map(function (row, index) {
-                    return { No: index + 1, '\ub9c8\uc77c\uc2a4\ud1a4': row['\ub9c8\uc77c\uc2a4\ud1a4'], '\ub0a0\uc9dc': row['\ub0a0\uc9dc'], '\ud604\ud669': row['\ud604\ud669'] };
+                var touched = collectMilestoneTouchedKeysForWebSave(runtimeRows);
+                if (!Object.keys(touched).length) return sourceRows.map(function(row, index) {
+                    return { No: index + 1, '마일스톤': row['마일스톤'], '날짜': row['날짜'], '현황': row['현황'] };
                 });
-                var runtimeCounts = multisetFromMilestonesForWebSave(runtimeRows);
-                var filtered = [];
-                sourceRows.forEach(function (row) {
-                    var key = milestoneIdentityForWebSave(row);
-                    if (takeMilestoneKeyForWebSave(runtimeCounts, key)) filtered.push(row);
-                });
-                runtimeRows.forEach(function (row) {
-                    var key = milestoneIdentityForWebSave(row);
-                    if (takeMilestoneKeyForWebSave(runtimeCounts, key)) filtered.push(row);
-                });
-                return filtered.map(function (row, index) {
+                var merged = sourceRows.filter(function(row) { return !touched[milestoneScopeKeyForWebSave(row)]; });
+                runtimeRows.forEach(function(row) { if (touched[milestoneScopeKeyForWebSave(row)]) merged.push(row); });
+                return merged.map(function (row, index) {
                     return {
                         No: index + 1,
-                        '\ub9c8\uc77c\uc2a4\ud1a4': row['\ub9c8\uc77c\uc2a4\ud1a4'],
-                        '\ub0a0\uc9dc': row['\ub0a0\uc9dc'],
-                        '\ud604\ud669': row['\ud604\ud669']
+                        '마일스톤': row['마일스톤'],
+                        '날짜': row['날짜'],
+                        '현황': row['현황']
                     };
                 });
             }
@@ -121418,6 +122341,25 @@ window.openAddNewProjectModal = function(editProject) {
                 if (!sourceWorkbookOverride && sourceWorkbook && !sourceWorkbookMatchesRawStats(sourceWorkbook, rawStats)) {
                     try { console.warn(LOG, 'source workbook raw-count mismatch; preserving workbook shell for lossless websave', rawStats); } catch (e1) { }
                 }
+                if (sourceWorkbook) {
+                    var sourceEntityConflicts = detectConcurrentEntityConflictsForWebSave(sourceWorkbook);
+                    var sourceSmartMerge = buildSmartMergedProjectsForWebSave(sourceWorkbook);
+                    var sourceProjectConflicts = sourceSmartMerge && Array.isArray(sourceSmartMerge.conflicts) ? sourceSmartMerge.conflicts : [];
+                    var sourceConflicts = sourceEntityConflicts.concat(sourceProjectConflicts);
+                    if (sourceConflicts.length) {
+                        var sourceConflictError = new Error('같은 데이터 항목의 동시 변경이 확인되어 웹 저장을 중단했습니다. 최신 원본을 다시 불러온 뒤 변경사항을 재검토하세요.');
+                        sourceConflictError.code = 'WEBSAVE_FIELD_CONFLICT';
+                        sourceConflictError.isWebSaveFieldConflict = true;
+                        sourceConflictError.conflicts = sourceConflicts;
+                        try { window.__codexWebSaveBuildConflict = { at: new Date().toISOString(), conflicts: sourceConflicts.slice(0, 20) }; } catch (sourceConflictAuditError) { }
+                        throw sourceConflictError;
+                    }
+                    if (sourceSmartMerge && sourceSmartMerge.modifiedCount > 0) {
+                        applySmartMergedProjectsToStoresForWebSave(sourceSmartMerge.projects, 'websave:source-delta-merge');
+                        projects = getProjects();
+                        maps = buildMaintenanceMaps(projects);
+                    }
+                }
                 var macroState = captureWorkbookMacroStateForWebSave(sourceWorkbook);
                 var workbook = cloneWorkbookForWebSave(sourceWorkbook) || window.XLSX.utils.book_new();
                 var settlementKeys = new Set();
@@ -121474,11 +122416,37 @@ window.openAddNewProjectModal = function(editProject) {
                     }
                     return '';
                 }
+                var explicitProjectRecordsForRows = ensureShaConcurrencyGlobals();
+                function explicitProjectRecordForRow(project) {
+                    if (!explicitProjectRecordsForRows || typeof explicitProjectRecordsForRows.get !== 'function') return null;
+                    var keys = [projectIdentityForShaRecord(project), getMaintenanceCode(project), project && project.id];
+                    for (var i = 0; i < keys.length; i += 1) {
+                        var key = String(keys[i] == null ? '' : keys[i]).trim();
+                        if (!key) continue;
+                        var record = explicitProjectRecordsForRows.get('project:' + key);
+                        if (record && record.type === 'project') return record;
+                    }
+                    return null;
+                }
+                function explicitProjectFieldValueForRow(record, header, aliases) {
+                    var fields = record && record.meta && Array.isArray(record.meta.changedFields) ? record.meta.changedFields : [];
+                    var changed = fields.some(function(field) {
+                        return projectDataHeaderForChangedFieldForWebSave(field) === header;
+                    });
+                    if (!changed) return { changed: false, value: '' };
+                    var source = record && record.data && typeof record.data === 'object' ? record.data : {};
+                    for (var i = 0; i < aliases.length; i += 1) {
+                        var key = aliases[i];
+                        if (source[key] !== undefined && source[key] !== null) return { changed: true, value: source[key] };
+                    }
+                    return { changed: true, value: '' };
+                }
                 var projectRows = projects.map(function (project) {
                     var id = project && project.id != null ? String(project.id) : '';
                     var noteAliases = ['특이사항', '비고', '메모', 'remarks', 'Remarks', 'remark', 'Remark', 'specialNote', 'SpecialNote', 'settlementNote', 'description', 'Description', 'note', 'Note', 'memo', 'Memo'];
-                    var noteValue = firstMeaningfulProjectValue(project, noteAliases, false);
-                    if (noteValue === '') noteValue = firstMeaningfulProjectValue(project, noteAliases, true);
+                    var noteDelta = explicitProjectFieldValueForRow(explicitProjectRecordForRow(project), 'Note', ['note', 'Note', 'remarks', 'Remarks', 'remark', 'Remark', 'memo', 'Memo', 'specialNote', 'SpecialNote', 'settlementNote', '특이사항', '비고', '메모']);
+                    var noteValue = noteDelta.changed ? noteDelta.value : firstMeaningfulProjectValue(project, noteAliases, false);
+                    if (!noteDelta.changed && noteValue === '') noteValue = firstMeaningfulProjectValue(project, noteAliases, true);
                     var docUrlValue = firstDefinedProjectValue(project, ['DOC_URL', 'docUrl', 'doc_url']);
                     var row = {
                         'ID': id,
@@ -121508,9 +122476,25 @@ window.openAddNewProjectModal = function(editProject) {
                     });
                     return row;
                 });
-                var linkRows = buildLinkRows(projects, maps);
-                var dependencyRows = buildDependencyRows(projects);
-                var workRows = buildWorkRows(projects, maps);
+                var frozenEntityDeltas = null;
+                try { frozenEntityDeltas = window.__codexWebSaveFrozenEntityDeltas || null; } catch (frozenEntityReadError) { frozenEntityDeltas = null; }
+                var linkRows = frozenEntityDeltas && Array.isArray(frozenEntityDeltas.linkRows)
+                    ? deepCloneForShaRecord(frozenEntityDeltas.linkRows)
+                    : applyExplicitLinkValuesForWebSave(projects, maps, buildLinkRows(projects, maps));
+                var dependencyRows = frozenEntityDeltas && Array.isArray(frozenEntityDeltas.dependencyRows)
+                    ? deepCloneForShaRecord(frozenEntityDeltas.dependencyRows)
+                    : buildDependencyRows(projects);
+                var workRows;
+                if (frozenEntityDeltas && Array.isArray(frozenEntityDeltas.workRows)) {
+                    var sourceWorkRowsForFrozenDelta = sourceWorkbook
+                        ? buildWorkRowsFromRawSheet(projects, maps, workSheetAoAForWebSave(sourceWorkbook))
+                        : [];
+                    workRows = sourceWorkbook
+                        ? mergeRuntimeWorkRowsWithRawRowsByTouchedForWebSave(sourceWorkRowsForFrozenDelta, frozenEntityDeltas.workRows)
+                        : deepCloneForShaRecord(frozenEntityDeltas.workRows);
+                } else {
+                    workRows = buildWorkRows(projects, maps, sourceWorkbook);
+                }
                 var historyRows = getHistory().map(function (item) {
                     item = item && typeof item === 'object' ? item : { Details: item };
                     return {
@@ -121523,7 +122507,9 @@ window.openAddNewProjectModal = function(editProject) {
                         'Details': safeString(typeof item.Details === 'object' ? JSON.stringify(item.Details) : (item.Details || item.details || ''))
                     };
                 });
-                var sourceMilestones = getMilestones();
+                var sourceMilestones = frozenEntityDeltas && Array.isArray(frozenEntityDeltas.milestones)
+                    ? deepCloneForShaRecord(frozenEntityDeltas.milestones)
+                    : getMilestones();
                 var milestoneRows = buildMilestoneRowsForWebSave(sourceWorkbook, sourceMilestones)
                     .filter(function (row) { return row['\ub0a0\uc9dc'] || row['\ub9c8\uc77c\uc2a4\ud1a4']; });
 
@@ -121531,16 +122517,24 @@ window.openAddNewProjectModal = function(editProject) {
                 var replaceProject = true;
                 var workDirtyReason = dirtyReasonMatches(/workdate|작업일/i);
                 var workRecentTouched = hasRecentWorkDateUserChangeForWebSave(projects);
-                var replaceWork = !sourceWorkbook || workDirtyReason || workRecentTouched;
+                var linkRecentTouched = hasRecentLinkUserChangeForWebSave();
+                var replaceWork = !sourceWorkbook || workRecentTouched;
                 var replaceDependencies = !sourceWorkbook || dirtyReasonMatches(/dependency|depend|의존/i);
-                var replaceLinks = !sourceWorkbook || dirtyReasonMatches(/link|url|doc/i);
+                var replaceLinks = !sourceWorkbook || linkRecentTouched;
                 var replaceMilestones = !sourceWorkbook || dirtyReasonMatches(/milestone|마일스톤/i);
+                if (sourceWorkbook && replaceLinks) {
+                    linkRows = mergeRuntimeLinkRowsWithSourceForWebSave(sourceWorkbook, linkRows);
+                }
+                if (sourceWorkbook && replaceDependencies) {
+                    dependencyRows = mergeRuntimeDependencyRowsWithSourceForWebSave(sourceWorkbook, dependencyRows);
+                }
                 try {
                     window.__codexWebSaveLastBuildDebug = {
                         at: new Date().toISOString(),
                         dirtyReasons: dirtyReasonText(),
                         workDirtyReason: workDirtyReason,
                         workRecentTouched: workRecentTouched,
+                        linkRecentTouched: linkRecentTouched,
                         replaceWork: replaceWork,
                         replaceLinks: replaceLinks,
                         replaceDependencies: replaceDependencies,
@@ -122604,6 +123598,19 @@ window.openAddNewProjectModal = function(editProject) {
                 var remoteBase64 = normalizeBase64(await fetchRemoteContentBase64(latestInfo, token));
                 if (!remoteBase64) return { ok: false, reason: 'remote-content-empty', initialSha: initialSha, latestSha: latestSha };
                 var latestWorkbook = readWorkbookFromBase64ForWebSave(remoteBase64);
+                var entityConflicts = detectConcurrentEntityConflictsForWebSave(latestWorkbook);
+                if (entityConflicts.length) {
+                    try {
+                        window.__codexWebSaveConflictRebase = {
+                            ok: false,
+                            initialSha: initialSha,
+                            latestSha: latestSha,
+                            conflicts: entityConflicts.slice(0, 20),
+                            at: new Date().toISOString()
+                        };
+                    } catch (entityConflictAuditError) { }
+                    return { ok: false, reason: 'field-conflict', conflicts: entityConflicts, initialSha: initialSha, latestSha: latestSha };
+                }
                 var latestWorkName = findWorkbookSheetName(latestWorkbook, ['Work', '작업'], false);
                 if (latestWorkName && latestWorkbook.Sheets && latestWorkbook.Sheets[latestWorkName]) {
                     try {
@@ -122621,6 +123628,37 @@ window.openAddNewProjectModal = function(editProject) {
                     }
                 }
                 var smartMerge = buildSmartMergedProjectsForWebSave(latestWorkbook);
+                if (smartMerge && Array.isArray(smartMerge.conflicts) && smartMerge.conflicts.length) {
+                    try {
+                        window.__codexWebSaveConflictRebase = {
+                            ok: false,
+                            initialSha: initialSha,
+                            latestSha: latestSha,
+                            conflicts: smartMerge.conflicts.slice(0, 20),
+                            at: new Date().toISOString()
+                        };
+                    } catch (conflictAuditError) { }
+                    return {
+                        ok: false,
+                        reason: 'field-conflict',
+                        conflicts: smartMerge.conflicts,
+                        initialSha: initialSha,
+                        latestSha: latestSha
+                    };
+                }
+                try {
+                    var remoteProjectsForCounts = readProjectDataProjectsFromWorkbookForWebSave(latestWorkbook);
+                    var remoteMapsForCounts = buildMaintenanceMaps(remoteProjectsForCounts);
+                    var latestRemoteCounts = {
+                        projects: remoteProjectsForCounts.length,
+                        work: buildWorkRowsFromRawSheet(remoteProjectsForCounts, remoteMapsForCounts, workSheetAoAForWebSave(latestWorkbook)).length,
+                        dependencies: dependencyRowsFromWorkbookForWebSave(latestWorkbook).length,
+                        milestones: readSourceMilestoneRowsForWebSave(latestWorkbook).length,
+                        links: linkRowsFromWorkbookForWebSave(latestWorkbook).length
+                    };
+                    window.__codexDataFlowRawCounts = Object.assign({}, window.__codexDataFlowRawCounts || {}, latestRemoteCounts);
+                    window.__codexWebSaveRemoteRebaseCounts = Object.assign({ at: new Date().toISOString() }, latestRemoteCounts);
+                } catch (remoteCountError) { }
                 if (smartMerge && smartMerge.modifiedCount > 0) {
                     applySmartMergedProjectsToStoresForWebSave(smartMerge.projects, 'websave:sha-smart-merge');
                     try {
@@ -123295,6 +124333,10 @@ window.openAddNewProjectModal = function(editProject) {
                 project = project || {};
                 var customFields = project.customFields && typeof project.customFields === 'object' ? project.customFields : {};
                 var settlement = project.settlement && typeof project.settlement === 'object' ? project.settlement : {};
+                var noteValue = pickFirstNonEmpty(project, ['note', 'memo', 'remarks', 'Remarks', 'remark', 'Remark', 'specialNote', 'SpecialNote', 'Note', '특이사항', '비고', '메모']);
+                if (String(noteValue == null ? '' : noteValue).trim() === '') {
+                    noteValue = pickFirstNonEmpty(customFields, ['특이사항', '비고', '메모', 'remarks', 'Remarks', 'note', 'Note']);
+                }
                 return {
                     id: safeString(project.id),
                     maintenanceCode: safeString(getMaintenanceCode(project)),
@@ -123304,26 +124346,149 @@ window.openAddNewProjectModal = function(editProject) {
                     progress: Number(project.progress != null ? project.progress : project.processRate) || 0,
                     taskType: safeString(project.taskType || project['작업 유형']),
                     building: safeString(project.building || project['건물동']),
-                    client: safeString(project.client || project.customer || project['고객사']),
-                    status: safeString(project.status || project['상태']),
+                    client: safeString(project.client || project.customer || project.Client || project.Customer || project['고객사'] || customFields['고객사']),
+                    status: safeString(project.costAccount || project.expenseAccount || project.account || project['비용계정'] || customFields['비용계정'] || project.status || project['상태']),
                     poAmount: Number(project.poAmount || 0) || 0,
                     prAmount: Number(project.prAmount != null ? project.prAmount : project.budget) || 0,
-                    orderType: safeString(project.orderType || project['발주유형']),
+                    orderType: safeString(project.orderType || project.costAllocation || project.costAlloc || project.allocation || project['비용배분'] || customFields['비용배분'] || project['발주유형']),
                     contractor: safeString(project.contractor || project['시공사']),
-                    settlementMonth: safeString(project.manualSettlementDate || project.settlementMonth || ''),
-                    note: safeString(project.memo || project.settlementNote || ''),
+                    settlementMonth: safeString(project.manualSettlementDate || project.settlementMonth || project['정산 월'] || project['정산월'] || customFields['정산 월'] || ''),
+                    webLink: safeString(project.webLink || project.webLinkUrl || project.link || project['웹 링크'] || customFields['웹 링크'] || ''),
+                    docUrl: safeString(project.docUrl || project.DOC_URL || project.doc_url || project.documentUrl || customFields.DOC_URL || customFields['DOC_URL'] || ''),
+                    note: safeString(noteValue),
                     settlement: settlement,
                     customFields: customFields
                 };
             }
 
-            function buildWebSaveValueSnapshot() {
+            function parseWebSaveBaselineArray(key) {
+                try {
+                    var raw = state.baselineValueSnapshot && state.baselineValueSnapshot[key];
+                    var parsed = raw ? JSON.parse(raw) : [];
+                    return Array.isArray(parsed) ? parsed : [];
+                } catch (e) {
+                    return [];
+                }
+            }
+
+            function sameWebSaveComparableValue(left, right) {
+                return stableWebSaveStringify(left) === stableWebSaveStringify(right);
+            }
+
+            function baselineProjectTokenIdentityForWebSave(token) {
+                token = token || {};
+                return String(token.maintenanceCode || token.id || token.name || '').trim();
+            }
+
+            function findBaselineProjectTokenForWebSave(project) {
+                var localToken = project && project.id !== undefined && project.maintenanceCode !== undefined && project.start !== undefined
+                    ? project : projectValueTokenForWebSave(project || {});
+                var identities = [localToken.maintenanceCode, localToken.id, localToken.name].map(function(value) {
+                    return String(value == null ? '' : value).trim();
+                }).filter(Boolean);
+                var baseline = parseWebSaveBaselineArray('projects');
+                for (var i = 0; i < baseline.length; i += 1) {
+                    var candidate = baseline[i] || {};
+                    var candidateIds = [candidate.maintenanceCode, candidate.id, candidate.name].map(function(value) {
+                        return String(value == null ? '' : value).trim();
+                    }).filter(Boolean);
+                    if (identities.some(function(identity) { return candidateIds.indexOf(identity) > -1; })) return candidate;
+                }
+                return null;
+            }
+
+            function projectTokenChangedFieldValueForWebSave(token, field) {
+                token = token || {};
+                var map = {
+                    id: 'id', ID: 'id', maintenanceCode: 'maintenanceCode', maintenanceNo: 'maintenanceCode',
+                    name: 'name', title: 'name', startDate: 'start', startDateStr: 'start', start: 'start',
+                    endDate: 'end', endDateStr: 'end', end: 'end', progress: 'progress', progressPercent: 'progress',
+                    taskType: 'taskType', building: 'building', client: 'client', customer: 'client',
+                    status: 'status', costAccount: 'status', poAmount: 'poAmount', prAmount: 'prAmount',
+                    orderType: 'orderType', costAllocation: 'orderType', contractor: 'contractor',
+                    manualSettlementDate: 'settlementMonth', settlementMonth: 'settlementMonth',
+                    note: 'note', memo: 'note', remarks: 'note', remark: 'note', specialNote: 'note',
+                    docUrl: 'docUrl', DOC_URL: 'docUrl', doc_url: 'docUrl', webLink: 'webLink', link: 'webLink'
+                };
+                var key = map[String(field || '').trim()] || String(field || '').trim();
+                return token[key];
+            }
+
+            function projectFromBaselineTokenForWebSave(token) {
+                token = token || {};
+                return {
+                    id: token.id || '',
+                    ID: token.id || '',
+                    maintenanceCode: token.maintenanceCode || '',
+                    name: token.name || '',
+                    startDateStr: token.start || '',
+                    endDateStr: token.end || '',
+                    progress: Number(token.progress) || 0,
+                    taskType: token.taskType || '',
+                    building: token.building || '',
+                    client: token.client || '',
+                    status: token.status || '',
+                    costAccount: token.status || '',
+                    poAmount: Number(token.poAmount) || 0,
+                    prAmount: Number(token.prAmount) || 0,
+                    orderType: token.orderType || '',
+                    contractor: token.contractor || '',
+                    manualSettlementDate: token.settlementMonth || '',
+                    webLink: token.webLink || '',
+                    docUrl: token.docUrl || '',
+                    note: token.note || '',
+                    customFields: deepCloneForShaRecord(token.customFields || {})
+                };
+            }
+
+            function synthesizeImplicitProjectDeltasForWebSave() {
+                var baseline = parseWebSaveBaselineArray('projects');
+                if (!baseline.length) return { added: 0, changed: 0, deleted: 0 };
                 var projects = getProjects();
-                var maps = buildMaintenanceMaps(projects);
+                var baselineByKey = {};
+                baseline.forEach(function(token) {
+                    [token && token.maintenanceCode, token && token.id, token && token.name].forEach(function(key) {
+                        key = String(key == null ? '' : key).trim();
+                        if (key && !baselineByKey[key]) baselineByKey[key] = token;
+                    });
+                });
+                var seenBaseline = new Set();
+                var knownFields = ['maintenanceCode', 'taskType', 'contractor', 'client', 'building', 'name', 'progress', 'startDate', 'endDate', 'status', 'orderType', 'poAmount', 'prAmount', 'manualSettlementDate', 'webLink', 'docUrl', 'note'];
+                var stats = { added: 0, changed: 0, deleted: 0 };
+                (projects || []).forEach(function(project) {
+                    var token = projectValueTokenForWebSave(project);
+                    var base = baselineByKey[String(token.maintenanceCode || '').trim()] || baselineByKey[String(token.id || '').trim()] || baselineByKey[String(token.name || '').trim()] || null;
+                    if (!base) {
+                        stats.added += 1;
+                        return;
+                    }
+                    seenBaseline.add(base);
+                    var changedFields = knownFields.filter(function(field) {
+                        return !sameWebSaveComparableValue(projectTokenChangedFieldValueForWebSave(base, field), projectTokenChangedFieldValueForWebSave(token, field));
+                    });
+                    if (changedFields.length) {
+                        stats.changed += 1;
+                    }
+                });
+                baseline.forEach(function(token) {
+                    if (seenBaseline.has(token)) return;
+                    stats.deleted += 1;
+                });
+                try {
+                    window.__codexWebSaveImplicitProjectDelta = Object.assign({
+                        at: new Date().toISOString(),
+                        decision: 'diagnostic-only',
+                        reason: 'unjournaled-runtime-differences-are-not-user-edits'
+                    }, stats);
+                } catch (e) { }
+                return stats;
+            }
+
+            function normalizeWebSaveValueSnapshot(projects, dependencyRows, workRows, linkRows, milestoneRows) {
                 var projectTokens = (projects || []).map(projectValueTokenForWebSave).sort(function (a, b) {
                     return String(a.id || a.maintenanceCode || a.name).localeCompare(String(b.id || b.maintenanceCode || b.name));
                 });
-                var dependencies = buildDependencyRows(projects).map(function (row) {
+                var dependencies = (dependencyRows || []).map(function (row) {
                     return {
                         pre: safeString(row.Predecessor_ID),
                         suc: safeString(row.Successor_ID),
@@ -123331,7 +124496,7 @@ window.openAddNewProjectModal = function(editProject) {
                         lag: Number(row.Lag || 0) || 0
                     };
                 }).sort(function (a, b) { return stableWebSaveStringify(a).localeCompare(stableWebSaveStringify(b)); });
-                var work = buildRuntimeWorkRowsForWebSaveSnapshot(projects, maps).map(function (row) {
+                var work = (workRows || []).map(function (row) {
                     return {
                         id: safeString(row['Project ID']),
                         code: safeString(row['유지관리번호']),
@@ -123339,7 +124504,7 @@ window.openAddNewProjectModal = function(editProject) {
                         detail: safeString(row['작업내용'])
                     };
                 }).sort(function (a, b) { return stableWebSaveStringify(a).localeCompare(stableWebSaveStringify(b)); });
-                var links = buildLinkRows(projects, maps).map(function (row) {
+                var links = (linkRows || []).map(function (row) {
                     return {
                         id: safeString(row['Project ID']),
                         code: safeString(row['유지관리번호']),
@@ -123347,7 +124512,7 @@ window.openAddNewProjectModal = function(editProject) {
                         url: safeString(row['Link URL'])
                     };
                 }).sort(function (a, b) { return stableWebSaveStringify(a).localeCompare(stableWebSaveStringify(b)); });
-                var milestones = (getMilestones() || []).map(makeMilestoneExportRowForWebSave).filter(function (row) {
+                var milestones = (milestoneRows || []).filter(function (row) {
                     return row['날짜'] || row['마일스톤'];
                 }).map(function (row) {
                     return {
@@ -123365,14 +124530,50 @@ window.openAddNewProjectModal = function(editProject) {
                 };
             }
 
+            function buildWebSaveValueSnapshot() {
+                var projects = getProjects();
+                var maps = buildMaintenanceMaps(projects);
+                return normalizeWebSaveValueSnapshot(
+                    projects,
+                    buildDependencyRows(projects),
+                    buildRuntimeWorkRowsForWebSaveSnapshot(projects, maps),
+                    buildLinkRows(projects, maps),
+                    (getMilestones() || []).map(makeMilestoneExportRowForWebSave)
+                );
+            }
+
+            function buildWebSaveSourceValueSnapshot(sourceWorkbook) {
+                if (!sourceWorkbook || !sourceWorkbook.Sheets) return null;
+                var projects = readProjectDataProjectsFromWorkbookForWebSave(sourceWorkbook);
+                if (!projects.length) return null;
+                var maps = buildMaintenanceMaps(projects);
+                return normalizeWebSaveValueSnapshot(
+                    projects,
+                    dependencyRowsFromWorkbookForWebSave(sourceWorkbook),
+                    buildWorkRowsFromRawSheet(projects, maps, workSheetAoAForWebSave(sourceWorkbook)),
+                    linkRowsFromWorkbookForWebSave(sourceWorkbook),
+                    readSourceMilestoneRowsForWebSave(sourceWorkbook)
+                );
+            }
+
             function captureWebSaveValueBaseline(reason) {
                 try {
                     if ((state.dirty || state.remoteDirty || Object.keys(state.dirtyReasons || {}).length) && state.baselineValueSnapshot) {
                         try { window.__codexWebSaveValueBaselineSkipped = { reason: reason || 'dirty-state', at: new Date().toISOString() }; } catch (skipError) { }
                         return state.baselineValueSnapshot;
                     }
-                    state.baselineValueSnapshot = buildWebSaveValueSnapshot();
-                    try { window.__codexWebSaveValueBaseline = { reason: reason || 'baseline', at: new Date().toISOString(), snapshot: state.baselineValueSnapshot }; } catch (e2) { }
+                    var sourceWorkbook = null;
+                    try { sourceWorkbook = window.__lastAutoUploadSourceWorkbook || null; } catch (sourceReadError) { sourceWorkbook = null; }
+                    var sourceSnapshot = buildWebSaveSourceValueSnapshot(sourceWorkbook);
+                    state.baselineValueSnapshot = sourceSnapshot || buildWebSaveValueSnapshot();
+                    try {
+                        window.__codexWebSaveValueBaseline = {
+                            reason: reason || 'baseline',
+                            origin: sourceSnapshot ? 'source-workbook' : 'runtime-fallback',
+                            at: new Date().toISOString(),
+                            snapshot: state.baselineValueSnapshot
+                        };
+                    } catch (e2) { }
                     return state.baselineValueSnapshot;
                 } catch (error) {
                     try { console.warn(LOG, 'value baseline capture failed', error); } catch (e) { }
@@ -123384,12 +124585,37 @@ window.openAddNewProjectModal = function(editProject) {
                 diff = diff || {};
                 var now = Date.now();
                 state.dirtyReasons = state.dirtyReasons || {};
-                if (diff.projects) state.dirtyReasons['project:value-changed'] = now;
-                if (diff.work) state.dirtyReasons['workdate:value-changed'] = now;
-                if (diff.dependencies) state.dirtyReasons['dependency:value-changed'] = now;
-                if (diff.links) state.dirtyReasons['link:value-changed'] = now;
-                if (diff.milestones) state.dirtyReasons['milestone:value-changed'] = now;
-                if (Object.keys(diff).some(function (key) { return !!diff[key]; })) {
+                var existingReasonText = Object.keys(state.dirtyReasons).join('|');
+                var explicitProjects = false;
+                var explicitWork = false;
+                var explicitLinks = false;
+                var explicitDependencies = /dependency|depend|의존/i.test(existingReasonText);
+                var explicitMilestones = /milestone|마일스톤/i.test(existingReasonText);
+                try {
+                    var modifiedRecords = ensureShaConcurrencyGlobals();
+                    explicitProjects = !!(modifiedRecords && modifiedRecords.size);
+                } catch (projectJournalError) { }
+                try { explicitWork = Object.keys(window.__codexWebSaveRecentWorkDateTouchedIds || {}).length > 0; } catch (e) { }
+                try { explicitLinks = Object.keys(window.__codexWebSaveRecentLinkTouchedIds || {}).length > 0; } catch (e2) { }
+                if (diff.projects && explicitProjects) state.dirtyReasons['project:value-changed'] = now;
+                if (diff.work && explicitWork) state.dirtyReasons['workdate:value-changed'] = now;
+                if (diff.dependencies && explicitDependencies) state.dirtyReasons['dependency:value-changed'] = now;
+                if (diff.links && explicitLinks) state.dirtyReasons['link:value-changed'] = now;
+                if (diff.milestones && explicitMilestones) state.dirtyReasons['milestone:value-changed'] = now;
+                var actionable = !!((diff.projects && explicitProjects) || (diff.work && explicitWork) ||
+                    (diff.dependencies && explicitDependencies) || (diff.links && explicitLinks) ||
+                    (diff.milestones && explicitMilestones));
+                try {
+                    window.__codexWebSaveIgnoredUnjournaledDiff = {
+                        projects: !!(diff.projects && !explicitProjects),
+                        work: !!(diff.work && !explicitWork),
+                        links: !!(diff.links && !explicitLinks),
+                        dependencies: !!(diff.dependencies && !explicitDependencies),
+                        milestones: !!(diff.milestones && !explicitMilestones),
+                        at: new Date().toISOString()
+                    };
+                } catch (e3) { }
+                if (actionable) {
                     state.dirty = true;
                     state.remoteDirty = true;
                     state.status = 'dirty';
@@ -123580,6 +124806,11 @@ window.openAddNewProjectModal = function(editProject) {
                 state.lastError = '';
                 setSaveProgress(3, '시작');
                 updateButton();
+                try {
+                    applyValueDiffDirtyReasons(detectWebSaveValueDiff());
+                } catch (preflightDiffError) {
+                    try { console.warn(LOG, 'save-time value diff preflight skipped', preflightDiffError); } catch (ignorePreflightDiffError) { }
+                }
                 var dirtyReasonsAtStart = {};
                 var remoteDirtyAtStart = false;
                 try {
@@ -123590,6 +124821,10 @@ window.openAddNewProjectModal = function(editProject) {
                     remoteDirtyAtStart = !!state.remoteDirty;
                 }
                 try {
+                    if (remoteDirtyAtStart || Object.keys(dirtyReasonsAtStart || {}).length) {
+                        synthesizeImplicitProjectDeltasForWebSave();
+                        captureExplicitEntityDeltasForWebSave();
+                    }
                     if (!navigator.onLine) {
                         setSaveProgress(38, 'XLSB 구성 (오프라인)');
                         var built = buildWorkbookForSync(options);
@@ -123648,7 +124883,13 @@ window.openAddNewProjectModal = function(editProject) {
                         if (!resolvedConflict || !resolvedConflict.ok) {
                             state.status = 'conflict';
                             finishSaveProgress('충돌 차단');
-                            notify('다른 기기에서 원본 XLSB가 변경되어 웹 저장을 중단했습니다.', 'error', 4500);
+                            var conflictMessage = '다른 기기에서 원본 XLSB가 변경되어 웹 저장을 중단했습니다.';
+                            if (resolvedConflict && resolvedConflict.reason === 'field-conflict' && resolvedConflict.conflicts && resolvedConflict.conflicts.length) {
+                                var firstConflict = resolvedConflict.conflicts[0];
+                                conflictMessage = '같은 데이터 항목이 다른 사용자와 동시에 변경되어 저장을 중단했습니다: ' +
+                                    String(firstConflict.key || '-') + ' / ' + String(firstConflict.field || '-');
+                            }
+                            notify(conflictMessage, 'error', 6000);
                             return { ok: false, reason: 'sha-conflict', initialSha: initialSha, latestSha: latestSha, detail: resolvedConflict && resolvedConflict.reason || '' };
                         }
                         state.status = 'syncing';
@@ -123739,9 +124980,21 @@ window.openAddNewProjectModal = function(editProject) {
                         var cleanProjects = getProjects();
                         var cleanMaps = buildMaintenanceMaps(cleanProjects);
                         cleanMapped.work = buildWorkRows(cleanProjects, cleanMaps).length;
-                        var cleanDiff = ['projects', 'work', 'dependencies', 'milestones', 'links'].some(function (key) {
+                        var cleanCountMismatch = ['projects', 'work', 'dependencies', 'milestones', 'links'].some(function (key) {
                             return cleanRaw[key] != null && cleanMapped[key] != null && Number(cleanRaw[key]) !== Number(cleanMapped[key]);
                         });
+                        // Count mismatches are diagnostics, not proof of a user edit.
+                        // Treating them as save intent can publish stale local cache.
+                        var cleanDiff = false;
+                        try {
+                            window.__codexWebSaveCleanCountAudit = {
+                                mismatch: cleanCountMismatch,
+                                raw: cleanRaw,
+                                mapped: cleanMapped,
+                                decision: 'diagnostic-only',
+                                at: new Date().toISOString()
+                            };
+                        } catch (cleanCountAuditError) { }
                         var valueDiff = detectWebSaveValueDiff();
                         var valueChanged = applyValueDiffDirtyReasons(valueDiff);
                         if (valueChanged) {
@@ -123865,6 +125118,18 @@ window.openAddNewProjectModal = function(editProject) {
                             forceSave: true,
                             userInitiated: true
                         }));
+                    }
+                    if (error && error.isWebSaveFieldConflict) {
+                        state.status = 'conflict';
+                        state.lastError = error.message;
+                        state.dirty = true;
+                        state.remoteDirty = true;
+                        state.dirtyReasons = Object.assign({}, dirtyReasonsAtStart || {}, state.dirtyReasons || {});
+                        state.dirtyReasons['websave:field-conflict'] = Date.now();
+                        recordWebSaveFlowAudit({ mode: 'field-conflict', sourcePath: CONFIG.targetPath, error: state.lastError, conflicts: error.conflicts || [] });
+                        finishSaveProgress('충돌 차단');
+                        notify(state.lastError, 'error', 6000);
+                        return { ok: false, reason: 'field-conflict', conflicts: error.conflicts || [] };
                     }
                     var isNetworkError = !navigator.onLine || (error && (String(error).includes('fetch') || String(error.message).includes('fetch') || String(error).includes('Network') || String(error).includes('network')));
                     if (isNetworkError) {
@@ -124110,6 +125375,7 @@ window.openAddNewProjectModal = function(editProject) {
                 rememberCurrentBaseSha: rememberCurrentBaseSha,
                 recordModifiedProject: recordModifiedProjectForWebSave,
                 recordDeletedProject: recordDeletedProjectForWebSave,
+                recordLinkChange: recordLinkChangeForWebSave,
                 clearModifiedRecords: clearModifiedRecordsForWebSave,
                 buildSmartMergedProjectsForWebSave: buildSmartMergedProjectsForWebSave,
                 resolveClientIpForWebSave: resolveClientIpForWebSave,
@@ -129176,18 +130442,31 @@ window.openAddNewProjectModal = function(editProject) {
                 panel.style.setProperty('--codex-gantt-wrapper-fit-height', ganttHeight + 'px');
             }
 
+            function setLegendStyleIfChanged(legend, name, value, priority) {
+                var nextPriority = priority || '';
+                if (legend.style.getPropertyValue(name) === value && legend.style.getPropertyPriority(name) === nextPriority) return false;
+                legend.style.setProperty(name, value, nextPriority);
+                return true;
+            }
+
+            function removeLegendStyleIfPresent(legend, name) {
+                if (!legend.style.getPropertyValue(name)) return false;
+                legend.style.removeProperty(name);
+                return true;
+            }
+
             function fitLegendHeight() {
                 var legend = getLegend();
                 if (!legend) return;
                 if (legend.classList.contains('legend-collapsed')) {
-                    legend.style.setProperty('min-height', '4px', 'important');
-                    legend.style.setProperty('max-height', '4px', 'important');
-                    legend.style.setProperty('height', '4px', 'important');
-                    legend.style.setProperty('padding', '0', 'important');
-                    legend.style.setProperty('margin-bottom', '0', 'important');
-                    legend.style.setProperty('overflow', 'visible', 'important');
-                    legend.style.removeProperty('--codex-legend-fit-min-height');
-                    legend.style.removeProperty('--legend-mobile-auto-min-height');
+                    setLegendStyleIfChanged(legend, 'min-height', '4px', 'important');
+                    setLegendStyleIfChanged(legend, 'max-height', '4px', 'important');
+                    setLegendStyleIfChanged(legend, 'height', '4px', 'important');
+                    setLegendStyleIfChanged(legend, 'padding', '0', 'important');
+                    setLegendStyleIfChanged(legend, 'margin-bottom', '0', 'important');
+                    setLegendStyleIfChanged(legend, 'overflow', 'visible', 'important');
+                    removeLegendStyleIfPresent(legend, '--codex-legend-fit-min-height');
+                    removeLegendStyleIfPresent(legend, '--legend-mobile-auto-min-height');
                     syncSchedulePanelHeight(0);
                     return;
                 }
@@ -129200,49 +130479,35 @@ window.openAddNewProjectModal = function(editProject) {
                 legend = legend || getLegend();
                 if (!legend) return 0;
                 if (legend.classList.contains('legend-collapsed')) {
-                    legend.style.setProperty('min-height', '4px', 'important');
-                    legend.style.setProperty('max-height', '4px', 'important');
-                    legend.style.setProperty('height', '4px', 'important');
-                    legend.style.setProperty('padding', '0', 'important');
-                    legend.style.setProperty('margin-bottom', '0', 'important');
-                    legend.style.setProperty('overflow', 'visible', 'important');
-                    legend.style.removeProperty('--codex-legend-fit-min-height');
-                    legend.style.removeProperty('--legend-mobile-auto-min-height');
+                    setLegendStyleIfChanged(legend, 'min-height', '4px', 'important');
+                    setLegendStyleIfChanged(legend, 'max-height', '4px', 'important');
+                    setLegendStyleIfChanged(legend, 'height', '4px', 'important');
+                    setLegendStyleIfChanged(legend, 'padding', '0', 'important');
+                    setLegendStyleIfChanged(legend, 'margin-bottom', '0', 'important');
+                    setLegendStyleIfChanged(legend, 'overflow', 'visible', 'important');
+                    removeLegendStyleIfPresent(legend, '--codex-legend-fit-min-height');
+                    removeLegendStyleIfPresent(legend, '--legend-mobile-auto-min-height');
                     syncSchedulePanelHeight(0);
                     return 0;
                 }
                 var base = 0;
-                legend.style.setProperty('--codex-legend-fit-min-height', '0px');
-                legend.style.setProperty('--legend-mobile-auto-min-height', '0px');
-                legend.style.setProperty('min-height', '0px', 'important');
-                legend.style.setProperty('height', 'auto', 'important');
-                legend.style.setProperty('max-height', 'none', 'important');
-                legend.style.setProperty('align-content', 'flex-start', 'important');
-                legend.style.setProperty('align-items', 'flex-start', 'important');
-                var legendRect = legend.getBoundingClientRect();
-                var maxBottom = 0;
-                Array.prototype.forEach.call(legend.children || [], function (child) {
-                    if (!child || child.classList.contains('legend-toggle')) return;
-                    var style = window.getComputedStyle(child);
-                    if (style.display === 'none' || style.visibility === 'hidden') return;
-                    var rect = child.getBoundingClientRect();
-                    if (rect.height <= 0) return;
-                    maxBottom = Math.max(maxBottom, rect.bottom - legendRect.top);
-                });
-                var measuredContent = Math.ceil(maxBottom + 6);
-                var needed = Math.ceil(Math.max(base, measuredContent));
-                var row = legend.querySelector('.codex-legend-bottom-actions');
-                if (row) {
-                    var rowRect = row.getBoundingClientRect();
-                    needed = Math.ceil(Math.max(needed, (rowRect.bottom - legendRect.top) + 3));
-                }
-                needed = Math.ceil(Math.max(needed, legend.scrollHeight || 0));
-                legend.style.setProperty('--codex-legend-fit-min-height', needed + 'px');
-                legend.style.setProperty('--legend-mobile-auto-min-height', needed + 'px');
-                legend.style.setProperty('min-height', needed + 'px', 'important');
-                legend.style.setProperty('height', 'auto', 'important');
-                legend.style.setProperty('max-height', 'none', 'important');
-                legend.style.setProperty('overflow', 'visible', 'important');
+                setLegendStyleIfChanged(legend, '--codex-legend-fit-min-height', '0px');
+                setLegendStyleIfChanged(legend, '--legend-mobile-auto-min-height', '0px');
+                setLegendStyleIfChanged(legend, 'min-height', '0px', 'important');
+                setLegendStyleIfChanged(legend, 'height', 'auto', 'important');
+                setLegendStyleIfChanged(legend, 'max-height', 'none', 'important');
+                setLegendStyleIfChanged(legend, 'align-content', 'flex-start', 'important');
+                setLegendStyleIfChanged(legend, 'align-items', 'flex-start', 'important');
+                // scrollHeight already covers the visible legend rows and the bottom
+                // action row. Reading every child's rectangle forced one full layout
+                // per child after each Gantt mutation.
+                var needed = Math.ceil(Math.max(base, legend.scrollHeight || 0) + 6);
+                setLegendStyleIfChanged(legend, '--codex-legend-fit-min-height', needed + 'px');
+                setLegendStyleIfChanged(legend, '--legend-mobile-auto-min-height', needed + 'px');
+                setLegendStyleIfChanged(legend, 'min-height', needed + 'px', 'important');
+                setLegendStyleIfChanged(legend, 'height', 'auto', 'important');
+                setLegendStyleIfChanged(legend, 'max-height', 'none', 'important');
+                setLegendStyleIfChanged(legend, 'overflow', 'visible', 'important');
                 syncSchedulePanelHeight(needed);
                 return needed;
             }
@@ -129253,10 +130518,7 @@ window.openAddNewProjectModal = function(editProject) {
                 requestAnimationFrame(function () {
                     var legend = getLegend();
                     applyLegendHeightNow(legend);
-                    requestAnimationFrame(function () {
-                        applyLegendHeightNow(legend);
-                        state.legendFitScheduled = false;
-                    });
+                    state.legendFitScheduled = false;
                 });
             }
 
@@ -129387,12 +130649,11 @@ window.openAddNewProjectModal = function(editProject) {
                         new MutationObserver(function () {
                             scheduleLegendFit();
                             scheduleLayout();
-                            setTimeout(scheduleLegendFit, 60);
                         }).observe(legend, {
                             childList: true,
                             subtree: true,
                             attributes: true,
-                            attributeFilter: ['class', 'style', 'data-codex-legend-3row']
+                            attributeFilter: ['class', 'data-codex-legend-3row']
                         });
                     } catch (legendObserverError) { }
                     try {
@@ -129400,7 +130661,6 @@ window.openAddNewProjectModal = function(editProject) {
                             new ResizeObserver(function () {
                                 scheduleLegendFit();
                                 scheduleLayout();
-                                setTimeout(scheduleLegendFit, 60);
                             }).observe(legend);
                         }
                     } catch (legendResizeError) { }
