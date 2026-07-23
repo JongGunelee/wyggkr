@@ -847,38 +847,120 @@
                 overflow: auto !important;
                 -webkit-overflow-scrolling: touch;
             }
+            /* [v9-BULLETPROOF] Absolute Fixed Header & Viewport Isolation Architecture */
+            .settlement-modal-overlay,
+            .pending-settlement-modal-overlay {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                z-index: 100000 !important;
+                overflow: hidden !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
             #dataDetailModal[data-modal-type="settlement"] .modal-content,
             #dataDetailModal[data-modal-type="settlement"] .settlement-modal-wrapper,
-            #dataDetailModal[data-modal-type="settlement"] .settlement-summary-dashboard,
-            #dataDetailModal[data-modal-type="settlement"] #settlement-table-container {
-                min-width: 1500px !important;
-                width: max-content !important;
+            .settlement-modal-content,
+            .pending-settlement-modal-content {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                z-index: 100001 !important;
+                display: flex !important;
+                flex-direction: column !important;
+                overflow: hidden !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            #dataDetailModal[data-modal-type="settlement"] .resizable-modal-header,
+            .settlement-modal-content > div:first-child,
+            .pending-settlement-modal-content > div:first-child {
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                width: 100% !important;
+                height: 81px !important;
+                z-index: 100010 !important;
                 flex-shrink: 0 !important;
-                display: block !important;
+                display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+                box-sizing: border-box !important;
+            }
+            #dataDetailModal[data-modal-type="settlement"] .resizable-modal-body,
+            .settlement-modal-content > div:nth-child(2),
+            .pending-settlement-modal-content > div:nth-child(2) {
+                margin-top: 81px !important;
+                height: calc(100vh - 81px) !important;
+                flex: 1 !important;
+                min-height: 0 !important;
+                overflow: auto !important;
+                -webkit-overflow-scrolling: touch;
+            }
+            #dataDetailModal[data-modal-type="settlement"] > div {
+                width: 100vw !important;
+                min-width: 100vw !important;
+                margin: 0 !important;
+                height: 100vh !important;
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+            }
+
+        }
+            #dataDetailModal.maximized,
+            #dataDetailModal.maximized > div,
+            #dataDetailModal.maximized .modal-content,
+            #dataDetailModal.maximized .settlement-modal-wrapper,
+            .settlement-modal-overlay.maximized .settlement-modal-content,
+            .pending-settlement-modal-content.maximized .pending-settlement-modal-content {
+                width: 100vw !important;
+                height: 100vh !important;
+                margin: 0 !important;
+                top: 0 !important;
+                left: 0 !important;
+                position: fixed !important;
+                z-index: 100001 !important;
+                overflow: hidden !important;
             }
             #dataDetailModal[data-modal-type="settlement"] > div {
                 width: 1500px !important;
                 min-width: 1500px !important;
                 max-width: none !important;
                 flex-shrink: 0 !important;
-                margin: 5% auto !important;
-                height: auto !important;
-                min-height: 80vh !important;
-                max-height: none !important;
+                margin: 0 auto !important;
+                height: 100vh !important;
                 position: relative !important;
                 transform: none !important;
                 box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2) !important;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
         }
-            /* [v26] Supreme Screen-Fitting: Fixed positioning ONLY for overlays and core content containers */
             #dataDetailModal.maximized,
             #dataDetailModal.maximized > div,
             #dataDetailModal.maximized .modal-content,
             #dataDetailModal.maximized .settlement-modal-wrapper,
             .settlement-modal-overlay.maximized .settlement-modal-content,
             .pending-settlement-modal-overlay.maximized .pending-settlement-modal-content {
+                width: 100vw !important;
+                min-width: 0 !important;
+                max-width: 100vw !important;
+                height: 100vh !important;
+                min-height: 100vh !important;
+                margin: 0 !important;
+                top: 0 !important;
+                left: 0 !important;
+                border-radius: 0 !important;
+                position: fixed !important;
+                z-index: 100001 !important;
+                overflow: hidden !important; /* [v8 FIX] Outer container MUST NOT scroll */
+                -webkit-overflow-scrolling: touch;
+            }
+            }
             /* [v26] Internal elements should fill parent width but NOT overlap header via fixed positioning */
             #dataDetailModal.maximized .settlement-summary-dashboard,
             #dataDetailModal.maximized #settlement-table-container,
@@ -897,20 +979,6 @@
             }
             #dataDetailModal.maximized .resizer-handle {
                 display: none !important;
-            }
-                width: 100vw !important;
-                min-width: 0 !important; /* v20: Kill 1500px floor */
-                max-width: 100vw !important;
-                height: 100vh !important;
-                min-height: 100vh !important;
-                margin: 0 !important;
-                top: 0 !important;
-                left: 0 !important;
-                border-radius: 0 !important;
-                position: fixed !important;
-                z-index: 100001 !important;
-                overflow: auto !important; /* v22: Full Gesture Recovery (Scroll Enabled) */
-                -webkit-overflow-scrolling: touch; /* v22: Smooth mobile scrolling */
             }
             #dataDetailModal.maximized div, 
             #dataDetailModal.maximized table,
@@ -2892,6 +2960,16 @@
                     }
 
                     restoreState() {
+                        // [v7-FIX] Always open modal headers in EXPANDED state by default for optimal UX
+                        try { localStorage.removeItem(STORAGE_KEY); sessionStorage.removeItem(STORAGE_KEY); } catch(e){}
+                        this.state = States.EXPANDED;
+                        this.headerEl.classList.remove("collapsed");
+                        if (this.toggleBtn) {
+                            this.toggleBtn.textContent = "\u2212";
+                            this.toggleBtn.setAttribute("aria-label", "\ud5e4\ub354 \uc811\uae30");
+                            this.toggleBtn.setAttribute("aria-expanded", "true");
+                        }
+                        if (this.collapsedLine) this.collapsedLine.classList.add("hidden");
                         let saved = null;
                         try {
                             saved = localStorage.getItem(STORAGE_KEY);
@@ -4261,7 +4339,7 @@
             backface-visibility: hidden !important;
             transform: translateZ(0) !important;
             will-change: auto !important;
-            contain: layout style paint !important;
+            contain: layout style !important; /* [v15] Removed paint containment to prevent GPU composite black flash */
         }
 
         /* [FIX] 필터 컨테이너 배경 유지 */
@@ -5670,6 +5748,41 @@
         /* Keep old class hidden for backward compat */
         .stl-freeze-indicator-bar { display: none !important; }
 
+        /* [v7-PRISTINE-RESTORE] Restored Original Working Modal Architecture (Matching 091 코드개선전 이전코드.html) */
+        .monthly-card, .quarterly-card, .yearly-card {
+            flex: 0 0 288px !important;
+            min-width: 288px !important;
+            width: 288px !important;
+            max-width: 288px !important;
+            flex-shrink: 0 !important;
+            box-sizing: border-box !important;
+        }
+        .monthly-cards-container, .quarterly-cards-container, .yearly-cards-container {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            overflow-x: auto !important;
+            gap: 16px !important;
+        }
+        /* Ensure header collapse restores expanded state by default on modal launch */
+        .settlement-modal-content > div:first-child {
+            position: relative;
+            z-index: 50;
+            flex-shrink: 0;
+        }
+
+/* [FIX-TOOLTIP-OVERLAP] Guarantee settlement card custom-tooltip native hover control */
+        .custom-tooltip {
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            transition: opacity 0.2s ease, visibility 0.2s ease !important;
+        }
+        .group:hover .custom-tooltip,
+        .custom-tooltip.is-active {
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
 
 
         /* ============================================================
@@ -5792,6 +5905,293 @@
         }
 
         /* 헤더 접기/펴기 시스템 */
+        
+        /* [v10-PURPLE-HEADER-BACKSTOP] Explicit Gradient Background Backstop */
+        /* [v15-ZERO-BLACK-FLASH] Legend & Shortcut Container Dropdown Integrity Shield */
+        html, body, #legendSection, #shortcutContainer {
+            color-scheme: light !important;
+        }
+        #legendSection select,
+        #legendSection option,
+        #shortcutContainer select,
+        #shortcutContainer option,
+        select,
+        option {
+            color-scheme: light !important;
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+            -webkit-backface-visibility: hidden !important;
+            backface-visibility: hidden !important;
+            contain: layout style !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+        #legendSection select option,
+        #shortcutContainer select option,
+        select option {
+            background: #ffffff !important;
+            background-color: #ffffff !important;
+            color: #1f2937 !important;
+            padding: 4px 8px !important;
+        }
+        /* Mobile Portrait & Desktop Fluid Optimization */
+        @media (max-width: 768px) {
+            #legendSection {
+                padding: 10px !important;
+                gap: 8px !important;
+            }
+            #shortcutContainer {
+                gap: 6px !important;
+                width: 100% !important;
+            }
+            #shortcutContainer .shortcut-item select,
+            #shortcutContainer .shortcut-item button {
+                font-size: 12px !important;
+                padding: 2px 6px !important;
+            }
+        }
+
+        /* [v14-ULTIMATE-INTEGRITY-FIX] Uncovered Toggle Button & Spherical Billiard Balls */
+        .settlement-header-collapsible,
+        .settlement-modal-content > div:first-child,
+        .pending-settlement-modal-content > div:first-child,
+        #dataDetailModal[data-modal-type="settlement"] .resizable-modal-header {
+            overflow: visible !important;
+            z-index: 100010 !important;
+            position: relative !important;
+        }
+        .settlement-collapse-toggle,
+        .settlement-header-toggle {
+            position: absolute !important;
+            bottom: -12px !important;
+            left: 50% !important;
+            transform: translateX(-50%) translateZ(0) !important;
+            z-index: 100020 !important;
+            width: 24px !important;
+            height: 24px !important;
+            min-width: 24px !important;
+            min-height: 24px !important;
+            border-radius: 50% !important;
+            background-color: #1f2937 !important;
+            color: #ffffff !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+            border: none !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        .billiard-ball {
+            position: relative !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 32px !important;
+            height: 32px !important;
+            min-width: 32px !important;
+            min-height: 32px !important;
+            max-width: 32px !important;
+            max-height: 32px !important;
+            border-radius: 50% !important;
+            font-size: 11px !important;
+            font-weight: 900 !important;
+            color: #ffffff !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
+            cursor: pointer !important;
+            border: none !important;
+            user-select: none !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3), inset -3px -3px 5px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.3) !important;
+            appearance: none !important;
+            background-color: transparent !important;
+            outline: none !important;
+            padding: 0 !important;
+            margin: 0 2px !important;
+            flex-shrink: 0 !important;
+        }
+        .ball-stripe { border-radius: 50% !important; }
+
+        /* [v12-PERFECT-RESTORE] 3-Bug Resolution Architecture */
+        /* 1. General Modal Centering (#dataDetailModal for Overview Accordion) */
+        /* [v13-BOOT-HIDDEN-FIX] Strict Hidden Scoping for Modals */
+        #dataDetailModal.hidden,
+        #dataDetailModal[style*="display: none"],
+        .modal-overlay.hidden,
+        .settlement-modal-overlay.hidden {
+            display: none !important;
+        }
+        #dataDetailModal:not(.hidden):not([style*="display: none"]) {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 100000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        #dataDetailModal:not([data-modal-type="settlement"]) > div {
+            width: 90vw !important;
+            max-width: 1400px !important;
+            height: 85vh !important;
+            margin: auto !important;
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            transform: none !important;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3) !important;
+        }
+        /* 2. Header Collapse Toggle Button Visible & Unclipped */
+        .settlement-header-collapsible,
+        .settlement-modal-content > div:first-child,
+        .pending-settlement-modal-content > div:first-child,
+        #dataDetailModal[data-modal-type="settlement"] .resizable-modal-header {
+            overflow: visible !important;
+        }
+        .settlement-header-toggle {
+            position: absolute !important;
+            bottom: -12px !important;
+            left: 50% !important;
+            transform: translateX(-50%) translateZ(0) !important;
+            z-index: 100020 !important;
+            width: 24px !important;
+            height: 24px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
+        }
+        /* 3. Billiard Ball Spherical Restoration (Original from 091 코드개선전 이전코드.html) */
+        .settlement-evidence-buttons-container {
+            display: flex !important;
+            flex-wrap: wrap !important;
+            gap: 10px !important;
+            align-items: center !important;
+            max-width: 100% !important;
+        }
+        .billiard-ball {
+            position: relative !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            width: 32px !important;
+            height: 32px !important;
+            min-width: 32px !important;
+            min-height: 32px !important;
+            border-radius: 50% !important;
+            font-size: 11px !important;
+            font-weight: 900 !important;
+            color: #ffffff !important;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
+            cursor: pointer !important;
+            border: none !important;
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+            user-select: none !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3), inset -3px -3px 5px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.3) !important;
+            appearance: none !important;
+            background-color: transparent !important;
+            outline: none !important;
+            padding: 0 !important;
+            flex-shrink: 0 !important;
+        }
+        .billiard-ball:hover {
+            transform: scale(1.15) translateY(-2px) !important;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.4), inset -3px -3px 5px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.5) !important;
+            filter: brightness(1.1) !important;
+            z-index: 10 !important;
+        }
+        .billiard-ball:active {
+            transform: scale(0.92) !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(0,0,0,0.6) !important;
+            filter: brightness(0.9) !important;
+        }
+        .ball-1 { background: radial-gradient(circle at 30% 30%, #FFD54F, #FBC02D) !important; }
+        .ball-2 { background: radial-gradient(circle at 30% 30%, #42A5F5, #1976D2) !important; }
+        .ball-3 { background: radial-gradient(circle at 30% 30%, #EF5350, #D32F2F) !important; }
+        .ball-4 { background: radial-gradient(circle at 30% 30%, #3F51B5, #1A237E) !important; }
+        .ball-5 { background: radial-gradient(circle at 30% 30%, #FF7043, #F4511E) !important; }
+        .ball-6 { background: radial-gradient(circle at 30% 30%, #66BB6A, #2E7D32) !important; }
+        .ball-7 { background: radial-gradient(circle at 30% 30%, #8D6E63, #4E342E) !important; }
+        .ball-0 { background: radial-gradient(circle at 30% 30%, #9E9E9E, #616161) !important; }
+        .ball-8 { background: radial-gradient(circle at 30% 30%, #616161, #212121) !important; }
+        .ball-stripe { background: #ffffff !important; overflow: hidden !important; border-radius: 50% !important; }
+        .ball-stripe::after {
+            content: "" !important; position: absolute !important; top: 25% !important; left: 0 !important; width: 100% !important; height: 50% !important; opacity: 0.9 !important;
+        }
+        .ball-9::after  { background: #FBC02D !important; }
+        .ball-10::after { background: #1976D2 !important; }
+        .ball-11::after { background: #D32F2F !important; }
+        .ball-12::after { background: #1A237E !important; }
+        .ball-stripe span { position: relative !important; z-index: 2 !important; color: #000 !important; text-shadow: none !important; font-weight: 900 !important; }
+        .ball-4 span, .ball-8 span { color: #fff !important; }
+        .settlement-doc-dynamic-btn:not(.billiard-ball) {
+            background-color: rgba(255, 255, 255, 0.22) !important;
+            background: rgba(255, 255, 255, 0.22) !important;
+            color: #ffffff !important;
+            border-radius: 8px !important;
+            padding: 4px 12px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            cursor: pointer !important;
+            transition: background-color 0.2s ease, transform 0.2s ease !important;
+        }
+
+        /* [v11-TOGGLE-CLIPPING-&-BADGE-FIX] Ensure toggle button overflow visible & evidence pill badge */
+        .settlement-header-collapsible,
+        .settlement-modal-content > div:first-child,
+        .pending-settlement-modal-content > div:first-child,
+        #dataDetailModal[data-modal-type="settlement"] .resizable-modal-header {
+            overflow: visible !important;
+        }
+        .settlement-header-toggle {
+            position: absolute !important;
+            bottom: -12px !important;
+            left: 50% !important;
+            transform: translateX(-50%) translateZ(0) !important;
+            z-index: 100020 !important;
+        }
+        .settlement-doc-dynamic-btn {
+            background-color: rgba(255, 255, 255, 0.22) !important;
+            background: rgba(255, 255, 255, 0.22) !important;
+            color: #ffffff !important;
+            border-radius: 8px !important;
+            padding: 4px 12px !important;
+            font-size: 13px !important;
+            font-weight: 500 !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            cursor: pointer !important;
+            transition: background-color 0.2s ease, transform 0.2s ease !important;
+        }
+        .settlement-doc-dynamic-btn:hover {
+            background-color: rgba(255, 255, 255, 0.35) !important;
+            background: rgba(255, 255, 255, 0.35) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        .settlement-header-collapsible,
+        .settlement-modal-content > div:first-child,
+        .pending-settlement-modal-content > div:first-child,
+        #dataDetailModal[data-modal-type="settlement"] .resizable-modal-header {
+            background: linear-gradient(to right, #4f46e5, #9333ea) !important;
+            background-color: #4f46e5 !important;
+            color: #ffffff !important;
+            min-height: 60px !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
         .settlement-header-collapsible {
             position: relative;
             will-change: max-height;
@@ -21069,14 +21469,33 @@
             min-width: 400px;
             display: flex;
             flex-direction: column;
-            --name-col-width: 360px;
+            --name-col-width: 250px;
             --po-col-width: 120px;
-            --dates-col-width: 170px;
-            --progress-col-width: 70px;
-            --progress-summary-col-width: 120px;
+            --dates-col-width: 130px;
+            --progress-col-width: 65px;
+            --progress-summary-col-width: 90px;
             /* 새로 추가된 진행률 요약 열 너비 */
             --name-padding: 55px;
             isolation: isolate;
+        }
+
+        /* [v22-CSS] Collapse: dataset attribute triggers CSS hide/show */
+        #ganttChartWrapper[data-codex-name-collapsed="1"] .gantt-titles,
+        .gantt-chart-container[data-codex-name-collapsed="1"] .gantt-titles {
+            display: none !important;
+            width: 0 !important;
+            min-width: 0 !important;
+            max-width: 0 !important;
+            flex: 0 0 0 !important;
+            overflow: hidden !important;
+            padding: 0 !important;
+            border-right: none !important;
+        }
+        #ganttChartWrapper[data-codex-name-collapsed="1"] .gantt-timeline-wrapper,
+        .gantt-chart-container[data-codex-name-collapsed="1"] .gantt-timeline-wrapper {
+            flex: 1 1 100% !important;
+            width: 100% !important;
+            min-width: 0 !important;
         }
 
         .gantt-titles-body-wrapper {
@@ -63397,6 +63816,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         // [REMOVED] \uae30\uc874 ensureTodayMarkers \ud568\uc218 - \uc0c8\ub85c\uc6b4 \uc2dc\uc2a4\ud15c\uc73c\ub85c \ub300\uccb4\ub428
 
         function scrollToToday() {
+            console.log('[v26-ScrollToday] scrollToToday() called');
             // [REFACTORED] Robust ScrollToToday - Auto Retry & Better Detection
             const container = (fullscreenModal && !fullscreenModal.classList.contains('hidden')) ? fullscreenModalBody : document.getElementById('ganttViewContent');
 
@@ -64033,6 +64453,88 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         el.style.display = 'flex';
                     }
                 });
+                if (colName === 'project-name') {
+                    // [v22-DEFINITIVE] Always find #ganttChartWrapper as the state anchor
+                    const _rootWrapper = document.getElementById('ganttChartWrapper');
+                    getGanttColumnSyncContainers().forEach(ganttContainer => {
+                        const panes = ganttContainer.matches && ganttContainer.matches('.gantt-titles')
+                            ? [ganttContainer]
+                            : Array.from(ganttContainer.querySelectorAll('.gantt-titles'));
+                        panes.forEach(pane => {
+                            // Find closest container but always use _rootWrapper for dataset state
+                            const paneWrapper = pane.closest('#ganttChartWrapper, .gantt-chart-container') || ganttContainer;
+                            const stateWrapper = _rootWrapper || paneWrapper;
+                            const timeline = paneWrapper ? paneWrapper.querySelector('.gantt-timeline-wrapper') : null;
+                            if (columnVisibility[colName]) {
+                                // EXPAND / RESTORE
+                                // Clear collapsed state on BOTH wrappers
+                                [stateWrapper, paneWrapper].forEach(w => {
+                                    if (w && w.dataset) {
+                                        delete w.dataset.codexNameCollapsed;
+                                        delete w.dataset.codexManualTitleWidth;
+                                        delete w.dataset.codexAutoTitleWidth;
+                                    }
+                                });
+                                const preWidth = Number((stateWrapper && stateWrapper.dataset && stateWrapper.dataset.codexPreCollapsePaneWidth) || 560);
+                                const restoredPx = Math.max(360, Math.round(preWidth)) + 'px';
+                                pane.style.removeProperty('display');
+                                pane.style.setProperty('display', 'flex', 'important');
+                                pane.style.setProperty('flex', '0 0 ' + restoredPx, 'important');
+                                pane.style.setProperty('width', restoredPx, 'important');
+                                pane.style.setProperty('min-width', '0px', 'important');
+                                pane.style.removeProperty('max-width');
+                                if (timeline) {
+                                    timeline.style.setProperty('flex', '1 1 0%', 'important');
+                                    timeline.style.setProperty('width', 'auto', 'important');
+                                }
+                                try {
+                                    if (window.CODEX_DESKTOP_GANTT_AUTO_TIGHT && typeof window.CODEX_DESKTOP_GANTT_AUTO_TIGHT.apply === 'function') {
+                                        window.CODEX_DESKTOP_GANTT_AUTO_TIGHT.apply('toggle-expand');
+                                    }
+                                } catch(e) {}
+                            } else {
+                                // COLLAPSE COMPLETE
+                                const currentWidth = pane.getBoundingClientRect().width || 560;
+                                // Store preWidth on BOTH wrappers
+                                [stateWrapper, paneWrapper].forEach(w => {
+                                    if (currentWidth > 50 && w && w.dataset) {
+                                        w.dataset.codexPreCollapsePaneWidth = String(Math.round(currentWidth));
+                                        w.dataset.codexNameCollapsed = '1';
+                                    }
+                                });
+                                // Force pane to 0 immediately - override any existing inline styles
+                                pane.style.removeProperty('display');
+                                pane.style.removeProperty('flex');
+                                pane.style.removeProperty('width');
+                                pane.style.setProperty('flex', '0 0 0px', 'important');
+                                pane.style.setProperty('width', '0px', 'important');
+                                pane.style.setProperty('min-width', '0px', 'important');
+                                pane.style.setProperty('max-width', '0px', 'important');
+                                pane.style.setProperty('overflow', 'hidden', 'important');
+                                pane.style.setProperty('display', 'none', 'important');
+                                if (timeline) {
+                                    timeline.style.removeProperty('flex');
+                                    timeline.style.removeProperty('width');
+                                    timeline.style.setProperty('flex', '1 1 100%', 'important');
+                                    timeline.style.setProperty('width', '100%', 'important');
+                                    timeline.style.setProperty('min-width', '0', 'important');
+                                }
+                                // Re-apply after a frame to survive ResizeObserver resets
+                                requestAnimationFrame(() => {
+                                    if (stateWrapper && stateWrapper.dataset && stateWrapper.dataset.codexNameCollapsed === '1') {
+                                        pane.style.setProperty('display', 'none', 'important');
+                                        pane.style.setProperty('width', '0px', 'important');
+                                        pane.style.setProperty('flex', '0 0 0px', 'important');
+                                        if (timeline) {
+                                            timeline.style.setProperty('flex', '1 1 100%', 'important');
+                                            timeline.style.setProperty('width', '100%', 'important');
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                    });
+                }
                 if (colName === 'project-po') {
                     getGanttColumnSyncContainers().forEach(ganttContainer => {
                         const panes = ganttContainer.matches && ganttContainer.matches('.gantt-titles')
@@ -64685,6 +65187,24 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
             chartWrapper.dataset.codexMobilePortraitViewportApplied = '1';
 
+            const isNameVisible = (typeof columnVisibility !== 'undefined' && columnVisibility) ? (columnVisibility['project-name'] !== false) : true;
+            if (!isNameVisible) {
+                titlesPane.style.setProperty('display', 'none', 'important');
+                titlesPane.style.setProperty('width', '0px', 'important');
+                titlesPane.style.setProperty('flex', '0 0 0px', 'important');
+                timelineWrapper.style.setProperty('flex', '1 1 100%', 'important');
+                timelineWrapper.style.setProperty('width', '100%', 'important');
+                timelineWrapper.style.setProperty('min-width', '0', 'important');
+                return;
+            } else {
+                titlesPane.style.removeProperty('display');
+                titlesPane.style.removeProperty('width');
+                titlesPane.style.removeProperty('flex');
+                timelineWrapper.style.removeProperty('flex');
+                timelineWrapper.style.removeProperty('width');
+                timelineWrapper.style.removeProperty('min-width');
+            }
+
             const wrapperRectWidth = chartWrapper.getBoundingClientRect ? chartWrapper.getBoundingClientRect().width : 0;
             const wrapperWidth = Math.max(chartWrapper.clientWidth || 0, wrapperRectWidth || 0, window.innerWidth || 0, 320);
             const requestedTitleWidth = parseFloat(chartWrapper.dataset.userTitleWidth || '');
@@ -64747,10 +65267,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 ? Math.max(180, Math.min(760, Math.round(requestedNameWidth)))
                 : Math.max(240, Math.min(mobileAutoNameMax, measuredNameWidth));
             if (!titleWidth) {
-                const autoTitleWidth = Math.ceil(projectNameWidth + 92);
+                const autoTitleWidth = Math.ceil(projectNameWidth + 48); // v25: tight mobile
                 titleWidth = Math.max(220, Math.min(mobilePaneMaxWidth, autoTitleWidth, Math.round(wrapperWidth * 0.64)));
             }
-            const titleContentWidth = Math.max(titleWidth + 188, projectNameWidth + 338);
+            const titleContentWidth = Math.max(titleWidth + 96, projectNameWidth + 192); // v25: tight mobile content
 
             chartWrapper.style.setProperty('overflow-x', 'hidden', 'important');
             chartWrapper.style.setProperty('overflow-y', 'hidden', 'important');
@@ -86449,7 +86969,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                 modal.innerHTML = `
                 <div class="settlement-modal-content bg-white flex flex-col w-screen h-screen max-w-none max-h-none overflow-hidden">
-                    <div class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
+                    <div class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-indigo-600 to-purple-600 text-white" style="background: linear-gradient(to right, #4f46e5, #9333ea) !important; color: #ffffff !important;">
                         <button id="settlement-modal-close-left" class="text-2xl leading-none hover:opacity-80 mr-4" type="button" title="\ub2eb\uae30">&times;</button>
                         <button class="modal-maximize-btn leading-none text-white hover:opacity-80 transition-all mr-4" type="button" style="font-size: 1.95em;" title="\uc804\uccb4\ubcf4\uae30" onclick="const ov=this.closest(&apos;.settlement-modal-overlay&apos;); ov.classList.toggle(&apos;maximized&apos;); this.innerHTML=ov.classList.contains(&apos;maximized&apos;)?&apos;\u2750&apos;:&apos;\u25fb&apos;; if(typeof updateMaximizedModalLayout===&apos;function&apos;)updateMaximizedModalLayout(); event.stopPropagation();">\u25fb</button>
                         <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -86472,8 +86992,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 // [PRD-HEADER-COLLISION] \ud5e4\ub354 \uc811\uae30/\ud3b4\uae30 \ucd08\uae30\ud654
                 try {
                     const headerEl = modal.querySelector('.settlement-modal-content > div:first-child');
-                    if (headerEl && window.SettlementHeaderCollapse) {
-                        window.SettlementHeaderCollapse.init(headerEl);
+                    if (headerEl) {
+                        headerEl.classList.remove('collapsed');
+                        try { localStorage.setItem('settlement_header_collapsed', 'false'); } catch(e){}
+                        if (window.SettlementHeaderCollapse) {
+                            window.SettlementHeaderCollapse.init(headerEl);
+                        }
                     }
                 } catch (e) {
                     console.warn('[PRD-HEADER-COLLISION] Header collapse init failed:', e);
@@ -86681,7 +87205,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                     ball.type = 'button';
                                     const mVal = parseInt(month, 10) || 0;
                                     const isStripe = mVal > 8 || mVal === 0;
-                                    ball.className = `billiard-ball ball-${mVal}${isStripe ? ' ball-stripe' : ''} settlement-doc-dynamic-btn`;
+                                    ball.className = `billiard-ball ball-${mVal}${isStripe ? ' ball-stripe' : ''}`; // [v14] Class isolation
                                     const suffix = docs.length > 1 ? `-${idx + 1}` : '';
                                     ball.innerHTML = `<span>${mVal ? String(mVal).padStart(2, '0') + suffix : '?'}</span>`;
                                     ball.dataset.tooltip = `${mVal ? mVal + '월' : '월 미상'} 증빙${suffix}${item.customer ? '(' + item.customer + ')' : ''}`;
@@ -87102,7 +87626,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     style.textContent = `
                                                 .settlement-summary-dashboard {
                             user-select: text !important;
-                            overflow-x: hidden;
+                            overflow-x: auto;
                         }
                         @media (max-width: 768px) {
                             .settlement-summary-dashboard { min-width: 1200px !important; }
@@ -97138,7 +97662,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         align-items: stretch !important;
         width: 100% !important;
         box-sizing: border-box !important;
-        contain: layout style paint !important;
+        contain: layout style !important; /* [v15] Removed paint containment to prevent GPU composite black flash */
     }
     #addMilestoneForm .milestone-date-picker-shell {
         position: relative !important;
@@ -107514,10 +108038,16 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
     }
 
     function updateControlPosition(chartWrapper, leftWidth, wrapperWidth) {
+        var mode = chartWrapper.dataset.mobilePaneMode || MODE_NORMAL;
         var pinned = chartWrapper.dataset.codexPaneControlPinned === '1';
+        // [v27-FIX] In MODE_NORMAL, X-position must ALWAYS stick to leftWidth (titlesPane right edge)
         if (pinned) {
             var storedLeft = parseFloat(chartWrapper.dataset.codexPaneControlLeft || '');
             var storedTop = parseFloat(chartWrapper.dataset.codexPaneControlTop || '');
+            // Override X with leftWidth if not manually dragging
+            if (mode === MODE_NORMAL && Number.isFinite(leftWidth) && leftWidth > 0) {
+                storedLeft = Math.round(leftWidth);
+            }
             var clampedStored = clampControlPosition(chartWrapper, storedLeft, storedTop, wrapperWidth);
             chartWrapper.dataset.codexPaneControlLeft = String(clampedStored.left);
             chartWrapper.dataset.codexPaneControlTop = String(clampedStored.top);
@@ -107561,34 +108091,74 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         ensureControl(chartWrapper);
         var wrapperWidth = getWrapperWidth(chartWrapper);
         var mode = chartWrapper.dataset.mobilePaneMode || MODE_NORMAL;
-        var rightMinWidth = getRightMinimumWidth(wrapperWidth);
-        var leftWidth = getDefaultTitleWidth(chartWrapper, wrapperWidth, parts);
 
-        if (mode === MODE_RIGHT_MIN) {
-            leftWidth = Math.max(0, wrapperWidth - rightMinWidth);
-            setFixedWidth(parts.titlesPane, leftWidth);
-            restoreTitlesPane(parts);
-            setTimelineWidth(parts, rightMinWidth, false);
-        } else if (mode === MODE_LEFT_COLLAPSED) {
-            leftWidth = 0;
-            setFixedWidth(parts.titlesPane, 0);
-            parts.titlesPane.style.setProperty('overflow', 'hidden', 'important');
-            parts.titlesPane.style.setProperty('opacity', '0', 'important');
-            setTimelineWidth(parts, 0, false);
+        if (mode === MODE_LEFT_COLLAPSED) {
+            // [v28-FIX] Left collapse: Hide titlesPane cleanly without destroying layout
+            if (parts.titlesPane) {
+                parts.titlesPane.style.setProperty('flex', '0 0 0px', 'important');
+                parts.titlesPane.style.setProperty('width', '0px', 'important');
+                parts.titlesPane.style.setProperty('min-width', '0px', 'important');
+                parts.titlesPane.style.setProperty('max-width', '0px', 'important');
+                parts.titlesPane.style.setProperty('overflow', 'hidden', 'important');
+                parts.titlesPane.style.setProperty('display', 'none', 'important');
+            }
+            if (parts.timelineWrapper) {
+                parts.timelineWrapper.style.setProperty('flex', '1 1 100%', 'important');
+                parts.timelineWrapper.style.setProperty('width', '100%', 'important');
+                parts.timelineWrapper.style.removeProperty('display');
+                parts.timelineWrapper.style.setProperty('opacity', '1', 'important');
+            }
+            chartWrapper.dataset.codexNameCollapsed = '1';
+            updateControlPosition(chartWrapper, 0, wrapperWidth);
         } else if (mode === MODE_RIGHT_COLLAPSED) {
-            leftWidth = wrapperWidth;
-            setFixedWidth(parts.titlesPane, leftWidth);
+            // [v28-FIX] Right collapse: Expand titlesPane to 100%
             restoreTitlesPane(parts);
-            setTimelineWidth(parts, 0, true);
+            if (parts.titlesPane) {
+                parts.titlesPane.style.setProperty('flex', '1 1 100%', 'important');
+                parts.titlesPane.style.setProperty('width', '100%', 'important');
+                parts.titlesPane.style.removeProperty('max-width');
+            }
+            if (parts.timelineWrapper) {
+                parts.timelineWrapper.style.setProperty('flex', '0 0 0px', 'important');
+                parts.timelineWrapper.style.setProperty('width', '0px', 'important');
+                parts.timelineWrapper.style.setProperty('overflow', 'hidden', 'important');
+                parts.timelineWrapper.style.setProperty('display', 'none', 'important');
+            }
+            updateControlPosition(chartWrapper, wrapperWidth, wrapperWidth);
         } else {
-            mode = MODE_NORMAL;
-            chartWrapper.dataset.mobilePaneMode = MODE_NORMAL;
-            setFixedWidth(parts.titlesPane, leftWidth);
+            // [v28-FIX] MODE_NORMAL: Clean up inline style overrides and restore authoritative auto-width
+            delete chartWrapper.dataset.codexNameCollapsed;
+            if (parts.titlesPane) {
+                parts.titlesPane.style.removeProperty('display');
+                parts.titlesPane.style.removeProperty('opacity');
+                parts.titlesPane.style.removeProperty('overflow');
+                parts.titlesPane.style.removeProperty('max-width');
+            }
+            if (parts.timelineWrapper) {
+                parts.timelineWrapper.style.removeProperty('display');
+                parts.timelineWrapper.style.removeProperty('opacity');
+                parts.timelineWrapper.style.removeProperty('overflow');
+                parts.timelineWrapper.style.setProperty('flex', '1 1 0%', 'important');
+                parts.timelineWrapper.style.setProperty('width', 'auto', 'important');
+            }
             restoreTitlesPane(parts);
-            setTimelineWidth(parts, 0, false);
+            
+            // Re-apply authoritative auto-width calculation
+            try {
+                if (typeof window.applyDesktopGanttAutoTitleWidth === 'function') {
+                    window.applyDesktopGanttAutoTitleWidth('mode-restore');
+                }
+                if (window.__codexDesktopGanttPostRenderTightWidth20260711 && typeof window.__codexDesktopGanttPostRenderTightWidth20260711.apply === 'function') {
+                    window.__codexDesktopGanttPostRenderTightWidth20260711.apply('mode-restore');
+                }
+            } catch(e) {}
+
+            var currentTitleW = 0;
+            try { currentTitleW = parts.titlesPane ? Math.round(parts.titlesPane.getBoundingClientRect().width || 0) : 0; } catch(e) {}
+            if (!(currentTitleW > 0)) currentTitleW = getDefaultTitleWidth(chartWrapper, wrapperWidth, parts);
+            updateControlPosition(chartWrapper, currentTitleW, wrapperWidth);
         }
 
-        updateControlPosition(chartWrapper, leftWidth, wrapperWidth);
         updateButtons(chartWrapper);
         requestAnimationFrame(function () { syncScrollbars(parts); });
     }
@@ -107608,12 +108178,18 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         } else if (mode === MODE_RIGHT_COLLAPSED) {
             leftWidth = wrapperWidth;
         } else {
+            // [v27-FIX] Always get authoritative actual rendered width of titlesPane
             try {
-                leftWidth = Math.round(parts.titlesPane.getBoundingClientRect().width || parts.titlesPane.offsetWidth || 0);
-            } catch (e) {
-                leftWidth = 0;
+                if (parts.titlesPane) {
+                    var rect = parts.titlesPane.getBoundingClientRect();
+                    leftWidth = Math.round(rect.width || parts.titlesPane.offsetWidth || 0);
+                }
+            } catch (e) { leftWidth = 0; }
+            if (!(leftWidth > 0)) {
+                var autoW = parseFloat(chartWrapper.dataset.codexAutoTitleWidth || chartWrapper.dataset.codexDesktopPostTightWidth || '');
+                if (Number.isFinite(autoW) && autoW > 0) leftWidth = Math.round(autoW);
+                else leftWidth = getDefaultTitleWidth(chartWrapper, wrapperWidth, parts);
             }
-            if (!(leftWidth > 0)) leftWidth = getDefaultTitleWidth(chartWrapper, wrapperWidth, parts);
         }
         updateControlPosition(chartWrapper, leftWidth, wrapperWidth);
         updateButtons(chartWrapper);
@@ -107625,14 +108201,14 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         rememberCurrentTitleWidth(chartWrapper, parts);
         if (nextMode === MODE_NORMAL) {
             chartWrapper.dataset.mobilePaneMode = MODE_NORMAL;
-            var remembered = parseFloat(chartWrapper.dataset.codexPanePreviousTitleWidth || '');
-            if (Number.isFinite(remembered) && remembered > 0) chartWrapper.dataset.userTitleWidth = String(Math.round(remembered));
+            delete chartWrapper.dataset.codexNameCollapsed;
         } else {
             chartWrapper.dataset.mobilePaneMode = nextMode;
         }
         applyMobileGanttPaneMode(chartWrapper);
-        setTimeout(function () { applyMobileGanttPaneMode(chartWrapper); }, 80);
-        setTimeout(function () { applyMobileGanttPaneMode(chartWrapper); }, 240);
+        setTimeout(function () { applyMobileGanttPaneMode(chartWrapper); }, 50);
+        setTimeout(function () { applyMobileGanttPaneMode(chartWrapper); }, 180);
+        setTimeout(function () { applyMobileGanttPaneMode(chartWrapper); }, 400);
     }
 
     function handleControlClick(event) {
@@ -107991,6 +108567,17 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         scheduleApply();
         setTimeout(scheduleApply, 180);
         setTimeout(scheduleApply, 600);
+        // [v27-FIX] Attach ResizeObserver directly on titlesPane elements
+        try {
+            if (typeof window.ResizeObserver === 'function') {
+                var titlesObserver = new ResizeObserver(function(entries) {
+                    scheduleApply();
+                });
+                document.querySelectorAll('#ganttChartWrapper .gantt-titles').forEach(function(el) {
+                    titlesObserver.observe(el);
+                });
+            }
+        } catch(e) {}
         ['gantt-rendered', 'instant-response:gantt-rendered', 'render:complete', 'fullscreenModalOpened', 'fullscreenModalClosed'].forEach(function (type) {
             document.addEventListener(type, scheduleApply, { passive: true });
         });
@@ -109462,6 +110049,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         }, true);
 
         function readCssPixels(style, name, fallback) {
+            if (!style || typeof style.getPropertyValue !== 'function') return fallback;
             var raw = style.getPropertyValue(name);
             var value = parseFloat(raw);
             return Number.isFinite(value) && value > 0 ? value : fallback;
@@ -109657,9 +110245,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
         function getDesktopGanttSummaryLiveWidth(pane, paneStyle, fixedWidth, resizerAllowance) {
             if (!pane) return 0;
+            if (!paneStyle) {
+                try { paneStyle = window.getComputedStyle(pane); } catch (e) { paneStyle = null; }
+            }
             var fallbackNameWidth = readCssPixels(paneStyle, '--name-col-width', 360);
             var summaryNameWidth = readCssPixels(paneStyle, '--codex-summary-name-width', fallbackNameWidth);
-            return Math.ceil(summaryNameWidth + fixedWidth + resizerAllowance + 12);
+            return Math.ceil(summaryNameWidth + (fixedWidth || 0) + (resizerAllowance || 0) + 12);
         }
 
         function getDesktopGanttVisibleRowLiveWidth(nameWidth, fixedWidth, resizerAllowance) {
@@ -109667,7 +110258,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         }
 
         function applyDesktopGanttAutoTitleWidth(reason) {
-            if (!isDesktop()) return;
+            console.log('[v26-AutoTitle] applyDesktopGanttAutoTitleWidth called, reason:', reason);
+            if (!isDesktop()) { console.log('[v26-AutoTitle] SKIP: not desktop'); return; }
 
             var projectView = document.getElementById('projectView');
             if (projectView && !projectView.classList.contains('open')) return;
@@ -109680,7 +110272,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
             syncDesktopGanttSummaryCompact(pane);
             syncDesktopGanttEmptyPoWidth(pane, wrapper);
-            var automaticReflow = /gantt-rendered|render:complete|project-open|group-toggle|column-toggle|mobile-portrait-exit|data:loaded/i.test(String(reason || ''));
+            var automaticReflow = /gantt-rendered|render:complete|project-open|accordion-open|group-toggle|column-toggle|mobile-portrait-exit|data:loaded/i.test(String(reason || '')); // v25: added accordion-open
             if (automaticReflow && wrapper.dataset.codexTitleResizeActive !== '1') {
                 delete wrapper.dataset.codexManualTitleWidth;
                 delete wrapper.dataset.codexManualNameWidth;
@@ -109702,8 +110294,9 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 sampleStyle.fontFamily
             ].join(' ');
 
-            var maxTextWidth = getGanttMaxTitleTextWidth(pane, ctx, ctx.font);
-            if (maxTextWidth <= 0) return;
+            var isNameVisible = (typeof columnVisibility !== 'undefined' && columnVisibility) ? (columnVisibility['project-name'] !== false) : true;
+
+            var maxTextWidth = isNameVisible ? getGanttMaxTitleTextWidth(pane, ctx, ctx.font) : 0;
 
             var fixedWidth = getGanttFixedColumnWidth(pane, paneStyle);
             var resizerAllowance = Math.max(32, pane.querySelectorAll('.header > .col-resizer').length * 8);
@@ -109712,72 +110305,57 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             var viewportCap = isBottomHierarchy
                 ? Math.max(720, Math.min(1320, Math.round(viewportWidthForCap * 0.885)))
                 : Math.max(720, Math.min(1180, Math.round(viewportWidthForCap * 0.82)));
+
             var currentNameWidth = readCssPixels(paneStyle, '--name-col-width', 360);
-            var maxNameForViewport = Math.max(220, viewportCap - fixedWidth - resizerAllowance - 28);
-            var desiredNameWidth = Math.ceil(maxTextWidth + 72);
-            desiredNameWidth = Math.max(260, Math.min(560, maxNameForViewport, desiredNameWidth));
-            var nameWidth = wrapper.dataset.codexManualNameWidth === '1' ? currentNameWidth : desiredNameWidth;
-            if (wrapper.dataset.codexManualNameWidth !== '1') {
+            var maxNameForViewport = Math.max(260, viewportCap - fixedWidth - resizerAllowance - 48);
+            var desiredNameWidth = isNameVisible ? Math.ceil(maxTextWidth + 48) : 0; // v25: tighter fit
+            if (isNameVisible) {
+                desiredNameWidth = Math.max(280, Math.min(680, maxNameForViewport, desiredNameWidth));
+            }
+
+            var nameWidth = isNameVisible ? (wrapper.dataset.codexManualNameWidth === '1' ? currentNameWidth : desiredNameWidth) : 0;
+            if (wrapper.dataset.codexManualNameWidth !== '1' || !isNameVisible) {
                 pane.style.setProperty('--name-col-width', nameWidth + 'px');
             }
-            var targetWidth = Math.ceil(nameWidth + fixedWidth + resizerAllowance + 28);
-            targetWidth = Math.max(400, Math.min(viewportCap, targetWidth));
-            var summaryLiveWidth = getDesktopGanttSummaryLiveWidth(pane, paneStyle, fixedWidth, resizerAllowance);
-            var visibleRowLiveWidth = getDesktopGanttVisibleRowLiveWidth(nameWidth, fixedWidth, resizerAllowance);
-            var bottomVisibleRowWidth = isBottomHierarchy ? visibleRowLiveWidth : 0;
-            if (pane.dataset.codexDesktopSummaryCompact === '1' && summaryLiveWidth > 0) {
-                var compactTargetWidth = Math.ceil(Math.min(summaryLiveWidth, visibleRowLiveWidth || summaryLiveWidth) + 16);
-                targetWidth = Math.max(360, Math.min(viewportCap, compactTargetWidth));
+
+            var minPaneCap = (isNameVisible || fixedWidth > 0) ? (isNameVisible ? 280 : 0) : 0;
+            var targetWidth = Math.ceil((isNameVisible ? nameWidth : 0) + fixedWidth + (isNameVisible ? resizerAllowance : 0) + (fixedWidth > 0 || isNameVisible ? 16 : 0) /* v25: tight */);
+            
+            if (!isNameVisible && fixedWidth <= 0) {
+                targetWidth = 0;
+                pane.style.setProperty('display', 'none', 'important');
+                pane.style.setProperty('flex', '0 0 0px', 'important');
+                pane.style.setProperty('width', '0px', 'important');
             } else {
-                if (visibleRowLiveWidth > 0) {
-                    var tightTargetWidth = Math.ceil(visibleRowLiveWidth + 16);
-                    targetWidth = Math.max(360, Math.min(viewportCap, Math.min(targetWidth, tightTargetWidth)));
-                }
-                if (isBottomHierarchy) {
+                pane.style.removeProperty('display');
+                targetWidth = Math.max(minPaneCap, Math.min(viewportCap, targetWidth));
+                var summaryLiveWidth = getDesktopGanttSummaryLiveWidth(pane);
+                var bottomVisibleRowWidth = isBottomHierarchy ? getDesktopGanttVisibleRowLiveWidth(nameWidth, fixedWidth, resizerAllowance) : 0;
+                if (pane.dataset.codexDesktopSummaryCompact === '1' && summaryLiveWidth > 0) {
+                    var compactTargetWidth = Math.ceil(summaryLiveWidth + 24); // v25: tighter compact
+                    targetWidth = Math.max(minPaneCap, Math.min(viewportCap, compactTargetWidth));
+                } else if (isBottomHierarchy) {
                     var bottomTargetWidth = bottomVisibleRowWidth > 0
-                        ? Math.ceil(bottomVisibleRowWidth + 16)
-                        : Math.ceil((summaryLiveWidth || targetWidth) + 28);
-                    targetWidth = Math.max(360, Math.min(viewportCap, Math.max(targetWidth, bottomTargetWidth)));
+                        ? Math.ceil(bottomVisibleRowWidth + 16) /* v25 */
+                        : Math.ceil((summaryLiveWidth || targetWidth) + 16) /* v25 */;
+                    targetWidth = Math.max(minPaneCap, Math.min(viewportCap, Math.max(targetWidth, bottomTargetWidth)));
+                }
+                pane.style.setProperty('flex', '0 0 ' + targetWidth + 'px', 'important');
+                pane.style.setProperty('width', targetWidth + 'px', 'important');
+            }
+
+            var timeline = wrapper.querySelector('.gantt-timeline-wrapper');
+            if (timeline) {
+                if (targetWidth === 0) {
+                    timeline.style.setProperty('flex', '1 1 100%', 'important');
+                    timeline.style.setProperty('width', '100%', 'important');
+                } else {
+                    timeline.style.setProperty('flex', '1 1 0%', 'important');
+                    timeline.style.setProperty('width', 'auto', 'important');
                 }
             }
 
-            var emptyPoBaselineWidth = Number(wrapper.dataset.codexDesktopEmptyPoBaselineWidth || 0);
-            var hasVisiblePoValue = wrapper.dataset.codexDesktopPoHasValue === '1';
-            if (!hasVisiblePoValue && !(emptyPoBaselineWidth > 0) && !isBottomHierarchy) {
-                emptyPoBaselineWidth = targetWidth;
-                wrapper.dataset.codexDesktopEmptyPoBaselineWidth = String(Math.round(emptyPoBaselineWidth));
-            }
-            if (!hasVisiblePoValue && emptyPoBaselineWidth > 0 && targetWidth > emptyPoBaselineWidth) {
-                var emptyPoExpansion = targetWidth - emptyPoBaselineWidth;
-                nameWidth = Math.max(260, nameWidth - emptyPoExpansion);
-                pane.style.setProperty('--name-col-width', nameWidth + 'px');
-                targetWidth = emptyPoBaselineWidth;
-            }
-
-            var key = [
-                nameWidth,
-                targetWidth,
-                Math.round(summaryLiveWidth || 0),
-                Math.round(visibleRowLiveWidth || 0),
-                Math.round(bottomVisibleRowWidth || 0),
-                isBottomHierarchy ? 'bottom' : 'top',
-                pane.dataset.codexDesktopSummaryCompact || '0',
-                pane.style.getPropertyValue('--codex-summary-name-width') || '',
-                getVisibleGanttTitleItems(pane).length,
-                pane.querySelectorAll('.group-header').length,
-                window.innerWidth
-            ].join(':');
-            if (ganttWidthLastKey === key) return;
-            ganttWidthLastKey = key;
-
-            var widthPx = targetWidth + 'px';
-            pane.style.setProperty('flex', '0 0 ' + widthPx, 'important');
-            pane.style.setProperty('width', widthPx, 'important');
-            pane.style.setProperty('min-width', widthPx, 'important');
-            pane.style.setProperty('max-width', widthPx, 'important');
             wrapper.dataset.codexAutoTitleWidth = String(targetWidth);
-            // Desktop auto-fit owns this pane width. Calling the mobile pane toggle here
-            // can restore the mobile/default split width after the desktop calculation.
         }
 
         function scheduleDesktopGanttAutoTitleWidth(reason) {
@@ -109797,7 +110375,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             if (!maxTextWidth) return false;
             var isMobilePortrait = !!(wrapper && wrapper.classList && wrapper.classList.contains('gantt-mobile-portrait'));
             var maxNameWidth = isMobilePortrait ? 680 : 560;
-            var nameWidth = Math.max(isMobilePortrait ? 260 : 260, Math.min(maxNameWidth, Math.ceil(maxTextWidth + (isMobilePortrait ? 108 : 90))));
+            var nameWidth = Math.max(isMobilePortrait ? 220 : 210, Math.min(maxNameWidth, Math.ceil(maxTextWidth + (isMobilePortrait ? 54 : 40))));
             pane.style.setProperty('--name-col-width', nameWidth + 'px');
             if (isMobilePortrait) {
                 pane.style.setProperty('--mobile-project-name-width', nameWidth + 'px');
@@ -109834,6 +110412,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 wrapper.dataset.userTitleWidth = String(Math.round(targetWidth));
             }
             pane.dataset.codexNameAutoFitReason = reason || 'manual';
+            // [v27-FIX] Notify pane toggle position to sync immediately
+            if (window.__codexMobileGanttPaneToggle && typeof window.__codexMobileGanttPaneToggle.refreshPosition === 'function') {
+                try { window.__codexMobileGanttPaneToggle.refreshPosition(); } catch(e) {}
+            }
             return true;
         }
 
@@ -109888,7 +110470,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         });
 
         document.addEventListener('click', function(event) {
-            if (event.target && event.target.closest && event.target.closest('#projectView .accordion-header, #projectView .accordion-icon, #projectView .accordion-title-btn')) {
+            if (event.target && event.target.closest && event.target.closest('#projectView, #scheduleHeaderToggle, .schedule-header-toggle, .accordion-header, .accordion-icon, .accordion-title-btn, [id*="projectView"]')) {
                 var wrapper = document.getElementById('ganttChartWrapper');
                 if (wrapper && wrapper.dataset.codexTitleResizeActive !== '1') {
                     delete wrapper.dataset.codexManualTitleWidth;
@@ -109896,10 +110478,18 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     delete wrapper.dataset.userTitleWidth;
                     delete wrapper.dataset.userNameColumnWidth;
                 }
-                setTimeout(function() {
-                    ganttWidthLastKey = '';
+                ganttWidthLastKey = '';
+                var triggerReflow = function() {
                     scheduleDesktopGanttAutoTitleWidth('project-open');
-                }, 120);
+                    if (typeof scheduleGanttColumnLayoutSync === 'function') {
+                        scheduleGanttColumnLayoutSync('project-open');
+                    }
+                };
+                triggerReflow();
+                setTimeout(triggerReflow, 30);
+                setTimeout(triggerReflow, 120);
+                setTimeout(triggerReflow, 300);
+                setTimeout(triggerReflow, 500);
             }
         }, true);
 
@@ -109973,6 +110563,49 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             scheduleDesktopGanttAutoTitleWidth('startup');
             syncDataDetailModalFit();
         }, 250);
+
+        
+        // [v25-ACCORDION-GUARD] Watch #projectView: cache invalidation + multi-frame retry + scroll-to-today
+        try {
+            var projectViewEl = document.getElementById('projectView');
+            if (projectViewEl) {
+                var pvObserver = new MutationObserver(function(mutations) {
+                    var isOpen = projectViewEl.classList.contains('open') || window.getComputedStyle(projectViewEl).display !== 'none';
+                    if (isOpen) {
+                        console.log("[v26-AccordionGuard] projectView OPEN detected by MutationObserver");
+                        ganttWidthLastKey = '';
+                        ganttTextMeasureCache = { dataRef: null, length: -1, font: '', domKey: '', maxWidth: 0 };
+                        applyDesktopGanttAutoTitleWidth('accordion-open-mutation');
+                        if (typeof scheduleGanttColumnLayoutSync === 'function') {
+                            scheduleGanttColumnLayoutSync('accordion-open-mutation');
+                        }
+                        var retryCount = 0;
+                        var retryAutoWidth = function() {
+                            retryCount++;
+                            ganttWidthLastKey = '';
+                            ganttTextMeasureCache = { dataRef: null, length: -1, font: '', domKey: '', maxWidth: 0 };
+                            applyDesktopGanttAutoTitleWidth('accordion-open-retry-' + retryCount);
+                            if (retryCount <= 2 && typeof tryScrollToTodayIfReady === 'function') {
+                                try { tryScrollToTodayIfReady(); } catch(e) {}
+                            }
+                            if (retryCount < 4) {
+                                requestAnimationFrame(retryAutoWidth);
+                            }
+                        };
+                        requestAnimationFrame(retryAutoWidth);
+                        setTimeout(function() {
+                            ganttWidthLastKey = '';
+                            ganttTextMeasureCache = { dataRef: null, length: -1, font: '', domKey: '', maxWidth: 0 };
+                            applyDesktopGanttAutoTitleWidth('accordion-open-late');
+                            if (typeof tryScrollToTodayIfReady === 'function') {
+                                try { tryScrollToTodayIfReady(); } catch(e) {}
+                            }
+                        }, 300);
+                    }
+                });
+                pvObserver.observe(projectViewEl, { attributes: true, attributeFilter: ['class', 'style'] });
+            }
+        } catch (e) { }
 
         window.__codexDesktopGanttDetailMilestoneFit20260508Api = {
             applyGanttTitleWidth: applyDesktopGanttAutoTitleWidth,
@@ -128524,7 +129157,7 @@ window.openAddNewProjectModal = function(editProject) {
             border: 1px solid #e2e8f0 !important;
             border-radius: 8px !important;
             background: #fff !important;
-            overflow: hidden !important;
+            overflow: visible !important;
             flex: 0 0 auto !important;
         }
 
@@ -128580,8 +129213,8 @@ window.openAddNewProjectModal = function(editProject) {
             flex-wrap: wrap !important;
             gap: 8px !important;
             padding: 10px 12px 12px !important;
-            max-height: 178px !important;
-            overflow: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
         }
 
         #settlementReviewModal .codex-review-button-grid[hidden] {
@@ -129778,10 +130411,12 @@ window.openAddNewProjectModal = function(editProject) {
                         var toggleHeight = Math.ceil(toggle.getBoundingClientRect().height || toggle.offsetHeight || 40);
                         if (grid.hidden) {
                             wrap.style.height = toggleHeight + 'px';
+                            wrap.style.overflow = 'hidden';
                             return;
                         }
-                        var gridHeight = Math.ceil(grid.getBoundingClientRect().height || grid.offsetHeight || 0);
-                        wrap.style.height = Math.max(toggleHeight, toggleHeight + gridHeight + 2) + 'px';
+                        /* [FIX-CARD-OVERLAP] Use auto height when expanded to prevent card overlap */
+                        wrap.style.height = 'auto';
+                        wrap.style.overflow = 'visible';
                     });
                 };
                 toggle.appendChild(titleSpan);
@@ -138094,6 +138729,22 @@ window.openAddNewProjectModal = function(editProject) {
         function optimizeEmptyFixedColumns(pane, wrapper) {
             var computed = window.getComputedStyle ? window.getComputedStyle(pane) : null;
             if (!computed) return;
+
+            var nameColumnEnabled = true;
+            try {
+                if (typeof columnVisibility !== 'undefined' && columnVisibility) {
+                    nameColumnEnabled = columnVisibility['project-name'] !== false;
+                }
+            } catch (e) {}
+
+            if (!nameColumnEnabled) {
+                pane.style.setProperty('--name-col-width', '0px', 'important');
+            } else {
+                var storedNameWidth = Number(wrapper.dataset.codexDesktopBaseNameWidth || 0);
+                if (storedNameWidth > 0) {
+                    pane.style.setProperty('--name-col-width', Math.round(storedNameWidth) + 'px');
+                }
+            }
             var parsedPoWidth = parseFloat(computed.getPropertyValue('--po-col-width'));
             var currentPoWidth = Number.isFinite(parsedPoWidth) && parsedPoWidth >= 0 ? parsedPoWidth : 120;
             var storedPoWidth = Number(wrapper.dataset.codexDesktopBasePoWidth || 0);
@@ -138118,16 +138769,46 @@ window.openAddNewProjectModal = function(editProject) {
         }
 
         function apply(reason) {
-            if (!isDesktop()) return false;
+            console.log('[v26-TightWidth] apply() called, reason:', reason);
+            if (!isDesktop()) { console.log('[v26-TightWidth] SKIP: not desktop'); return false; }
             var projectView = document.getElementById('projectView');
-            if (projectView && !projectView.classList.contains('open')) return false;
+            if (projectView && !projectView.classList.contains('open')) { console.log('[v26-TightWidth] SKIP: projectView not open'); return false; }
             var wrapper = document.getElementById('ganttChartWrapper');
-            if (!wrapper || wrapper.dataset.codexTitleResizeActive === '1') return false;
+            if (!wrapper || wrapper.dataset.codexTitleResizeActive === '1') { console.log('[v26-TightWidth] SKIP: no wrapper or resize active'); return false; }
+
+            // [v22-fix] Check collapse state BEFORE any reset, so column/startup events cannot undo collapse
+            var isNameHidden = false;
+            try {
+                if (typeof columnVisibility !== 'undefined' && columnVisibility) {
+                    isNameHidden = columnVisibility['project-name'] === false;
+                }
+            } catch(e) {}
+            var isNameCollapsed = (wrapper && wrapper.dataset && wrapper.dataset.codexNameCollapsed === '1');
+            if (isNameHidden || isNameCollapsed) {
+                var paneHidden = wrapper ? wrapper.querySelector('.gantt-titles') : null;
+                var timelineFull = wrapper ? wrapper.querySelector('.gantt-timeline-wrapper') : null;
+                if (paneHidden) {
+                    paneHidden.style.setProperty('flex', '0 0 0px', 'important');
+                    paneHidden.style.setProperty('width', '0px', 'important');
+                    paneHidden.style.setProperty('min-width', '0px', 'important');
+                    paneHidden.style.setProperty('max-width', '0px', 'important');
+                    paneHidden.style.setProperty('overflow', 'hidden', 'important');
+                    paneHidden.style.setProperty('display', 'none', 'important');
+                }
+                if (timelineFull) {
+                    timelineFull.style.setProperty('flex', '1 1 100%', 'important');
+                    timelineFull.style.setProperty('width', '100%', 'important');
+                }
+                return true;
+            }
+
+            // Reset manual overrides only when NOT in collapsed state
             if (/startup|gantt-rendered|render:complete|project|group|column|pane-replaced|resize-drift/i.test(String(reason || ''))) {
                 delete wrapper.dataset.codexManualTitleWidth;
                 delete wrapper.dataset.codexManualNameWidth;
                 delete wrapper.dataset.userTitleWidth;
                 delete wrapper.dataset.userNameColumnWidth;
+                // NOTE: codexNameCollapsed is NOT deleted here - it is only deleted on expand click
             }
             if (wrapper.dataset.codexManualTitleWidth === '1') return false;
             var pane = wrapper.querySelector('.gantt-titles');
@@ -138136,21 +138817,20 @@ window.openAddNewProjectModal = function(editProject) {
 
             optimizeEmptyFixedColumns(pane, wrapper);
             var usedWidth = collectRightEdge(pane);
-            if (usedWidth <= 0) return false;
+            console.log('[v26-TightWidth] usedWidth:', usedWidth, 'pane visible:', pane.offsetWidth > 0);
+            if (usedWidth <= 0) { console.log('[v26-TightWidth] SKIP: usedWidth <= 0'); return false; }
 
             var wrapperWidth = wrapper.getBoundingClientRect().width || window.innerWidth || 0;
             var minTimeline = Math.max(520, Math.min(760, wrapperWidth * 0.42));
             var cap = Math.max(360, wrapperWidth - minTimeline);
-            var target = Math.ceil(usedWidth + 16);
-            var existingAutoWidth = Number(wrapper.dataset.codexAutoTitleWidth || 0);
-            if (Number.isFinite(existingAutoWidth) && existingAutoWidth > 0) {
-                target = Math.min(target, Math.ceil(existingAutoWidth));
-            }
+            var target = Math.ceil(usedWidth + 4);
+            // v26: Removed existingAutoWidth limiter - let collectRightEdge be authoritative
+            // var existingAutoWidth = Number(wrapper.dataset.codexAutoTitleWidth || 0);
             var emptyPoBaselineWidth = Number(wrapper.dataset.codexDesktopEmptyPoBaselineWidth || 0);
             if (wrapper.dataset.codexDesktopPoHasValue !== '1' && emptyPoBaselineWidth > 0) {
                 target = Math.min(target, Math.ceil(emptyPoBaselineWidth));
             }
-            target = Math.max(360, Math.min(cap, target));
+            target = Math.max(200, Math.min(cap, target)); // v26: lowered min from 360→200
 
             var current = pane.getBoundingClientRect().width;
             if (Math.abs(current - target) < 2 && wrapper.dataset.codexDesktopPostTightWidth === String(target)) {
@@ -138158,6 +138838,7 @@ window.openAddNewProjectModal = function(editProject) {
             }
 
             var widthPx = target + 'px';
+            console.log('[v26-TightWidth] SETTING width to', target, 'px (reason:', reason, ')');
             pane.style.setProperty('flex', '0 0 ' + widthPx, 'important');
             pane.style.setProperty('width', widthPx, 'important');
             pane.style.setProperty('min-width', widthPx, 'important');
@@ -138167,6 +138848,10 @@ window.openAddNewProjectModal = function(editProject) {
             wrapper.dataset.codexDesktopPostTightWidth = String(target);
             wrapper.dataset.codexDesktopPostTightReason = String(reason || 'post-render');
             wrapper.dataset.codexDesktopPostTightCount = String(++applyCount);
+            // [v27-FIX] Notify pane toggle position to sync immediately with post-tight width
+            if (window.__codexMobileGanttPaneToggle && typeof window.__codexMobileGanttPaneToggle.refreshPosition === 'function') {
+                try { window.__codexMobileGanttPaneToggle.refreshPosition(); } catch(e) {}
+            }
             return true;
         }
 
@@ -138333,6 +139018,30 @@ window.openAddNewProjectModal = function(editProject) {
                 schedule('desktop-gantt-dom-change-settled', 260);
             });
             if (projectView) observer.observe(projectView, { attributes: true, attributeFilter: ['class'] });
+            // v26: Also directly hook into projectView open for immediate + delayed apply
+            if (projectView) {
+                var pvOpenObserver = new MutationObserver(function() {
+                    if (!projectView.classList.contains('open')) return;
+                    console.log('[v26-ShellObs] projectView opened - immediate apply + delayed retries');
+                    schedule('accordion-opened-immediate', 0);
+                    schedule('accordion-opened-80', 80);
+                    schedule('accordion-opened-200', 200);
+                    schedule('accordion-opened-500', 500);
+                    schedule('accordion-opened-1000', 1000);
+                    // Also trigger scrollToToday after render settles
+                    setTimeout(function() {
+                        if (typeof tryScrollToTodayIfReady === 'function') {
+                            try { tryScrollToTodayIfReady(); } catch(e) {}
+                        }
+                    }, 600);
+                    setTimeout(function() {
+                        if (typeof tryScrollToTodayIfReady === 'function') {
+                            try { tryScrollToTodayIfReady(); } catch(e) {}
+                        }
+                    }, 1200);
+                });
+                pvOpenObserver.observe(projectView, { attributes: true, attributeFilter: ['class'] });
+            }
             var schedulePanel = document.getElementById('accordion-panel-schedule') || projectView;
             if (schedulePanel && !shellTreeObserver) {
                 shellTreeObserver = new MutationObserver(function() {
