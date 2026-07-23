@@ -109544,6 +109544,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
             var wrapper = document.getElementById('ganttChartWrapper');
             if (!wrapper) return;
+            var _paneMode = (wrapper.dataset || {}).mobilePaneMode || ''; if (_paneMode === 'left-collapsed' || _paneMode === 'right-collapsed') return; /* v37-MODE-GUARD */
 
             var pane = wrapper.querySelector('.gantt-titles');
             if (!pane) return;
@@ -137988,6 +137989,7 @@ window.openAddNewProjectModal = function(editProject) {
             if (projectView && !projectView.classList.contains('open')) return false;
             var wrapper = document.getElementById('ganttChartWrapper');
             if (!wrapper || wrapper.dataset.codexTitleResizeActive === '1') return false;
+            var _paneMode = (wrapper.dataset || {}).mobilePaneMode || ''; if (_paneMode === 'left-collapsed' || _paneMode === 'right-collapsed') return false; /* v37-MODE-GUARD */
             if (/startup|gantt-rendered|render:complete|project|group|column|pane-replaced|resize-drift/i.test(String(reason || ''))) {
                 delete wrapper.dataset.codexManualTitleWidth;
                 delete wrapper.dataset.codexManualNameWidth;
@@ -138066,6 +138068,7 @@ window.openAddNewProjectModal = function(editProject) {
                     delete wrapper.dataset.userNameColumnWidth;
                     var pane = wrapper.querySelector('.gantt-titles');
                     if (pane) optimizeEmptyFixedColumns(pane, wrapper);
+                    var _pm = (wrapper.dataset || {}).mobilePaneMode || ''; if (_pm === 'left-collapsed' || _pm === 'right-collapsed') { /* v37-MODE-GUARD: skip direct width reset in collapsed mode */ } else {
                     var knownWidth = Number(wrapper.dataset.codexAutoTitleWidth || wrapper.dataset.codexDesktopPostTightWidth || 0);
                     var actualWidth = pane && pane.getBoundingClientRect ? pane.getBoundingClientRect().width : 0;
                     if (pane && knownWidth > 0 && actualWidth > knownWidth + 2) {
@@ -138075,6 +138078,7 @@ window.openAddNewProjectModal = function(editProject) {
                         pane.style.setProperty('min-width', knownWidthPx, 'important');
                         pane.style.setProperty('max-width', knownWidthPx, 'important');
                     }
+                    } /* end v37-MODE-GUARD else */
                 }
                 schedule(type, 0);
                 schedule(type + ':settled', 160);
@@ -138119,6 +138123,7 @@ window.openAddNewProjectModal = function(editProject) {
 
         function enforceEmptyPoBaseline(wrapper, pane, reason) {
             if (!wrapper || !pane || !isDesktop()) return false;
+            var _paneMode = (wrapper.dataset || {}).mobilePaneMode || ''; if (_paneMode === 'left-collapsed' || _paneMode === 'right-collapsed') return false; /* v37-MODE-GUARD */
             if (wrapper.dataset.codexTitleResizeActive === '1' || wrapper.dataset.codexManualTitleWidth === '1') return false;
             if (wrapper.dataset.codexDesktopPoHasValue === '1') return false;
             var baseline = Number(wrapper.dataset.codexDesktopEmptyPoBaselineWidth || 0);
