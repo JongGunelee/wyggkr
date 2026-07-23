@@ -428,17 +428,6 @@
             try { document.addEventListener(type, catchEarlyCancel, { capture: true, passive: false }); } catch (e2) { }
         });
     })();
-    (function installDependencyEscapeHandler() {
-        if (window.__codexDependencyEscapeHandler) return;
-        window.__codexDependencyEscapeHandler = function (event) {
-            if (!event || event.key !== 'Escape') return;
-            const dependencyModal = document.getElementById('dependencyModal');
-            if (dependencyModal && !dependencyModal.classList.contains('hidden') && typeof window.closeDependencyModal === 'function') {
-                window.closeDependencyModal();
-            }
-        };
-        document.addEventListener('keydown', window.__codexDependencyEscapeHandler);
-    })();
     window.__buildingFieldKeyCache = window.__buildingFieldKeyCache || (typeof WeakMap === 'function' ? new WeakMap() : null);
     window.resolveBuildingText = function(p) {
         if (!p) return "";
@@ -490,45 +479,10 @@
             });
             
             const origMO = window.MutationObserver;
-            const tailwindRuntimeObservers = window.__codexTailwindRuntimeObservers = [];
             window.MutationObserver = function(cb) {
-                const observer = new origMO((m, o) => { if (!isHidden && !window.__codexCredentialPromptActive) cb(m, o); });
-                try {
-                    const creationStack = String(new Error().stack || '');
-                    if (/cdn\.tailwindcss\.com|codex-offline-tailwind|codex-user-library-tailwind/i.test(creationStack)) {
-                        tailwindRuntimeObservers.push(observer);
-                    }
-                } catch (e) { }
-                return observer;
+                return new origMO((m, o) => { if (!isHidden && !window.__codexCredentialPromptActive) cb(m, o); });
             };
             window.MutationObserver.prototype = origMO.prototype;
-
-            // Tailwind Play CDN recompiles the whole utility sheet for every large Gantt DOM mutation.
-            // Keep its initial utility output, then stop only Tailwind-owned observers after parsing.
-            window.__codexQuiesceTailwindRuntime = function(reason) {
-                if (window.__codexTailwindRuntimeQuiesced) return window.__codexTailwindRuntimeDiagnostics;
-                let disconnected = 0;
-                let discardedRecords = 0;
-                tailwindRuntimeObservers.forEach(function(observer) {
-                    if (!observer) return;
-                    try {
-                        const records = typeof observer.takeRecords === 'function' ? observer.takeRecords() : [];
-                        discardedRecords += records && records.length ? records.length : 0;
-                    } catch (e) { }
-                    try {
-                        observer.disconnect();
-                        disconnected++;
-                    } catch (e) { }
-                });
-                window.__codexTailwindRuntimeQuiesced = true;
-                window.__codexTailwindRuntimeDiagnostics = {
-                    reason: String(reason || 'initial-css-ready'),
-                    disconnected,
-                    discardedRecords,
-                    at: Date.now()
-                };
-                return window.__codexTailwindRuntimeDiagnostics;
-            };
             
             window.__codexShowCrashOverlay = function(message) {
                 if (!document.body || document.getElementById('zdr-crash-overlay')) return;
@@ -847,120 +801,38 @@
                 overflow: auto !important;
                 -webkit-overflow-scrolling: touch;
             }
-            /* [v9-BULLETPROOF] Absolute Fixed Header & Viewport Isolation Architecture */
-            .settlement-modal-overlay,
-            .pending-settlement-modal-overlay {
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100vw !important;
-                height: 100vh !important;
-                z-index: 100000 !important;
-                overflow: hidden !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
             #dataDetailModal[data-modal-type="settlement"] .modal-content,
             #dataDetailModal[data-modal-type="settlement"] .settlement-modal-wrapper,
-            .settlement-modal-content,
-            .pending-settlement-modal-content {
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100vw !important;
-                height: 100vh !important;
-                z-index: 100001 !important;
-                display: flex !important;
-                flex-direction: column !important;
-                overflow: hidden !important;
-                margin: 0 !important;
-                padding: 0 !important;
-            }
-            #dataDetailModal[data-modal-type="settlement"] .resizable-modal-header,
-            .settlement-modal-content > div:first-child,
-            .pending-settlement-modal-content > div:first-child {
-                position: absolute !important;
-                top: 0 !important;
-                left: 0 !important;
-                width: 100% !important;
-                height: 81px !important;
-                z-index: 100010 !important;
+            #dataDetailModal[data-modal-type="settlement"] .settlement-summary-dashboard,
+            #dataDetailModal[data-modal-type="settlement"] #settlement-table-container {
+                min-width: 1500px !important;
+                width: max-content !important;
                 flex-shrink: 0 !important;
-                display: flex !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-                box-sizing: border-box !important;
-            }
-            #dataDetailModal[data-modal-type="settlement"] .resizable-modal-body,
-            .settlement-modal-content > div:nth-child(2),
-            .pending-settlement-modal-content > div:nth-child(2) {
-                margin-top: 81px !important;
-                height: calc(100vh - 81px) !important;
-                flex: 1 !important;
-                min-height: 0 !important;
-                overflow: auto !important;
-                -webkit-overflow-scrolling: touch;
-            }
-            #dataDetailModal[data-modal-type="settlement"] > div {
-                width: 100vw !important;
-                min-width: 100vw !important;
-                margin: 0 !important;
-                height: 100vh !important;
-                position: fixed !important;
-                top: 0 !important;
-                left: 0 !important;
-            }
-
-        }
-            #dataDetailModal.maximized,
-            #dataDetailModal.maximized > div,
-            #dataDetailModal.maximized .modal-content,
-            #dataDetailModal.maximized .settlement-modal-wrapper,
-            .settlement-modal-overlay.maximized .settlement-modal-content,
-            .pending-settlement-modal-content.maximized .pending-settlement-modal-content {
-                width: 100vw !important;
-                height: 100vh !important;
-                margin: 0 !important;
-                top: 0 !important;
-                left: 0 !important;
-                position: fixed !important;
-                z-index: 100001 !important;
-                overflow: hidden !important;
+                display: block !important;
             }
             #dataDetailModal[data-modal-type="settlement"] > div {
                 width: 1500px !important;
                 min-width: 1500px !important;
                 max-width: none !important;
                 flex-shrink: 0 !important;
-                margin: 0 auto !important;
-                height: 100vh !important;
+                margin: 5% auto !important;
+                height: auto !important;
+                min-height: 80vh !important;
+                max-height: none !important;
                 position: relative !important;
                 transform: none !important;
                 box-shadow: 0 20px 25px -5px rgba(0,0,0,0.2) !important;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             }
 
         }
+            /* [v26] Supreme Screen-Fitting: Fixed positioning ONLY for overlays and core content containers */
             #dataDetailModal.maximized,
             #dataDetailModal.maximized > div,
             #dataDetailModal.maximized .modal-content,
             #dataDetailModal.maximized .settlement-modal-wrapper,
             .settlement-modal-overlay.maximized .settlement-modal-content,
             .pending-settlement-modal-overlay.maximized .pending-settlement-modal-content {
-                width: 100vw !important;
-                min-width: 0 !important;
-                max-width: 100vw !important;
-                height: 100vh !important;
-                min-height: 100vh !important;
-                margin: 0 !important;
-                top: 0 !important;
-                left: 0 !important;
-                border-radius: 0 !important;
-                position: fixed !important;
-                z-index: 100001 !important;
-                overflow: hidden !important; /* [v8 FIX] Outer container MUST NOT scroll */
-                -webkit-overflow-scrolling: touch;
-            }
-            }
             /* [v26] Internal elements should fill parent width but NOT overlap header via fixed positioning */
             #dataDetailModal.maximized .settlement-summary-dashboard,
             #dataDetailModal.maximized #settlement-table-container,
@@ -979,6 +851,20 @@
             }
             #dataDetailModal.maximized .resizer-handle {
                 display: none !important;
+            }
+                width: 100vw !important;
+                min-width: 0 !important; /* v20: Kill 1500px floor */
+                max-width: 100vw !important;
+                height: 100vh !important;
+                min-height: 100vh !important;
+                margin: 0 !important;
+                top: 0 !important;
+                left: 0 !important;
+                border-radius: 0 !important;
+                position: fixed !important;
+                z-index: 100001 !important;
+                overflow: auto !important; /* v22: Full Gesture Recovery (Scroll Enabled) */
+                -webkit-overflow-scrolling: touch; /* v22: Smooth mobile scrolling */
             }
             #dataDetailModal.maximized div, 
             #dataDetailModal.maximized table,
@@ -1840,30 +1726,7 @@
         }
         @media (min-width: 768px) { .md\:p-8 { padding: 2rem !important; } }
     </style>
-    <script>
-        (function loadTailwindOnce() {
-            if (!window.CodexOfflineLibraries) return;
-            window.__codexTailwindReadyPromise = window.CodexOfflineLibraries
-                .loadScriptCandidates('tailwind', ['https://cdn.tailwindcss.com'], function() { return typeof window.tailwind !== 'undefined'; })
-                .then(function(ready) {
-                    const quiesceAfterInitialPaint = function() {
-                        requestAnimationFrame(function() {
-                            requestAnimationFrame(function() {
-                                if (typeof window.__codexQuiesceTailwindRuntime === 'function') {
-                                    window.__codexQuiesceTailwindRuntime(ready ? 'initial-css-ready' : 'tailwind-unavailable');
-                                }
-                            });
-                        });
-                    };
-                    if (document.readyState === 'loading') {
-                        document.addEventListener('DOMContentLoaded', quiesceAfterInitialPaint, { once: true });
-                    } else {
-                        quiesceAfterInitialPaint();
-                    }
-                    return ready;
-                });
-        })();
-    </script>
+    <script>window.CodexOfflineLibraries&&window.CodexOfflineLibraries.loadScriptCandidates('tailwind',['https://cdn.tailwindcss.com'],function(){return typeof window.tailwind!=='undefined';});</script>
     <style id="codex-local-font-face">
         @font-face {
   font-family: 'Noto Sans KR';
@@ -2960,16 +2823,6 @@
                     }
 
                     restoreState() {
-                        // [v7-FIX] Always open modal headers in EXPANDED state by default for optimal UX
-                        try { localStorage.removeItem(STORAGE_KEY); sessionStorage.removeItem(STORAGE_KEY); } catch(e){}
-                        this.state = States.EXPANDED;
-                        this.headerEl.classList.remove("collapsed");
-                        if (this.toggleBtn) {
-                            this.toggleBtn.textContent = "\u2212";
-                            this.toggleBtn.setAttribute("aria-label", "\ud5e4\ub354 \uc811\uae30");
-                            this.toggleBtn.setAttribute("aria-expanded", "true");
-                        }
-                        if (this.collapsedLine) this.collapsedLine.classList.add("hidden");
                         let saved = null;
                         try {
                             saved = localStorage.getItem(STORAGE_KEY);
@@ -3805,28 +3658,17 @@
                 // [v4.36] \ube44\ub3d9\uae30 cleanupStale (\uccad\ud06c \ucc98\ub9ac, \uba54\uc778 \uc2a4\ub808\ub4dc \ube14\ub85c\ud0b9 \ubc29\uc9c0)
                 // \uc6d0\ub9ac: 40+ Observer \uc815\ub9ac \uc2dc 10\uac1c\uc529 \ub098\ub220 requestIdleCallback/setTimeout\uc73c\ub85c \ubd84\uc0b0
                 OP.cleanupStaleAsync = function (callback) {
-                    this._cleanupStaleAsyncCallbacks = this._cleanupStaleAsyncCallbacks || [];
-                    if (callback) this._cleanupStaleAsyncCallbacks.push(callback);
-                    if (this._cleanupStaleAsyncRunning) return;
-                    this._cleanupStaleAsyncRunning = true;
-                    const ids = Array.from(this.perElementObservers.keys());
-                    const finish = (cleaned) => {
-                        this._cleanupStaleAsyncRunning = false;
-                        const callbacks = this._cleanupStaleAsyncCallbacks.splice(0);
-                        callbacks.forEach(fn => { try { fn(cleaned); } catch (e) { } });
-                    };
-                    if (ids.length === 0) { finish(0); return; }
+                    const entries = Array.from(this.perElementObservers.entries());
+                    if (entries.length === 0) { if (callback) callback(0); return; }
                     const CHUNK = 10;
                     const now = Date.now();
                     const MAX_AGE = 30000, PROGRESS_MAX_AGE = 30000; // [v4.42] \ub3d9\uae30\ud654 (1\ubd84\u219230\ucd08)
                     let idx = 0, cleaned = 0;
                     const self = this;
                     const processChunk = () => {
-                        const end = Math.min(idx + CHUNK, ids.length);
+                        const end = Math.min(idx + CHUNK, entries.length);
                         for (let i = idx; i < end; i++) {
-                            const id = ids[i];
-                            const entry = self.perElementObservers.get(id);
-                            if (!entry) continue;
+                            const [id, entry] = entries[i];
                             let shouldRemove = !entry.target || !entry.target.isConnected ||
                                 entry.target.classList?.contains('hidden') ||
                                 (id.startsWith('progress-') && entry.created && (now - entry.created) > PROGRESS_MAX_AGE) ||
@@ -3837,15 +3679,15 @@
                             }
                         }
                         idx = end;
-                        if (idx < ids.length) {
-                            if (typeof requestIdleCallback === 'function') requestIdleCallback(processChunk, { timeout: 250 });
+                        if (idx < entries.length) {
+                            if (typeof requestIdleCallback === 'function') requestIdleCallback(processChunk);
                             else setTimeout(processChunk, 16);
                         } else {
                             cleaned += self.prunePausedObservers();
-                            finish(cleaned);
+                            if (callback) callback(cleaned);
                         }
                     };
-                    if (typeof requestIdleCallback === 'function') requestIdleCallback(processChunk, { timeout: 250 });
+                    if (typeof requestIdleCallback === 'function') requestIdleCallback(processChunk);
                     else setTimeout(processChunk, 0);
                 };
 
@@ -4339,7 +4181,7 @@
             backface-visibility: hidden !important;
             transform: translateZ(0) !important;
             will-change: auto !important;
-            contain: layout style !important; /* [v15] Removed paint containment to prevent GPU composite black flash */
+            contain: layout style paint !important;
         }
 
         /* [FIX] 필터 컨테이너 배경 유지 */
@@ -5748,41 +5590,6 @@
         /* Keep old class hidden for backward compat */
         .stl-freeze-indicator-bar { display: none !important; }
 
-        /* [v7-PRISTINE-RESTORE] Restored Original Working Modal Architecture (Matching 091 코드개선전 이전코드.html) */
-        .monthly-card, .quarterly-card, .yearly-card {
-            flex: 0 0 288px !important;
-            min-width: 288px !important;
-            width: 288px !important;
-            max-width: 288px !important;
-            flex-shrink: 0 !important;
-            box-sizing: border-box !important;
-        }
-        .monthly-cards-container, .quarterly-cards-container, .yearly-cards-container {
-            display: flex !important;
-            flex-wrap: nowrap !important;
-            overflow-x: auto !important;
-            gap: 16px !important;
-        }
-        /* Ensure header collapse restores expanded state by default on modal launch */
-        .settlement-modal-content > div:first-child {
-            position: relative;
-            z-index: 50;
-            flex-shrink: 0;
-        }
-
-/* [FIX-TOOLTIP-OVERLAP] Guarantee settlement card custom-tooltip native hover control */
-        .custom-tooltip {
-            visibility: hidden !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-            transition: opacity 0.2s ease, visibility 0.2s ease !important;
-        }
-        .group:hover .custom-tooltip,
-        .custom-tooltip.is-active {
-            visibility: visible !important;
-            opacity: 1 !important;
-        }
-
 
 
         /* ============================================================
@@ -5905,293 +5712,6 @@
         }
 
         /* 헤더 접기/펴기 시스템 */
-        
-        /* [v10-PURPLE-HEADER-BACKSTOP] Explicit Gradient Background Backstop */
-        /* [v15-ZERO-BLACK-FLASH] Legend & Shortcut Container Dropdown Integrity Shield */
-        html, body, #legendSection, #shortcutContainer {
-            color-scheme: light !important;
-        }
-        #legendSection select,
-        #legendSection option,
-        #shortcutContainer select,
-        #shortcutContainer option,
-        select,
-        option {
-            color-scheme: light !important;
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            color: #1f2937 !important;
-            -webkit-backface-visibility: hidden !important;
-            backface-visibility: hidden !important;
-            contain: layout style !important;
-            opacity: 1 !important;
-            visibility: visible !important;
-        }
-        #legendSection select option,
-        #shortcutContainer select option,
-        select option {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            color: #1f2937 !important;
-            padding: 4px 8px !important;
-        }
-        /* Mobile Portrait & Desktop Fluid Optimization */
-        @media (max-width: 768px) {
-            #legendSection {
-                padding: 10px !important;
-                gap: 8px !important;
-            }
-            #shortcutContainer {
-                gap: 6px !important;
-                width: 100% !important;
-            }
-            #shortcutContainer .shortcut-item select,
-            #shortcutContainer .shortcut-item button {
-                font-size: 12px !important;
-                padding: 2px 6px !important;
-            }
-        }
-
-        /* [v14-ULTIMATE-INTEGRITY-FIX] Uncovered Toggle Button & Spherical Billiard Balls */
-        .settlement-header-collapsible,
-        .settlement-modal-content > div:first-child,
-        .pending-settlement-modal-content > div:first-child,
-        #dataDetailModal[data-modal-type="settlement"] .resizable-modal-header {
-            overflow: visible !important;
-            z-index: 100010 !important;
-            position: relative !important;
-        }
-        .settlement-collapse-toggle,
-        .settlement-header-toggle {
-            position: absolute !important;
-            bottom: -12px !important;
-            left: 50% !important;
-            transform: translateX(-50%) translateZ(0) !important;
-            z-index: 100020 !important;
-            width: 24px !important;
-            height: 24px !important;
-            min-width: 24px !important;
-            min-height: 24px !important;
-            border-radius: 50% !important;
-            background-color: #1f2937 !important;
-            color: #ffffff !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            cursor: pointer !important;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
-            border: none !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-        }
-        .billiard-ball {
-            position: relative !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: 32px !important;
-            height: 32px !important;
-            min-width: 32px !important;
-            min-height: 32px !important;
-            max-width: 32px !important;
-            max-height: 32px !important;
-            border-radius: 50% !important;
-            font-size: 11px !important;
-            font-weight: 900 !important;
-            color: #ffffff !important;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
-            cursor: pointer !important;
-            border: none !important;
-            user-select: none !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3), inset -3px -3px 5px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.3) !important;
-            appearance: none !important;
-            background-color: transparent !important;
-            outline: none !important;
-            padding: 0 !important;
-            margin: 0 2px !important;
-            flex-shrink: 0 !important;
-        }
-        .ball-stripe { border-radius: 50% !important; }
-
-        /* [v12-PERFECT-RESTORE] 3-Bug Resolution Architecture */
-        /* 1. General Modal Centering (#dataDetailModal for Overview Accordion) */
-        /* [v13-BOOT-HIDDEN-FIX] Strict Hidden Scoping for Modals */
-        #dataDetailModal.hidden,
-        #dataDetailModal[style*="display: none"],
-        .modal-overlay.hidden,
-        .settlement-modal-overlay.hidden {
-            display: none !important;
-        }
-        #dataDetailModal:not(.hidden):not([style*="display: none"]) {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            z-index: 100000 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
-        #dataDetailModal:not([data-modal-type="settlement"]) > div {
-            width: 90vw !important;
-            max-width: 1400px !important;
-            height: 85vh !important;
-            margin: auto !important;
-            position: relative !important;
-            top: auto !important;
-            left: auto !important;
-            transform: none !important;
-            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.3) !important;
-        }
-        /* 2. Header Collapse Toggle Button Visible & Unclipped */
-        .settlement-header-collapsible,
-        .settlement-modal-content > div:first-child,
-        .pending-settlement-modal-content > div:first-child,
-        #dataDetailModal[data-modal-type="settlement"] .resizable-modal-header {
-            overflow: visible !important;
-        }
-        .settlement-header-toggle {
-            position: absolute !important;
-            bottom: -12px !important;
-            left: 50% !important;
-            transform: translateX(-50%) translateZ(0) !important;
-            z-index: 100020 !important;
-            width: 24px !important;
-            height: 24px !important;
-            border-radius: 50% !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3) !important;
-        }
-        /* 3. Billiard Ball Spherical Restoration (Original from 091 코드개선전 이전코드.html) */
-        .settlement-evidence-buttons-container {
-            display: flex !important;
-            flex-wrap: wrap !important;
-            gap: 10px !important;
-            align-items: center !important;
-            max-width: 100% !important;
-        }
-        .billiard-ball {
-            position: relative !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: 32px !important;
-            height: 32px !important;
-            min-width: 32px !important;
-            min-height: 32px !important;
-            border-radius: 50% !important;
-            font-size: 11px !important;
-            font-weight: 900 !important;
-            color: #ffffff !important;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.5) !important;
-            cursor: pointer !important;
-            border: none !important;
-            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-            user-select: none !important;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3), inset -3px -3px 5px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.3) !important;
-            appearance: none !important;
-            background-color: transparent !important;
-            outline: none !important;
-            padding: 0 !important;
-            flex-shrink: 0 !important;
-        }
-        .billiard-ball:hover {
-            transform: scale(1.15) translateY(-2px) !important;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.4), inset -3px -3px 5px rgba(0,0,0,0.5), inset 2px 2px 4px rgba(255,255,255,0.5) !important;
-            filter: brightness(1.1) !important;
-            z-index: 10 !important;
-        }
-        .billiard-ball:active {
-            transform: scale(0.92) !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2), inset 2px 2px 5px rgba(0,0,0,0.6) !important;
-            filter: brightness(0.9) !important;
-        }
-        .ball-1 { background: radial-gradient(circle at 30% 30%, #FFD54F, #FBC02D) !important; }
-        .ball-2 { background: radial-gradient(circle at 30% 30%, #42A5F5, #1976D2) !important; }
-        .ball-3 { background: radial-gradient(circle at 30% 30%, #EF5350, #D32F2F) !important; }
-        .ball-4 { background: radial-gradient(circle at 30% 30%, #3F51B5, #1A237E) !important; }
-        .ball-5 { background: radial-gradient(circle at 30% 30%, #FF7043, #F4511E) !important; }
-        .ball-6 { background: radial-gradient(circle at 30% 30%, #66BB6A, #2E7D32) !important; }
-        .ball-7 { background: radial-gradient(circle at 30% 30%, #8D6E63, #4E342E) !important; }
-        .ball-0 { background: radial-gradient(circle at 30% 30%, #9E9E9E, #616161) !important; }
-        .ball-8 { background: radial-gradient(circle at 30% 30%, #616161, #212121) !important; }
-        .ball-stripe { background: #ffffff !important; overflow: hidden !important; border-radius: 50% !important; }
-        .ball-stripe::after {
-            content: "" !important; position: absolute !important; top: 25% !important; left: 0 !important; width: 100% !important; height: 50% !important; opacity: 0.9 !important;
-        }
-        .ball-9::after  { background: #FBC02D !important; }
-        .ball-10::after { background: #1976D2 !important; }
-        .ball-11::after { background: #D32F2F !important; }
-        .ball-12::after { background: #1A237E !important; }
-        .ball-stripe span { position: relative !important; z-index: 2 !important; color: #000 !important; text-shadow: none !important; font-weight: 900 !important; }
-        .ball-4 span, .ball-8 span { color: #fff !important; }
-        .settlement-doc-dynamic-btn:not(.billiard-ball) {
-            background-color: rgba(255, 255, 255, 0.22) !important;
-            background: rgba(255, 255, 255, 0.22) !important;
-            color: #ffffff !important;
-            border-radius: 8px !important;
-            padding: 4px 12px !important;
-            font-size: 13px !important;
-            font-weight: 500 !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            gap: 6px !important;
-            border: 1px solid rgba(255, 255, 255, 0.3) !important;
-            cursor: pointer !important;
-            transition: background-color 0.2s ease, transform 0.2s ease !important;
-        }
-
-        /* [v11-TOGGLE-CLIPPING-&-BADGE-FIX] Ensure toggle button overflow visible & evidence pill badge */
-        .settlement-header-collapsible,
-        .settlement-modal-content > div:first-child,
-        .pending-settlement-modal-content > div:first-child,
-        #dataDetailModal[data-modal-type="settlement"] .resizable-modal-header {
-            overflow: visible !important;
-        }
-        .settlement-header-toggle {
-            position: absolute !important;
-            bottom: -12px !important;
-            left: 50% !important;
-            transform: translateX(-50%) translateZ(0) !important;
-            z-index: 100020 !important;
-        }
-        .settlement-doc-dynamic-btn {
-            background-color: rgba(255, 255, 255, 0.22) !important;
-            background: rgba(255, 255, 255, 0.22) !important;
-            color: #ffffff !important;
-            border-radius: 8px !important;
-            padding: 4px 12px !important;
-            font-size: 13px !important;
-            font-weight: 500 !important;
-            display: inline-flex !important;
-            align-items: center !important;
-            gap: 6px !important;
-            border: 1px solid rgba(255, 255, 255, 0.3) !important;
-            cursor: pointer !important;
-            transition: background-color 0.2s ease, transform 0.2s ease !important;
-        }
-        .settlement-doc-dynamic-btn:hover {
-            background-color: rgba(255, 255, 255, 0.35) !important;
-            background: rgba(255, 255, 255, 0.35) !important;
-            transform: translateY(-1px) !important;
-        }
-
-        .settlement-header-collapsible,
-        .settlement-modal-content > div:first-child,
-        .pending-settlement-modal-content > div:first-child,
-        #dataDetailModal[data-modal-type="settlement"] .resizable-modal-header {
-            background: linear-gradient(to right, #4f46e5, #9333ea) !important;
-            background-color: #4f46e5 !important;
-            color: #ffffff !important;
-            min-height: 60px !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-        }
         .settlement-header-collapsible {
             position: relative;
             will-change: max-height;
@@ -21469,33 +20989,14 @@
             min-width: 400px;
             display: flex;
             flex-direction: column;
-            --name-col-width: 250px;
+            --name-col-width: 360px;
             --po-col-width: 120px;
-            --dates-col-width: 130px;
-            --progress-col-width: 65px;
-            --progress-summary-col-width: 90px;
+            --dates-col-width: 170px;
+            --progress-col-width: 70px;
+            --progress-summary-col-width: 120px;
             /* 새로 추가된 진행률 요약 열 너비 */
             --name-padding: 55px;
             isolation: isolate;
-        }
-
-        /* [v22-CSS] Collapse: dataset attribute triggers CSS hide/show */
-        #ganttChartWrapper[data-codex-name-collapsed="1"] .gantt-titles,
-        .gantt-chart-container[data-codex-name-collapsed="1"] .gantt-titles {
-            display: none !important;
-            width: 0 !important;
-            min-width: 0 !important;
-            max-width: 0 !important;
-            flex: 0 0 0 !important;
-            overflow: hidden !important;
-            padding: 0 !important;
-            border-right: none !important;
-        }
-        #ganttChartWrapper[data-codex-name-collapsed="1"] .gantt-timeline-wrapper,
-        .gantt-chart-container[data-codex-name-collapsed="1"] .gantt-timeline-wrapper {
-            flex: 1 1 100% !important;
-            width: 100% !important;
-            min-width: 0 !important;
         }
 
         .gantt-titles-body-wrapper {
@@ -37181,30 +36682,16 @@
         // [\uc131\ub2a5 \ucd5c\uc801\ud654] localStorage \uc800\uc7a5 \ub514\ubc14\uc6b4\uc2f1
         let saveRevisionHistoryTimeout = null;
         let saveRevisionHistoryIdleId = null;
-        let saveRevisionHistoryGeneration = 0;
         function debouncedSaveRevisionHistory() {
-            const generation = ++saveRevisionHistoryGeneration;
             if (saveRevisionHistoryTimeout) {
                 clearTimeout(saveRevisionHistoryTimeout);
-                saveRevisionHistoryTimeout = null;
             }
             if (saveRevisionHistoryIdleId && window.cancelIdleCallback) {
                 try { cancelIdleCallback(saveRevisionHistoryIdleId); } catch (e) { }
                 saveRevisionHistoryIdleId = null;
             }
-            let completed = false;
             const run = () => {
-                if (completed || generation !== saveRevisionHistoryGeneration) return;
-                completed = true;
-                if (saveRevisionHistoryTimeout) {
-                    clearTimeout(saveRevisionHistoryTimeout);
-                    saveRevisionHistoryTimeout = null;
-                }
-                if (saveRevisionHistoryIdleId && window.cancelIdleCallback) {
-                    try { cancelIdleCallback(saveRevisionHistoryIdleId); } catch (e) { }
-                    saveRevisionHistoryIdleId = null;
-                }
-                try { saveRevisionHistoryToStorage(); } catch (e) { }
+                try { debouncedSaveRevisionHistory(); } catch (e) { }
                 saveRevisionHistoryTimeout = null;
                 saveRevisionHistoryIdleId = null;
             };
@@ -53122,19 +52609,13 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
             try { if (mappingModal) mappingModal.classList.add('hidden'); } catch (e) { }
             try { if (window.RefactoringSuite2025 && typeof window.RefactoringSuite2025.markDataStatsDirty === 'function') window.RefactoringSuite2025.markDataStatsDirty(); } catch (e) { }
-            // Refresh the visible surface once; the milestone manager renders on open.
-            setTimeout(() => {
-                try { if (typeof updateAndApplyDateRange === 'function') updateAndApplyDateRange(); } catch (e) { }
-                try {
-                    if (typeof milestoneModal !== 'undefined' && milestoneModal && !milestoneModal.classList.contains('hidden') && typeof renderMilestoneModal === 'function') {
-                        renderMilestoneModal();
-                    }
-                } catch (e) { }
-                try {
-                    if (typeof requestCoalescedMainRender === 'function') requestCoalescedMainRender('milestone-fast-apply');
-                    else if (typeof render === 'function') render();
-                } catch (e) { }
-            }, 0);
+            // [PERF-FIX] defer heavy rendering to give E2E polling a gap on the main thread
+            try { if (typeof renderMilestoneModal === 'function') setTimeout(() => renderMilestoneModal(), 0); } catch (e) { }
+            try {
+                if (typeof requestCoalescedMainRender === 'function') setTimeout(() => requestCoalescedMainRender('milestone-fast-apply'), 0);
+                else if (typeof render === 'function') setTimeout(() => render(), 0);
+            } catch (e) { }
+            try { if (typeof updateAndApplyDateRange === 'function') setTimeout(() => updateAndApplyDateRange(), 0); } catch (e) { }
             try { if (typeof showToast === 'function' && !options.silent) showToast(`${processed.length}\uac1c\uc758 \ub9c8\uc77c\uc2a4\ud1a4\uc774 \uc131\uacf5\uc801\uc73c\ub85c \ub85c\ub4dc\ub418\uc5c8\uc2b5\ub2c8\ub2e4.`, 'success'); } catch (e) { }
             return { applied: processed.length, mode: 'fast', idxDate, idxName, idxStatus };
         }
@@ -61082,59 +60563,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const todayTime = today.getTime();
             const tomorrowTime = tomorrow.getTime();
 
-            // Build project flags in O(projects + work rows), once per summary refresh.
-            const summaryWorkFlagsByProject = new Map();
-            const ensureSummaryWorkFlags = (projectId) => {
-                const key = String(projectId == null ? '' : projectId).trim();
-                if (!summaryWorkFlagsByProject.has(key)) {
-                    summaryWorkFlagsByProject.set(key, { today: false, tomorrow: false, thisWeek: false, nextWeek: false });
-                }
-                return summaryWorkFlagsByProject.get(key);
-            };
-            const formatSummaryDate = (value) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
-            const thisWeekDates = new Set();
-            const nextWeekDates = new Set();
-            const thisWeekMonday = new Date(todayTime);
-            const todayWeekday = thisWeekMonday.getDay();
-            thisWeekMonday.setDate(thisWeekMonday.getDate() + (todayWeekday === 0 ? -6 : 1 - todayWeekday));
-            const nextWeekMonday = new Date(todayTime);
-            nextWeekMonday.setDate(nextWeekMonday.getDate() + (todayWeekday === 0 ? 1 : 8 - todayWeekday));
-            for (let dayOffset = 0; dayOffset < 7; dayOffset++) {
-                const thisWeekDate = new Date(thisWeekMonday);
-                thisWeekDate.setDate(thisWeekMonday.getDate() + dayOffset);
-                thisWeekDates.add(formatSummaryDate(thisWeekDate));
-                const nextWeekDate = new Date(nextWeekMonday);
-                nextWeekDate.setDate(nextWeekMonday.getDate() + dayOffset);
-                nextWeekDates.add(formatSummaryDate(nextWeekDate));
-            }
-            const registerSummaryWorkDate = (projectId, rawDate) => {
-                const dateText = String(rawDate == null ? '' : rawDate).trim();
-                if (!dateText) return;
-                const flags = ensureSummaryWorkFlags(projectId);
-                if (dateText.startsWith(todayStr)) flags.today = true;
-                if (dateText.startsWith(tomorrowStr)) flags.tomorrow = true;
-                const dateKey = dateText.slice(0, 10);
-                if (thisWeekDates.has(dateKey)) flags.thisWeek = true;
-                if (nextWeekDates.has(dateKey)) flags.nextWeek = true;
-            };
-            try {
-                const store = window.workDate && window.workDate.store;
-                if (store && typeof store.forEach === 'function') {
-                    store.forEach((stored, projectId) => {
-                        if (!stored || !Array.isArray(stored.dates)) return;
-                        stored.dates.forEach(item => registerSummaryWorkDate(projectId, item && item.date));
-                    });
-                }
-            } catch (e) { }
-            try {
-                const items = Array.isArray(window.workItems) ? window.workItems : [];
-                for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
-                    const item = items[itemIndex];
-                    if (!item) continue;
-                    registerSummaryWorkDate(item.projectId, item.workDate);
-                }
-            } catch (e) { }
-
             // \ub2e8\uc77c \ub8e8\ud504\ub85c \ubaa8\ub4e0 \ud1b5\uacc4 \uacc4\uc0b0
             for (let i = 0; i < data.length; i++) {
                 const p = data[i];
@@ -61158,10 +60586,25 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                 // \ub0a0\uc9dc \uae30\ubc18 \uce74\uc6b4\ud2b8
                 // [\uc624\ub298 \uc791\uc5c5/\ub0b4\uc77c \uc791\uc5c5] \uc5c4\uaca9\ud55c \uc791\uc5c5\uc77c \uae30\uc900 \uce74\uc6b4\ud2b8
+                let hasTodayWork = false;
+                let hasTomorrowWork = false;
                 const pid = String(p.id).trim();
-                const workFlags = summaryWorkFlagsByProject.get(pid);
-                if (workFlags && workFlags.today) todayWorkCount++;
-                if (workFlags && workFlags.tomorrow) tomorrowWorkCount++;
+
+                if (window.workDate && window.workDate.store && window.workDate.store.has(pid)) {
+                    const stored = window.workDate.store.get(pid);
+                    if (stored && stored.dates && Array.isArray(stored.dates)) {
+                        hasTodayWork = stored.dates.some(d => d && d.date && d.date.startsWith(todayStr));
+                        hasTomorrowWork = stored.dates.some(d => d && d.date && d.date.startsWith(tomorrowStr));
+                    }
+                }
+                if (!hasTodayWork && Array.isArray(window.workItems)) {
+                    hasTodayWork = window.workItems.some(w => String(w.projectId).trim() === pid && String(w.workDate || '').trim().startsWith(todayStr));
+                }
+                if (!hasTomorrowWork && Array.isArray(window.workItems)) {
+                    hasTomorrowWork = window.workItems.some(w => String(w.projectId).trim() === pid && String(w.workDate || '').trim().startsWith(tomorrowStr));
+                }
+                if (hasTodayWork) todayWorkCount++;
+                if (hasTomorrowWork) tomorrowWorkCount++;
 
                 if (p.startDate) {
                     const startDate = new Date(p.startDate);
@@ -61172,10 +60615,61 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 }
 
                 // [THIS-WEEK-COUNT] \uc774\ubc88\uc8fc \uc6d4~\uc77c(7\uc77c) \uc791\uc5c5 \ub9c8\ucee4 \ud655\uc778
-                if (workFlags && workFlags.thisWeek) thisWeekWorkCount++;
+                let t_hasThisWeekWork = false;
+                {
+                    const t_pid = String(p.id).trim();
+                    const t_ref = new Date(todayTime);
+                    const t_day = t_ref.getDay();
+                    const t_diffToMonday = (t_day === 0 ? -6 : 1 - t_day);
+                    const t_monday = new Date(t_ref);
+                    t_monday.setDate(t_ref.getDate() + t_diffToMonday);
+                    for (let d = 0; d < 7 && !t_hasThisWeekWork; d++) {
+                        const t_checkDate = new Date(t_monday);
+                        t_checkDate.setDate(t_monday.getDate() + d);
+                        const t_str = `${t_checkDate.getFullYear()}-${String(t_checkDate.getMonth() + 1).padStart(2, '0')}-${String(t_checkDate.getDate()).padStart(2, '0')}`;
+                        if (window.workDate && window.workDate.store && window.workDate.store.has(t_pid)) {
+                            const stored = window.workDate.store.get(t_pid);
+                            if (stored && stored.dates && Array.isArray(stored.dates)) {
+                                if (stored.dates.some(dt => dt && dt.date && dt.date.startsWith(t_str))) {
+                                    t_hasThisWeekWork = true; break;
+                                }
+                            }
+                        }
+                        if (!t_hasThisWeekWork && Array.isArray(window.workItems)) {
+                            if (window.workItems.some(w => String(w.projectId).trim() === t_pid && String(w.workDate || '').trim().startsWith(t_str))) {
+                                t_hasThisWeekWork = true; break;
+                            }
+                        }
+                    }
+                }
+                if (t_hasThisWeekWork) thisWeekWorkCount++;
 
                 // [NEXT-WEEK-COUNT] \ucc28\uc8fc \uc6d4~\uc77c \uc791\uc5c5 \ub9c8\ucee4 \ud655\uc778
-                if (workFlags && workFlags.nextWeek) nextWeekWorkCount++;
+                let b_hasNextWeekWork = false;
+                const b_pid = String(p.id).trim();
+                const b_refDate = new Date(todayTime);
+                const b_day = b_refDate.getDay();
+                const b_diffToMonday = (b_day === 0 ? 1 : 8 - b_day);
+                
+                for (let d = 0; d < 7; d++) {
+                    const b_checkDate = new Date(b_refDate);
+                    b_checkDate.setDate(b_refDate.getDate() + b_diffToMonday + d);
+                    const b_targetStr = `${b_checkDate.getFullYear()}-${String(b_checkDate.getMonth() + 1).padStart(2, '0')}-${String(b_checkDate.getDate()).padStart(2, '0')}`;
+                    if (window.workDate && window.workDate.store && window.workDate.store.has(b_pid)) {
+                        const stored = window.workDate.store.get(b_pid);
+                        if (stored && stored.dates && Array.isArray(stored.dates)) {
+                            if (stored.dates.some(dt => dt && dt.date && dt.date.startsWith(b_targetStr))) {
+                                b_hasNextWeekWork = true; break;
+                            }
+                        }
+                    }
+                    if (!b_hasNextWeekWork && Array.isArray(window.workItems)) {
+                        if (window.workItems.some(w => String(w.projectId).trim() === b_pid && String(w.workDate || '').trim().startsWith(b_targetStr))) {
+                            b_hasNextWeekWork = true; break;
+                        }
+                    }
+                }
+                if (b_hasNextWeekWork) nextWeekWorkCount++;
             }
 
             const totalCount = data.length;
@@ -63816,7 +63310,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         // [REMOVED] \uae30\uc874 ensureTodayMarkers \ud568\uc218 - \uc0c8\ub85c\uc6b4 \uc2dc\uc2a4\ud15c\uc73c\ub85c \ub300\uccb4\ub428
 
         function scrollToToday() {
-            console.log('[v26-ScrollToday] scrollToToday() called');
             // [REFACTORED] Robust ScrollToToday - Auto Retry & Better Detection
             const container = (fullscreenModal && !fullscreenModal.classList.contains('hidden')) ? fullscreenModalBody : document.getElementById('ganttViewContent');
 
@@ -64453,88 +63946,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         el.style.display = 'flex';
                     }
                 });
-                if (colName === 'project-name') {
-                    // [v22-DEFINITIVE] Always find #ganttChartWrapper as the state anchor
-                    const _rootWrapper = document.getElementById('ganttChartWrapper');
-                    getGanttColumnSyncContainers().forEach(ganttContainer => {
-                        const panes = ganttContainer.matches && ganttContainer.matches('.gantt-titles')
-                            ? [ganttContainer]
-                            : Array.from(ganttContainer.querySelectorAll('.gantt-titles'));
-                        panes.forEach(pane => {
-                            // Find closest container but always use _rootWrapper for dataset state
-                            const paneWrapper = pane.closest('#ganttChartWrapper, .gantt-chart-container') || ganttContainer;
-                            const stateWrapper = _rootWrapper || paneWrapper;
-                            const timeline = paneWrapper ? paneWrapper.querySelector('.gantt-timeline-wrapper') : null;
-                            if (columnVisibility[colName]) {
-                                // EXPAND / RESTORE
-                                // Clear collapsed state on BOTH wrappers
-                                [stateWrapper, paneWrapper].forEach(w => {
-                                    if (w && w.dataset) {
-                                        delete w.dataset.codexNameCollapsed;
-                                        delete w.dataset.codexManualTitleWidth;
-                                        delete w.dataset.codexAutoTitleWidth;
-                                    }
-                                });
-                                const preWidth = Number((stateWrapper && stateWrapper.dataset && stateWrapper.dataset.codexPreCollapsePaneWidth) || 560);
-                                const restoredPx = Math.max(360, Math.round(preWidth)) + 'px';
-                                pane.style.removeProperty('display');
-                                pane.style.setProperty('display', 'flex', 'important');
-                                pane.style.setProperty('flex', '0 0 ' + restoredPx, 'important');
-                                pane.style.setProperty('width', restoredPx, 'important');
-                                pane.style.setProperty('min-width', '0px', 'important');
-                                pane.style.removeProperty('max-width');
-                                if (timeline) {
-                                    timeline.style.setProperty('flex', '1 1 0%', 'important');
-                                    timeline.style.setProperty('width', 'auto', 'important');
-                                }
-                                try {
-                                    if (window.CODEX_DESKTOP_GANTT_AUTO_TIGHT && typeof window.CODEX_DESKTOP_GANTT_AUTO_TIGHT.apply === 'function') {
-                                        window.CODEX_DESKTOP_GANTT_AUTO_TIGHT.apply('toggle-expand');
-                                    }
-                                } catch(e) {}
-                            } else {
-                                // COLLAPSE COMPLETE
-                                const currentWidth = pane.getBoundingClientRect().width || 560;
-                                // Store preWidth on BOTH wrappers
-                                [stateWrapper, paneWrapper].forEach(w => {
-                                    if (currentWidth > 50 && w && w.dataset) {
-                                        w.dataset.codexPreCollapsePaneWidth = String(Math.round(currentWidth));
-                                        w.dataset.codexNameCollapsed = '1';
-                                    }
-                                });
-                                // Force pane to 0 immediately - override any existing inline styles
-                                pane.style.removeProperty('display');
-                                pane.style.removeProperty('flex');
-                                pane.style.removeProperty('width');
-                                pane.style.setProperty('flex', '0 0 0px', 'important');
-                                pane.style.setProperty('width', '0px', 'important');
-                                pane.style.setProperty('min-width', '0px', 'important');
-                                pane.style.setProperty('max-width', '0px', 'important');
-                                pane.style.setProperty('overflow', 'hidden', 'important');
-                                pane.style.setProperty('display', 'none', 'important');
-                                if (timeline) {
-                                    timeline.style.removeProperty('flex');
-                                    timeline.style.removeProperty('width');
-                                    timeline.style.setProperty('flex', '1 1 100%', 'important');
-                                    timeline.style.setProperty('width', '100%', 'important');
-                                    timeline.style.setProperty('min-width', '0', 'important');
-                                }
-                                // Re-apply after a frame to survive ResizeObserver resets
-                                requestAnimationFrame(() => {
-                                    if (stateWrapper && stateWrapper.dataset && stateWrapper.dataset.codexNameCollapsed === '1') {
-                                        pane.style.setProperty('display', 'none', 'important');
-                                        pane.style.setProperty('width', '0px', 'important');
-                                        pane.style.setProperty('flex', '0 0 0px', 'important');
-                                        if (timeline) {
-                                            timeline.style.setProperty('flex', '1 1 100%', 'important');
-                                            timeline.style.setProperty('width', '100%', 'important');
-                                        }
-                                    }
-                                });
-                            }
-                        });
-                    });
-                }
                 if (colName === 'project-po') {
                     getGanttColumnSyncContainers().forEach(ganttContainer => {
                         const panes = ganttContainer.matches && ganttContainer.matches('.gantt-titles')
@@ -65187,24 +64598,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
             chartWrapper.dataset.codexMobilePortraitViewportApplied = '1';
 
-            const isNameVisible = (typeof columnVisibility !== 'undefined' && columnVisibility) ? (columnVisibility['project-name'] !== false) : true;
-            if (!isNameVisible) {
-                titlesPane.style.setProperty('display', 'none', 'important');
-                titlesPane.style.setProperty('width', '0px', 'important');
-                titlesPane.style.setProperty('flex', '0 0 0px', 'important');
-                timelineWrapper.style.setProperty('flex', '1 1 100%', 'important');
-                timelineWrapper.style.setProperty('width', '100%', 'important');
-                timelineWrapper.style.setProperty('min-width', '0', 'important');
-                return;
-            } else {
-                titlesPane.style.removeProperty('display');
-                titlesPane.style.removeProperty('width');
-                titlesPane.style.removeProperty('flex');
-                timelineWrapper.style.removeProperty('flex');
-                timelineWrapper.style.removeProperty('width');
-                timelineWrapper.style.removeProperty('min-width');
-            }
-
             const wrapperRectWidth = chartWrapper.getBoundingClientRect ? chartWrapper.getBoundingClientRect().width : 0;
             const wrapperWidth = Math.max(chartWrapper.clientWidth || 0, wrapperRectWidth || 0, window.innerWidth || 0, 320);
             const requestedTitleWidth = parseFloat(chartWrapper.dataset.userTitleWidth || '');
@@ -65267,10 +64660,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 ? Math.max(180, Math.min(760, Math.round(requestedNameWidth)))
                 : Math.max(240, Math.min(mobileAutoNameMax, measuredNameWidth));
             if (!titleWidth) {
-                const autoTitleWidth = Math.ceil(projectNameWidth + 48); // v25: tight mobile
+                const autoTitleWidth = Math.ceil(projectNameWidth + 92);
                 titleWidth = Math.max(220, Math.min(mobilePaneMaxWidth, autoTitleWidth, Math.round(wrapperWidth * 0.64)));
             }
-            const titleContentWidth = Math.max(titleWidth + 96, projectNameWidth + 192); // v25: tight mobile content
+            const titleContentWidth = Math.max(titleWidth + 188, projectNameWidth + 338);
 
             chartWrapper.style.setProperty('overflow-x', 'hidden', 'important');
             chartWrapper.style.setProperty('overflow-y', 'hidden', 'important');
@@ -65371,30 +64764,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const wasHeaderCollapsed = existingGanttEl && existingGanttEl.classList.contains('header-collapsed');
             const existingToggleBtn = existingGanttEl && existingGanttEl.querySelector('.header-toggle-btn');
             const wasToggleBtnActive = existingToggleBtn && existingToggleBtn.classList.contains('active');
-
-            // Release observers and handlers that own nodes inside the chart being replaced.
-            // Native observers remain rooted until disconnect(), even after replaceChildren().
-            if (existingGanttEl) {
-                try {
-                    if (typeof existingGanttEl._titlesTouchForwarderCleanup === 'function') {
-                        existingGanttEl._titlesTouchForwarderCleanup();
-                    }
-                } catch (e) { }
-                try {
-                    if (existingGanttEl.__codexFloatingScrollbarResizeObserver) {
-                        existingGanttEl.__codexFloatingScrollbarResizeObserver.disconnect();
-                        existingGanttEl.__codexFloatingScrollbarResizeObserver = null;
-                    }
-                } catch (e) { }
-                try {
-                    const observedWorkdateBody = window._workDateResizeObserverTarget;
-                    if (window._workDateResizeObserver && observedWorkdateBody && existingGanttEl.contains(observedWorkdateBody)) {
-                        window._workDateResizeObserver.disconnect();
-                        window._workDateResizeObserver = null;
-                        window._workDateResizeObserverTarget = null;
-                    }
-                } catch (e) { }
-            }
 
             // [PERF] DOM clear \ucd5c\uc801\ud654: innerHTML \ud30c\uc2f1 \ube44\uc6a9/GC \uac10\uc18c
             try {
@@ -67398,7 +66767,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         const floatingScrollbarResizeObserver = new ResizeObserver(() => {
                             requestAnimationFrame(updateGanttFloatingScrollbarMetrics);
                         });
-                        ganttEl.__codexFloatingScrollbarResizeObserver = floatingScrollbarResizeObserver;
                         floatingScrollbarResizeObserver.observe(finalTimelineBodyWrapper);
                         const ganttBodyNode = finalTimelineBodyWrapper.querySelector('.gantt-body');
                         if (ganttBodyNode) floatingScrollbarResizeObserver.observe(ganttBodyNode);
@@ -68587,7 +67955,15 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             // \ud568\uc218 \uc815\uc758 \uc9c1\ud6c4 \uc989\uc2dc \uc804\uc5ed\uc5d0 \ub178\ucd9c
             window.closeDependencyModal = closeDependencyModal;
 
-            // The singleton ESC handler is installed during bootstrap so this render scope is never captured.
+            // ESC \ud0a4\ub85c \uc758\uc874\uc131 \ubaa8\ub2ec \ub2eb\uae30
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const dependencyModal = document.getElementById('dependencyModal');
+                    if (dependencyModal && !dependencyModal.classList.contains('hidden')) {
+                        closeDependencyModal();
+                    }
+                }
+            });
 
             function selectDependencyType(type) {
                 selectedDependencyType = type;
@@ -74086,24 +73462,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 return raw === undefined || raw === null ? '' : String(raw).trim();
             };
 
-            const buildWorkdateAuditItemIndex = () => {
-                const index = new Map();
-                const items = Array.isArray(window.workItems) ? window.workItems : [];
-                for (let i = 0; i < items.length; i++) {
-                    const item = items[i];
-                    if (!item || item.projectId === undefined || item.projectId === null) continue;
-                    const projectId = String(item.projectId).trim();
-                    let bucket = index.get(projectId);
-                    if (!bucket) {
-                        bucket = [];
-                        index.set(projectId, bucket);
-                    }
-                    bucket.push(item);
-                }
-                return index;
-            };
-
-            const getWorkdateAuditEntries = (project, workItemsByProject) => {
+            const getWorkdateAuditEntries = (project) => {
                 const entries = [];
                 const seen = new Set();
                 const pid = getWorkdateAuditProjectId(project);
@@ -74125,10 +73484,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 } catch (e) { /* audit must not block filtering */ }
 
                 try {
-                    if (pid && workItemsByProject && typeof workItemsByProject.get === 'function') {
-                        const indexedItems = workItemsByProject.get(pid) || [];
-                        indexedItems.forEach(item => pushEntry(item && item.workDate, item && item.workDetail, 'workItems'));
-                    } else if (pid && Array.isArray(window.workItems)) {
+                    if (pid && Array.isArray(window.workItems)) {
                         window.workItems.forEach(item => {
                             if (!item || String(item.projectId).trim() !== pid) return;
                             pushEntry(item.workDate, item.workDetail, 'workItems');
@@ -74170,7 +73526,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 return entries;
             };
 
-            const getWorkdatePlanPinIssue = (project, workItemsByProject) => {
+            const getWorkdatePlanPinIssue = (project) => {
                 const pid = getWorkdateAuditProjectId(project);
                 if (!project || !pid) return null;
                 const planStart = normalizeDate(project.startDate || project.startDateStr);
@@ -74178,7 +73534,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 if (!planStart || !planEnd || isNaN(planStart.getTime()) || isNaN(planEnd.getTime())) return null;
                 const minPlan = planStart <= planEnd ? planStart : planEnd;
                 const maxPlan = planStart <= planEnd ? planEnd : planStart;
-                const entries = getWorkdateAuditEntries(project, workItemsByProject);
+                const entries = getWorkdateAuditEntries(project);
                 const outOfPlanEntries = entries.filter(item => {
                     const parsed = normalizeDate(item.date);
                     return parsed && !isNaN(parsed.getTime()) && (parsed < minPlan || parsed > maxPlan);
@@ -74216,10 +73572,9 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const issues = [];
                 let outOfPlanPins = 0;
                 let missingPinProjects = 0;
-                const workItemsByProject = buildWorkdateAuditItemIndex();
                 try {
                     source.forEach(project => {
-                        const issue = getWorkdatePlanPinIssue(project, workItemsByProject);
+                        const issue = getWorkdatePlanPinIssue(project);
                         if (!issue) return;
                         issues.push(issue);
                         outOfPlanPins += issue.outOfPlanEntries ? issue.outOfPlanEntries.length : 0;
@@ -74283,16 +73638,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const summary = collectWorkdatePlanPinIssues();
                 const markers = getActiveOutOfPlanMarkers(container);
                 const count = Math.max(summary.total || 0, markers.length || 0);
-                const countText = String(count);
-                const shouldHide = count === 0;
-                const ariaHidden = shouldHide ? 'true' : 'false';
-                const title = count > 0
+                countEl.textContent = String(count);
+                button.classList.toggle('hidden', count === 0);
+                button.setAttribute('aria-hidden', count === 0 ? 'true' : 'false');
+                button.title = count > 0
                     ? `기간 밖 작업일 핀 ${summary.outOfPlanPins || markers.length}건, 작업기간 내 핀 없음 ${summary.missingPinProjects || 0}건을 표시합니다.`
                     : '기간 밖 작업일 핀 또는 작업기간 내 핀 없음 항목 없음';
-                if (countEl.textContent !== countText) countEl.textContent = countText;
-                if (button.classList.contains('hidden') !== shouldHide) button.classList.toggle('hidden', shouldHide);
-                if (button.getAttribute('aria-hidden') !== ariaHidden) button.setAttribute('aria-hidden', ariaHidden);
-                if (button.title !== title) button.title = title;
                 if (!workdateOutOfPlanNoticeBound) {
                     workdateOutOfPlanNoticeBound = true;
                     button.addEventListener('click', () => {
@@ -74303,45 +73654,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 }
             };
             window.updateWorkdateOutOfPlanNotice = updateWorkdateOutOfPlanNotice;
-
-            const bindWorkdateMarkerTooltipDelegation = (markerLayer) => {
-                if (!markerLayer || markerLayer.dataset.tooltipDelegated === '1') return;
-                markerLayer.dataset.tooltipDelegated = '1';
-                const getMarker = (event) => {
-                    const target = event && event.target;
-                    const marker = target && target.closest ? target.closest('.workdate-marker') : null;
-                    return marker && markerLayer.contains(marker) ? marker : null;
-                };
-                const getTooltipHtml = (marker) => {
-                    if (!marker) return '';
-                    if (typeof marker.__workdateTooltipHtml === 'string') return marker.__workdateTooltipHtml;
-                    try {
-                        marker.__workdateTooltipHtml = decodeURIComponent(marker.dataset.tooltip || '');
-                    } catch (e) {
-                        marker.__workdateTooltipHtml = '';
-                    }
-                    return marker.__workdateTooltipHtml;
-                };
-                markerLayer.addEventListener('mouseover', (event) => {
-                    const marker = getMarker(event);
-                    if (!marker || (event.relatedTarget && marker.contains(event.relatedTarget))) return;
-                    marker.dataset.active = 'true';
-                    const html = getTooltipHtml(marker);
-                    if (html) showTooltip(html, event.clientX, event.clientY);
-                });
-                markerLayer.addEventListener('mousemove', (event) => {
-                    const marker = getMarker(event);
-                    if (!marker) return;
-                    const html = getTooltipHtml(marker);
-                    if (html) showTooltip(html, event.clientX, event.clientY);
-                });
-                markerLayer.addEventListener('mouseout', (event) => {
-                    const marker = getMarker(event);
-                    if (!marker || (event.relatedTarget && marker.contains(event.relatedTarget))) return;
-                    marker.dataset.active = 'false';
-                    hideTooltip();
-                });
-            };
 
             const updateGanttWithWorkDates = () => {
                 const container = getActiveGanttViewportContainer();
@@ -74380,7 +73692,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 markerLayer.style.width = `${ganttBody.scrollWidth}px`;
                 markerLayer.style.height = `${ganttBody.scrollHeight}px`;
                 markerLayer.style.pointerEvents = 'none';
-                bindWorkdateMarkerTooltipDelegation(markerLayer);
                 // [REFACTOR] \ub9c8\ucee4\ub294 \uac04\ud2b8 \ub9c9\ub300(z-index: 2) \uc704\uc5d0 \ud45c\uc2dc\ub418\uc9c0\ub9cc milestone \ud5e4\ub354(z-index: 50-51) \uc544\ub798\ub85c \uc720\uc9c0
                 // \uc2a4\ud06c\ub864 \uc2dc 70% \uc624\ubc84\ub7a9 \uac10\uc9c0 \ub85c\uc9c1\uc774 \ub9c8\ucee4\ub97c \uc228\uae40 \ucc98\ub9ac
                 markerLayer.style.zIndex = '10'; // [REFACTOR] Increased to 10 to stay above gantt-bars but below milestone headers
@@ -74684,6 +73995,17 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     `;
                         // store tooltip content on dataset so external sync/scroll handlers can re-show it
                         try { marker.dataset.tooltip = encodeURIComponent(tooltipHtml); } catch (e) { /* ignore */ }
+                        marker.addEventListener('mouseenter', (e) => {
+                            marker.dataset.active = 'true';
+                            showTooltip(tooltipHtml, e.clientX, e.clientY);
+                        });
+                        marker.addEventListener('mousemove', (e) => {
+                            showTooltip(tooltipHtml, e.clientX, e.clientY);
+                        });
+                        marker.addEventListener('mouseleave', () => {
+                            marker.dataset.active = 'false';
+                            hideTooltip();
+                        });
                     });
                 });
 
@@ -74723,24 +74045,15 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 } catch (e) { console.warn('[workdate] debug failed', e); }
 
                 // \ub9c8\ucee4 \ub808\uc774\uc5b4 \ud06c\uae30\ub97c ganttBody \ubcc0\ud654\uc5d0 \ub9de\ucd94\uae30 \uc704\ud55c ResizeObserver
-                if (typeof ResizeObserver !== 'undefined') {
+                if (typeof ResizeObserver !== 'undefined' && !window._workDateResizeObserver) {
                     try {
-                        if (window._workDateResizeObserver && window._workDateResizeObserverTarget !== ganttBody) {
-                            window._workDateResizeObserver.disconnect();
-                            window._workDateResizeObserver = null;
-                        }
-                        if (!window._workDateResizeObserver) {
-                            window._workDateResizeObserver = new ResizeObserver(() => {
-                                const liveBody = window._workDateResizeObserverTarget;
-                                if (!liveBody || !liveBody.isConnected) return;
-                                const ml = liveBody.querySelector('#workdate-markers');
-                                if (ml) {
-                                    ml.style.width = `${liveBody.scrollWidth}px`;
-                                    ml.style.height = `${liveBody.scrollHeight}px`;
-                                }
-                            });
-                        }
-                        window._workDateResizeObserverTarget = ganttBody;
+                        window._workDateResizeObserver = new ResizeObserver(() => {
+                            const ml = ganttBody.querySelector('#workdate-markers');
+                            if (ml) {
+                                ml.style.width = `${ganttBody.scrollWidth}px`;
+                                ml.style.height = `${ganttBody.scrollHeight}px`;
+                            }
+                        });
                         window._workDateResizeObserver.observe(ganttBody);
                     } catch (e) {
                         console.warn('[workdate] ResizeObserver setup failed', e);
@@ -74761,11 +74074,13 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 if (typeof window.syncWorkdateMarkers === 'function') {
                     // requestAnimationFrame\uc744 \uc0ac\uc6a9\ud558\uc5ec DOM\uc774 \uc644\uc804\ud788 \ub80c\ub354\ub9c1\ub41c \ud6c4 \uc2e4\ud589
                     requestAnimationFrame(() => {
-                        try {
-                            window.syncWorkdateMarkers();
-                        } catch (e) {
-                            console.warn('[workdate] syncWorkdateMarkers failed after marker creation', e);
-                        }
+                        requestAnimationFrame(() => {
+                            try {
+                                window.syncWorkdateMarkers();
+                            } catch (e) {
+                                console.warn('[workdate] syncWorkdateMarkers failed after marker creation', e);
+                            }
+                        });
                     });
                 }
             };
@@ -74796,7 +74111,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     }
                     ganttBody.appendChild(markerLayer);
                 }
-                bindWorkdateMarkerTooltipDelegation(markerLayer);
                 markerLayer.style.width = `${ganttBody.scrollWidth}px`;
                 markerLayer.style.height = `${ganttBody.scrollHeight}px`;
 
@@ -74948,8 +74262,19 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             <div><strong>프로젝트:</strong> ${project.name || ''}</div>
                             ${outOfPlanNotice}
                         </div>
-                        `;
+                    `;
                         try { marker.dataset.tooltip = encodeURIComponent(tooltipHtml); } catch (e) { }
+                        marker.addEventListener('mouseenter', (e) => {
+                            marker.dataset.active = 'true';
+                            showTooltip(tooltipHtml, e.clientX, e.clientY);
+                        });
+                        marker.addEventListener('mousemove', (e) => {
+                            showTooltip(tooltipHtml, e.clientX, e.clientY);
+                        });
+                        marker.addEventListener('mouseleave', () => {
+                            marker.dataset.active = 'false';
+                            hideTooltip();
+                        });
                         fragment.appendChild(marker);
                     });
                 });
@@ -74994,10 +74319,11 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     rafId = requestAnimationFrame(() => {
                         rafId = 0;
                         rebuild();
+                        sync();
+                        requestAnimationFrame(sync);
                     });
-                    // One post-layout sync is sufficient after the marker layer is rebuilt.
-                    // Rebuilding again on a timer multiplied DOM churn during rapid Gantt actions.
-                    timers.push(setTimeout(sync, 140));
+                    timers.push(setTimeout(rebuild, 140));
+                    timers.push(setTimeout(sync, 280));
                 };
             })();
             window.scheduleReliableWorkdateMarkerRefresh = scheduleReliableWorkdateMarkerRefresh;
@@ -75025,7 +74351,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 if (!window._workdateSyncRaf) window._workdateSyncRaf = null;
 
                 const scheduleWorkdateSync = () => {
-                    if (window._workdateSyncRaf) return;
+                    if (window._workdateSyncRaf) cancelAnimationFrame(window._workdateSyncRaf);
                     window._workdateSyncRaf = requestAnimationFrame(() => {
                         try { syncWorkdateMarkers(); } catch (e) { console.warn('syncWorkdateMarkers failed', e); }
                         window._workdateSyncRaf = null;
@@ -75087,65 +74413,71 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                         // [PERF-OPT][v4.80] \uc131\ub215 \ucd5c\uc801\ud654: \ub8e8\ud504 \uc804 \ubaa8\ub4e0 \ubc14 \ub85c\uc6b0\ub97c Map\uc5d0 \uce90\uc2f1
                      // [FIX] Duplicated block removed
                     
-                    const rowRectMap = new Map();
-                    const setMarkerStyleIfChanged = (marker, name, value) => {
-                        if (marker.style[name] !== value) marker.style[name] = value;
-                    };
-                    const setMarkerVisibility = (marker, hidden) => {
-                        const hiddenValue = hidden ? '1' : '0';
-                        if (marker.dataset && marker.dataset.syncHidden !== hiddenValue) marker.dataset.syncHidden = hiddenValue;
-                        setMarkerStyleIfChanged(marker, 'display', hidden ? 'none' : 'block');
-                        setMarkerStyleIfChanged(marker, 'opacity', hidden
-                            ? '0'
-                            : ((marker.classList.contains('marker-past') && !marker.classList.contains('marker-out-of-plan')) ? '0.48' : '1'));
-                        setMarkerStyleIfChanged(marker, 'pointerEvents', hidden ? 'none' : 'auto');
-                    };
-
                     Array.from(markerLayer.querySelectorAll('.workdate-marker')).forEach(marker => {
                         try {
                             const projectId = marker.dataset && marker.dataset.projectId;
                             const dateStr = marker.dataset && marker.dataset.date;
                             if (!projectId || !dateStr) {
-                                setMarkerVisibility(marker, true);
+                                if (marker.dataset) marker.dataset.syncHidden = '1';
+                                // ensure not inside header
+                                if (marker.parentNode && headerRect) {
+                                    const mRect = marker.getBoundingClientRect();
+                                    if (mRect.top < headerRect.bottom) {
+                                        marker.style.display = 'none';
+                                        marker.style.opacity = '0';
+                                        marker.style.pointerEvents = 'none';
+                                    }
+                                }
                                 return;
                             }
 
                             const row = rowMap.get(String(projectId));
                             if (!row) {
-                                setMarkerVisibility(marker, true);
+                                marker.style.display = 'none';
+                                if (marker.dataset) marker.dataset.syncHidden = '1';
+                                marker.style.opacity = '0';
+                                marker.style.pointerEvents = 'none';
                                 return;
                             }
 
                             // [PERF-OPT] hide marker if the row is hidden - classList \uccb4\ud06c \uc6b0\uc120 (getComputedStyle \ud638\ucd9c \ucd5c\uc18c\ud654)
                             if (row.classList.contains('hidden')) {
-                                setMarkerVisibility(marker, true);
+                                if (marker.dataset) marker.dataset.syncHidden = '1';
+                                marker.style.display = 'none';
+                                marker.style.opacity = '0';
+                                marker.style.pointerEvents = 'none';
                                 return;
                             }
                             // display:none \uccb4\ud06c\ub294 hidden \ud074\ub798\uc2a4\uac00 \uc5c6\uc744 \ub54c\ub9cc \uc218\ud589
                             if (row.style.display === 'none') {
-                                setMarkerVisibility(marker, true);
+                                if (marker.dataset) marker.dataset.syncHidden = '1';
+                                marker.style.display = 'none';
+                                marker.style.opacity = '0';
+                                marker.style.pointerEvents = 'none';
                                 return;
                             }
 
                             // compute top relative to markerLayer using bounding rects (handles transforms/scroll)
-                            let rowRect = rowRectMap.get(String(projectId));
-                            if (!rowRect) {
-                                rowRect = row.getBoundingClientRect();
-                                rowRectMap.set(String(projectId), rowRect);
-                            }
-                            const markerHeight = 14;
+                            const rowRect = row.getBoundingClientRect();
+                            const markerHeight = marker.offsetHeight || Math.max(12, parseFloat(window.getComputedStyle(marker).fontSize) || 14);
                             let top = rowRect.top - layerRect.top + Math.max(0, (rowRect.height - markerHeight) / 2);
 
                             // remove or hide if overlapping the timeline header
                             if (headerRect && rowRect.top < headerRect.bottom) {
-                                setMarkerVisibility(marker, true);
+                                if (marker.dataset) marker.dataset.syncHidden = '1';
+                                marker.style.display = 'none';
+                                marker.style.opacity = '0';
+                                marker.style.pointerEvents = 'none';
                                 return;
                             }
 
                             // compute left by date string to precisely align with day grid (\uba3c\uc800 \uc704\uce58 \uacc4\uc0b0)
                             const parsed = normalizeDate(dateStr);
                             if (!parsed) {
-                                setMarkerVisibility(marker, true);
+                                if (marker.dataset) marker.dataset.syncHidden = '1';
+                                marker.style.display = 'none';
+                                marker.style.opacity = '0';
+                                marker.style.pointerEvents = 'none';
                                 return;
                             }
                             // [FIX] \uadf8\ub9ac\ub4dc \ub77c\uc778\uc744 \uae30\uc900\uc73c\ub85c \uc815\ud655\ud55c \uc911\uc559 \uc815\ub82c (\uac04\ud2b8 \ub9c9\ub300\uc640 \ub3d9\uc77c\ud55c \uae30\uc900 \uc0ac\uc6a9)
@@ -75160,8 +74492,9 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             left = Math.max(0, Math.min(left, maxLeft));
 
                             // [FIX] \ub9c8\ucee4 \uc704\uce58\ub97c \uba3c\uc800 \uc124\uc815
-                            setMarkerStyleIfChanged(marker, 'left', `${left}px`);
-                            setMarkerStyleIfChanged(marker, 'top', `${top}px`);
+                            if (marker.dataset) marker.dataset.syncHidden = '0';
+                            marker.style.left = `${left}px`;
+                            marker.style.top = `${top}px`;
 
                             // [PERF-OPT] \ub9c8\uc77c\uc2a4\ud1a4 \ud5e4\ub354\uc640 \uacb9\uce58\ub294\uc9c0 \ud655\uc778 - \uce90\uc2f1\ub41c milestoneHeaderRect \uc0ac\uc6a9
                             let isUnderMilestoneHeader = false;
@@ -75175,20 +74508,21 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                             // [FIX] \ub9c8\uc77c\uc2a4\ud1a4 \ud5e4\ub354 \uc544\ub798\ub85c \ub4e4\uc5b4\uac00\uba74 \uc228\uae30\uace0, \ube60\uc838\ub098\uc624\uba74 \ub2e4\uc2dc \ubcf4\uc774\uae30
                             if (isUnderMilestoneHeader) {
-                                setMarkerVisibility(marker, true);
+                                if (marker.dataset) marker.dataset.syncHidden = '1';
+                                marker.style.display = 'none';
+                                marker.style.opacity = '0';
+                                marker.style.pointerEvents = 'none';
                             } else {
-                                setMarkerVisibility(marker, false);
+                                if (marker.dataset) marker.dataset.syncHidden = '0';
+                                marker.style.display = 'block';
+                                marker.style.opacity = (marker.classList.contains('marker-past') && !marker.classList.contains('marker-out-of-plan')) ? '0.48' : '1';
+                                marker.style.pointerEvents = 'auto';
                             }
                         } catch (e) {
                             console.warn('workdate marker sync error', e);
                         }
                     });
                     updateWorkdateOutOfPlanNotice(container);
-                    // Discard only the marker/style records produced by this synchronous pass.
-                    // Relevant row mutations that triggered the pass were already delivered.
-                    if (window._workdateMarkerObserver && typeof window._workdateMarkerObserver.takeRecords === 'function') {
-                        window._workdateMarkerObserver.takeRecords();
-                    }
                 };
 
                 // DOM mutations that can change layout (reorder/collapse/expand) should trigger sync.
@@ -75218,12 +74552,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             if (node.matches && node.matches('.title-item[data-project-id], .gantt-bar-row[data-project-id], .group-item-container, .group-header')) return true;
                             return !!(node.querySelector && node.querySelector('.title-item[data-project-id], .gantt-bar-row[data-project-id], .group-item-container, .group-header'));
                         };
-                        const isGanttLayoutTarget = (node) => {
-                            if (!node || node.nodeType !== 1 || isMarkerNode(node)) return false;
-                            return !!(node.matches && node.matches(
-                                '#ganttChartWrapper, #ganttViewContent, .gantt-body, .gantt-timeline, .gantt-timeline-header, .gantt-titles, .gantt-titles-body, .milestone-title-row'
-                            ));
-                        };
                         const collectProjectIdsFromNode = (node, bucket) => {
                             if (!node || node.nodeType !== 1 || isMarkerNode(node)) return;
                             if (node.matches && node.matches('.title-item[data-project-id], .gantt-bar-row[data-project-id]') && node.dataset.projectId) {
@@ -75237,7 +74565,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         };
                         window._workdateMarkerObserver = new MutationObserver((mutations) => {
                             let needsRebuild = false;
-                            let needsSync = false;
                             const affectedProjectIds = new Set();
                             for (let i = 0; i < mutations.length; i++) {
                                 const mutation = mutations[i];
@@ -75248,7 +74575,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                         needsRebuild = true;
                                         break;
                                     }
-                                    if (isGanttLayoutTarget(mutation.target)) needsSync = true;
                                     continue;
                                 }
                                 if (mutation.type === 'childList') {
@@ -75260,7 +74586,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                         needsRebuild = true;
                                         break;
                                     }
-                                    if (isGanttLayoutTarget(mutation.target) || changedNodes.some(isGanttLayoutTarget)) needsSync = true;
                                 }
                             }
                             if (needsRebuild && typeof window.scheduleReliableWorkdateMarkerRefresh === 'function') {
@@ -75274,7 +74599,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                     }
                                 }
                                 window.scheduleReliableWorkdateMarkerRefresh('visible-row-mutation');
-                            } else if (needsSync) {
+                            } else {
                                 scheduleWorkdateSync();
                             }
                         });
@@ -75297,18 +74622,15 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             }, { passive: true });
                         }
 
-                        // Window resize is global; bind it once while body scroll handlers rebind per render.
-                        if (!window.__workdateWindowResizeHandler) {
-                            window.__workdateWindowResizeHandler = () => {
-                                if (window.__workdateWindowResizeTimer) clearTimeout(window.__workdateWindowResizeTimer);
-                                window.__workdateWindowResizeTimer = setTimeout(() => {
-                                    window.__workdateWindowResizeTimer = 0;
-                                    scheduleWorkdateSync();
-                                    refreshWorkdateTooltip();
-                                }, 120);
-                            };
-                            window.addEventListener('resize', window.__workdateWindowResizeHandler, { passive: true });
-                        }
+                        // window resize
+                        let resizeTimer = null;
+                        window.addEventListener('resize', () => {
+                            if (resizeTimer) clearTimeout(resizeTimer);
+                            resizeTimer = setTimeout(() => {
+                                scheduleWorkdateSync();
+                                refreshWorkdateTooltip();
+                            }, 120);
+                        });
 
                         // also observe style attribute changes on ganttChartWrapper (for zoom via transform)
                         const chart = document.getElementById('ganttChartWrapper');
@@ -75331,7 +74653,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 ['DOMContentLoaded', 'gantt-rendered', 'render:complete', 'data:loaded'].forEach((eventName) => {
                     document.addEventListener(eventName, () => {
                         try { attachMutationObserver(); } catch (e) { }
-                        try { attachScrollResizeHandlers(); } catch (e) { }
                     }, { passive: true });
                 });
 
@@ -78899,10 +78220,13 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                 modalContent.style.maxHeight = '80vh'; // \ud654\uba74 \ub192\uc774\uc758 80%\ub85c \uc81c\ud55c
 
                                 // \ud654\uba74 \uc911\uc559\uc5d0 \uc704\uce58
-                                // Avoid forcing layout on every open; drag/resize converts this to pixel coordinates.
-                                modalContent.style.left = '50%';
-                                modalContent.style.top = '50%';
-                                modalContent.style.transform = 'translate(-50%, -50%)';
+                                const rect = modalContent.getBoundingClientRect();
+                                const centerX = (window.innerWidth - rect.width) / 2;
+                                const centerY = (window.innerHeight - rect.height) / 2;
+
+                                modalContent.style.left = Math.max(0, centerX) + 'px';
+                                modalContent.style.top = Math.max(0, centerY) + 'px';
+                                modalContent.style.transform = 'none';
                             }
                         }
                     });
@@ -86969,7 +86293,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                 modal.innerHTML = `
                 <div class="settlement-modal-content bg-white flex flex-col w-screen h-screen max-w-none max-h-none overflow-hidden">
-                    <div class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-indigo-600 to-purple-600 text-white" style="background: linear-gradient(to right, #4f46e5, #9333ea) !important; color: #ffffff !important;">
+                    <div class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
                         <button id="settlement-modal-close-left" class="text-2xl leading-none hover:opacity-80 mr-4" type="button" title="\ub2eb\uae30">&times;</button>
                         <button class="modal-maximize-btn leading-none text-white hover:opacity-80 transition-all mr-4" type="button" style="font-size: 1.95em;" title="\uc804\uccb4\ubcf4\uae30" onclick="const ov=this.closest(&apos;.settlement-modal-overlay&apos;); ov.classList.toggle(&apos;maximized&apos;); this.innerHTML=ov.classList.contains(&apos;maximized&apos;)?&apos;\u2750&apos;:&apos;\u25fb&apos;; if(typeof updateMaximizedModalLayout===&apos;function&apos;)updateMaximizedModalLayout(); event.stopPropagation();">\u25fb</button>
                         <div class="flex items-center gap-3 min-w-0 flex-1">
@@ -86992,12 +86316,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 // [PRD-HEADER-COLLISION] \ud5e4\ub354 \uc811\uae30/\ud3b4\uae30 \ucd08\uae30\ud654
                 try {
                     const headerEl = modal.querySelector('.settlement-modal-content > div:first-child');
-                    if (headerEl) {
-                        headerEl.classList.remove('collapsed');
-                        try { localStorage.setItem('settlement_header_collapsed', 'false'); } catch(e){}
-                        if (window.SettlementHeaderCollapse) {
-                            window.SettlementHeaderCollapse.init(headerEl);
-                        }
+                    if (headerEl && window.SettlementHeaderCollapse) {
+                        window.SettlementHeaderCollapse.init(headerEl);
                     }
                 } catch (e) {
                     console.warn('[PRD-HEADER-COLLISION] Header collapse init failed:', e);
@@ -87205,7 +86525,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                     ball.type = 'button';
                                     const mVal = parseInt(month, 10) || 0;
                                     const isStripe = mVal > 8 || mVal === 0;
-                                    ball.className = `billiard-ball ball-${mVal}${isStripe ? ' ball-stripe' : ''}`; // [v14] Class isolation
+                                    ball.className = `billiard-ball ball-${mVal}${isStripe ? ' ball-stripe' : ''} settlement-doc-dynamic-btn`;
                                     const suffix = docs.length > 1 ? `-${idx + 1}` : '';
                                     ball.innerHTML = `<span>${mVal ? String(mVal).padStart(2, '0') + suffix : '?'}</span>`;
                                     ball.dataset.tooltip = `${mVal ? mVal + '월' : '월 미상'} 증빙${suffix}${item.customer ? '(' + item.customer + ')' : ''}`;
@@ -87626,7 +86946,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     style.textContent = `
                                                 .settlement-summary-dashboard {
                             user-select: text !important;
-                            overflow-x: auto;
+                            overflow-x: hidden;
                         }
                         @media (max-width: 768px) {
                             .settlement-summary-dashboard { min-width: 1200px !important; }
@@ -96151,13 +95471,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const LOG = '[SettlementObserver v1.0]';
 
             let debounceTimer = null;
-            // Observe the stable chart host, not a replaceable .gantt-titles subtree.
-            const container = document.getElementById('ganttChart') || document.getElementById('ganttChartWrapper');
+            const container = document.querySelector('.gantt-titles');
             if (!container) {
                 console.warn(LOG, '\u26a0\ufe0f .gantt-titles \ucee8\ud14c\uc774\ub108 \uc5c6\uc74c - \uc9c0\uc5f0 \ucd08\uae30\ud654');
                 // DOM \uc900\ube44 \ud6c4 \uc7ac\uc2dc\ub3c4
                 document.addEventListener('DOMContentLoaded', function () {
-                    const c = document.getElementById('ganttChart') || document.getElementById('ganttChartWrapper');
+                    const c = document.querySelector('.gantt-titles');
                     if (c) initObserver(c);
                 });
                 return;
@@ -97662,7 +96981,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         align-items: stretch !important;
         width: 100% !important;
         box-sizing: border-box !important;
-        contain: layout style !important; /* [v15] Removed paint containment to prevent GPU composite black flash */
+        contain: layout style paint !important;
     }
     #addMilestoneForm .milestone-date-picker-shell {
         position: relative !important;
@@ -101655,10 +100974,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     });
                 });
                 skeletonGuard.observe(target, { childList: true, subtree: true });
-                if (this.__skeletonGuard) {
-                    try { this.__skeletonGuard.disconnect(); } catch (e) { }
-                }
-                this.__skeletonGuard = skeletonGuard;
 
                 if (window.gantt) {
                     origScrollSize = gantt.config.scroll_size || 0;
@@ -101985,10 +101300,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const closingToken = Controller.beginSession();
                 fullViewButtonLockUntil = 0;
                 window.removeEventListener('resize', this.onResize);
-                if (this.__skeletonGuard) {
-                    try { this.__skeletonGuard.disconnect(); } catch (e) { }
-                    this.__skeletonGuard = null;
-                }
                 if (this.__fullViewRenderHandler) {
                     document.removeEventListener('gantt-rendered', this.__fullViewRenderHandler, true);
                     document.removeEventListener('gantt:rendered', this.__fullViewRenderHandler, true);
@@ -106528,19 +105839,13 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
     }
     function observe() {
         const vp = el('overviewSankeyViewport');
-        if (!vp || typeof window.ResizeObserver !== 'function') return;
-        if (state.observer && state.observerTarget === vp) return;
-        if (state.observer) {
-            try { state.observer.disconnect(); } catch (e) { }
-        }
+        if (!vp || state.observer || typeof window.ResizeObserver !== 'function') return;
         state.observer = new ResizeObserver(() => {
             const modal = el('overviewSankeyModal');
             if (modal && !modal.classList.contains('hidden')) fit();
         });
-        state.observerTarget = vp;
         state.observer.observe(vp);
     }
-    window.__overviewSankeyRebindResizeObserver = observe;
     function init() {
         if (state.ready) return;
         bind();
@@ -106932,9 +106237,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     replacement.dataset.sankeyHotfixCloned = '1';
                     viewport.replaceWith(replacement);
                     viewport = replacement;
-                    if (typeof window.__overviewSankeyRebindResizeObserver === 'function') {
-                        window.__overviewSankeyRebindResizeObserver();
-                    }
                 }
 
                 svg.style.overflow = 'visible';
@@ -107914,19 +107216,15 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
     }
 
     function getWrapperWidth(chartWrapper) {
-        var clientWidth = chartWrapper.clientWidth || 0;
-        if (clientWidth > 0) return Math.max(320, Math.round(clientWidth));
         var rectWidth = 0;
         try { rectWidth = chartWrapper.getBoundingClientRect().width || 0; } catch (e) { rectWidth = 0; }
-        return Math.max(320, Math.round(rectWidth || window.innerWidth || 320));
+        return Math.max(320, Math.round(chartWrapper.clientWidth || rectWidth || window.innerWidth || 320));
     }
 
     function getWrapperHeight(chartWrapper) {
-        var clientHeight = chartWrapper.clientHeight || 0;
-        if (clientHeight > 0) return Math.max(48, Math.round(clientHeight));
         var rectHeight = 0;
         try { rectHeight = chartWrapper.getBoundingClientRect().height || 0; } catch (e) { rectHeight = 0; }
-        return Math.max(48, Math.round(rectHeight || 48));
+        return Math.max(48, Math.round(chartWrapper.clientHeight || rectHeight || 48));
     }
 
     function getRightMinimumWidth(wrapperWidth) {
@@ -108038,16 +107336,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
     }
 
     function updateControlPosition(chartWrapper, leftWidth, wrapperWidth) {
-        var mode = chartWrapper.dataset.mobilePaneMode || MODE_NORMAL;
         var pinned = chartWrapper.dataset.codexPaneControlPinned === '1';
-        // [v27-FIX] In MODE_NORMAL, X-position must ALWAYS stick to leftWidth (titlesPane right edge)
         if (pinned) {
             var storedLeft = parseFloat(chartWrapper.dataset.codexPaneControlLeft || '');
             var storedTop = parseFloat(chartWrapper.dataset.codexPaneControlTop || '');
-            // Override X with leftWidth if not manually dragging
-            if (mode === MODE_NORMAL && Number.isFinite(leftWidth) && leftWidth > 0) {
-                storedLeft = Math.round(leftWidth);
-            }
             var clampedStored = clampControlPosition(chartWrapper, storedLeft, storedTop, wrapperWidth);
             chartWrapper.dataset.codexPaneControlLeft = String(clampedStored.left);
             chartWrapper.dataset.codexPaneControlTop = String(clampedStored.top);
@@ -108091,74 +107383,34 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         ensureControl(chartWrapper);
         var wrapperWidth = getWrapperWidth(chartWrapper);
         var mode = chartWrapper.dataset.mobilePaneMode || MODE_NORMAL;
+        var rightMinWidth = getRightMinimumWidth(wrapperWidth);
+        var leftWidth = getDefaultTitleWidth(chartWrapper, wrapperWidth, parts);
 
-        if (mode === MODE_LEFT_COLLAPSED) {
-            // [v28-FIX] Left collapse: Hide titlesPane cleanly without destroying layout
-            if (parts.titlesPane) {
-                parts.titlesPane.style.setProperty('flex', '0 0 0px', 'important');
-                parts.titlesPane.style.setProperty('width', '0px', 'important');
-                parts.titlesPane.style.setProperty('min-width', '0px', 'important');
-                parts.titlesPane.style.setProperty('max-width', '0px', 'important');
-                parts.titlesPane.style.setProperty('overflow', 'hidden', 'important');
-                parts.titlesPane.style.setProperty('display', 'none', 'important');
-            }
-            if (parts.timelineWrapper) {
-                parts.timelineWrapper.style.setProperty('flex', '1 1 100%', 'important');
-                parts.timelineWrapper.style.setProperty('width', '100%', 'important');
-                parts.timelineWrapper.style.removeProperty('display');
-                parts.timelineWrapper.style.setProperty('opacity', '1', 'important');
-            }
-            chartWrapper.dataset.codexNameCollapsed = '1';
-            updateControlPosition(chartWrapper, 0, wrapperWidth);
+        if (mode === MODE_RIGHT_MIN) {
+            leftWidth = Math.max(0, wrapperWidth - rightMinWidth);
+            setFixedWidth(parts.titlesPane, leftWidth);
+            restoreTitlesPane(parts);
+            setTimelineWidth(parts, rightMinWidth, false);
+        } else if (mode === MODE_LEFT_COLLAPSED) {
+            leftWidth = 0;
+            setFixedWidth(parts.titlesPane, 0);
+            parts.titlesPane.style.setProperty('overflow', 'hidden', 'important');
+            parts.titlesPane.style.setProperty('opacity', '0', 'important');
+            setTimelineWidth(parts, 0, false);
         } else if (mode === MODE_RIGHT_COLLAPSED) {
-            // [v28-FIX] Right collapse: Expand titlesPane to 100%
+            leftWidth = wrapperWidth;
+            setFixedWidth(parts.titlesPane, leftWidth);
             restoreTitlesPane(parts);
-            if (parts.titlesPane) {
-                parts.titlesPane.style.setProperty('flex', '1 1 100%', 'important');
-                parts.titlesPane.style.setProperty('width', '100%', 'important');
-                parts.titlesPane.style.removeProperty('max-width');
-            }
-            if (parts.timelineWrapper) {
-                parts.timelineWrapper.style.setProperty('flex', '0 0 0px', 'important');
-                parts.timelineWrapper.style.setProperty('width', '0px', 'important');
-                parts.timelineWrapper.style.setProperty('overflow', 'hidden', 'important');
-                parts.timelineWrapper.style.setProperty('display', 'none', 'important');
-            }
-            updateControlPosition(chartWrapper, wrapperWidth, wrapperWidth);
+            setTimelineWidth(parts, 0, true);
         } else {
-            // [v28-FIX] MODE_NORMAL: Clean up inline style overrides and restore authoritative auto-width
-            delete chartWrapper.dataset.codexNameCollapsed;
-            if (parts.titlesPane) {
-                parts.titlesPane.style.removeProperty('display');
-                parts.titlesPane.style.removeProperty('opacity');
-                parts.titlesPane.style.removeProperty('overflow');
-                parts.titlesPane.style.removeProperty('max-width');
-            }
-            if (parts.timelineWrapper) {
-                parts.timelineWrapper.style.removeProperty('display');
-                parts.timelineWrapper.style.removeProperty('opacity');
-                parts.timelineWrapper.style.removeProperty('overflow');
-                parts.timelineWrapper.style.setProperty('flex', '1 1 0%', 'important');
-                parts.timelineWrapper.style.setProperty('width', 'auto', 'important');
-            }
+            mode = MODE_NORMAL;
+            chartWrapper.dataset.mobilePaneMode = MODE_NORMAL;
+            setFixedWidth(parts.titlesPane, leftWidth);
             restoreTitlesPane(parts);
-            
-            // Re-apply authoritative auto-width calculation
-            try {
-                if (typeof window.applyDesktopGanttAutoTitleWidth === 'function') {
-                    window.applyDesktopGanttAutoTitleWidth('mode-restore');
-                }
-                if (window.__codexDesktopGanttPostRenderTightWidth20260711 && typeof window.__codexDesktopGanttPostRenderTightWidth20260711.apply === 'function') {
-                    window.__codexDesktopGanttPostRenderTightWidth20260711.apply('mode-restore');
-                }
-            } catch(e) {}
-
-            var currentTitleW = 0;
-            try { currentTitleW = parts.titlesPane ? Math.round(parts.titlesPane.getBoundingClientRect().width || 0) : 0; } catch(e) {}
-            if (!(currentTitleW > 0)) currentTitleW = getDefaultTitleWidth(chartWrapper, wrapperWidth, parts);
-            updateControlPosition(chartWrapper, currentTitleW, wrapperWidth);
+            setTimelineWidth(parts, 0, false);
         }
 
+        updateControlPosition(chartWrapper, leftWidth, wrapperWidth);
         updateButtons(chartWrapper);
         requestAnimationFrame(function () { syncScrollbars(parts); });
     }
@@ -108178,18 +107430,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         } else if (mode === MODE_RIGHT_COLLAPSED) {
             leftWidth = wrapperWidth;
         } else {
-            // [v27-FIX] Always get authoritative actual rendered width of titlesPane
             try {
-                if (parts.titlesPane) {
-                    var rect = parts.titlesPane.getBoundingClientRect();
-                    leftWidth = Math.round(rect.width || parts.titlesPane.offsetWidth || 0);
-                }
-            } catch (e) { leftWidth = 0; }
-            if (!(leftWidth > 0)) {
-                var autoW = parseFloat(chartWrapper.dataset.codexAutoTitleWidth || chartWrapper.dataset.codexDesktopPostTightWidth || '');
-                if (Number.isFinite(autoW) && autoW > 0) leftWidth = Math.round(autoW);
-                else leftWidth = getDefaultTitleWidth(chartWrapper, wrapperWidth, parts);
+                leftWidth = Math.round(parts.titlesPane.getBoundingClientRect().width || parts.titlesPane.offsetWidth || 0);
+            } catch (e) {
+                leftWidth = 0;
             }
+            if (!(leftWidth > 0)) leftWidth = getDefaultTitleWidth(chartWrapper, wrapperWidth, parts);
         }
         updateControlPosition(chartWrapper, leftWidth, wrapperWidth);
         updateButtons(chartWrapper);
@@ -108201,14 +107447,14 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         rememberCurrentTitleWidth(chartWrapper, parts);
         if (nextMode === MODE_NORMAL) {
             chartWrapper.dataset.mobilePaneMode = MODE_NORMAL;
-            delete chartWrapper.dataset.codexNameCollapsed;
+            var remembered = parseFloat(chartWrapper.dataset.codexPanePreviousTitleWidth || '');
+            if (Number.isFinite(remembered) && remembered > 0) chartWrapper.dataset.userTitleWidth = String(Math.round(remembered));
         } else {
             chartWrapper.dataset.mobilePaneMode = nextMode;
         }
         applyMobileGanttPaneMode(chartWrapper);
-        setTimeout(function () { applyMobileGanttPaneMode(chartWrapper); }, 50);
-        setTimeout(function () { applyMobileGanttPaneMode(chartWrapper); }, 180);
-        setTimeout(function () { applyMobileGanttPaneMode(chartWrapper); }, 400);
+        setTimeout(function () { applyMobileGanttPaneMode(chartWrapper); }, 80);
+        setTimeout(function () { applyMobileGanttPaneMode(chartWrapper); }, 240);
     }
 
     function handleControlClick(event) {
@@ -108567,17 +107813,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         scheduleApply();
         setTimeout(scheduleApply, 180);
         setTimeout(scheduleApply, 600);
-        // [v27-FIX] Attach ResizeObserver directly on titlesPane elements
-        try {
-            if (typeof window.ResizeObserver === 'function') {
-                var titlesObserver = new ResizeObserver(function(entries) {
-                    scheduleApply();
-                });
-                document.querySelectorAll('#ganttChartWrapper .gantt-titles').forEach(function(el) {
-                    titlesObserver.observe(el);
-                });
-            }
-        } catch(e) {}
         ['gantt-rendered', 'instant-response:gantt-rendered', 'render:complete', 'fullscreenModalOpened', 'fullscreenModalClosed'].forEach(function (type) {
             document.addEventListener(type, scheduleApply, { passive: true });
         });
@@ -110049,7 +109284,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         }, true);
 
         function readCssPixels(style, name, fallback) {
-            if (!style || typeof style.getPropertyValue !== 'function') return fallback;
             var raw = style.getPropertyValue(name);
             var value = parseFloat(raw);
             return Number.isFinite(value) && value > 0 ? value : fallback;
@@ -110196,11 +109430,26 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         }
 
         function isVisibleGanttMeasureNode(node) {
-            if (!node || !node.isConnected) return false;
-            if (node.hidden || node.getAttribute('aria-hidden') === 'true') return false;
-            if (node.classList && node.classList.contains('hidden')) return false;
-            if (node.closest && node.closest('.hidden, [hidden], [aria-hidden="true"]')) return false;
-            if (node.style && (node.style.display === 'none' || node.style.visibility === 'hidden')) return false;
+            if (!node || !node.getBoundingClientRect) return false;
+            var rect = node.getBoundingClientRect();
+            if (rect.width <= 0.5 || rect.height <= 0.5) return false;
+            var style = window.getComputedStyle(node);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+        }
+
+        function isMeaningfulDesktopGanttMeasureNode(node) {
+            if (!isVisibleGanttMeasureNode(node)) return false;
+            if (!node.matches) return true;
+            if (node.matches('.group-header .project-po, .group-header .project-settlement')) {
+                var text = String(node.textContent || '').replace(/\s+/g, '').trim();
+                var hasInput = !!(node.querySelector && node.querySelector('input, select, button'));
+                return !!text || hasInput;
+            }
+            if (node.matches('.group-header .project-progress-summary')) {
+                var bar = node.querySelector ? node.querySelector('[style*="width"], .progress-bar, div > div') : null;
+                var text2 = String(node.textContent || '').replace(/\s+/g, '').trim();
+                return !!text2 || !!bar;
+            }
             return true;
         }
 
@@ -110243,23 +109492,52 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             return true;
         }
 
-        function getDesktopGanttSummaryLiveWidth(pane, paneStyle, fixedWidth, resizerAllowance) {
-            if (!pane) return 0;
-            if (!paneStyle) {
-                try { paneStyle = window.getComputedStyle(pane); } catch (e) { paneStyle = null; }
-            }
-            var fallbackNameWidth = readCssPixels(paneStyle, '--name-col-width', 360);
-            var summaryNameWidth = readCssPixels(paneStyle, '--codex-summary-name-width', fallbackNameWidth);
-            return Math.ceil(summaryNameWidth + (fixedWidth || 0) + (resizerAllowance || 0) + 12);
+        function getDesktopGanttSummaryLiveWidth(pane) {
+            if (!pane || !pane.getBoundingClientRect) return 0;
+            var paneRect = pane.getBoundingClientRect();
+            if (!paneRect || paneRect.width <= 0) return 0;
+            var nodes = [];
+            [
+                '.header > .gantt-name-header-col',
+                '.header > .header-col',
+                '.group-header > div:first-child',
+                '.group-header > .flex.items-center.flex-shrink-0 > *',
+                '.title-item > :not(.resizer)'
+            ].forEach(function(selector) {
+                pane.querySelectorAll(selector).forEach(function(node) {
+                    if (isVisibleGanttMeasureNode(node)) nodes.push(node);
+                });
+            });
+            var maxRight = paneRect.left;
+            nodes.forEach(function(node) {
+                maxRight = Math.max(maxRight, node.getBoundingClientRect().right);
+            });
+            return Math.max(0, Math.ceil(maxRight - paneRect.left));
         }
 
-        function getDesktopGanttVisibleRowLiveWidth(nameWidth, fixedWidth, resizerAllowance) {
-            return Math.ceil(Math.max(0, nameWidth) + fixedWidth + resizerAllowance + 12);
+        function getDesktopGanttVisibleRowLiveWidth(pane) {
+            if (!pane || !pane.getBoundingClientRect) return 0;
+            var paneRect = pane.getBoundingClientRect();
+            if (!paneRect || paneRect.width <= 0) return 0;
+            var nodes = [];
+            [
+                '.title-item > :not(.resizer)',
+                '.group-header > div:first-child',
+                '.group-header > .flex.items-center.flex-shrink-0 > *'
+            ].forEach(function(selector) {
+                pane.querySelectorAll(selector).forEach(function(node) {
+                    if (isMeaningfulDesktopGanttMeasureNode(node)) nodes.push(node);
+                });
+            });
+            var maxRight = paneRect.left;
+            nodes.forEach(function(node) {
+                maxRight = Math.max(maxRight, node.getBoundingClientRect().right);
+            });
+            return Math.max(0, Math.ceil(maxRight - paneRect.left));
         }
 
         function applyDesktopGanttAutoTitleWidth(reason) {
-            console.log('[v26-AutoTitle] applyDesktopGanttAutoTitleWidth called, reason:', reason);
-            if (!isDesktop()) { console.log('[v26-AutoTitle] SKIP: not desktop'); return; }
+            if (!isDesktop()) return;
 
             var projectView = document.getElementById('projectView');
             if (projectView && !projectView.classList.contains('open')) return;
@@ -110272,7 +109550,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
             syncDesktopGanttSummaryCompact(pane);
             syncDesktopGanttEmptyPoWidth(pane, wrapper);
-            var automaticReflow = /gantt-rendered|render:complete|project-open|accordion-open|group-toggle|column-toggle|mobile-portrait-exit|data:loaded/i.test(String(reason || '')); // v25: added accordion-open
+            var automaticReflow = /gantt-rendered|render:complete|project-open|group-toggle|column-toggle|mobile-portrait-exit|data:loaded/i.test(String(reason || ''));
             if (automaticReflow && wrapper.dataset.codexTitleResizeActive !== '1') {
                 delete wrapper.dataset.codexManualTitleWidth;
                 delete wrapper.dataset.codexManualNameWidth;
@@ -110294,9 +109572,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 sampleStyle.fontFamily
             ].join(' ');
 
-            var isNameVisible = (typeof columnVisibility !== 'undefined' && columnVisibility) ? (columnVisibility['project-name'] !== false) : true;
-
-            var maxTextWidth = isNameVisible ? getGanttMaxTitleTextWidth(pane, ctx, ctx.font) : 0;
+            var maxTextWidth = getGanttMaxTitleTextWidth(pane, ctx, ctx.font);
+            if (maxTextWidth <= 0) return;
 
             var fixedWidth = getGanttFixedColumnWidth(pane, paneStyle);
             var resizerAllowance = Math.max(32, pane.querySelectorAll('.header > .col-resizer').length * 8);
@@ -110305,57 +109582,72 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             var viewportCap = isBottomHierarchy
                 ? Math.max(720, Math.min(1320, Math.round(viewportWidthForCap * 0.885)))
                 : Math.max(720, Math.min(1180, Math.round(viewportWidthForCap * 0.82)));
-
             var currentNameWidth = readCssPixels(paneStyle, '--name-col-width', 360);
-            var maxNameForViewport = Math.max(260, viewportCap - fixedWidth - resizerAllowance - 48);
-            var desiredNameWidth = isNameVisible ? Math.ceil(maxTextWidth + 48) : 0; // v25: tighter fit
-            if (isNameVisible) {
-                desiredNameWidth = Math.max(280, Math.min(680, maxNameForViewport, desiredNameWidth));
-            }
-
-            var nameWidth = isNameVisible ? (wrapper.dataset.codexManualNameWidth === '1' ? currentNameWidth : desiredNameWidth) : 0;
-            if (wrapper.dataset.codexManualNameWidth !== '1' || !isNameVisible) {
+            var maxNameForViewport = Math.max(220, viewportCap - fixedWidth - resizerAllowance - 28);
+            var desiredNameWidth = Math.ceil(maxTextWidth + 72);
+            desiredNameWidth = Math.max(260, Math.min(560, maxNameForViewport, desiredNameWidth));
+            var nameWidth = wrapper.dataset.codexManualNameWidth === '1' ? currentNameWidth : desiredNameWidth;
+            if (wrapper.dataset.codexManualNameWidth !== '1') {
                 pane.style.setProperty('--name-col-width', nameWidth + 'px');
             }
-
-            var minPaneCap = (isNameVisible || fixedWidth > 0) ? (isNameVisible ? 280 : 0) : 0;
-            var targetWidth = Math.ceil((isNameVisible ? nameWidth : 0) + fixedWidth + (isNameVisible ? resizerAllowance : 0) + (fixedWidth > 0 || isNameVisible ? 16 : 0) /* v25: tight */);
-            
-            if (!isNameVisible && fixedWidth <= 0) {
-                targetWidth = 0;
-                pane.style.setProperty('display', 'none', 'important');
-                pane.style.setProperty('flex', '0 0 0px', 'important');
-                pane.style.setProperty('width', '0px', 'important');
+            var targetWidth = Math.ceil(nameWidth + fixedWidth + resizerAllowance + 28);
+            targetWidth = Math.max(400, Math.min(viewportCap, targetWidth));
+            var summaryLiveWidth = getDesktopGanttSummaryLiveWidth(pane);
+            var visibleRowLiveWidth = getDesktopGanttVisibleRowLiveWidth(pane);
+            var bottomVisibleRowWidth = isBottomHierarchy ? visibleRowLiveWidth : 0;
+            if (pane.dataset.codexDesktopSummaryCompact === '1' && summaryLiveWidth > 0) {
+                var compactTargetWidth = Math.ceil(Math.min(summaryLiveWidth, visibleRowLiveWidth || summaryLiveWidth) + 16);
+                targetWidth = Math.max(360, Math.min(viewportCap, compactTargetWidth));
             } else {
-                pane.style.removeProperty('display');
-                targetWidth = Math.max(minPaneCap, Math.min(viewportCap, targetWidth));
-                var summaryLiveWidth = getDesktopGanttSummaryLiveWidth(pane);
-                var bottomVisibleRowWidth = isBottomHierarchy ? getDesktopGanttVisibleRowLiveWidth(nameWidth, fixedWidth, resizerAllowance) : 0;
-                if (pane.dataset.codexDesktopSummaryCompact === '1' && summaryLiveWidth > 0) {
-                    var compactTargetWidth = Math.ceil(summaryLiveWidth + 24); // v25: tighter compact
-                    targetWidth = Math.max(minPaneCap, Math.min(viewportCap, compactTargetWidth));
-                } else if (isBottomHierarchy) {
+                if (visibleRowLiveWidth > 0) {
+                    var tightTargetWidth = Math.ceil(visibleRowLiveWidth + 16);
+                    targetWidth = Math.max(360, Math.min(viewportCap, Math.min(targetWidth, tightTargetWidth)));
+                }
+                if (isBottomHierarchy) {
                     var bottomTargetWidth = bottomVisibleRowWidth > 0
-                        ? Math.ceil(bottomVisibleRowWidth + 16) /* v25 */
-                        : Math.ceil((summaryLiveWidth || targetWidth) + 16) /* v25 */;
-                    targetWidth = Math.max(minPaneCap, Math.min(viewportCap, Math.max(targetWidth, bottomTargetWidth)));
-                }
-                pane.style.setProperty('flex', '0 0 ' + targetWidth + 'px', 'important');
-                pane.style.setProperty('width', targetWidth + 'px', 'important');
-            }
-
-            var timeline = wrapper.querySelector('.gantt-timeline-wrapper');
-            if (timeline) {
-                if (targetWidth === 0) {
-                    timeline.style.setProperty('flex', '1 1 100%', 'important');
-                    timeline.style.setProperty('width', '100%', 'important');
-                } else {
-                    timeline.style.setProperty('flex', '1 1 0%', 'important');
-                    timeline.style.setProperty('width', 'auto', 'important');
+                        ? Math.ceil(bottomVisibleRowWidth + 16)
+                        : Math.ceil((summaryLiveWidth || targetWidth) + 28);
+                    targetWidth = Math.max(360, Math.min(viewportCap, Math.max(targetWidth, bottomTargetWidth)));
                 }
             }
 
+            var emptyPoBaselineWidth = Number(wrapper.dataset.codexDesktopEmptyPoBaselineWidth || 0);
+            var hasVisiblePoValue = wrapper.dataset.codexDesktopPoHasValue === '1';
+            if (!hasVisiblePoValue && !(emptyPoBaselineWidth > 0) && !isBottomHierarchy) {
+                emptyPoBaselineWidth = targetWidth;
+                wrapper.dataset.codexDesktopEmptyPoBaselineWidth = String(Math.round(emptyPoBaselineWidth));
+            }
+            if (!hasVisiblePoValue && emptyPoBaselineWidth > 0 && targetWidth > emptyPoBaselineWidth) {
+                var emptyPoExpansion = targetWidth - emptyPoBaselineWidth;
+                nameWidth = Math.max(260, nameWidth - emptyPoExpansion);
+                pane.style.setProperty('--name-col-width', nameWidth + 'px');
+                targetWidth = emptyPoBaselineWidth;
+            }
+
+            var key = [
+                nameWidth,
+                targetWidth,
+                Math.round(summaryLiveWidth || 0),
+                Math.round(visibleRowLiveWidth || 0),
+                Math.round(bottomVisibleRowWidth || 0),
+                isBottomHierarchy ? 'bottom' : 'top',
+                pane.dataset.codexDesktopSummaryCompact || '0',
+                pane.style.getPropertyValue('--codex-summary-name-width') || '',
+                getVisibleGanttTitleItems(pane).length,
+                pane.querySelectorAll('.group-header').length,
+                window.innerWidth
+            ].join(':');
+            if (ganttWidthLastKey === key) return;
+            ganttWidthLastKey = key;
+
+            var widthPx = targetWidth + 'px';
+            pane.style.setProperty('flex', '0 0 ' + widthPx, 'important');
+            pane.style.setProperty('width', widthPx, 'important');
+            pane.style.setProperty('min-width', widthPx, 'important');
+            pane.style.setProperty('max-width', widthPx, 'important');
             wrapper.dataset.codexAutoTitleWidth = String(targetWidth);
+            // Desktop auto-fit owns this pane width. Calling the mobile pane toggle here
+            // can restore the mobile/default split width after the desktop calculation.
         }
 
         function scheduleDesktopGanttAutoTitleWidth(reason) {
@@ -110375,7 +109667,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             if (!maxTextWidth) return false;
             var isMobilePortrait = !!(wrapper && wrapper.classList && wrapper.classList.contains('gantt-mobile-portrait'));
             var maxNameWidth = isMobilePortrait ? 680 : 560;
-            var nameWidth = Math.max(isMobilePortrait ? 220 : 210, Math.min(maxNameWidth, Math.ceil(maxTextWidth + (isMobilePortrait ? 54 : 40))));
+            var nameWidth = Math.max(isMobilePortrait ? 260 : 260, Math.min(maxNameWidth, Math.ceil(maxTextWidth + (isMobilePortrait ? 108 : 90))));
             pane.style.setProperty('--name-col-width', nameWidth + 'px');
             if (isMobilePortrait) {
                 pane.style.setProperty('--mobile-project-name-width', nameWidth + 'px');
@@ -110412,10 +109704,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 wrapper.dataset.userTitleWidth = String(Math.round(targetWidth));
             }
             pane.dataset.codexNameAutoFitReason = reason || 'manual';
-            // [v27-FIX] Notify pane toggle position to sync immediately
-            if (window.__codexMobileGanttPaneToggle && typeof window.__codexMobileGanttPaneToggle.refreshPosition === 'function') {
-                try { window.__codexMobileGanttPaneToggle.refreshPosition(); } catch(e) {}
-            }
             return true;
         }
 
@@ -110470,7 +109758,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         });
 
         document.addEventListener('click', function(event) {
-            if (event.target && event.target.closest && event.target.closest('#projectView, #scheduleHeaderToggle, .schedule-header-toggle, .accordion-header, .accordion-icon, .accordion-title-btn, [id*="projectView"]')) {
+            if (event.target && event.target.closest && event.target.closest('#projectView .accordion-header, #projectView .accordion-icon, #projectView .accordion-title-btn')) {
                 var wrapper = document.getElementById('ganttChartWrapper');
                 if (wrapper && wrapper.dataset.codexTitleResizeActive !== '1') {
                     delete wrapper.dataset.codexManualTitleWidth;
@@ -110478,18 +109766,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     delete wrapper.dataset.userTitleWidth;
                     delete wrapper.dataset.userNameColumnWidth;
                 }
-                ganttWidthLastKey = '';
-                var triggerReflow = function() {
+                setTimeout(function() {
+                    ganttWidthLastKey = '';
                     scheduleDesktopGanttAutoTitleWidth('project-open');
-                    if (typeof scheduleGanttColumnLayoutSync === 'function') {
-                        scheduleGanttColumnLayoutSync('project-open');
-                    }
-                };
-                triggerReflow();
-                setTimeout(triggerReflow, 30);
-                setTimeout(triggerReflow, 120);
-                setTimeout(triggerReflow, 300);
-                setTimeout(triggerReflow, 500);
+                }, 120);
             }
         }, true);
 
@@ -110522,12 +109802,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             var modal = document.getElementById('dataDetailModal');
             if (!modal) return;
             if (!isDesktop()) {
-                if (modal.classList.contains('codex-fit-detail-modal')) modal.classList.remove('codex-fit-detail-modal');
+                modal.classList.remove('codex-fit-detail-modal');
                 return;
             }
             var visible = !modal.classList.contains('hidden') && window.getComputedStyle(modal).display !== 'none';
             if (!visible) {
-                if (modal.classList.contains('codex-fit-detail-modal')) modal.classList.remove('codex-fit-detail-modal');
+                modal.classList.remove('codex-fit-detail-modal');
                 return;
             }
             var titleText = '';
@@ -110535,25 +109815,14 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             if (titleNode) titleText = titleNode.textContent || '';
             var hasTable = !!modal.querySelector('#dataDetailTableContainer table, #dataDetailTableContainer .detail-table');
             var shouldFit = hasTable || /상세|현황|내역|목록/.test(titleText);
-            if (modal.classList.contains('codex-fit-detail-modal') !== shouldFit) {
-                modal.classList.toggle('codex-fit-detail-modal', shouldFit);
-            }
+            modal.classList.toggle('codex-fit-detail-modal', shouldFit);
         }
 
         var dataDetailModal = document.getElementById('dataDetailModal');
         if (dataDetailModal) {
-            var dataDetailFitRaf = 0;
-            var scheduleDataDetailModalFit = function() {
-                if (dataDetailFitRaf) return;
-                dataDetailFitRaf = requestAnimationFrame(function() {
-                    dataDetailFitRaf = 0;
-                    syncDataDetailModalFit();
-                });
-            };
-            var dataDetailFitObserver = new MutationObserver(scheduleDataDetailModalFit);
-            dataDetailFitObserver.observe(dataDetailModal, { attributes: true, attributeFilter: ['class', 'style'] });
-            var dataDetailTableRoot = document.getElementById('dataDetailTableContainer');
-            if (dataDetailTableRoot) dataDetailFitObserver.observe(dataDetailTableRoot, { childList: true, subtree: true });
+            new MutationObserver(function() {
+                requestAnimationFrame(syncDataDetailModalFit);
+            }).observe(dataDetailModal, { attributes: true, attributeFilter: ['class', 'style'], childList: true, subtree: true });
         }
         document.addEventListener('click', function() {
             setTimeout(syncDataDetailModalFit, 80);
@@ -110563,49 +109832,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             scheduleDesktopGanttAutoTitleWidth('startup');
             syncDataDetailModalFit();
         }, 250);
-
-        
-        // [v25-ACCORDION-GUARD] Watch #projectView: cache invalidation + multi-frame retry + scroll-to-today
-        try {
-            var projectViewEl = document.getElementById('projectView');
-            if (projectViewEl) {
-                var pvObserver = new MutationObserver(function(mutations) {
-                    var isOpen = projectViewEl.classList.contains('open') || window.getComputedStyle(projectViewEl).display !== 'none';
-                    if (isOpen) {
-                        console.log("[v26-AccordionGuard] projectView OPEN detected by MutationObserver");
-                        ganttWidthLastKey = '';
-                        ganttTextMeasureCache = { dataRef: null, length: -1, font: '', domKey: '', maxWidth: 0 };
-                        applyDesktopGanttAutoTitleWidth('accordion-open-mutation');
-                        if (typeof scheduleGanttColumnLayoutSync === 'function') {
-                            scheduleGanttColumnLayoutSync('accordion-open-mutation');
-                        }
-                        var retryCount = 0;
-                        var retryAutoWidth = function() {
-                            retryCount++;
-                            ganttWidthLastKey = '';
-                            ganttTextMeasureCache = { dataRef: null, length: -1, font: '', domKey: '', maxWidth: 0 };
-                            applyDesktopGanttAutoTitleWidth('accordion-open-retry-' + retryCount);
-                            if (retryCount <= 2 && typeof tryScrollToTodayIfReady === 'function') {
-                                try { tryScrollToTodayIfReady(); } catch(e) {}
-                            }
-                            if (retryCount < 4) {
-                                requestAnimationFrame(retryAutoWidth);
-                            }
-                        };
-                        requestAnimationFrame(retryAutoWidth);
-                        setTimeout(function() {
-                            ganttWidthLastKey = '';
-                            ganttTextMeasureCache = { dataRef: null, length: -1, font: '', domKey: '', maxWidth: 0 };
-                            applyDesktopGanttAutoTitleWidth('accordion-open-late');
-                            if (typeof tryScrollToTodayIfReady === 'function') {
-                                try { tryScrollToTodayIfReady(); } catch(e) {}
-                            }
-                        }, 300);
-                    }
-                });
-                pvObserver.observe(projectViewEl, { attributes: true, attributeFilter: ['class', 'style'] });
-            }
-        } catch (e) { }
 
         window.__codexDesktopGanttDetailMilestoneFit20260508Api = {
             applyGanttTitleWidth: applyDesktopGanttAutoTitleWidth,
@@ -129157,7 +128383,7 @@ window.openAddNewProjectModal = function(editProject) {
             border: 1px solid #e2e8f0 !important;
             border-radius: 8px !important;
             background: #fff !important;
-            overflow: visible !important;
+            overflow: hidden !important;
             flex: 0 0 auto !important;
         }
 
@@ -129213,8 +128439,8 @@ window.openAddNewProjectModal = function(editProject) {
             flex-wrap: wrap !important;
             gap: 8px !important;
             padding: 10px 12px 12px !important;
-            max-height: none !important;
-            overflow: visible !important;
+            max-height: 178px !important;
+            overflow: auto !important;
         }
 
         #settlementReviewModal .codex-review-button-grid[hidden] {
@@ -130411,12 +129637,10 @@ window.openAddNewProjectModal = function(editProject) {
                         var toggleHeight = Math.ceil(toggle.getBoundingClientRect().height || toggle.offsetHeight || 40);
                         if (grid.hidden) {
                             wrap.style.height = toggleHeight + 'px';
-                            wrap.style.overflow = 'hidden';
                             return;
                         }
-                        /* [FIX-CARD-OVERLAP] Use auto height when expanded to prevent card overlap */
-                        wrap.style.height = 'auto';
-                        wrap.style.overflow = 'visible';
+                        var gridHeight = Math.ceil(grid.getBoundingClientRect().height || grid.offsetHeight || 0);
+                        wrap.style.height = Math.max(toggleHeight, toggleHeight + gridHeight + 2) + 'px';
                     });
                 };
                 toggle.appendChild(titleSpan);
@@ -131077,31 +130301,18 @@ window.openAddNewProjectModal = function(editProject) {
                 panel.style.setProperty('--codex-gantt-wrapper-fit-height', ganttHeight + 'px');
             }
 
-            function setLegendStyleIfChanged(legend, name, value, priority) {
-                var nextPriority = priority || '';
-                if (legend.style.getPropertyValue(name) === value && legend.style.getPropertyPriority(name) === nextPriority) return false;
-                legend.style.setProperty(name, value, nextPriority);
-                return true;
-            }
-
-            function removeLegendStyleIfPresent(legend, name) {
-                if (!legend.style.getPropertyValue(name)) return false;
-                legend.style.removeProperty(name);
-                return true;
-            }
-
             function fitLegendHeight() {
                 var legend = getLegend();
                 if (!legend) return;
                 if (legend.classList.contains('legend-collapsed')) {
-                    setLegendStyleIfChanged(legend, 'min-height', '4px', 'important');
-                    setLegendStyleIfChanged(legend, 'max-height', '4px', 'important');
-                    setLegendStyleIfChanged(legend, 'height', '4px', 'important');
-                    setLegendStyleIfChanged(legend, 'padding', '0', 'important');
-                    setLegendStyleIfChanged(legend, 'margin-bottom', '0', 'important');
-                    setLegendStyleIfChanged(legend, 'overflow', 'visible', 'important');
-                    removeLegendStyleIfPresent(legend, '--codex-legend-fit-min-height');
-                    removeLegendStyleIfPresent(legend, '--legend-mobile-auto-min-height');
+                    legend.style.setProperty('min-height', '4px', 'important');
+                    legend.style.setProperty('max-height', '4px', 'important');
+                    legend.style.setProperty('height', '4px', 'important');
+                    legend.style.setProperty('padding', '0', 'important');
+                    legend.style.setProperty('margin-bottom', '0', 'important');
+                    legend.style.setProperty('overflow', 'visible', 'important');
+                    legend.style.removeProperty('--codex-legend-fit-min-height');
+                    legend.style.removeProperty('--legend-mobile-auto-min-height');
                     syncSchedulePanelHeight(0);
                     return;
                 }
@@ -131114,35 +130325,49 @@ window.openAddNewProjectModal = function(editProject) {
                 legend = legend || getLegend();
                 if (!legend) return 0;
                 if (legend.classList.contains('legend-collapsed')) {
-                    setLegendStyleIfChanged(legend, 'min-height', '4px', 'important');
-                    setLegendStyleIfChanged(legend, 'max-height', '4px', 'important');
-                    setLegendStyleIfChanged(legend, 'height', '4px', 'important');
-                    setLegendStyleIfChanged(legend, 'padding', '0', 'important');
-                    setLegendStyleIfChanged(legend, 'margin-bottom', '0', 'important');
-                    setLegendStyleIfChanged(legend, 'overflow', 'visible', 'important');
-                    removeLegendStyleIfPresent(legend, '--codex-legend-fit-min-height');
-                    removeLegendStyleIfPresent(legend, '--legend-mobile-auto-min-height');
+                    legend.style.setProperty('min-height', '4px', 'important');
+                    legend.style.setProperty('max-height', '4px', 'important');
+                    legend.style.setProperty('height', '4px', 'important');
+                    legend.style.setProperty('padding', '0', 'important');
+                    legend.style.setProperty('margin-bottom', '0', 'important');
+                    legend.style.setProperty('overflow', 'visible', 'important');
+                    legend.style.removeProperty('--codex-legend-fit-min-height');
+                    legend.style.removeProperty('--legend-mobile-auto-min-height');
                     syncSchedulePanelHeight(0);
                     return 0;
                 }
                 var base = 0;
-                setLegendStyleIfChanged(legend, '--codex-legend-fit-min-height', '0px');
-                setLegendStyleIfChanged(legend, '--legend-mobile-auto-min-height', '0px');
-                setLegendStyleIfChanged(legend, 'min-height', '0px', 'important');
-                setLegendStyleIfChanged(legend, 'height', 'auto', 'important');
-                setLegendStyleIfChanged(legend, 'max-height', 'none', 'important');
-                setLegendStyleIfChanged(legend, 'align-content', 'flex-start', 'important');
-                setLegendStyleIfChanged(legend, 'align-items', 'flex-start', 'important');
-                // scrollHeight already covers the visible legend rows and the bottom
-                // action row. Reading every child's rectangle forced one full layout
-                // per child after each Gantt mutation.
-                var needed = Math.ceil(Math.max(base, legend.scrollHeight || 0) + 6);
-                setLegendStyleIfChanged(legend, '--codex-legend-fit-min-height', needed + 'px');
-                setLegendStyleIfChanged(legend, '--legend-mobile-auto-min-height', needed + 'px');
-                setLegendStyleIfChanged(legend, 'min-height', needed + 'px', 'important');
-                setLegendStyleIfChanged(legend, 'height', 'auto', 'important');
-                setLegendStyleIfChanged(legend, 'max-height', 'none', 'important');
-                setLegendStyleIfChanged(legend, 'overflow', 'visible', 'important');
+                legend.style.setProperty('--codex-legend-fit-min-height', '0px');
+                legend.style.setProperty('--legend-mobile-auto-min-height', '0px');
+                legend.style.setProperty('min-height', '0px', 'important');
+                legend.style.setProperty('height', 'auto', 'important');
+                legend.style.setProperty('max-height', 'none', 'important');
+                legend.style.setProperty('align-content', 'flex-start', 'important');
+                legend.style.setProperty('align-items', 'flex-start', 'important');
+                var legendRect = legend.getBoundingClientRect();
+                var maxBottom = 0;
+                Array.prototype.forEach.call(legend.children || [], function (child) {
+                    if (!child || child.classList.contains('legend-toggle')) return;
+                    var style = window.getComputedStyle(child);
+                    if (style.display === 'none' || style.visibility === 'hidden') return;
+                    var rect = child.getBoundingClientRect();
+                    if (rect.height <= 0) return;
+                    maxBottom = Math.max(maxBottom, rect.bottom - legendRect.top);
+                });
+                var measuredContent = Math.ceil(maxBottom + 6);
+                var needed = Math.ceil(Math.max(base, measuredContent));
+                var row = legend.querySelector('.codex-legend-bottom-actions');
+                if (row) {
+                    var rowRect = row.getBoundingClientRect();
+                    needed = Math.ceil(Math.max(needed, (rowRect.bottom - legendRect.top) + 3));
+                }
+                needed = Math.ceil(Math.max(needed, legend.scrollHeight || 0));
+                legend.style.setProperty('--codex-legend-fit-min-height', needed + 'px');
+                legend.style.setProperty('--legend-mobile-auto-min-height', needed + 'px');
+                legend.style.setProperty('min-height', needed + 'px', 'important');
+                legend.style.setProperty('height', 'auto', 'important');
+                legend.style.setProperty('max-height', 'none', 'important');
+                legend.style.setProperty('overflow', 'visible', 'important');
                 syncSchedulePanelHeight(needed);
                 return needed;
             }
@@ -131153,7 +130378,10 @@ window.openAddNewProjectModal = function(editProject) {
                 requestAnimationFrame(function () {
                     var legend = getLegend();
                     applyLegendHeightNow(legend);
-                    state.legendFitScheduled = false;
+                    requestAnimationFrame(function () {
+                        applyLegendHeightNow(legend);
+                        state.legendFitScheduled = false;
+                    });
                 });
             }
 
@@ -131284,11 +130512,12 @@ window.openAddNewProjectModal = function(editProject) {
                         new MutationObserver(function () {
                             scheduleLegendFit();
                             scheduleLayout();
+                            setTimeout(scheduleLegendFit, 60);
                         }).observe(legend, {
                             childList: true,
                             subtree: true,
                             attributes: true,
-                            attributeFilter: ['class', 'data-codex-legend-3row']
+                            attributeFilter: ['class', 'style', 'data-codex-legend-3row']
                         });
                     } catch (legendObserverError) { }
                     try {
@@ -131296,6 +130525,7 @@ window.openAddNewProjectModal = function(editProject) {
                             new ResizeObserver(function () {
                                 scheduleLegendFit();
                                 scheduleLayout();
+                                setTimeout(scheduleLegendFit, 60);
                             }).observe(legend);
                         }
                     } catch (legendResizeError) { }
@@ -138729,22 +137959,6 @@ window.openAddNewProjectModal = function(editProject) {
         function optimizeEmptyFixedColumns(pane, wrapper) {
             var computed = window.getComputedStyle ? window.getComputedStyle(pane) : null;
             if (!computed) return;
-
-            var nameColumnEnabled = true;
-            try {
-                if (typeof columnVisibility !== 'undefined' && columnVisibility) {
-                    nameColumnEnabled = columnVisibility['project-name'] !== false;
-                }
-            } catch (e) {}
-
-            if (!nameColumnEnabled) {
-                pane.style.setProperty('--name-col-width', '0px', 'important');
-            } else {
-                var storedNameWidth = Number(wrapper.dataset.codexDesktopBaseNameWidth || 0);
-                if (storedNameWidth > 0) {
-                    pane.style.setProperty('--name-col-width', Math.round(storedNameWidth) + 'px');
-                }
-            }
             var parsedPoWidth = parseFloat(computed.getPropertyValue('--po-col-width'));
             var currentPoWidth = Number.isFinite(parsedPoWidth) && parsedPoWidth >= 0 ? parsedPoWidth : 120;
             var storedPoWidth = Number(wrapper.dataset.codexDesktopBasePoWidth || 0);
@@ -138769,46 +137983,16 @@ window.openAddNewProjectModal = function(editProject) {
         }
 
         function apply(reason) {
-            console.log('[v26-TightWidth] apply() called, reason:', reason);
-            if (!isDesktop()) { console.log('[v26-TightWidth] SKIP: not desktop'); return false; }
+            if (!isDesktop()) return false;
             var projectView = document.getElementById('projectView');
-            if (projectView && !projectView.classList.contains('open')) { console.log('[v26-TightWidth] SKIP: projectView not open'); return false; }
+            if (projectView && !projectView.classList.contains('open')) return false;
             var wrapper = document.getElementById('ganttChartWrapper');
-            if (!wrapper || wrapper.dataset.codexTitleResizeActive === '1') { console.log('[v26-TightWidth] SKIP: no wrapper or resize active'); return false; }
-
-            // [v22-fix] Check collapse state BEFORE any reset, so column/startup events cannot undo collapse
-            var isNameHidden = false;
-            try {
-                if (typeof columnVisibility !== 'undefined' && columnVisibility) {
-                    isNameHidden = columnVisibility['project-name'] === false;
-                }
-            } catch(e) {}
-            var isNameCollapsed = (wrapper && wrapper.dataset && wrapper.dataset.codexNameCollapsed === '1');
-            if (isNameHidden || isNameCollapsed) {
-                var paneHidden = wrapper ? wrapper.querySelector('.gantt-titles') : null;
-                var timelineFull = wrapper ? wrapper.querySelector('.gantt-timeline-wrapper') : null;
-                if (paneHidden) {
-                    paneHidden.style.setProperty('flex', '0 0 0px', 'important');
-                    paneHidden.style.setProperty('width', '0px', 'important');
-                    paneHidden.style.setProperty('min-width', '0px', 'important');
-                    paneHidden.style.setProperty('max-width', '0px', 'important');
-                    paneHidden.style.setProperty('overflow', 'hidden', 'important');
-                    paneHidden.style.setProperty('display', 'none', 'important');
-                }
-                if (timelineFull) {
-                    timelineFull.style.setProperty('flex', '1 1 100%', 'important');
-                    timelineFull.style.setProperty('width', '100%', 'important');
-                }
-                return true;
-            }
-
-            // Reset manual overrides only when NOT in collapsed state
+            if (!wrapper || wrapper.dataset.codexTitleResizeActive === '1') return false;
             if (/startup|gantt-rendered|render:complete|project|group|column|pane-replaced|resize-drift/i.test(String(reason || ''))) {
                 delete wrapper.dataset.codexManualTitleWidth;
                 delete wrapper.dataset.codexManualNameWidth;
                 delete wrapper.dataset.userTitleWidth;
                 delete wrapper.dataset.userNameColumnWidth;
-                // NOTE: codexNameCollapsed is NOT deleted here - it is only deleted on expand click
             }
             if (wrapper.dataset.codexManualTitleWidth === '1') return false;
             var pane = wrapper.querySelector('.gantt-titles');
@@ -138817,20 +138001,21 @@ window.openAddNewProjectModal = function(editProject) {
 
             optimizeEmptyFixedColumns(pane, wrapper);
             var usedWidth = collectRightEdge(pane);
-            console.log('[v26-TightWidth] usedWidth:', usedWidth, 'pane visible:', pane.offsetWidth > 0);
-            if (usedWidth <= 0) { console.log('[v26-TightWidth] SKIP: usedWidth <= 0'); return false; }
+            if (usedWidth <= 0) return false;
 
             var wrapperWidth = wrapper.getBoundingClientRect().width || window.innerWidth || 0;
             var minTimeline = Math.max(520, Math.min(760, wrapperWidth * 0.42));
             var cap = Math.max(360, wrapperWidth - minTimeline);
-            var target = Math.ceil(usedWidth + 4);
-            // v26: Removed existingAutoWidth limiter - let collectRightEdge be authoritative
-            // var existingAutoWidth = Number(wrapper.dataset.codexAutoTitleWidth || 0);
+            var target = Math.ceil(usedWidth + 16);
+            var existingAutoWidth = Number(wrapper.dataset.codexAutoTitleWidth || 0);
+            if (Number.isFinite(existingAutoWidth) && existingAutoWidth > 0) {
+                target = Math.min(target, Math.ceil(existingAutoWidth));
+            }
             var emptyPoBaselineWidth = Number(wrapper.dataset.codexDesktopEmptyPoBaselineWidth || 0);
             if (wrapper.dataset.codexDesktopPoHasValue !== '1' && emptyPoBaselineWidth > 0) {
                 target = Math.min(target, Math.ceil(emptyPoBaselineWidth));
             }
-            target = Math.max(200, Math.min(cap, target)); // v26: lowered min from 360→200
+            target = Math.max(360, Math.min(cap, target));
 
             var current = pane.getBoundingClientRect().width;
             if (Math.abs(current - target) < 2 && wrapper.dataset.codexDesktopPostTightWidth === String(target)) {
@@ -138838,7 +138023,6 @@ window.openAddNewProjectModal = function(editProject) {
             }
 
             var widthPx = target + 'px';
-            console.log('[v26-TightWidth] SETTING width to', target, 'px (reason:', reason, ')');
             pane.style.setProperty('flex', '0 0 ' + widthPx, 'important');
             pane.style.setProperty('width', widthPx, 'important');
             pane.style.setProperty('min-width', widthPx, 'important');
@@ -138848,10 +138032,6 @@ window.openAddNewProjectModal = function(editProject) {
             wrapper.dataset.codexDesktopPostTightWidth = String(target);
             wrapper.dataset.codexDesktopPostTightReason = String(reason || 'post-render');
             wrapper.dataset.codexDesktopPostTightCount = String(++applyCount);
-            // [v27-FIX] Notify pane toggle position to sync immediately with post-tight width
-            if (window.__codexMobileGanttPaneToggle && typeof window.__codexMobileGanttPaneToggle.refreshPosition === 'function') {
-                try { window.__codexMobileGanttPaneToggle.refreshPosition(); } catch(e) {}
-            }
             return true;
         }
 
@@ -139018,30 +138198,6 @@ window.openAddNewProjectModal = function(editProject) {
                 schedule('desktop-gantt-dom-change-settled', 260);
             });
             if (projectView) observer.observe(projectView, { attributes: true, attributeFilter: ['class'] });
-            // v26: Also directly hook into projectView open for immediate + delayed apply
-            if (projectView) {
-                var pvOpenObserver = new MutationObserver(function() {
-                    if (!projectView.classList.contains('open')) return;
-                    console.log('[v26-ShellObs] projectView opened - immediate apply + delayed retries');
-                    schedule('accordion-opened-immediate', 0);
-                    schedule('accordion-opened-80', 80);
-                    schedule('accordion-opened-200', 200);
-                    schedule('accordion-opened-500', 500);
-                    schedule('accordion-opened-1000', 1000);
-                    // Also trigger scrollToToday after render settles
-                    setTimeout(function() {
-                        if (typeof tryScrollToTodayIfReady === 'function') {
-                            try { tryScrollToTodayIfReady(); } catch(e) {}
-                        }
-                    }, 600);
-                    setTimeout(function() {
-                        if (typeof tryScrollToTodayIfReady === 'function') {
-                            try { tryScrollToTodayIfReady(); } catch(e) {}
-                        }
-                    }, 1200);
-                });
-                pvOpenObserver.observe(projectView, { attributes: true, attributeFilter: ['class'] });
-            }
             var schedulePanel = document.getElementById('accordion-panel-schedule') || projectView;
             if (schedulePanel && !shellTreeObserver) {
                 shellTreeObserver = new MutationObserver(function() {
