@@ -1152,6 +1152,58 @@
             flex-direction: column !important;
         }
 
+
+
+        
+
+        
+
+        
+
+        
+
+        
+
+        
+
+        
+
+        /* =====================================================================
+           [v67] 무결성 보증: Samsung Galaxy A51/71 (412px), iPhone (375px), Desktop (1440px)
+           모바일 세로/가로 전구간 정산 대시보드 뱃지 상부 헤더 뱃지 바로 좌측 3D 입체 수평 밀착
+           ===================================================================== */
+        #settlementModal button.settlement-dashboard-toggle,
+        .settlement-modal-content .settlement-dashboard-toggle,
+        html body .settlement-dashboard-toggle {
+            display: flex !important;
+            pointer-events: auto !important;
+            z-index: 999999 !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+        }
+
+        @media (min-width: 769px) {
+            #settlementModal button.settlement-dashboard-toggle,
+            .settlement-modal-content .settlement-dashboard-toggle,
+            html body .settlement-dashboard-toggle {
+                position: absolute !important;
+                left: calc(50% - 127px) !important;
+                top: 2px !important;
+                transform: none !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            #settlementModal button.settlement-dashboard-toggle,
+            .settlement-modal-content .settlement-dashboard-toggle,
+            html body .settlement-dashboard-toggle {
+                position: fixed !important;
+                left: calc(50vw - 42px) !important;
+                top: 57px !important;
+                transform: none !important;
+            }
+        }
+
 </style>
     <!-- [v32-SAFE] ULTRA-GUARD (Total Origin Isolation) -->
     <!-- Runs before any other script. Forms a 100% airtight firewall on file:// protocol. -->
@@ -6388,11 +6440,13 @@
             /* 모바일 일반 화면에서는 1500px 대시보드 실제 폭이 아니라
                현재 보이는 viewport 기준으로 버튼을 고정해 항상 보이게 유지 */
             .settlement-dashboard-toggle {
-                position: sticky;
-                left: clamp(120px, calc(50vw + 84px), calc(100vw - 36px));
-                top: 0;
-                transform: translateZ(0);
-                z-index: 60;
+                display: flex !important;
+                position: absolute !important;
+                left: calc(50% - 127px) !important;
+                top: 2px !important;
+                transform: none !important;
+                z-index: 100 !important;
+                pointer-events: auto !important;
             }
 
             .settlement-dashboard-toggle:hover {
@@ -113452,9 +113506,21 @@ function showPendingSettlementModal(periodType, projects) {
                     html = html.replace(/<head\b([^>]*)>/i, '<head$1>' + baseTag);
                 }
                 var patch = rawDataMobileTooltipPatchScript();
-                if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, patch + '</body>');
-                return html + patch;
-                return html + patch;
+                if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, patch + '\n</body>');
+
+
+
+
+
+
+
+
+
+
+
+
+
+
             }
             function setDirectFrame(frame) {
                 if (!frame) return;
@@ -137033,6 +137099,45 @@ window.openAddNewProjectModal = function(editProject) {
         })();
     </script>
 
+
+
+
+<script>
+/* =====================================================================
+   [v67] 무결성 보증: Samsung Galaxy A51/71 모바일 세로 모드 뱃지 Y축/X축 수평 정밀 맞춤 가디언
+   ===================================================================== */
+(function initV67PerfectBadgePositioner() {
+    function alignDashBadge() {
+        const hBadge = document.querySelector('.settlement-header-toggle');
+        const dBadge = document.querySelector('.settlement-dashboard-toggle');
+        if (!hBadge || !dBadge) return;
+        
+        const hr = hBadge.getBoundingClientRect();
+        if (hr.width === 0 || hr.height === 0) return;
+        
+        if (window.innerWidth <= 768) {
+            dBadge.style.setProperty('position', 'fixed', 'important');
+            dBadge.style.setProperty('top', hr.top + 'px', 'important');
+            dBadge.style.setProperty('left', 'calc(50vw - 42px)', 'important');
+            dBadge.style.setProperty('z-index', '999999', 'important');
+            dBadge.style.setProperty('display', 'flex', 'important');
+            dBadge.style.setProperty('opacity', '1', 'important');
+            dBadge.style.setProperty('visibility', 'visible', 'important');
+        }
+    }
+
+    alignDashBadge();
+    document.addEventListener('DOMContentLoaded', alignDashBadge);
+    window.addEventListener('resize', alignDashBadge);
+    window.addEventListener('scroll', alignDashBadge, true);
+    
+    const modal = document.getElementById('settlementModal') || document.querySelector('.settlement-modal-overlay');
+    if (modal) {
+        const obs = new MutationObserver(alignDashBadge);
+        obs.observe(modal, { attributes: true, attributeFilter: ['class', 'style'] });
+    }
+})();
+</script>
 
 </body>
 
