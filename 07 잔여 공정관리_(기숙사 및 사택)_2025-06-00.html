@@ -4771,252 +4771,77 @@
 
         /* select 요소 - 검정 플래시 완전 방지 */
         select {
-            /* [v10.0] 배경색 - 가장 먼저 선언하여 렌더링 우선순위 확보 */
-            background-color: #ffffff !important;
-            background: #ffffff !important;
-            /* 네이티브 스타일 유지 */
-            -webkit-appearance: menulist !important;
-            appearance: menulist !important;
-            /* 레이아웃 격리 - 검정 플래시 방지 핵심 */
-            contain: layout style;
-            /* 색상 */
-            color: #1f2937 !important;
-            /* 트랜지션/애니메이션 완전 비활성화 */
-            transition: none !important;
-            -webkit-transition: none !important;
-            animation: none !important;
-            /* 투명도 고정 */
-            opacity: 1 !important;
-            /* 필터 비활성화 */
-            filter: none !important;
-            /* 외곽선 기본값 */
-            outline: none;
-            /* 박스 그림자 제거 */
-            box-shadow: none;
-        }
+/* ============================================================
+ * [CORE CLEAN DESIGN SYSTEM] UNIFIED SELECT & DROPDOWN ENGINE
+ * Clean, non-conflicting, GPU-safe, black-flash-free styling
+ * ============================================================ */
 
-        /* select 모든 상태에서 배경색 유지 */
-        select:hover,
-        select:focus,
-        select:active,
-        select:focus-visible,
-        select:focus-within,
-        select:target {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            outline: 2px solid #8b5cf6 !important;
-            outline-offset: -2px !important;
-            transition: none !important;
-            -webkit-transition: none !important;
-            opacity: 1 !important;
-        }
+select,
+.accordion-header select,
+#legendSection select,
+#shortcutContainer select,
+#customFilterContainer select,
+#controlsPanel select,
+[id*="filter"] select,
+select[id*="filter"] {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 6px !important;
+    padding: 3px 6px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    outline: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+    -webkit-transform: none !important;
+    contain: none !important;
+    will-change: auto !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    opacity: 1 !important;
+    filter: none !important;
+    -webkit-appearance: menulist !important;
+    appearance: menulist !important;
+    cursor: pointer !important;
+}
 
-        /* [FIX] 필터 드롭다운 렌더링 중 검정 플래시 방지 */
-        #customFilterContainer select,
-        #controlsPanel select,
-        #shortcutContainer select,
-        [id*="filter"] select,
-        select[id*="filter"] {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            -webkit-backface-visibility: hidden !important;
-            backface-visibility: hidden !important;
-            transform: translateZ(0) !important;
-            will-change: auto !important;
-            contain: layout style paint !important;
-        }
+select option {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #1f2937 !important;
+    font-size: 13px !important;
+    padding: 6px 10px !important;
+}
 
-        /* [FIX] 필터 컨테이너 배경 유지 */
-        #customFilterContainer,
-        .pinnable-control-wrapper {
-            background: transparent !important;
-            -webkit-backface-visibility: hidden !important;
-            backface-visibility: hidden !important;
-        }
+select option:checked,
+select option:hover,
+select option:focus {
+    background-color: #f3f4f6 !important;
+    color: #111827 !important;
+}
 
-        /* select 옵션 */
-        select option {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            color: #000000 !important;
-        }
+select:focus,
+select:hover,
+select:active {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25) !important;
+    outline: none !important;
+    transform: none !important;
+}
 
-        /* [v4.42] 옵션 선택 중 검정색 방지 - 모든 상태 커버 */
-        select option:checked,
-        select option:hover,
-        select option:focus,
-        select option:active {
-            background: #e5e7eb !important;
-            background-color: #e5e7eb !important;
-            color: #000000 !important;
-            -webkit-text-fill-color: #000000 !important;
-        }
-
-        /* [FLASH-FIX-v12] 모달/패널 전환 시 검정 플래시 완전 방지 */
-        select,
-        select *,
-        input[type="date"],
-        .dropdown,
-        .dropdown-menu {
-            -webkit-transform: translateZ(0);
-            transform: translateZ(0);
-            -webkit-backface-visibility: hidden;
-            backface-visibility: hidden;
-            will-change: auto !important;
-            /* [v4.42] contents→auto (렌더링 안정화) */
-            -webkit-text-fill-color: inherit !important;
-            /* [v4.42] 텍스트 색상 유지 */
-        }
-
-        /* 모달 전환 애니메이션 중 배경색 유지 */
-        body.modal-active select,
-        body.modal-active input[type="date"],
-        body.modal-active .dropdown {
-            background-color: #ffffff !important;
-            filter: none !important;
-            transition: none !important;
-        }
-
-        /* [FLASH-FIX-v12] 드롭다운/달력 선택 시 검정 플래시 완전 방지 */
-        select:focus,
-        select:active,
-        select:hover,
-        input[type="date"]:focus,
-        input[type="date"]:active {
-            background-color: #ffffff !important;
-            filter: none !important;
-            -webkit-appearance: menulist !important;
-            appearance: menulist !important;
-        }
-
-        /* 드롭다운 옵션 열림 시 배경색 유지 */
-        select:focus option,
-        select option:hover,
-        select option:checked {
-            background-color: #ffffff !important;
-            color: #1f2937 !important;
-        }
-
-        /* 필터 컨테이너 내 select 플래시 방지 */
-        #customFilterContainer select:focus,
-        #controlsPanel select:focus,
-        .pinnable-control-wrapper select:focus {
-            background-color: #ffffff !important;
-            outline: 2px solid #8b5cf6 !important;
-            outline-offset: -2px !important;
-        }
-
-        /* [v4.40] 유휴 복귀 시 블랙플래시 완전 방지 */
-        /* 페이지 visibility 전환 시 select/option 배경색 강제 유지 */
-        select,
-        select option,
-        #customFilterContainer select,
-        #controlsPanel select,
-        .pinnable-control-wrapper select,
-        [data-filter-key] {
-            background-color: #ffffff !important;
-            color: #1f2937 !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
-        }
-
-        /* 탭 전환 시 깜빡임 방지 - GPU 레이어 분리 */
-        #customFilterContainer,
-        #controlsPanel,
-        .pinnable-control-wrapper {
-            contain: layout style paint;
-            isolation: isolate;
-        }
-
-        /* Firefox 포커스 링 */
-        select:-moz-focusring {
-            color: transparent;
-            text-shadow: 0 0 0 #000;
-        }
-
-        /* IE/Edge 확장 버튼 */
-        select::-ms-expand {
-            background: #ffffff !important;
-        }
-
-        /* 웹킷 브라우저 내부 버튼 */
-        select::-webkit-inner-spin-button,
-        select::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-
-        /* 커스텀 드롭다운 패널 - ALL STATES 강화 */
-        .dropdown-menu,
-        .dropdown-panel,
-        .dropdown-content,
-        .filter-dropdown,
-        .filter-panel {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            transform: translate3d(0, 0, 0) !important;
-            -webkit-transform: translate3d(0, 0, 0) !important;
-            -webkit-backface-visibility: hidden !important;
-            backface-visibility: hidden !important;
-            transition: none !important;
-            opacity: 1 !important;
-        }
-
-        .dropdown-menu:hover,
-        .dropdown-panel:hover,
-        .dropdown-content:hover,
-        .filter-dropdown:hover,
-        .filter-panel:hover,
-        .dropdown-menu:focus,
-        .dropdown-panel:focus,
-        .filter-dropdown:focus,
-        .filter-panel:focus,
-        .dropdown-menu:active,
-        .dropdown-panel:active,
-        .filter-dropdown:active,
-        .filter-panel:active {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            transition: none !important;
-            opacity: 1 !important;
-        }
-
-        /* hidden 상태 - display:none으로 완전 숨김 */
-        .dropdown-menu.hidden,
-        .dropdown-panel.hidden,
-        .dropdown-content.hidden,
-        .filter-dropdown.hidden {
-            display: none !important;
-        }
-
-        /* 필터/바로가기 드롭다운 */
-        #filterDropdown,
-        #shortcutDropdown,
-        .filter-btn-dropdown,
-        .shortcut-dropdown,
-        #header-customer-filter-shortcut,
-        #header-contractor-filter-shortcut,
-        #header-cost-account-filter-shortcut {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            transform: translate3d(0, 0, 0) !important;
-            -webkit-transform: translate3d(0, 0, 0) !important;
-            transition: none !important;
-            opacity: 1 !important;
-        }
-
-        /* shortcutContainer 내부 모든 select */
-        #shortcutContainer select,
-        #legendSection select,
-        .accordion-header select {
-            background: #ffffff !important;
-            background-color: #ffffff !important;
-            transform: translate3d(0, 0, 0) !important;
-            -webkit-transform: translate3d(0, 0, 0) !important;
-            transition: none !important;
-            opacity: 1 !important;
-        }
-
+#shortcutContainer .shortcut-item.active-shortcut,
+#header-customer-filter-shortcut.header-shortcut-active,
+#header-contractor-filter-shortcut.header-shortcut-active,
+#header-cost-account-filter-shortcut.header-shortcut-active,
+.header-shortcut-active {
+    border: 2px solid #ef4444 !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+    animation: none !important;
+}
         /* Tailwind transition 클래스 무효화 - select 요소 */
         select.transition,
         select.transition-all,
@@ -5043,7 +4868,7 @@
             backface-visibility: hidden;
             transform: translateZ(0);
             isolation: isolate;
-            contain: layout style;
+            /* contain removed for native dropdown popup clipping fix */
             will-change: transform, opacity;
         }
 
@@ -6249,7 +6074,7 @@
             gap: 6px;
             max-width: calc(100% - 160px);
             align-items: flex-start;
-            contain: layout style;
+            /* contain removed for native dropdown popup clipping fix */
         }
 
         /* 스크롤 모드 (버튼 20개 초과) */
@@ -8099,89 +7924,14 @@
 
     <!-- [DROPDOWN-FLASH-FIX] v10.0 - 검정 플래시 완전 방지 JavaScript -->
     <!-- mousedown 시점에 미리 흰색 배경 적용하여 브라우저 렌더링 선점 -->
+    <!-- [DROPDOWN-FLASH-FIX] Cleaned Module -->
     <script>
         (function DropdownFlashPreventionModule() {
             'use strict';
-
-            /**
-             * [\ud575\uc2ec] \uac80\uc815 \ud50c\ub798\uc2dc \ubc29\uc9c0 - \ud074\ub9ad \uc804\uc5d0 \ubc30\uacbd \uace0\uc815
-             */
-            function preventBlackFlash(selectEl) {
-                if (!selectEl) return;
-
-                // \uc778\ub77c\uc778 \uc2a4\ud0c0\uc77c\ub85c \ubc30\uacbd\uc0c9 \uac15\uc81c \uc801\uc6a9 (CSS\ubcf4\ub2e4 \uc6b0\uc120\uc21c\uc704 \ub192\uc74c)
-                selectEl.style.setProperty('background-color', '#ffffff', 'important');
-                selectEl.style.setProperty('background', '#ffffff', 'important');
-                selectEl.style.setProperty('color', '#1f2937', 'important');
-                selectEl.style.setProperty('opacity', '1', 'important');
-
-                // option \uc694\uc18c\ub4e4\ub3c4 \ubc30\uacbd\uc0c9 \uc801\uc6a9
-                var options = selectEl.querySelectorAll('option');
-                for (var i = 0; i < options.length; i++) {
-                    options[i].style.setProperty('background-color', '#ffffff', 'important');
-                    options[i].style.setProperty('color', '#000000', 'important');
-                }
-            }
-
-            /**
-             * \ubaa8\ub4e0 select \uc694\uc18c\uc5d0 \ud50c\ub798\uc2dc \ubc29\uc9c0 \uc801\uc6a9
-             */
-            function applyToAllSelects() {
-                var selects = document.querySelectorAll('select');
-                for (var i = 0; i < selects.length; i++) {
-                    preventBlackFlash(selects[i]);
-                }
-            }
-
-            /**
-             * \uc774\ubca4\ud2b8 \uc704\uc784\uc73c\ub85c \ubaa8\ub4e0 select \ucc98\ub9ac
-             */
-            function setupEventDelegation() {
-                // mousedown\uc5d0\uc11c \ubbf8\ub9ac \ubc30\uacbd\uc0c9 \uc801\uc6a9 (click\ubcf4\ub2e4 \uba3c\uc800 \ubc1c\uc0dd)
-                document.addEventListener('mousedown', function (e) {
-                    var target = e.target;
-                    if (target.tagName === 'SELECT') {
-                        preventBlackFlash(target);
-                    }
-                }, true); // capture phase\ub85c \uac00\uc7a5 \uba3c\uc800 \ucc98\ub9ac
-
-                // focus \uc774\ubca4\ud2b8\uc5d0\uc11c\ub3c4 \uc801\uc6a9
-                document.addEventListener('focus', function (e) {
-                    var target = e.target;
-                    if (target.tagName === 'SELECT') {
-                        preventBlackFlash(target);
-                    }
-                }, true);
-            }
-
-            /**
-             * \ucd08\uae30\ud654
-             */
-            function init() {
-                // DOM \uc900\ube44 \uc2dc \uc2e4\ud589
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', function () {
-                        applyToAllSelects();
-                        setupEventDelegation();
-                    });
-                } else {
-                    applyToAllSelects();
-                    setupEventDelegation();
-                }
-
-                // \ud398\uc774\uc9c0 \ub85c\ub4dc \uc644\ub8cc \ud6c4 \uc7ac\uc801\uc6a9
-                window.addEventListener('load', applyToAllSelects);
-            }
-
-            // \uc790\ub3d9 \uc2e4\ud589
-            init();
-
-            // API \ub0b4\ubcf4\ub0b4\uae30
             window.DropdownFlashFix = {
-                apply: preventBlackFlash,
-                applyAll: applyToAllSelects
+                apply: function () {},
+                applyAll: function () {}
             };
-
         })();
     </script>
 
@@ -21655,7 +21405,7 @@
             /* [FIX] Create isolated stacking context to prevent select dropdowns from appearing above milestone headers */
             isolation: isolate;
             /* [FIX] Ensure all children including select dropdowns stay below milestone headers */
-            contain: layout style;
+            /* contain removed for native dropdown popup clipping fix */
         }
 
         .resizer {
@@ -22331,7 +22081,7 @@
             flex-direction: column;
             box-sizing: border-box;
             width: 100%;
-            contain: layout style;
+            /* contain removed for native dropdown popup clipping fix */
             backface-visibility: hidden;
             transform: translate3d(0, 0, 0);
             -webkit-font-smoothing: antialiased;
@@ -24377,14 +24127,14 @@
             }
 
 
-            /* [FIX] Prevent Black Flash on Dropdowns */
-            /* Force hardware acceleration and opaque background to prevent rendering artifacts */
+            /* [PURGED] Cleaned up GPU transform on select and dropdowns */
             select,
             .filter-content,
             .dropdown-menu,
             [data-status-filter] {
-                transform: translateZ(0);
-                backface-visibility: hidden;
+                transform: none !important;
+                -webkit-transform: none !important;
+                backface-visibility: visible !important;
                 outline: none !important;
             }
 
@@ -25148,23 +24898,24 @@
             transform: translateZ(0);
         }
 
-        @keyframes legendBlink {
-            0%, 100% { opacity: 1; }
+        @keyframes legendBlink { 0%, 100% { opacity: 1; } }
             50%       { opacity: 0.55; }
         }
 
         #shortcutContainer .shortcut-item.active-shortcut {
-            border: 2px solid #ef4444;
-            border-radius: 0.5rem;
-            animation: legendBlink 1s linear infinite;
+            border: 2px solid #ef4444 !important;
+            border-radius: 0.5rem !important;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25) !important;
+            animation: none !important;
         }
 
         #header-customer-filter-shortcut.header-shortcut-active,
         #header-contractor-filter-shortcut.header-shortcut-active,
         #header-cost-account-filter-shortcut.header-shortcut-active {
-            border: 2px solid #ef4444;
-            border-radius: 0.5rem;
-            animation: legendBlink 1s linear infinite;
+            border: 2px solid #ef4444 !important;
+            border-radius: 0.5rem !important;
+            box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25) !important;
+            animation: none !important;
         }
 
         /* [v4.57] 범례 아이템 자동 크기 조절 - JS autoFitLegendItems()에서 zoom 동적 적용 */
@@ -131121,12 +130872,11 @@ window.openAddNewProjectModal = function(editProject) {
                 fitLegendHeight();
                 if (!state.fitRetryScheduled) {
                     state.fitRetryScheduled = true;
-                    setTimeout(function () { scheduleLegendFit(); }, 40);
-                    setTimeout(function () { scheduleLegendFit(); }, 120);
+                    // [CASCADE-FIX] Single debounced legend fit instead of 3 cascading timeouts
                     setTimeout(function () {
                         state.fitRetryScheduled = false;
                         scheduleLegendFit();
-                    }, 260);
+                    }, 100);
                 }
             }
 
@@ -131202,15 +130952,24 @@ window.openAddNewProjectModal = function(editProject) {
                 if (legend && legend.dataset.codexLegendFitObserver !== '1') {
                     legend.dataset.codexLegendFitObserver = '1';
                     try {
-                        new MutationObserver(function () {
-                            scheduleLegendFit();
-                            scheduleLayout();
-                            setTimeout(scheduleLegendFit, 60);
+                        // [CASCADE-FIX] Remove style from attributeFilter to prevent infinite style-mutation loop
+                        new MutationObserver(function (mutations) {
+                            var shouldSync = false;
+                            for (var m = 0; m < mutations.length; m += 1) {
+                                var targetId = mutations[m].target ? mutations[m].target.id : '';
+                                if (targetId === 'legendSection' || mutations[m].type === 'childList') {
+                                    shouldSync = true;
+                                    break;
+                                }
+                            }
+                            if (shouldSync) {
+                                scheduleLegendFit();
+                            }
                         }).observe(legend, {
                             childList: true,
-                            subtree: true,
+                            subtree: false,
                             attributes: true,
-                            attributeFilter: ['class', 'style', 'data-codex-legend-3row']
+                            attributeFilter: ['class', 'data-codex-legend-3row']
                         });
                     } catch (legendObserverError) { }
                     try {
