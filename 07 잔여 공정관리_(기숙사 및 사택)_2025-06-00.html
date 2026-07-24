@@ -7924,14 +7924,89 @@ select:active {
 
     <!-- [DROPDOWN-FLASH-FIX] v10.0 - 검정 플래시 완전 방지 JavaScript -->
     <!-- mousedown 시점에 미리 흰색 배경 적용하여 브라우저 렌더링 선점 -->
-    <!-- [DROPDOWN-FLASH-FIX] Cleaned Module -->
     <script>
         (function DropdownFlashPreventionModule() {
             'use strict';
+
+            /**
+             * [\ud575\uc2ec] \uac80\uc815 \ud50c\ub798\uc2dc \ubc29\uc9c0 - \ud074\ub9ad \uc804\uc5d0 \ubc30\uacbd \uace0\uc815
+             */
+            function preventBlackFlash(selectEl) {
+                if (!selectEl) return;
+
+                // \uc778\ub77c\uc778 \uc2a4\ud0c0\uc77c\ub85c \ubc30\uacbd\uc0c9 \uac15\uc81c \uc801\uc6a9 (CSS\ubcf4\ub2e4 \uc6b0\uc120\uc21c\uc704 \ub192\uc74c)
+                selectEl.style.setProperty('background-color', '#ffffff', 'important');
+                selectEl.style.setProperty('background', '#ffffff', 'important');
+                selectEl.style.setProperty('color', '#1f2937', 'important');
+                selectEl.style.setProperty('opacity', '1', 'important');
+
+                // option \uc694\uc18c\ub4e4\ub3c4 \ubc30\uacbd\uc0c9 \uc801\uc6a9
+                var options = selectEl.querySelectorAll('option');
+                for (var i = 0; i < options.length; i++) {
+                    options[i].style.setProperty('background-color', '#ffffff', 'important');
+                    options[i].style.setProperty('color', '#000000', 'important');
+                }
+            }
+
+            /**
+             * \ubaa8\ub4e0 select \uc694\uc18c\uc5d0 \ud50c\ub798\uc2dc \ubc29\uc9c0 \uc801\uc6a9
+             */
+            function applyToAllSelects() {
+                var selects = document.querySelectorAll('select');
+                for (var i = 0; i < selects.length; i++) {
+                    preventBlackFlash(selects[i]);
+                }
+            }
+
+            /**
+             * \uc774\ubca4\ud2b8 \uc704\uc784\uc73c\ub85c \ubaa8\ub4e0 select \ucc98\ub9ac
+             */
+            function setupEventDelegation() {
+                // mousedown\uc5d0\uc11c \ubbf8\ub9ac \ubc30\uacbd\uc0c9 \uc801\uc6a9 (click\ubcf4\ub2e4 \uba3c\uc800 \ubc1c\uc0dd)
+                document.addEventListener('mousedown', function (e) {
+                    var target = e.target;
+                    if (target.tagName === 'SELECT') {
+                        preventBlackFlash(target);
+                    }
+                }, true); // capture phase\ub85c \uac00\uc7a5 \uba3c\uc800 \ucc98\ub9ac
+
+                // focus \uc774\ubca4\ud2b8\uc5d0\uc11c\ub3c4 \uc801\uc6a9
+                document.addEventListener('focus', function (e) {
+                    var target = e.target;
+                    if (target.tagName === 'SELECT') {
+                        preventBlackFlash(target);
+                    }
+                }, true);
+            }
+
+            /**
+             * \ucd08\uae30\ud654
+             */
+            function init() {
+                // DOM \uc900\ube44 \uc2dc \uc2e4\ud589
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', function () {
+                        applyToAllSelects();
+                        setupEventDelegation();
+                    });
+                } else {
+                    applyToAllSelects();
+                    setupEventDelegation();
+                }
+
+                // \ud398\uc774\uc9c0 \ub85c\ub4dc \uc644\ub8cc \ud6c4 \uc7ac\uc801\uc6a9
+                window.addEventListener('load', applyToAllSelects);
+            }
+
+            // \uc790\ub3d9 \uc2e4\ud589
+            init();
+
+            // API \ub0b4\ubcf4\ub0b4\uae30
             window.DropdownFlashFix = {
-                apply: function () {},
-                applyAll: function () {}
+                apply: preventBlackFlash,
+                applyAll: applyToAllSelects
             };
+
         })();
     </script>
 
@@ -24127,14 +24202,14 @@ select:active {
             }
 
 
-            /* [PURGED] Cleaned up GPU transform on select and dropdowns */
+            /* [FIX] Prevent Black Flash on Dropdowns */
+            /* Force hardware acceleration and opaque background to prevent rendering artifacts */
             select,
             .filter-content,
             .dropdown-menu,
             [data-status-filter] {
-                transform: none !important;
-                -webkit-transform: none !important;
-                backface-visibility: visible !important;
+                transform: translateZ(0);
+                backface-visibility: hidden;
                 outline: none !important;
             }
 
