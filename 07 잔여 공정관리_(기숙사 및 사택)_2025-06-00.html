@@ -1199,8 +1199,19 @@
             html body .settlement-dashboard-toggle {
                 position: fixed !important;
                 left: calc(50vw - 42px) !important;
-                top: 57px !important;
+                top: 73px !important;
                 transform: none !important;
+                z-index: 999999 !important;
+                display: flex !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
+            
+            /* [v68] Mobile portrait modal layout overall downward adjustment */
+            #settlementModal .settlement-dashboard-shell,
+            .settlement-modal-content .settlement-dashboard-shell {
+                padding-top: 14px !important;
+                margin-top: 2px !important;
             }
         }
 
@@ -137104,25 +137115,34 @@ window.openAddNewProjectModal = function(editProject) {
 
 <script>
 /* =====================================================================
-   [v67] 무결성 보증: Samsung Galaxy A51/71 모바일 세로 모드 뱃지 Y축/X축 수평 정밀 맞춤 가디언
+   [v68] 무결성 보증: 모바일 세로 모드 보라색 헤더 가림 0% 및 레이아웃 전체 하향 조정 정밀 가디언
    ===================================================================== */
-(function initV67PerfectBadgePositioner() {
+(function initV68PerfectBadgePositioner() {
     function alignDashBadge() {
-        const hBadge = document.querySelector('.settlement-header-toggle');
         const dBadge = document.querySelector('.settlement-dashboard-toggle');
-        if (!hBadge || !dBadge) return;
-        
-        const hr = hBadge.getBoundingClientRect();
-        if (hr.width === 0 || hr.height === 0) return;
+        const headerBar = document.querySelector('.settlement-modal-content > div:first-child');
+        if (!dBadge) return;
         
         if (window.innerWidth <= 768) {
+            let targetTop = 73;
+            if (headerBar) {
+                const hrBox = headerBar.getBoundingClientRect();
+                if (hrBox.bottom > 0 && hrBox.bottom < 120) {
+                    targetTop = Math.round(hrBox.bottom + 2);
+                }
+            }
             dBadge.style.setProperty('position', 'fixed', 'important');
-            dBadge.style.setProperty('top', hr.top + 'px', 'important');
+            dBadge.style.setProperty('top', targetTop + 'px', 'important');
             dBadge.style.setProperty('left', 'calc(50vw - 42px)', 'important');
             dBadge.style.setProperty('z-index', '999999', 'important');
             dBadge.style.setProperty('display', 'flex', 'important');
             dBadge.style.setProperty('opacity', '1', 'important');
             dBadge.style.setProperty('visibility', 'visible', 'important');
+        } else {
+            dBadge.style.removeProperty('position');
+            dBadge.style.removeProperty('top');
+            dBadge.style.removeProperty('left');
+            dBadge.style.removeProperty('z-index');
         }
     }
 
