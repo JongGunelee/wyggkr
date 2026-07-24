@@ -573,7 +573,586 @@
             display: block;
             flex: 0 0 auto;
         }
-    </style>
+    
+        /* [v45] Perfectly centered close button 'X' inside square button box */
+        .cost-analysis-btn.icon,
+        .cost-analysis-fullscreen-close,
+        [data-cost-fullscreen-close],
+        [data-cost-close] {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-align: center !important;
+            line-height: 1 !important;
+            font-size: 20px !important;
+            font-weight: 700 !important;
+            width: 34px !important;
+            height: 34px !important;
+            min-height: 34px !important;
+            padding: 0 !important;
+            border-radius: 6px !important;
+            border: 1px solid #cbd5e1 !important;
+            background: #ffffff !important;
+            color: #334155 !important;
+            cursor: pointer !important;
+            box-sizing: border-box !important;
+            vertical-align: middle !important;
+        }
+        .cost-analysis-btn.icon:hover,
+        .cost-analysis-fullscreen-close:hover,
+        [data-cost-fullscreen-close]:hover,
+        [data-cost-close]:hover {
+            background: #f1f5f9 !important;
+            color: #0f172a !important;
+            border-color: #94a3b8 !important;
+        }
+        .cost-analysis-fullscreen .cost-analysis-fullscreen-close {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+
+
+        /* [v48] Work Content Summary & Analysis Modal 100% Fullscreen Activation */
+        #workContentSearchModal {
+            padding: 0 !important;
+            align-items: stretch !important;
+            justify-content: stretch !important;
+        }
+        #workContentSearchPanel,
+        #workContentSearchPanel.work-content-search-panel--fullscreen {
+            width: 100vw !important;
+            height: 100dvh !important;
+            max-width: 100vw !important;
+            max-height: 100dvh !important;
+            border-radius: 0 !important;
+            border: 0 !important;
+            margin: 0 !important;
+            position: fixed !important;
+            inset: 0 !important;
+            box-shadow: none !important;
+        }
+
+
+        /* [v49] Settlement Review Modal 100% Fullscreen Activation */
+        #settlementReviewModal {
+            padding: 0 !important;
+            align-items: stretch !important;
+            justify-content: stretch !important;
+        }
+        .codex-settlement-review-panel,
+        #settlementReviewModal .codex-settlement-review-panel {
+            width: 100vw !important;
+            height: 100dvh !important;
+            max-width: 100vw !important;
+            max-height: 100dvh !important;
+            border-radius: 0 !important;
+            border: 0 !important;
+            margin: 0 !important;
+            position: fixed !important;
+            inset: 0 !important;
+            box-shadow: none !important;
+        }
+
+
+        /* [v50] FIX: 정산 작업중 모달 maximized 상태 콘텐츠 영역 전체 높이 채움 */
+        .pending-settlement-modal-overlay.maximized .pending-settlement-modal-content {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            display: flex !important;
+            flex-direction: column !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+        }
+
+        .pending-settlement-modal-overlay.maximized .pending-settlement-modal-content > .flex-1.overflow-auto,
+        .pending-settlement-modal-overlay.maximized .pending-settlement-modal-content .flex-1.overflow-auto {
+            flex: 1 1 auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            overflow: auto !important;
+            position: relative !important;
+        }
+
+        /* [v50] FIX: 정산 상세 모달 maximized 상태 콘텐츠 영역 전체 높이 채움 */
+        .settlement-modal-overlay.maximized .settlement-modal-content {
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            display: flex !important;
+            flex-direction: column !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            box-shadow: none !important;
+        }
+
+        .settlement-modal-overlay.maximized .settlement-modal-content > .flex-1.overflow-auto,
+        .settlement-modal-overlay.maximized .settlement-modal-content .flex-1.overflow-auto {
+            flex: 1 1 auto !important;
+            max-height: none !important;
+            min-height: 0 !important;
+            overflow: auto !important;
+        }
+
+
+        /* [v51] 무결성 보증: 정산 모달 (정산 작업중 & 정산 상세) 레이아웃 완전 CSS 통제 */
+        
+        /* 1. 일반 (Normal/Default) 팝업 모드 */
+        .pending-settlement-modal-overlay:not(.maximized),
+        .settlement-modal-overlay:not(.maximized) {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 100000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: rgba(15, 23, 42, 0.75) !important;
+            backdrop-filter: blur(4px) !important;
+            padding: 1rem !important;
+        }
+
+        .pending-settlement-modal-overlay:not(.maximized) .pending-settlement-modal-content,
+        .settlement-modal-overlay:not(.maximized) .settlement-modal-content {
+            position: relative !important;
+            width: 92vw !important;
+            height: 85vh !important;
+            max-width: 1600px !important;
+            max-height: 900px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            border-radius: 12px !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
+            overflow: hidden !important;
+            margin: auto !important;
+            top: auto !important;
+            left: auto !important;
+            transform: none !important;
+            background: #ffffff !important;
+        }
+
+        /* 2. 전체화면 (Maximized) 팝업 모드 */
+        .pending-settlement-modal-overlay.maximized,
+        .settlement-modal-overlay.maximized {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 100000 !important;
+            display: block !important;
+            background: #1e293b !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+        }
+
+        .pending-settlement-modal-overlay.maximized .pending-settlement-modal-content,
+        .settlement-modal-overlay.maximized .settlement-modal-content {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            display: flex !important;
+            flex-direction: column !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            transform: none !important;
+            background: #ffffff !important;
+        }
+
+        /* 3. 자식 요소 공통 flex 정렬 구조 보증 (헤더 -> 경고바 -> 테이블) */
+        .pending-settlement-modal-content > div:first-child,
+        .settlement-modal-content > div:first-child {
+            flex-shrink: 0 !important;
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            width: 100% !important;
+            z-index: 10 !important;
+        }
+
+        .pending-settlement-modal-content > .bg-amber-50 {
+            flex-shrink: 0 !important;
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            width: 100% !important;
+            z-index: 5 !important;
+        }
+
+        .pending-settlement-modal-content > .flex-1.overflow-auto,
+        .settlement-modal-content > .flex-1.overflow-auto,
+        .pending-settlement-modal-content .flex-1.overflow-auto,
+        .settlement-modal-content .flex-1.overflow-auto {
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            width: 100% !important;
+            overflow: auto !important;
+            z-index: 1 !important;
+        }
+
+
+        /* [v52] 무결성 보증: 정산 작업중 모달 초기 100% 화면 채움 & 겹침 원천 방지 CSS */
+
+        /* 1. 전체화면 (Maximized / Default) 팝업 모드 */
+        .pending-settlement-modal-overlay.maximized,
+        .settlement-modal-overlay.maximized {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 100000 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            background: #1e293b !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            overflow: hidden !important;
+        }
+
+        .pending-settlement-modal-overlay.maximized .pending-settlement-modal-content,
+        .settlement-modal-overlay.maximized .settlement-modal-content {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-width: 100vw !important;
+            max-height: 100vh !important;
+            display: flex !important;
+            flex-direction: column !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: hidden !important;
+            transform: none !important;
+            background: #ffffff !important;
+            z-index: 100001 !important;
+        }
+
+        /* 2. 일반 (Normal / Un-maximized) 팝업 모드 */
+        .pending-settlement-modal-overlay:not(.maximized),
+        .settlement-modal-overlay:not(.maximized) {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 100000 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            background: rgba(15, 23, 42, 0.75) !important;
+            backdrop-filter: blur(4px) !important;
+            padding: 1rem !important;
+        }
+
+        .pending-settlement-modal-overlay:not(.maximized) .pending-settlement-modal-content,
+        .settlement-modal-overlay:not(.maximized) .settlement-modal-content {
+            position: relative !important;
+            width: 92vw !important;
+            height: 85vh !important;
+            max-width: 1600px !important;
+            max-height: 900px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            border-radius: 12px !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
+            overflow: hidden !important;
+            margin: auto !important;
+            top: auto !important;
+            left: auto !important;
+            transform: none !important;
+            background: #ffffff !important;
+        }
+
+        /* 3. 모달 내부 3대 자식 요소의 절대 수직 정렬 (Flexbox Flow - 겹침 원천 차단) */
+        /* 자식 1: 모달 헤더 바 */
+        .pending-settlement-modal-content > div:first-child,
+        .settlement-modal-content > div:first-child {
+            position: relative !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            flex: 0 0 auto !important;
+            flex-shrink: 0 !important;
+            z-index: 20 !important;
+            margin: 0 !important;
+        }
+
+        /* 자식 2: 경고 메시지 바 (bg-amber-50) */
+        .pending-settlement-modal-content > .bg-amber-50,
+        .pending-settlement-modal-content .bg-amber-50 {
+            position: relative !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            flex: 0 0 auto !important;
+            flex-shrink: 0 !important;
+            z-index: 15 !important;
+            margin: 0 !important;
+        }
+
+        /* 자식 3: 테이블 컨테이너 영역 */
+        .pending-settlement-modal-content > .flex-1.overflow-auto,
+        .settlement-modal-content > .flex-1.overflow-auto,
+        .pending-settlement-modal-content .flex-1.overflow-auto,
+        .settlement-modal-content .flex-1.overflow-auto {
+            position: relative !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100% !important;
+            flex: 1 1 auto !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow: auto !important;
+            z-index: 10 !important;
+            margin: 0 !important;
+        }
+
+
+        /* [v53] 무결성 보증: '총괄 상세 현황' 및 모든 Maximized 모달 테이블 폭 100% 자동 최적화 */
+        #dataDetailModal.maximized #dataDetailTableContainer,
+        #dataDetailModal.maximized .resizable-modal-body {
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        #dataDetailModal.maximized table,
+        #dataDetailModal.maximized #dataDetailTableContainer table,
+        .settlement-modal-overlay.maximized table,
+        .pending-settlement-modal-overlay.maximized table {
+            width: 100% !important;
+            min-width: 100% !important;
+            max-width: none !important;
+            table-layout: auto !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+        }
+
+        #dataDetailModal.maximized th,
+        #dataDetailModal.maximized td,
+        #dataDetailModal.maximized #dataDetailTableContainer th,
+        #dataDetailModal.maximized #dataDetailTableContainer td {
+            box-sizing: border-box !important;
+        }
+
+
+        /* [v53-ENHANCED] '총괄 상세 현황' 모달 폭 100% 반응형 자동 최적화 (Full-Width Auto-Fit) */
+        #dataDetailModal.maximized .modal-content,
+        #dataDetailModal.maximized .resizable-modal-body,
+        #dataDetailModal.maximized #dataDetailTableContainer {
+            width: 100% !important;
+            min-width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        #dataDetailModal.maximized table,
+        #dataDetailModal.maximized #dataDetailTableContainer table,
+        #dataDetailModal.maximized .detail-table,
+        #dataDetailTableContainer table,
+        .settlement-modal-overlay.maximized table,
+        .pending-settlement-modal-overlay.maximized table {
+            width: 100% !important;
+            min-width: 100% !important;
+            max-width: none !important;
+            table-layout: auto !important;
+            box-sizing: border-box !important;
+            margin: 0 !important;
+        }
+
+        #dataDetailModal.maximized th,
+        #dataDetailModal.maximized td,
+        #dataDetailModal.maximized #dataDetailTableContainer th,
+        #dataDetailModal.maximized #dataDetailTableContainer td {
+            box-sizing: border-box !important;
+        }
+
+
+        /* =====================================================================
+           [v58] 무결성 보증: 대시보드 뱃지 상부 뱃지 좌측 부근(left: calc(50% - 48px)) 정밀 밀착 배치
+           ===================================================================== */
+
+        /* 1. 보라색 헤더 바: 하단 뱃지가 잘리지 않도록 overflow: visible 및 상위 z-index 부여 */
+        .settlement-modal-content > div:first-child,
+        .pending-settlement-modal-content > div:first-child,
+        .settlement-header-collapsible {
+            position: relative !important;
+            z-index: 50 !important;
+            overflow: visible !important;
+        }
+
+        /* 2. 보라색 헤더 하단 연결 컨테이너 (흰색 배경): z-index를 낮게 설정하여 상부 뱃지가 깔리지 않게 방지 */
+        .settlement-modal-content > div:nth-child(2),
+        .pending-settlement-modal-content > div:nth-child(2) {
+            position: relative !important;
+            z-index: 1 !important;
+        }
+
+        /* 3. 상부 보라색 헤더 뱃지(settlement-header-toggle): 중앙(50%) 3D 최상위 레이어(z-index: 100) 입체 부상 */
+        .settlement-header-toggle {
+            position: absolute !important;
+            bottom: -13px !important;
+            left: 50% !important;
+            transform: translateX(-50%) !important;
+            z-index: 100 !important;
+            width: 26px !important;
+            height: 26px !important;
+            border-radius: 50% !important;
+            background-color: #1e293b !important;
+            color: #ffffff !important;
+            border: 2px solid #ffffff !important;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            overflow: visible !important;
+            pointer-events: auto !important;
+        }
+
+        .settlement-header-toggle:hover {
+            transform: translateX(-50%) scale(1.15) !important;
+            background-color: #0f172a !important;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6) !important;
+        }
+
+        /* 4. 복원된 대시보드 뱃지(settlement-dashboard-toggle): 상부 뱃지 좌측 바로 옆 근접 정밀 배치 */
+        .settlement-dashboard-toggle {
+            display: flex !important;
+            position: absolute !important;
+            left: calc(50% - 127px) !important;
+            top: 2px !important;
+            transform: none !important;
+            z-index: 20 !important;
+            width: 24px !important;
+            height: 24px !important;
+            border-radius: 50% !important;
+            background-color: #334155 !important;
+            color: #ffffff !important;
+            border: 1.5px solid #ffffff !important;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25) !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            pointer-events: auto !important;
+        }
+
+        .settlement-dashboard-toggle:hover {
+            transform: scale(1.12) !important;
+            background-color: #1e293b !important;
+        }
+
+
+
+        /* =====================================================================
+           [v59] 무결성 보증: 상세 모달 좌측 'X' 닫기 버튼 전수 캡처 & 100% 닫기 보증
+           ===================================================================== */
+        (function initV59LeftCloseGuardian() {
+            document.addEventListener('click', function(e) {
+                var target = e.target;
+                if (!target) return;
+
+                // Check if target or parent matches left close button
+                var leftCloseBtn = target.closest('#closeDataDetailModalBtnLeft, #settlement-modal-close-left, .close-modal-left, [data-modal-close-left]');
+                if (leftCloseBtn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+
+                    // 1. Try invoking official closeDetailModal() function if available
+                    if (typeof window.closeDetailModal === 'function') {
+                        try { window.closeDetailModal(); } catch(err) {}
+                    }
+
+                    // 2. Fallback: find closest modal overlay and hide completely
+                    var modal = leftCloseBtn.closest('.modal-overlay, .settlement-modal-overlay, .pending-settlement-modal-overlay, #dataDetailModal');
+                    if (modal) {
+                        modal.classList.add('hidden');
+                        modal.style.display = 'none';
+                        try { window.ModalStateGuardian?.sync?.('detail-modal-close-left'); } catch(err) {}
+                    }
+                }
+            }, true); // Capture phase delegation for 100% reliability
+        })();
+
+
+
+        /* =====================================================================
+           [v60] 무결성 보증: '작업 요약' 모달 100% 브라우저 화면 가득 참(Fullscreen) 완벽 복원
+           ===================================================================== */
+        #workContentSearchModal {
+            padding: 0 !important;
+            margin: 0 !important;
+            align-items: stretch !important;
+            justify-content: stretch !important;
+        }
+
+        #workContentSearchPanel,
+        #workContentSearchPanel.work-content-search-panel--fullscreen {
+            position: fixed !important;
+            inset: 0 !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            max-width: 100vw !important;
+            max-height: 100dvh !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+
+
+        /* =====================================================================
+           [v61] 무결성 보증: 진짜 '작업 요약' 모달(#summaryReportModal / #summaryReportPanel) 100% 브라우저 화면 전체 가득 참(Fullscreen) 복원
+           ===================================================================== */
+        #summaryReportModal {
+            position: fixed !important;
+            inset: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            align-items: stretch !important;
+            justify-content: stretch !important;
+        }
+
+        #summaryReportPanel {
+            position: fixed !important;
+            inset: 0 !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            max-width: 100vw !important;
+            max-height: 100dvh !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+        }
+
+</style>
     <!-- [v32-SAFE] ULTRA-GUARD (Total Origin Isolation) -->
     <!-- Runs before any other script. Forms a 100% airtight firewall on file:// protocol. -->
     <script>
@@ -5316,8 +5895,11 @@
         .pending-settlement-modal-content table thead th,
         #settlement-table-container table thead th,
         #pending-settlement-table-container table thead th {
-            background-color: #f3f4f6 !important;
-            position: relative !important;
+            background-color: #f1f5f9 !important;
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 30 !important;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12) !important;
         }
 
         /* tbody 행이 thead 아래로 들어가면 숨김 - clip-path로 처리 */
@@ -26084,6 +26666,7 @@
         <div class="overview-sankey-shell">
             <div class="overview-sankey-panel">
                 <div class="overview-sankey-header">
+                    <button type="button" class="text-white text-2xl leading-none mr-4 hover:opacity-80 transition-opacity focus:outline-none" data-overview-sankey-close="1" aria-label="닫기">&times;</button>
                     <div>
                         
                         <div class="flex flex-col">
@@ -26545,10 +27128,10 @@
             <div class="resizer-handle nw" data-direction="nw"></div>
             <div class="resizer-handle se" data-direction="se"></div>
             <div class="resizer-handle sw" data-direction="sw"></div>
-            <div class="resizable-modal-header">
-                <h2 id="dataDetailTitle" class="text-xl font-bold text-gray-800">상세 데이터</h2>
-                <button id="closeDataDetailModalBtn"
-                    class="text-gray-500 hover:text-gray-800 text-3xl leading-none">&times;</button>
+            <div class="resizable-modal-header" style="display: flex !important; align-items: center !important; justify-content: space-between !important; width: 100% !important;">
+                <button id="closeDataDetailModalBtnLeft" type="button" onclick="if(typeof closeDetailModal==='function'){closeDetailModal();}else{const m=this.closest('.modal-overlay,#dataDetailModal');if(m){m.classList.add('hidden');m.style.display='none';}}" class="text-gray-500 hover:text-gray-800 text-3xl leading-none mr-3 cursor-pointer focus:outline-none" aria-label="닫기" title="닫기">&times;</button>
+                <h2 id="dataDetailTitle" class="text-xl font-bold text-gray-800 flex-grow">상세 데이터</h2>
+                <button id="closeDataDetailModalBtn" type="button" class="text-gray-500 hover:text-gray-800 text-3xl leading-none cursor-pointer focus:outline-none" aria-label="닫기" title="닫기">&times;</button>
             </div>
             <div class="resizable-modal-body">
                 <div id="dataDetailTableContainer" class="h-full overflow-auto">
@@ -62951,7 +63534,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const tbl = dataDetailTableContainer.querySelector('table');
             if (tbl) {
                 const detailTableMinWidth = Math.max(900, tbl.querySelectorAll('thead th').length * 140);
-                tbl.style.width = 'max-content';
+                tbl.style.width = '100%';
+                tbl.style.minWidth = '100%';
                 tbl.style.minWidth = detailTableMinWidth + 'px';
                 tbl.style.tableLayout = 'auto';
                 makeTableSortable(tbl);
@@ -63202,7 +63786,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const tbl = dataDetailTableContainer.querySelector('table');
             if (tbl) {
                 const detailTableMinWidth = Math.max(900, tbl.querySelectorAll('thead th').length * 140);
-                tbl.style.width = 'max-content';
+                tbl.style.width = '100%';
+                tbl.style.minWidth = '100%';
                 tbl.style.minWidth = detailTableMinWidth + 'px';
                 tbl.style.tableLayout = 'auto';
                 makeTableSortable(tbl);
@@ -63371,6 +63956,32 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         // [v27] Supreme Targeted Layout Refresh: Fixes file:// origin security error
         // by avoiding global 'resize' event storm which triggers sensitive workers.
         function updateMaximizedModalLayout() {
+            // [v51 GUARD] Reset inline styles for settlement modals to rely on robust CSS
+            const pendingModal = document.querySelector('.pending-settlement-modal-overlay');
+            if (pendingModal) {
+                const pContent = pendingModal.querySelector('.pending-settlement-modal-content');
+                if (pContent) {
+                    pContent.style.position = '';
+                    pContent.style.top = '';
+                    pContent.style.left = '';
+                    pContent.style.width = '';
+                    pContent.style.height = '';
+                    pContent.style.transform = '';
+                }
+            }
+            const settModal = document.querySelector('.settlement-modal-overlay');
+            if (settModal) {
+                const sContent = settModal.querySelector('.settlement-modal-content');
+                if (sContent) {
+                    sContent.style.position = '';
+                    sContent.style.top = '';
+                    sContent.style.left = '';
+                    sContent.style.width = '';
+                    sContent.style.height = '';
+                    sContent.style.transform = '';
+                }
+            }
+
             const maximizedMilestoneModal =
                 (typeof milestoneModal !== 'undefined' &&
                     milestoneModal &&
@@ -63422,7 +64033,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     if (el.tagName === 'TABLE') {
                         el.style.setProperty('min-width', isSettlement ? '1200px' : '960px', 'important');
                         el.style.setProperty('max-width', 'none', 'important');
-                        el.style.setProperty('width', 'max-content', 'important');
+                        el.style.setProperty('width', '100%', 'important');
+                        el.style.setProperty('min-width', '100%', 'important');
                         el.style.setProperty('table-layout', 'auto', 'important');
                         return;
                     }
@@ -86001,7 +86613,7 @@ function showPendingSettlementModal(periodType, projects) {
                             </button>
                         </div>
                     </div>
-                    <div class="flex-1 overflow-auto p-4">
+                    <div class="flex-1 overflow-auto px-4 pb-4 pt-0">
                         <div id="pending-settlement-table-container"></div>
                     </div>
                 </div>
@@ -86176,7 +86788,7 @@ function showPendingSettlementModal(periodType, projects) {
                 })();
             }
 
-            function openSettlementModal(key, projects) {
+            window.openSettlementModal = function openSettlementModal(key, projects) {
                 console.log('[Settlement] openSettlementModal called:', key, projects?.length || 0);
                 measureUiCommit('settlement-detail-modal-open', () => {
                     const overlay = document.querySelector('.settlement-modal-overlay:not(.hidden), .pending-settlement-modal-overlay:not(.hidden)');
@@ -86283,7 +86895,7 @@ function showPendingSettlementModal(periodType, projects) {
                 currentModalKey = normalizedKey;
 
                 const modal = document.createElement('div');
-                modal.className = 'settlement-modal-overlay fixed inset-0 z-[100000] flex items-center justify-center';
+                modal.className = 'settlement-modal-overlay maximized fixed inset-0 z-[100000] flex items-center justify-center';
                 modal.style.cssText = 'background: #1e293b;';
                 modal.dataset.settlementPrecalc = usedPrecalc ? '1' : '0';
 
@@ -86297,7 +86909,7 @@ function showPendingSettlementModal(periodType, projects) {
                 <div class="settlement-modal-content bg-white flex flex-col w-screen h-screen max-w-none max-h-none overflow-hidden">
                     <div class="flex items-center justify-between p-4 border-b bg-gradient-to-r from-indigo-600 to-purple-600 text-white">
                         <button id="settlement-modal-close-left" class="text-2xl leading-none hover:opacity-80 mr-4" type="button" title="\ub2eb\uae30">&times;</button>
-                        <button class="modal-maximize-btn leading-none text-white hover:opacity-80 transition-all mr-4" type="button" style="font-size: 1.95em;" title="\uc804\uccb4\ubcf4\uae30" onclick="const ov=this.closest(&apos;.settlement-modal-overlay&apos;); ov.classList.toggle(&apos;maximized&apos;); this.innerHTML=ov.classList.contains(&apos;maximized&apos;)?&apos;\u2750&apos;:&apos;\u25fb&apos;; if(typeof updateMaximizedModalLayout===&apos;function&apos;)updateMaximizedModalLayout(); event.stopPropagation();">\u25fb</button>
+                        <button class="modal-maximize-btn leading-none text-white hover:opacity-80 transition-all mr-4" type="button" style="font-size: 1.95em;" title="\uc804\uccb4\ubcf4\uae30" onclick="const ov=this.closest(&apos;.settlement-modal-overlay&apos;); ov.classList.toggle(&apos;maximized&apos;); this.innerHTML=ov.classList.contains(&apos;maximized&apos;)?&apos;\u2750&apos;:&apos;\u25fb&apos;; if(typeof updateMaximizedModalLayout===&apos;function&apos;)updateMaximizedModalLayout(); event.stopPropagation();">\u2750</button>
                         <div class="flex items-center gap-3 min-w-0 flex-1">
                             <h2 class="text-xl font-bold truncate">${titleText}</h2>
                             <button id="settlement-doc-link" class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition hidden" type="button">증빙 보기</button>
@@ -93913,7 +94525,7 @@ function showPendingSettlementModal(periodType, projects) {
                             <div class="settlement-modal-header">
                                 <h3 style="margin:0; font-size: 18px; font-weight: 600;">\uD83D\uDCC5 \uc815\uc0b0\uc6d4 \ubc30\uc815 (Settlement Assignment)</h3>
                                 <button id="closeSettlementModalBtn" style="background:none; border:none; color:white; font-size:24px; cursor:pointer; line-height:1;">&times;</button>
-                                <button class="modal-maximize-btn leading-none text-white hover:opacity-80 transition-all ml-2" type="button" style="background:none; border:none; font-size: 28.8px; cursor:pointer; line-height:1;" title="\uc804\uccb4\ubcf4\uae30" onclick="const ov=this.closest(&apos;.settlement-modal-overlay&apos;); ov.classList.toggle(&apos;maximized&apos;); this.innerHTML=ov.classList.contains(&apos;maximized&apos;)?&apos;\u2750&apos;:&apos;\u25fb&apos;; if(typeof updateMaximizedModalLayout===&apos;function&apos;)updateMaximizedModalLayout(); event.stopPropagation();">\u25fb</button>
+                                <button class="modal-maximize-btn leading-none text-white hover:opacity-80 transition-all ml-2" type="button" style="background:none; border:none; font-size: 28.8px; cursor:pointer; line-height:1;" title="\uc804\uccb4\ubcf4\uae30" onclick="const ov=this.closest(&apos;.settlement-modal-overlay&apos;); ov.classList.toggle(&apos;maximized&apos;); this.innerHTML=ov.classList.contains(&apos;maximized&apos;)?&apos;\u2750&apos;:&apos;\u25fb&apos;; if(typeof updateMaximizedModalLayout===&apos;function&apos;)updateMaximizedModalLayout(); event.stopPropagation();">\u2750</button>
                             </div>
                             <div class="settlement-modal-body">
                                 <div class="settlement-bulk-section">
@@ -112842,6 +113454,7 @@ function showPendingSettlementModal(periodType, projects) {
                 var patch = rawDataMobileTooltipPatchScript();
                 if (/<\/body>/i.test(html)) return html.replace(/<\/body>/i, patch + '</body>');
                 return html + patch;
+                return html + patch;
             }
             function setDirectFrame(frame) {
                 if (!frame) return;
@@ -130136,7 +130749,7 @@ window.openAddNewProjectModal = function(editProject) {
                     var panel = modal.querySelector('.codex-settlement-review-panel');
                     var body = modal.querySelector('.codex-settlement-review-body');
                     if (panel) {
-                        panel.style.setProperty('min-height', '0', 'important');
+                        panel.style.setProperty('min-height', '0', 'important'); panel.style.setProperty('width', '100vw', 'important'); panel.style.setProperty('height', '100dvh', 'important'); panel.style.setProperty('max-width', '100vw', 'important'); panel.style.setProperty('max-height', '100dvh', 'important'); panel.style.setProperty('border-radius', '0', 'important');
                         panel.style.setProperty('overflow', 'hidden', 'important');
                     }
                     if (body) {
@@ -130545,8 +131158,8 @@ window.openAddNewProjectModal = function(editProject) {
 
 
     <!-- [WORK-CONTENT-SEARCH-MODAL] -->
-    <div id="workContentSearchModal" class="fixed inset-0 z-[100320] hidden flex items-center justify-center bg-slate-900/60 p-4" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="workContentSearchTitle" style="position: fixed !important; inset: 0 !important; z-index: 100320 !important; display: none !important; align-items: center; justify-content: center; background: rgba(15, 23, 42, 0.6) !important; padding: 18px;">
-        <div id="workContentSearchPanel" class="bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col w-full max-w-6xl max-h-[85vh] overflow-hidden" style="width: min(1120px, calc(100vw - 36px)); max-height: min(780px, calc(100vh - 36px)); display: flex !important; flex-direction: column !important; overflow: hidden !important; border-radius: 8px; background: #fff !important; border: 1px solid #d1d5db !important; box-shadow: 0 24px 70px rgba(15, 23, 42, .28) !important; position: relative;">
+    <div id="workContentSearchModal" class="fixed inset-0 z-[100320] hidden flex items-center justify-center bg-slate-900/60" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="workContentSearchTitle" style="position: fixed !important; inset: 0 !important; z-index: 100320 !important; display: none !important; align-items: stretch !important; justify-content: stretch !important; background: rgba(15, 23, 42, 0.6) !important; padding: 0 !important;">
+        <div id="workContentSearchPanel" class="bg-white rounded-none shadow-2xl flex flex-col w-full h-full overflow-hidden work-content-search-panel--fullscreen" style="width: 100vw !important; height: 100dvh !important; max-width: 100vw !important; max-height: 100dvh !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; border-radius: 0 !important; background: #fff !important; border: 0 !important; position: fixed !important; inset: 0 !important; margin: 0 !important;">
             <div class="work-content-search-header" style="display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 12px !important; padding: 14px 16px !important; border-bottom: 1px solid #e5e7eb !important; background: #f8fafc !important;">
                 <button type="button" class="work-content-search-close" aria-label="닫기" style="border: 1px solid #cbd5e1 !important; border-radius: 6px !important; background: #fff !important; color: #334155 !important; width: 34px !important; height: 34px !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 24px !important; font-weight: 700 !important; cursor: pointer !important;">&times;</button>
                 <div style="display: flex !important; align-items: center !important; gap: 10px !important; min-width: 0 !important;">
@@ -135071,7 +135684,7 @@ window.openAddNewProjectModal = function(editProject) {
                 state.householdMainSearchComposing = false;
                 householdLoadRetryCount = 0;
                 window.__collectEntriesCache = null;
-                modal.style.setProperty('display', 'flex', 'important');
+                modal.style.setProperty('display', 'flex', 'important'); var panel = $('workContentSearchPanel'); if (panel) panel.classList.add('work-content-search-panel--fullscreen');
                 modal.classList.remove('hidden');
                 modal.setAttribute('aria-hidden', 'false');
                 syncSidebarToggleState();
@@ -135590,7 +136203,7 @@ window.openAddNewProjectModal = function(editProject) {
                         '#workContentSearchPanel .modal-resizer-s { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; cursor: s-resize; z-index: 60; }',
                         '#workContentSearchPanel .modal-resizer-se { position: absolute; right: 0; bottom: 0; width: 16px; height: 16px; cursor: se-resize; z-index: 61; }',
                         '#workContentSearchPanel .modal-resizer-se::after { content: ""; position: absolute; right: 4px; bottom: 4px; width: 6px; height: 6px; border-right: 2px solid #94a3b8; border-bottom: 2px solid #94a3b8; }',
-                        '#workContentSearchPanel.work-content-search-panel--fullscreen { position: fixed !important; left: 12px !important; top: 12px !important; width: calc(100vw - 24px) !important; height: calc(100vh - 24px) !important; max-width: none !important; max-height: none !important; margin: 0 !important; transform: none !important; border-radius: 8px !important; }',
+                        '#workContentSearchPanel.work-content-search-panel--fullscreen { position: fixed !important; left: 0 !important; top: 0 !important; width: 100vw !important; height: 100dvh !important; max-width: 100vw !important; max-height: 100dvh !important; margin: 0 !important; transform: none !important; border-radius: 0 !important; border: 0 !important; }',
                         '#workContentSearchPanel.work-content-search-panel--fullscreen .modal-resizer-e, #workContentSearchPanel.work-content-search-panel--fullscreen .modal-resizer-s, #workContentSearchPanel.work-content-search-panel--fullscreen .modal-resizer-se { display: none !important; }',
                         '@media (max-width: 767px) { #workContentSearchPanel.work-content-search-panel--fullscreen { left: 0 !important; top: 0 !important; width: 100vw !important; height: 100vh !important; border-radius: 0px !important; } }'
                     ].join('\n');
@@ -136436,8 +137049,8 @@ window.openAddNewProjectModal = function(editProject) {
 <!-- [MOBILE-MASTER-PATCH-v21.0] Conditional visibility: Hide settlement summary when expanded on mobile. -->
 
     <!-- [SUMMARY-REPORT-MODAL] -->
-    <div id="summaryReportModal" class="fixed inset-0 z-[100300] hidden flex items-center justify-center bg-slate-900/60 p-4" style="position: fixed !important; inset: 0 !important; z-index: 100300 !important; display: none !important; align-items: center !important; justify-content: center !important; background: rgba(15, 23, 42, 0.6) !important; padding: 18px !important;">
-        <div id="summaryReportPanel" class="bg-white rounded-lg shadow-2xl border border-gray-200 flex flex-col w-full max-w-6xl max-h-[85vh] overflow-hidden" style="width: min(1120px, calc(100vw - 36px)) !important; max-height: min(760px, calc(100vh - 36px)) !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; border-radius: 8px !important; background: #fff !important; border: 1px solid #d1d5db !important; box-shadow: 0 24px 70px rgba(15, 23, 42, .28) !important; position: relative !important;">
+    <div id="summaryReportModal" class="fixed inset-0 z-[100300] hidden flex items-center justify-center bg-slate-900/60" style="position: fixed !important; inset: 0 !important; z-index: 100300 !important; display: none !important; align-items: stretch !important; justify-content: stretch !important; padding: 0 !important; margin: 0 !important;">
+        <div id="summaryReportPanel" class="bg-white border-0 flex flex-col w-full h-full overflow-hidden" style="position: fixed !important; inset: 0 !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100dvh !important; max-width: 100vw !important; max-height: 100dvh !important; display: flex !important; flex-direction: column !important; overflow: hidden !important; border-radius: 0 !important; background: #fff !important; border: 0 !important; margin: 0 !important;">
             <!-- Header -->
             <div class="flex justify-between items-center bg-slate-50 px-4 py-3 border-b border-gray-200" style="display: flex !important; align-items: center !important; justify-content: space-between !important; gap: 12px !important; padding: 14px 16px !important; border-bottom: 1px solid #e5e7eb !important; background: #f8fafc !important;">
                 <button type="button" class="summary-modal-close text-gray-500 hover:text-gray-800 text-2xl font-bold p-1 focus:outline-none" aria-label="닫기" style="border: 1px solid #cbd5e1 !important; border-radius: 6px !important; background: #fff !important; color: #334155 !important; width: 34px !important; height: 34px !important; display: flex !important; align-items: center !important; justify-content: center !important; font-size: 24px !important; font-weight: 700 !important; cursor: pointer !important;">&times;</button>
@@ -139662,11 +140275,11 @@ window.openAddNewProjectModal = function(editProject) {
             modal.setAttribute('role', 'dialog');
             modal.setAttribute('aria-modal', 'true');
             modal.setAttribute('aria-labelledby', 'costAnalysisTitle');
-            modal.innerHTML = '<div class="cost-analysis-panel"><header class="cost-analysis-head"><div><h3 id="costAnalysisTitle" class="cost-analysis-title">\uc138\ub300\ub0b4 \uc218\uc7a5\uc791\uc5c5 \ube44\uc6a9 \uc808\uac10 \uc2ec\uce35 \ubd84\uc11d</h3><div class="cost-analysis-status" aria-live="polite"></div></div><div class="cost-analysis-head-actions"><button type="button" class="cost-analysis-btn icon" data-cost-fullscreen-open aria-label="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" title="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" aria-expanded="false">\u26f6</button><button type="button" class="cost-analysis-btn icon cost-analysis-fullscreen-close" data-cost-fullscreen-close aria-label="\uc804\uccb4 \ud654\uba74 \ub2eb\uae30" title="\uc804\uccb4 \ud654\uba74 \ub2eb\uae30">\u00d7</button><button type="button" class="cost-analysis-btn icon" data-cost-close aria-label="\ub2eb\uae30" title="\ub2eb\uae30">\u00d7</button></div></header>' +
+            modal.innerHTML = '<div class="cost-analysis-panel"><header class="cost-analysis-head"><button type="button" class="cost-analysis-btn icon cost-analysis-left-close mr-3" data-cost-close aria-label="닫기" title="닫기">&times;</button><div><h3 id="costAnalysisTitle" class="cost-analysis-title">\uc138\ub300\ub0b4 \uc218\uc7a5\uc791\uc5c5 \ube44\uc6a9 \uc808\uac10 \uc2ec\uce35 \ubd84\uc11d</h3><div class="cost-analysis-status" aria-live="polite"></div></div><div class="cost-analysis-head-actions"><button type="button" class="cost-analysis-btn icon" data-cost-fullscreen-open aria-label="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" title="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" aria-expanded="false">\u26f6</button><button type="button" class="cost-analysis-btn icon cost-analysis-fullscreen-close" data-cost-fullscreen-close aria-label="\uc804\uccb4 \ud654\uba74 \ub2eb\uae30" title="\uc804\uccb4 \ud654\uba74 \ub2eb\uae30">\u00d7</button><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors px-2 leading-none cursor-pointer focus:outline-none" data-cost-close aria-label="닫기" title="닫기">&times;</button></div></header>' +
                 '<div class="cost-analysis-toolbar"><div class="cost-analysis-source" role="group" aria-label="\ub2e8\uac00 \ucd9c\ucc98"><button type="button" data-source-mode="auto">\uc790\ub3d9</button><button type="button" data-source-mode="manual">\uc218\ub3d9</button></div><button type="button" class="cost-analysis-btn" data-cost-remote-load>\uc6d0\uaca9 \ubd88\ub7ec\uc624\uae30</button><button type="button" class="cost-analysis-btn primary" data-cost-remote-save>\uc6d0\uaca9 \uc800\uc7a5</button><button type="button" class="cost-analysis-btn" data-cost-local-open>\ud30c\uc77c \ubd88\ub7ec\uc624\uae30</button><button type="button" class="cost-analysis-btn" data-cost-download>\ub2e8\uac00 XLSB</button><button type="button" class="cost-analysis-btn primary" data-cost-export-all title="Excel \uc804\uccb4 \ub2e4\uc6b4\ub85c\ub4dc">\u21e9 Excel \uc804\uccb4</button><div class="cost-analysis-period-filter" data-cost-period-filter></div><input type="file" data-cost-file accept=".xlsb,.xlsx" hidden><span class="cost-analysis-toolbar-spacer"></span><div class="cost-analysis-column-menu"><button type="button" class="cost-analysis-btn" data-cost-columns>\uc5f4 \ud45c\uc2dc</button><div class="cost-analysis-column-pop hidden" data-cost-column-pop></div></div></div>' +
                 '<main class="cost-analysis-body"><div data-cost-source-audit></div><div data-cost-rollover></div><div class="cost-analysis-top-sections"><details class="cost-analysis-section" data-cost-section="settings"><summary>\uac74\ubb3c\ub3d9 \ub2e8\uac00 \uc124\uc815</summary><div data-cost-settings></div></details><details class="cost-analysis-section" data-cost-section="other"><summary>\uae30\ud0c0 \uc791\uc5c5 \ubd84\ub958 (\uc218\uc7a5\uc791\uc5c5 \uc81c\uc678)</summary><div data-cost-exceptions></div></details></div><section class="cost-analysis-kpis" data-cost-kpis></section><div class="cost-analysis-detail-head"><h4>\uc218\uc7a5\uc791\uc5c5 \uc138\ub300 \uc0c1\uc138</h4><div class="cost-analysis-detail-actions"><button type="button" class="cost-analysis-btn icon" data-cost-table-fullscreen-open aria-label="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" title="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30">\u26f6</button><button type="button" class="cost-analysis-btn" data-cost-evidence="all">\uc804\uccb4 \uc99d\ube59</button></div></div><span data-cost-table-anchor hidden></span><section data-cost-table></section></main></div>' +
-                '<div id="costAnalysisTableFullscreen" class="hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="costAnalysisTableFullscreenTitle"><div class="cost-analysis-table-fullscreen-panel"><header class="cost-analysis-head"><h3 id="costAnalysisTableFullscreenTitle" class="cost-analysis-title">\uc218\uc7a5\uc791\uc5c5 \uc138\ub300 \uc0c1\uc138 - \uc804\uccb4 \ud654\uba74</h3><button type="button" class="cost-analysis-btn icon" data-cost-table-fullscreen-close aria-label="\ub2eb\uae30" title="\ub2eb\uae30">\u00d7</button></header><main class="cost-analysis-table-fullscreen-body" data-cost-table-fullscreen-body></main></div></div>' +
-                '<div id="costAnalysisEvidenceModal" class="hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="costAnalysisEvidenceTitle"><div class="cost-analysis-evidence-panel"><header class="cost-analysis-head"><div><h3 id="costAnalysisEvidenceTitle" class="cost-analysis-title" data-cost-evidence-title>\uc0c1\uc138 \uc99d\ube59</h3></div><div class="cost-analysis-head-actions"><button type="button" class="cost-analysis-btn primary" data-cost-evidence-export title="Excel \ub2e4\uc6b4\ub85c\ub4dc">\u21e9 Excel</button><button type="button" class="cost-analysis-btn icon" data-cost-evidence-close aria-label="\ub2eb\uae30" title="\ub2eb\uae30">\u00d7</button></div></header><div class="cost-analysis-evidence-formula" data-cost-evidence-formula></div><div class="cost-analysis-evidence-summary" data-cost-evidence-summary></div><main class="cost-analysis-evidence-body" data-cost-evidence-body></main></div></div>';
+                '<div id="costAnalysisTableFullscreen" class="hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="costAnalysisTableFullscreenTitle"><div class="cost-analysis-table-fullscreen-panel"><header class="cost-analysis-head"><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors mr-3 leading-none cursor-pointer focus:outline-none" data-cost-table-fullscreen-close aria-label="닫기" title="닫기">&times;</button><h3 id="costAnalysisTableFullscreenTitle" class="cost-analysis-title">\uc218\uc7a5\uc791\uc5c5 \uc138\ub300 \uc0c1\uc138 - \uc804\uccb4 \ud654\uba74</h3><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors px-2 leading-none cursor-pointer focus:outline-none" data-cost-table-fullscreen-close aria-label="닫기" title="닫기">&times;</button></header><main class="cost-analysis-table-fullscreen-body" data-cost-table-fullscreen-body></main></div></div>' +
+                '<div id="costAnalysisEvidenceModal" class="hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="costAnalysisEvidenceTitle"><div class="cost-analysis-evidence-panel"><header class="cost-analysis-head"><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors mr-3 leading-none cursor-pointer focus:outline-none" data-cost-evidence-close aria-label="닫기" title="닫기">&times;</button><div><h3 id="costAnalysisEvidenceTitle" class="cost-analysis-title" data-cost-evidence-title>\uc0c1\uc138 \uc99d\ube59</h3></div><div class="cost-analysis-head-actions"><button type="button" class="cost-analysis-btn primary" data-cost-evidence-export title="Excel \ub2e4\uc6b4\ub85c\ub4dc">\u21e9 Excel</button><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors px-2 leading-none cursor-pointer focus:outline-none" data-cost-evidence-close aria-label="닫기" title="닫기">&times;</button></div></header><div class="cost-analysis-evidence-formula" data-cost-evidence-formula></div><div class="cost-analysis-evidence-summary" data-cost-evidence-summary></div><main class="cost-analysis-evidence-body" data-cost-evidence-body></main></div></div>';
             bindModal(modal);
             document.body.appendChild(modal);
             return modal;
@@ -139872,7 +140485,7 @@ window.openAddNewProjectModal = function(editProject) {
                 if (target.closest('[data-cost-table-fullscreen-open]')) { openTableFullscreen(); return; }
                 if (target.closest('[data-cost-table-fullscreen-close]')) { closeTableFullscreen(); return; }
                 if (target === modal) { if (modal.classList.contains('cost-analysis-fullscreen')) return; return close(); }
-                if (target.closest('[data-cost-close]')) return close();
+                if (target.closest('[data-cost-close]')) { if (modal && modal.classList.contains('cost-analysis-fullscreen')) setCostModalFullscreen(false, true); return close(); }
                 var sourceButton = target.closest('[data-source-mode]');
                 if (sourceButton) {
                     state.sourceMode = sourceButton.dataset.sourceMode === 'manual' ? 'manual' : 'auto'; persist();
@@ -140165,6 +140778,29 @@ window.openAddNewProjectModal = function(editProject) {
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true }); else init();
     })();
     </script>
+
+        // [v47] Left close button listener for dataDetailModal ("총괄 상세 현황")
+        (function() {
+            function initDataDetailLeftClose() {
+                var leftBtn = document.getElementById('closeDataDetailModalBtnLeft');
+                if (leftBtn && !leftBtn.dataset.bound) {
+                    leftBtn.dataset.bound = '1';
+                    leftBtn.addEventListener('click', function() {
+                        var modal = document.getElementById('dataDetailModal');
+                        if (modal) {
+                            modal.style.display = 'none';
+                            modal.classList.add('hidden');
+                        }
+                    });
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initDataDetailLeftClose);
+            } else {
+                initDataDetailLeftClose();
+            }
+        })();
+
 </html>
 
 <!-- [SETTLEMENT-MODAL-PATCH-v6.18.7] Increased maximize button size (1.5em -> 1.95em) in settlement modals & Integrity Audit. -->
