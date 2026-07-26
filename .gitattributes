@@ -2,3 +2,4 @@
 *.xlsb filter=lfs diff=lfs merge=lfs -text
 
 "03 작업 유형별 현황_2025-06-00.html" -text
+"07 잔여 공정관리_(기숙사 및 사택)_2025-06-00.html" -text
