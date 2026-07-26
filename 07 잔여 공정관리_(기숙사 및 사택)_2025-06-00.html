@@ -27642,7 +27642,7 @@
         top: auto !important;
     }
 
-    html body .settlement-modal-overlay [data-settlement-table-scroll="1"].settlement-detail-scroll-viewport {
+    html body .settlement-modal-overlay .settlement-modal-content #settlement-table-container [data-settlement-table-scroll="1"].settlement-detail-scroll-viewport {
         --settlement-table-shield-height: 8px;
         flex: 0 1 auto !important;
         width: 100% !important;
@@ -27663,7 +27663,7 @@
         scrollbar-gutter: stable;
     }
 
-    html body .settlement-modal-overlay [data-settlement-table-scroll="1"] > .settlement-table-top-shield {
+    html body .settlement-modal-overlay .settlement-modal-content #settlement-table-container [data-settlement-table-scroll="1"] > .settlement-table-top-shield {
         position: sticky;
         top: 0;
         left: 0;
@@ -27677,19 +27677,19 @@
         box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
     }
 
-    html body .settlement-modal-overlay [data-settlement-table-scroll="1"] > table {
+    html body .settlement-modal-overlay .settlement-modal-content #settlement-table-container [data-settlement-table-scroll="1"] > table {
         border-collapse: separate !important;
         border-spacing: 0 !important;
     }
 
-    html body .settlement-modal-overlay [data-settlement-table-scroll="1"] > table > thead {
+    html body .settlement-modal-overlay .settlement-modal-content #settlement-table-container [data-settlement-table-scroll="1"] > table > thead {
         position: sticky !important;
         top: var(--settlement-table-shield-height) !important;
         z-index: 100 !important;
         background: #f1f5f9 !important;
     }
 
-    html body .settlement-modal-overlay [data-settlement-table-scroll="1"] > table > thead th {
+    html body .settlement-modal-overlay .settlement-modal-content #settlement-table-container [data-settlement-table-scroll="1"] > table > thead th {
         position: static !important;
         top: auto !important;
         z-index: auto !important;
@@ -27698,7 +27698,7 @@
     }
 
     @media screen and (max-width: 768px) and (orientation: portrait) {
-        html body .settlement-modal-overlay [data-settlement-table-scroll="1"].settlement-detail-scroll-viewport {
+        html body .settlement-modal-overlay .settlement-modal-content #settlement-table-container [data-settlement-table-scroll="1"].settlement-detail-scroll-viewport {
             max-height: calc(100dvh - 176px) !important;
             scrollbar-gutter: auto;
         }
