@@ -63356,9 +63356,17 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             });
             const clamp = (value, max) => Math.max(0, Math.min(max, value));
 
-            scroller.style.touchAction = 'pan-x pan-y pinch-zoom';
+            const nativeVertical = getOptions().nativeVertical === true;
+            // [v80] Settlement tables opt into native vertical panning so the
+            // browser keeps inertia and chains to the real outer Y scroller.
+            scroller.style.touchAction = nativeVertical ? 'pan-y pinch-zoom' : 'pan-x pan-y pinch-zoom';
             scroller.style.webkitOverflowScrolling = 'touch';
-            scroller.style.overscrollBehavior = scroller.style.overscrollBehavior || 'contain';
+            if (nativeVertical) {
+                scroller.style.overscrollBehaviorX = 'contain';
+                scroller.style.overscrollBehaviorY = 'auto';
+            } else {
+                scroller.style.overscrollBehavior = scroller.style.overscrollBehavior || 'contain';
+            }
 
             scroller.addEventListener('touchstart', function(e) {
                 const opts = getOptions();
@@ -63374,11 +63382,15 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     return;
                 }
                 const touch = e.touches[0];
+                const bounds = getBounds();
                 touchSession = {
                     x: touch.clientX,
                     y: touch.clientY,
                     left: scroller.scrollLeft,
                     top: scroller.scrollTop,
+                    maxLeft: bounds.maxLeft,
+                    maxTop: bounds.maxTop,
+                    nativeVertical,
                     mode: null
                 };
             }, { passive: true });
@@ -63390,13 +63402,14 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const deltaY = touch.clientY - touchSession.y;
                 const absX = Math.abs(deltaX);
                 const absY = Math.abs(deltaY);
-                const bounds = getBounds();
-                const canScrollX = bounds.maxLeft > 1;
-                const canScrollY = bounds.maxTop > 1;
+                const canScrollX = touchSession.maxLeft > 1;
+                const canScrollY = touchSession.maxTop > 1;
 
                 if (touchSession.mode === null) {
                     if (absX < 4 && absY < 4) return;
-                    if (canScrollX && canScrollY) {
+                    if (touchSession.nativeVertical) {
+                        touchSession.mode = canScrollX && absX > (absY * 1.05) ? 'x' : 'y';
+                    } else if (canScrollX && canScrollY) {
                         touchSession.mode = absX > (absY * 1.05) ? 'x' : (absY > (absX * 1.05) ? 'y' : 'xy');
                     } else if (canScrollX) {
                         touchSession.mode = 'x';
@@ -63409,11 +63422,11 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                 let didScroll = false;
                 if ((touchSession.mode === 'x' || touchSession.mode === 'xy') && canScrollX) {
-                    scroller.scrollLeft = clamp(touchSession.left - deltaX, bounds.maxLeft);
+                    scroller.scrollLeft = clamp(touchSession.left - deltaX, touchSession.maxLeft);
                     didScroll = true;
                 }
-                if ((touchSession.mode === 'y' || touchSession.mode === 'xy') && canScrollY) {
-                    scroller.scrollTop = clamp(touchSession.top - deltaY, bounds.maxTop);
+                if (!touchSession.nativeVertical && (touchSession.mode === 'y' || touchSession.mode === 'xy') && canScrollY) {
+                    scroller.scrollTop = clamp(touchSession.top - deltaY, touchSession.maxTop);
                     didScroll = true;
                 }
 
@@ -87349,6 +87362,11 @@ function showPendingSettlementModal(periodType, projects) {
                     const useCache = modal.dataset.settlementPrecalc === '1';
                     const tableRoot = createSettlementTable(currentModalProjects, currentModalKey, { useCache });
                     tableContainer.appendChild(tableRoot);
+                    requestAnimationFrame(() => {
+                        if (typeof window.__alignSettlementMobileBadges === 'function') {
+                            window.__alignSettlementMobileBadges(modal);
+                        }
+                    });
 
                     /* [CLEANUP] Legacy resizing logic removed (V15 Integrity Audit) - see RefactoringDiagnosticKit.enableResizing */
                 }
@@ -87669,6 +87687,11 @@ function showPendingSettlementModal(periodType, projects) {
                         container.innerHTML = '';
                         const nc = createSettlementTable(filtered, typeof currentModalKey !== 'undefined' ? currentModalKey : '');
                         container.appendChild(nc);
+                        requestAnimationFrame(() => {
+                            if (typeof window.__alignSettlementMobileBadges === 'function') {
+                                window.__alignSettlementMobileBadges(modal);
+                            }
+                        });
                         const nt = nc.querySelector('table');
                         if (nt) { 
                             nt.dataset.sortKey = sortKey; nt.dataset.sortDir = sortDir;
@@ -88238,19 +88261,12 @@ function showPendingSettlementModal(periodType, projects) {
                             : Math.max(0, candidate.scrollHeight - candidate.clientHeight);
                         return !best || range > best.range ? { element: candidate, range } : best;
                     }, null) || { element: bodyScroller, range: 0 };
-                    const getBounds = () => {
-                        const horizontal = resolveAxisScroller('x');
-                        const vertical = resolveAxisScroller('y');
-                        return {
-                            horizontalScroller: horizontal.element,
-                            verticalScroller: vertical.element,
-                            maxLeft: horizontal.range,
-                            maxTop: vertical.range
-                        };
-                    };
-                    // The outer modal body owns X; the nested detail table owns Y.
-                    dashboardScroller.style.touchAction = 'none';
+                    // [v80] The table owns horizontal movement while the browser
+                    // natively routes vertical pan/inertia to the outer modal body.
+                    dashboardScroller.style.touchAction = 'pan-y pinch-zoom';
                     dashboardScroller.style.webkitOverflowScrolling = 'touch';
+                    dashboardScroller.style.overscrollBehaviorX = 'contain';
+                    dashboardScroller.style.overscrollBehaviorY = 'auto';
                     dashboardScroller.addEventListener('touchstart', (e) => {
                         if (!e.touches || e.touches.length !== 1) {
                             resetTouchSession();
@@ -88261,12 +88277,13 @@ function showPendingSettlementModal(periodType, projects) {
                             return;
                         }
                         const touch = e.touches[0];
-                        const bounds = getBounds();
+                        const horizontal = resolveAxisScroller('x');
                         touchSession = {
                             x: touch.clientX,
                             y: touch.clientY,
-                            left: bounds.horizontalScroller.scrollLeft,
-                            top: bounds.verticalScroller.scrollTop,
+                            horizontalScroller: horizontal.element,
+                            maxLeft: horizontal.range,
+                            left: horizontal.element.scrollLeft,
                             mode: null
                         };
                     }, { passive: true });
@@ -88277,26 +88294,13 @@ function showPendingSettlementModal(periodType, projects) {
                         const deltaY = touch.clientY - touchSession.y;
                         const absX = Math.abs(deltaX);
                         const absY = Math.abs(deltaY);
-                        const bounds = getBounds();
-                        const canScrollX = bounds.maxLeft > 1;
-                        const canScrollY = bounds.maxTop > 1;
+                        const canScrollX = touchSession.maxLeft > 1;
                         if (touchSession.mode === null) {
                             if (absX < 4 && absY < 4) return;
-                            if (canScrollX && canScrollY) touchSession.mode = absX > (absY * 1.05) ? 'x' : (absY > (absX * 1.05) ? 'y' : 'xy');
-                            else if (canScrollX) touchSession.mode = 'x';
-                            else if (canScrollY) touchSession.mode = 'y';
-                            else touchSession.mode = 'xy';
+                            touchSession.mode = canScrollX && absX > (absY * 1.05) ? 'x' : 'y';
                         }
-                        let moved = false;
-                        if ((touchSession.mode === 'x' || touchSession.mode === 'xy') && canScrollX) {
-                            bounds.horizontalScroller.scrollLeft = Math.max(0, Math.min(bounds.maxLeft, touchSession.left - deltaX));
-                            moved = true;
-                        }
-                        if ((touchSession.mode === 'y' || touchSession.mode === 'xy') && canScrollY) {
-                            bounds.verticalScroller.scrollTop = Math.max(0, Math.min(bounds.maxTop, touchSession.top - deltaY));
-                            moved = true;
-                        }
-                        if (moved) {
+                        if (touchSession.mode === 'x' && canScrollX) {
+                            touchSession.horizontalScroller.scrollLeft = Math.max(0, Math.min(touchSession.maxLeft, touchSession.left - deltaX));
                             if (e.cancelable) e.preventDefault();
                             if (e.stopImmediatePropagation) e.stopImmediatePropagation();
                         }
@@ -88578,7 +88582,8 @@ function showPendingSettlementModal(periodType, projects) {
                 tableScrollContainer.className = 'flex-1 w-full min-w-0 overflow-auto relative bg-white';
                 tableScrollContainer.dataset.settlementTableScroll = '1';
                 // [FIX-SIAV-V6.45] Keep STL horizontal scroll ownership on this element, not the outer flex wrapper.
-                tableScrollContainer.style.overscrollBehavior = 'contain';
+                tableScrollContainer.style.overscrollBehaviorX = 'contain';
+                tableScrollContainer.style.overscrollBehaviorY = 'auto';
                 tableScrollContainer.style.minWidth = '0';
                 tableScrollContainer.style.maxWidth = '100%';
 
@@ -88590,9 +88595,10 @@ function showPendingSettlementModal(periodType, projects) {
                     }, { passive: true });
                 }
 
-                tableScrollContainer.style.touchAction = 'pan-x pan-y pinch-zoom';
+                tableScrollContainer.style.touchAction = 'pan-y pinch-zoom';
                 tableScrollContainer.style.webkitOverflowScrolling = 'touch';
                 ensureBidirectionalTouchScrollBridge(tableScrollContainer, {
+                    nativeVertical: true,
                     onScroll: () => {
                         if (typeof dashboardEl !== "undefined" && dashboardEl) {
                             dashboardEl.scrollLeft = tableScrollContainer.scrollLeft;
@@ -138130,47 +138136,107 @@ window.openAddNewProjectModal = function(editProject) {
 
 <script>
 /* =====================================================================
-   [v68] 무결성 보증: 모바일 세로 모드 보라색 헤더 가림 0% 및 레이아웃 전체 하향 조정 정밀 가디언
+   [v80] 무결성 보증: 가변 높이 보라색 헤더 위 접기/펴기 뱃지 고정
+   - 120px 고정 임계값/전역 scroll 재측정 제거
+   - 모바일에서는 대시보드 뱃지를 헤더로 재배치하여 overflow/z-index 잘림 차단
    ===================================================================== */
-(function initV68PerfectBadgePositioner() {
-    function alignDashBadge() {
-        const dBadge = document.querySelector('.settlement-dashboard-toggle');
-        const headerBar = document.querySelector('.settlement-modal-content > div:first-child');
-        if (!dBadge) return;
-        
+(function initV80SettlementBadgeGuardian() {
+    let resizeFrame = 0;
+
+    function getActiveSettlementModal(preferred) {
+        if (preferred && preferred.isConnected) return preferred;
+        const modals = Array.from(document.querySelectorAll('.settlement-modal-overlay'));
+        return modals.reverse().find((modal) => {
+            const style = getComputedStyle(modal);
+            return style.display !== 'none' && style.visibility !== 'hidden';
+        }) || null;
+    }
+
+    function resetBadgeLayout(badge) {
+        ['position', 'top', 'right', 'bottom', 'left', 'z-index', 'display', 'opacity', 'visibility']
+            .forEach((name) => badge.style.removeProperty(name));
+    }
+
+    function bindRehomedDashboardToggle(badge, modal, dashboard) {
+        badge.__settlementDashboardHost = dashboard;
+        badge.__settlementModalHost = modal;
+        if (badge.__v80DirectToggleBound) return;
+        badge.__v80DirectToggleBound = true;
+        badge.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            const hostModal = badge.__settlementModalHost;
+            const host = badge.__settlementDashboardHost
+                || hostModal?.querySelector('.settlement-summary-dashboard');
+            const body = host?.querySelector('[data-dashboard-body]');
+            const icon = badge.querySelector('[data-dashboard-toggle-icon], span');
+            if (!body || !icon) return;
+            const isCollapsed = body.style.maxHeight === '0px';
+            body.style.maxHeight = isCollapsed ? '9999px' : '0px';
+            body.style.opacity = isCollapsed ? '1' : '0';
+            icon.textContent = isCollapsed ? '\u2212' : '+';
+            badge.setAttribute('aria-expanded', isCollapsed ? 'true' : 'false');
+            badge.setAttribute('aria-label', isCollapsed ? '\ub300\uc2dc\ubcf4\ub4dc \uc811\uae30' : '\ub300\uc2dc\ubcf4\ub4dc \ud3bc\uce58\uae30');
+            badge.title = isCollapsed ? '\uc811\uae30' : '\ud3bc\uce58\uae30';
+        });
+    }
+
+    function alignDashBadge(preferredModal) {
+        const modal = getActiveSettlementModal(preferredModal);
+        if (!modal) return;
+        const headerBar = modal.querySelector('.settlement-header-collapsible')
+            || modal.querySelector('.settlement-modal-content > div:first-child');
+        const dashboard = modal.querySelector('.settlement-summary-dashboard');
+        const freshBadge = dashboard?.querySelector('.settlement-dashboard-toggle');
+        const rehomedBadges = Array.from(modal.querySelectorAll('.settlement-dashboard-toggle[data-v80-rehomed="1"]'));
+        const dBadge = freshBadge || rehomedBadges[0] || null;
+        if (!dBadge || !headerBar) return;
+
+        rehomedBadges.forEach((stale) => {
+            if (stale !== dBadge) stale.remove();
+        });
+
         if (window.innerWidth <= 768) {
-            let targetTop = 73;
-            if (headerBar) {
-                const hrBox = headerBar.getBoundingClientRect();
-                if (hrBox.bottom > 0 && hrBox.bottom < 120) {
-                    targetTop = Math.round(hrBox.bottom + 2);
-                }
+            if (!dBadge.__v80HomeMarker || !dBadge.__v80HomeMarker.isConnected) {
+                const marker = document.createComment('v80-settlement-dashboard-toggle-home');
+                dBadge.parentNode?.insertBefore(marker, dBadge);
+                dBadge.__v80HomeMarker = marker;
             }
-            dBadge.style.setProperty('position', 'fixed', 'important');
-            dBadge.style.setProperty('top', targetTop + 'px', 'important');
-            dBadge.style.setProperty('left', 'calc(50vw - 42px)', 'important');
-            dBadge.style.setProperty('z-index', '999999', 'important');
+            bindRehomedDashboardToggle(dBadge, modal, dashboard || dBadge.__settlementDashboardHost);
+            if (dBadge.parentElement !== headerBar) headerBar.appendChild(dBadge);
+            dBadge.dataset.v80Rehomed = '1';
+            dBadge.style.setProperty('position', 'absolute', 'important');
+            dBadge.style.setProperty('top', 'auto', 'important');
+            dBadge.style.setProperty('right', 'auto', 'important');
+            dBadge.style.setProperty('bottom', '-12px', 'important');
+            dBadge.style.setProperty('left', 'calc(50% - 42px)', 'important');
+            dBadge.style.setProperty('z-index', '101', 'important');
             dBadge.style.setProperty('display', 'flex', 'important');
             dBadge.style.setProperty('opacity', '1', 'important');
             dBadge.style.setProperty('visibility', 'visible', 'important');
         } else {
-            dBadge.style.removeProperty('position');
-            dBadge.style.removeProperty('top');
-            dBadge.style.removeProperty('left');
-            dBadge.style.removeProperty('z-index');
+            const marker = dBadge.__v80HomeMarker;
+            if (marker && marker.isConnected && marker.parentNode) {
+                marker.parentNode.insertBefore(dBadge, marker.nextSibling);
+            }
+            delete dBadge.dataset.v80Rehomed;
+            resetBadgeLayout(dBadge);
         }
     }
 
-    alignDashBadge();
-    document.addEventListener('DOMContentLoaded', alignDashBadge);
-    window.addEventListener('resize', alignDashBadge);
-    window.addEventListener('scroll', alignDashBadge, true);
-    
-    const modal = document.getElementById('settlementModal') || document.querySelector('.settlement-modal-overlay');
-    if (modal) {
-        const obs = new MutationObserver(alignDashBadge);
-        obs.observe(modal, { attributes: true, attributeFilter: ['class', 'style'] });
+    function scheduleAlign() {
+        cancelAnimationFrame(resizeFrame);
+        resizeFrame = requestAnimationFrame(() => alignDashBadge());
     }
+
+    window.__alignSettlementMobileBadges = alignDashBadge;
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', scheduleAlign, { once: true });
+    } else {
+        scheduleAlign();
+    }
+    window.addEventListener('resize', scheduleAlign, { passive: true });
+    window.addEventListener('orientationchange', scheduleAlign, { passive: true });
 })();
 </script>
 
