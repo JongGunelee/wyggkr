@@ -58183,16 +58183,9 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         async function preloadWebSaveFreshArrayBufferForAutoUpload(url) {
             const audit = readRecentWebSaveAuditForAutoUpload();
             if (!isDefaultWorkbookAutoUploadUrl(url)) return null;
+            let payload = null;
             try {
-                const payload = readWebSaveReloadPayload(audit);
-                if (payload && payload.base64) {
-                    return buildWebSaveFreshArrayBufferResult(payload.base64, {
-                        source: 'session-websave-payload',
-                        sha: payload.sha,
-                        savedAt: payload.savedAt,
-                        preloaded: true
-                    });
-                }
+                payload = readWebSaveReloadPayload(audit);
             } catch (e1) {
                 markAutoUploadWebSaveFreshness({
                     used: false,
@@ -58204,6 +58197,17 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             try {
                 const latest = await fetchLatestWebSaveContentBase64ForAutoUpload();
                 if (latest && latest.base64) {
+                    if (payload && payload.sha && latest.sha && payload.sha !== latest.sha) {
+                        try { sessionStorage.removeItem(AUTO_UPLOAD_WEBSAVE_RELOAD_KEY); } catch (clearStalePayloadError) { }
+                        try {
+                            window.__codexStaleWebSaveReloadPayload = {
+                                discarded: true,
+                                cachedSha: payload.sha,
+                                remoteSha: latest.sha,
+                                at: new Date().toISOString()
+                            };
+                        } catch (stalePayloadAuditError) { }
+                    }
                     return buildWebSaveFreshArrayBufferResult(latest.base64, {
                         source: 'github-contents-api',
                         sha: latest.sha,
@@ -58217,6 +58221,14 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     source: 'freshness-preload-failed',
                     sha: audit && audit.sha || '',
                     error: String(e2 && e2.message || e2)
+                });
+            }
+            if (payload && payload.base64) {
+                return buildWebSaveFreshArrayBufferResult(payload.base64, {
+                    source: 'session-websave-payload-unverified-fallback',
+                    sha: payload.sha,
+                    savedAt: payload.savedAt,
+                    preloaded: true
                 });
             }
             return null;
@@ -58266,17 +58278,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         async function resolveWebSaveFreshArrayBufferForAutoUpload(url, arrayBuffer) {
             const audit = readRecentWebSaveAuditForAutoUpload();
             if (!isDefaultWorkbookAutoUploadUrl(url)) return arrayBuffer;
-            try {
-                const payload = readWebSaveReloadPayload(audit);
-                if (payload && payload.base64) {
-                    return buildWebSaveFreshArrayBufferResult(payload.base64, {
-                        source: 'session-websave-payload',
-                        sha: payload.sha,
-                        savedAt: payload.savedAt,
-                        preloaded: false
-                    }).arrayBuffer;
-                }
-            } catch (e1) { /* ignore and try API */ }
             let pageBase64 = '';
             try { pageBase64 = arrayBufferToAutoUploadBase64(arrayBuffer); } catch (e) { pageBase64 = ''; }
             try {
@@ -119347,7 +119348,7 @@ window.openAddNewProjectModal = function(editProject) {
             if (window.WebSavePlugin && window.WebSavePlugin.__installed20260529) return;
 
             var LOG = '[WebSavePlugin]';
-            var INTEGRITY_BUILD = '2026.07.26.2';
+            var INTEGRITY_BUILD = '2026.07.26.3';
             try { window.__codexWebSaveIntegrityBuild = INTEGRITY_BUILD; } catch (integrityBuildError) { }
             var CONFIG = {
                 apiBase: 'https://api.github.com/repos/jonggunelee/wyggkr04/contents/',
