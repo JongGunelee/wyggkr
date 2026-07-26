@@ -119417,7 +119417,7 @@ window.openAddNewProjectModal = function(editProject) {
             if (window.WebSavePlugin && window.WebSavePlugin.__installed20260529) return;
 
             var LOG = '[WebSavePlugin]';
-            var INTEGRITY_BUILD = '2026.07.26.4';
+            var INTEGRITY_BUILD = '2026.07.26.5';
             try { window.__codexWebSaveIntegrityBuild = INTEGRITY_BUILD; } catch (integrityBuildError) { }
             var CONFIG = {
                 apiBase: 'https://api.github.com/repos/jonggunelee/wyggkr04/contents/',
@@ -124877,14 +124877,42 @@ window.openAddNewProjectModal = function(editProject) {
                 var immutableSha = String(latestInfo && latestInfo.sha || '').trim();
                 if (!immutableSha) throw new Error('원격 원본의 불변 Git blob SHA를 확인하지 못했습니다.');
                 var padding = (content.match(/=*$/) || [''])[0].length;
-                // Git blob SHA 자체가 불변 백업이다. 같은 전체 XLSB를 별도 PUT하면
-                // 저장 1회에 대용량 blob/commit이 두 번 생성되어 지연과 저장소 팽창을 만든다.
+                var byteLength = Math.floor(content.length * 3 / 4) - padding;
+                var backupPath = buildRemoteBackupPath();
+                var result = await putRemoteContent(backupPath, token, {
+                    message: formatWebSaveCommitMessage('WebSavePlugin backup before sync', await resolveClientIpForWebSave()),
+                    content: content
+                });
+                var uploadedSha = String(result && result.content && result.content.sha || '').trim();
+                if (!uploadedSha || uploadedSha !== immutableSha) {
+                    var uploadMismatch = new Error('GitHub 원격 백업 SHA 검증이 일치하지 않아 원본 저장을 중단했습니다.');
+                    uploadMismatch.code = 'WEBSAVE_REMOTE_BACKUP_SHA_MISMATCH';
+                    uploadMismatch.expectedSha = immutableSha;
+                    uploadMismatch.actualSha = uploadedSha;
+                    uploadMismatch.backupPath = backupPath;
+                    throw uploadMismatch;
+                }
+                var verifiedInfo = await fetchRemoteFileInfo(token, backupPath);
+                var verifiedSha = String(verifiedInfo && verifiedInfo.sha || '').trim();
+                var verifiedSize = Number(verifiedInfo && verifiedInfo.size);
+                if (verifiedSha !== immutableSha || !Number.isFinite(verifiedSize) || verifiedSize !== byteLength) {
+                    var verifyMismatch = new Error('GitHub 원격 백업 파일의 SHA 또는 크기 검증이 일치하지 않아 원본 저장을 중단했습니다.');
+                    verifyMismatch.code = 'WEBSAVE_REMOTE_BACKUP_VERIFY_FAILED';
+                    verifyMismatch.expectedSha = immutableSha;
+                    verifyMismatch.actualSha = verifiedSha;
+                    verifyMismatch.expectedSize = byteLength;
+                    verifyMismatch.actualSize = verifiedSize;
+                    verifyMismatch.backupPath = backupPath;
+                    throw verifyMismatch;
+                }
                 return {
-                    path: String(latestInfo && latestInfo.path || CONFIG.targetPath) + '@blob:' + immutableSha,
-                    sha: immutableSha,
-                    byteLength: Math.floor(content.length * 3 / 4) - padding,
+                    path: backupPath,
+                    sha: verifiedSha,
+                    byteLength: verifiedSize,
                     immutableHistory: true,
-                    networkWrite: false
+                    networkWrite: true,
+                    verified: true,
+                    commitSha: String(result && result.commit && result.commit.sha || '')
                 };
             }
 
@@ -126879,8 +126907,11 @@ window.openAddNewProjectModal = function(editProject) {
                                     if (latestQueueSha && item.payload && !item.payload.sha) {
                                         item.payload.sha = latestQueueSha;
                                     }
+                                    var latestQueueContent = normalizeBase64(await fetchRemoteContentBase64(latestQueueInfo, token));
+                                    if (!latestQueueContent) throw new Error('대기 큐 저장 전 원격 원본 백업 콘텐츠를 읽지 못했습니다.');
+                                    var queueBackup = await createRemoteBackupBeforeOverwrite(token, latestQueueInfo, latestQueueContent);
                                     var result = await putRemoteContentWithShaRebaseRetry(CONFIG.targetPath, token, item.payload, {
-                                        expectedRemoteContentBase64: '',
+                                        expectedRemoteContentBase64: latestQueueContent,
                                         attempts: CONFIG.maxGithubPutShaRebaseAttempts,
                                         allowConflictOverride: false
                                     });
@@ -126891,6 +126922,15 @@ window.openAddNewProjectModal = function(editProject) {
                                         state.remoteSha = newSha;
                                         rememberCurrentBaseSha(newSha, 'pending-queue-remote-saved');
                                     }
+                                    try {
+                                        window.__codexWebSavePendingQueueLastBackup = {
+                                            path: queueBackup && queueBackup.path || '',
+                                            sha: queueBackup && queueBackup.sha || '',
+                                            verified: !!(queueBackup && queueBackup.verified),
+                                            targetSha: newSha || '',
+                                            at: new Date().toISOString()
+                                        };
+                                    } catch (queueBackupAuditError) { }
                                 }
                             } catch (err) {
                                 console.error('Failed to process queue item', err);
