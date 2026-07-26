@@ -27702,6 +27702,15 @@
             max-height: calc(100dvh - 176px) !important;
             scrollbar-gutter: auto;
         }
+
+        /* [v82-mobile-settlement-header-toggle-viewport-guard]
+         * Keep the header collapse control reachable even when evidence badges wrap
+         * beyond one portrait viewport. Normal-height headers retain the boundary position.
+         */
+        html body .settlement-modal-overlay .settlement-header-collapsible > .settlement-header-toggle {
+            top: min(calc(100% - 12px), calc(100dvh - 40px)) !important;
+            bottom: auto !important;
+        }
     }
 </style>
 <script>
