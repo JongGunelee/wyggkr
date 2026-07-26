@@ -95994,10 +95994,11 @@ function showPendingSettlementModal(periodType, projects) {
 
                 var origRead = XLSX.read;
                 XLSX.read = function () {
-                    StateManager.transition(DataFlowState.VALIDATING, 'XLSX.read');
+                    var webSaveRead = window.__codexWebSaveWorkbookReadInProgress === true;
+                    if (!webSaveRead) StateManager.transition(DataFlowState.VALIDATING, 'XLSX.read');
                     var result = origRead.apply(this, arguments);
                     // \ud30c\uc2f1 \uc644\ub8cc \ud6c4 RAF\uc5d0\uc11c \ub3d9\uae30\ud654 \uc218\ud589
-                    requestAnimationFrame(function () {
+                    if (!webSaveRead) requestAnimationFrame(function () {
                         performSafeSync('XLSX.read-complete');
                     });
                     return result;
@@ -100086,6 +100087,8 @@ function showPendingSettlementModal(periodType, projects) {
 
                 var maps = buildProjectMaps(projects);
                 var applied = 0;
+                var skippedUserEdited = 0;
+                var touchedIds = window.__codexWebSaveRecentLinkTouchedIds || {};
 
                 // Ensure projectLinkStore exists
                 if (!window.projectLinkStore) {
@@ -100109,6 +100112,15 @@ function showPendingSettlementModal(periodType, projects) {
                     // Try to find the project
                     var project = findProject(maps, rawId);
                     var targetId = project ? project.id : rawId;
+                    var targetCode = project ? normalizeId(
+                        project.maintenanceNo || project.maintenanceNumber || project.manageNo ||
+                        project.유지관리번호 || project['유지관리번호']
+                    ) : '';
+                    if (touchedIds.__all__ || touchedIds[rawId] || touchedIds[normalizeId(targetId)] ||
+                        (targetCode && touchedIds[targetCode])) {
+                        skippedUserEdited++;
+                        continue;
+                    }
 
                     try {
                         window.projectLinkStore.setProjectLink(targetId, rawUrl);
@@ -100118,8 +100130,8 @@ function showPendingSettlementModal(periodType, projects) {
                     }
                 }
 
-                console.log(LOG, 'Applied', applied, 'URL links');
-                return { applied: applied };
+                console.log(LOG, 'Applied', applied, 'URL links; protected user edits:', skippedUserEdited);
+                return { applied: applied, skippedUserEdited: skippedUserEdited };
             }
 
             // =======================================================================
@@ -100138,6 +100150,7 @@ function showPendingSettlementModal(periodType, projects) {
 
                 XLSX.read = function () {
                     var workbook = originalRead.apply(this, arguments);
+                    if (window.__codexWebSaveWorkbookReadInProgress === true) return workbook;
 
                     try {
                         processWorkbook(workbook);
@@ -101294,6 +101307,7 @@ function showPendingSettlementModal(periodType, projects) {
 
                 XLSX.read = function () {
                     var workbook = originalRead.apply(this, arguments);
+                    if (window.__codexWebSaveWorkbookReadInProgress === true) return workbook;
 
                     // Check for Work sheet
                     if (workbook && workbook.SheetNames) {
@@ -113734,6 +113748,7 @@ function showPendingSettlementModal(periodType, projects) {
                 var originalRead = window.XLSX.read;
                 window.XLSX.read = function () {
                     var workbook = originalRead.apply(this, arguments);
+                    if (window.__codexWebSaveWorkbookReadInProgress === true) return workbook;
                     try { processWorkbook(workbook); } catch (e) { }
                     return workbook;
                 };
@@ -119585,7 +119600,7 @@ window.openAddNewProjectModal = function(editProject) {
             if (window.WebSavePlugin && window.WebSavePlugin.__installed20260529) return;
 
             var LOG = '[WebSavePlugin]';
-            var INTEGRITY_BUILD = '2026.07.26.7';
+            var INTEGRITY_BUILD = '2026.07.27.8';
             try { window.__codexWebSaveIntegrityBuild = INTEGRITY_BUILD; } catch (integrityBuildError) { }
             var CONFIG = {
                 apiBase: 'https://api.github.com/repos/jonggunelee/wyggkr04/contents/',
@@ -120088,7 +120103,25 @@ window.openAddNewProjectModal = function(editProject) {
                         var code = getMaintenanceCode(projectOrId);
                         if (code) ids.push(String(code).trim());
                     } else if (projectOrId != null) {
-                        ids.push(String(projectOrId).trim());
+                        var rawLinkScopeId = String(projectOrId).trim();
+                        ids.push(rawLinkScopeId);
+                        // Links rows may use either Project ID or maintenance code.
+                        // Resolve both identities at the journal boundary so an
+                        // edit/delete cannot miss the original XLSB row.
+                        try {
+                            var linkScopeProjects = getProjects() || [];
+                            for (var linkScopeIndex = 0; linkScopeIndex < linkScopeProjects.length; linkScopeIndex += 1) {
+                                var linkScopeProject = linkScopeProjects[linkScopeIndex];
+                                if (!linkScopeProject) continue;
+                                var linkScopeProjectId = linkScopeProject.id != null ? String(linkScopeProject.id).trim() : '';
+                                var linkScopeMaintenanceCode = getMaintenanceCode(linkScopeProject);
+                                if (rawLinkScopeId === linkScopeProjectId || rawLinkScopeId === linkScopeMaintenanceCode) {
+                                    if (linkScopeProjectId) ids.push(linkScopeProjectId);
+                                    if (linkScopeMaintenanceCode) ids.push(linkScopeMaintenanceCode);
+                                    break;
+                                }
+                            }
+                        } catch (linkScopeResolveError) { }
                     }
                     ids = ids.filter(function(value, index, list) { return value && list.indexOf(value) === index; });
                     if (!ids.length) return false;
@@ -121217,15 +121250,26 @@ window.openAddNewProjectModal = function(editProject) {
 
             function readWorkbookFromBase64ForWebSave(base64) {
                 if (!window.XLSX || typeof window.XLSX.read !== 'function') throw new Error('XLSX library unavailable');
-                return window.XLSX.read(base64ToArrayBufferForWebSave(base64), {
-                    type: 'array',
-                    cellDates: false,
-                    cellNF: true,
-                    cellStyles: true,
-                    bookVBA: true,
-                    sheetStubs: false,
-                    dense: false
-                });
+                var alreadyReadingForWebSave = window.__codexWebSaveWorkbookReadInProgress === true;
+                window.__codexWebSaveWorkbookReadInProgress = true;
+                try {
+                    return window.XLSX.read(base64ToArrayBufferForWebSave(base64), {
+                        type: 'array',
+                        cellDates: false,
+                        cellNF: true,
+                        cellStyles: true,
+                        bookVBA: true,
+                        sheetStubs: false,
+                        dense: false
+                    });
+                } finally {
+                    if (alreadyReadingForWebSave) {
+                        window.__codexWebSaveWorkbookReadInProgress = true;
+                    } else {
+                        try { delete window.__codexWebSaveWorkbookReadInProgress; }
+                        catch (clearWebSaveReadGuardError) { window.__codexWebSaveWorkbookReadInProgress = false; }
+                    }
+                }
             }
 
             function inspectProjectSourceWorkbookForWebSave(sourceWorkbook) {
