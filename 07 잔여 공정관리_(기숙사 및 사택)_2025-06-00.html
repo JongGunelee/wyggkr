@@ -57637,7 +57637,11 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const customFieldKeys = new Set();
             projectData.forEach(p => {
                 if (p.customFields) {
-                    Object.keys(p.customFields).forEach(key => customFieldKeys.add(key));
+                    Object.keys(p.customFields).forEach(key => {
+                        // `remarks` is only the runtime alias of the fixed 특이사항 field.
+                        // Do not expose it as an independent filter or persist it as a custom column.
+                        if (String(key || '').trim().toLowerCase() !== 'remarks') customFieldKeys.add(key);
+                    });
                 }
             });
 
@@ -119348,7 +119352,7 @@ window.openAddNewProjectModal = function(editProject) {
             if (window.WebSavePlugin && window.WebSavePlugin.__installed20260529) return;
 
             var LOG = '[WebSavePlugin]';
-            var INTEGRITY_BUILD = '2026.07.26.3';
+            var INTEGRITY_BUILD = '2026.07.26.4';
             try { window.__codexWebSaveIntegrityBuild = INTEGRITY_BUILD; } catch (integrityBuildError) { }
             var CONFIG = {
                 apiBase: 'https://api.github.com/repos/jonggunelee/wyggkr04/contents/',
@@ -121174,6 +121178,85 @@ window.openAddNewProjectModal = function(editProject) {
                     /^col[_\s-]?\d+$/i.test(text) ||
                     /^column\d+$/i.test(normalized) ||
                     /^empty\d*$/i.test(normalized);
+            }
+
+            function isRuntimeProjectAliasHeaderForWebSave(value) {
+                // `remarks` is an in-memory compatibility alias for the canonical Note/특이사항 field.
+                // It must never become a physical custom column in Project Data.
+                return normalizeHeaderTokenForWebSave(value) === 'remarks';
+            }
+
+            function removeTrailingRuntimeProjectAliasColumnsForWebSave(workbook) {
+                if (!workbook || !workbook.Sheets || !window.XLSX || !window.XLSX.utils) return { removed: 0, migrated: 0 };
+                var name = findWorkbookSheetName(workbook, ['Project Data', 'ProjectData', '프로젝트'], true);
+                var sourceSheet = name && workbook.Sheets[name];
+                if (!sourceSheet || !sourceSheet['!ref']) return { removed: 0, migrated: 0 };
+                // Work on an isolated sheet clone. A fail-closed conflict must not mutate the loaded source.
+                var sheet = cloneSheetForWebSave(sourceSheet);
+                var fixedHeaders = projectDataFixedHeadersForWebSave();
+                var existingRows = sheetHeaderRowsForWebSave(sheet, 2, 512);
+                var lockedHeaderRows = detectLockedHeaderRowsForWebSave(existingRows, ['Project Data', 'ProjectData', '프로젝트'], 'Project Data', fixedHeaders);
+                var range;
+                try { range = window.XLSX.utils.decode_range(sheet['!ref']); } catch (rangeError) { return { removed: 0, migrated: 0 }; }
+                var noteColumns = [];
+                var aliasColumns = [];
+                for (var c = 0; c <= range.e.c; c += 1) {
+                    var parts = [];
+                    for (var rr = 0; rr < lockedHeaderRows; rr += 1) {
+                        var headerCell = sheet[window.XLSX.utils.encode_cell({ r: rr, c: c })];
+                        var headerValue = headerCell && headerCell.v != null ? String(headerCell.v).trim() : '';
+                        if (headerValue) parts.push(headerValue);
+                    }
+                    var headerText = parts.join(' ').replace(/\s+/g, ' ').trim();
+                    if (isRuntimeProjectAliasHeaderForWebSave(headerText)) aliasColumns.push(c);
+                    else if (matchHeaderKeyForWebSave(headerText, ['Note']) === 'Note') noteColumns.push(c);
+                }
+                if (!aliasColumns.length || !noteColumns.length) return { removed: 0, migrated: 0 };
+                aliasColumns.sort(function(a, b) { return b - a; });
+                var keepColumn = noteColumns[0];
+                var removed = 0;
+                var migrated = 0;
+                aliasColumns.forEach(function(aliasColumn) {
+                    // The application-generated pollution is append-only. Refuse non-trailing surgery so
+                    // an unrelated user column can never be shifted or removed by inference.
+                    if (aliasColumn !== range.e.c) {
+                        var positionError = new Error('Project Data의 remarks 별칭 열 위치가 예상과 달라 안전한 웹 저장을 중단했습니다. 원본 열 구조를 확인하세요.');
+                        positionError.code = 'WEBSAVE_PROJECT_ALIAS_POSITION_CONFLICT';
+                        throw positionError;
+                    }
+                    var merges = Array.isArray(sheet['!merges']) ? sheet['!merges'] : [];
+                    if (merges.some(function(merge) { return merge && merge.s && merge.e && merge.s.c <= aliasColumn && merge.e.c >= aliasColumn; })) {
+                        var mergeError = new Error('Project Data의 remarks 별칭 열에 병합 셀이 있어 안전한 웹 저장을 중단했습니다.');
+                        mergeError.code = 'WEBSAVE_PROJECT_ALIAS_MERGE_CONFLICT';
+                        throw mergeError;
+                    }
+                    for (var rowIndex = lockedHeaderRows; rowIndex <= range.e.r; rowIndex += 1) {
+                        var keepAddress = window.XLSX.utils.encode_cell({ r: rowIndex, c: keepColumn });
+                        var aliasAddress = window.XLSX.utils.encode_cell({ r: rowIndex, c: aliasColumn });
+                        var keepCell = sheet[keepAddress];
+                        var aliasCell = sheet[aliasAddress];
+                        var keepValue = keepCell && keepCell.v != null ? String(keepCell.v).trim() : '';
+                        var aliasValue = aliasCell && aliasCell.v != null ? String(aliasCell.v).trim() : '';
+                        if (aliasValue && keepValue !== aliasValue) {
+                            var valueError = new Error('Project Data의 remarks 별칭 열에 독립 값이 있어 안전한 웹 저장을 중단했습니다. 특이사항 열과 값을 확인하세요.');
+                            valueError.code = 'WEBSAVE_PROJECT_ALIAS_VALUE_CONFLICT';
+                            valueError.row = rowIndex + 1;
+                            throw valueError;
+                        }
+                        delete sheet[aliasAddress];
+                    }
+                    for (var headerRow = 0; headerRow < lockedHeaderRows; headerRow += 1) {
+                        delete sheet[window.XLSX.utils.encode_cell({ r: headerRow, c: aliasColumn })];
+                    }
+                    range.e.c -= 1;
+                    removed += 1;
+                    if (Array.isArray(sheet['!cols']) && sheet['!cols'].length > range.e.c + 1) sheet['!cols'].length = range.e.c + 1;
+                });
+                sheet['!ref'] = window.XLSX.utils.encode_range(range);
+                trimSheetMetadataForWebSave(sheet, range.e.r, range.e.c);
+                workbook.Sheets[name] = sheet;
+                try { window.__codexWebSaveAliasCleanup = { at: new Date().toISOString(), sheet: name, removedColumns: removed, migratedValues: migrated }; } catch (auditError) { }
+                return { removed: removed, migrated: migrated };
             }
 
             function webSaveHeaderAliases() {
@@ -123417,6 +123500,7 @@ window.openAddNewProjectModal = function(editProject) {
                 }
                 var macroState = captureWorkbookMacroStateForWebSave(sourceWorkbook);
                 var workbook = cloneWorkbookForWebSave(sourceWorkbook) || window.XLSX.utils.book_new();
+                removeTrailingRuntimeProjectAliasColumnsForWebSave(workbook);
                 var settlementKeys = new Set();
                 var customKeys = new Set();
                 projects.forEach(function (project) {
@@ -123435,6 +123519,7 @@ window.openAddNewProjectModal = function(editProject) {
                     var text = String(key == null ? '' : key).trim();
                     return text &&
                         !isSyntheticHeaderPartForWebSave(text) &&
+                        !isRuntimeProjectAliasHeaderForWebSave(text) &&
                         !isSettlementMonthHeaderLikeForWebSave(text) &&
                         settlementHeaders.indexOf(text) === -1 &&
                         fixedHeaders.indexOf(text) === -1 &&
@@ -139970,7 +140055,7 @@ window.openAddNewProjectModal = function(editProject) {
     <script id="codex-cost-estimation-analysis-20260711">
     (function installCostEstimationAnalysis20260711() {
         'use strict';
-        if (window.CostEstimationAnalysis && window.CostEstimationAnalysis.version === '2026.07.24.2') return;
+        if (window.CostEstimationAnalysis && window.CostEstimationAnalysis.version === '2026.07.26.1') return;
 
         var STORAGE_KEY = 'codex_cost_estimation_vault_v1';
         var MODE_KEY = 'codex_cost_estimation_source_mode_v1';
@@ -140516,14 +140601,10 @@ window.openAddNewProjectModal = function(editProject) {
             if (!api) return null;
             var signature = projectDataSignature();
             if (state.householdCache && state.householdCacheSignature === signature) return state.householdCache;
-            var apiState = typeof api.getState === 'function' ? api.getState() : null;
-            var period = apiState && apiState.periodFilter || {};
-            var draft = apiState && apiState.draft || {};
-            var defaultPeriod = (!Array.isArray(period.years) || !period.years.length) && (!period.type || period.type === 'all') && (!Array.isArray(period.values) || !period.values.length);
-            var defaultDates = !String(draft.start || '').trim() && !String(draft.end || '').trim();
             var result = null;
-            if (apiState && apiState.viewMode === 'household' && apiState.lastHousehold && defaultPeriod && defaultDates) result = apiState.lastHousehold;
-            else if (typeof api.analyzeHouseholdCanonical === 'function') result = api.analyzeHouseholdCanonical();
+            // A household-modal cache can still describe the previous upload while projectData already
+            // contains newly loaded rows. Rebuild canonically on every project signature change.
+            if (typeof api.analyzeHouseholdCanonical === 'function') result = api.analyzeHouseholdCanonical();
             else result = api.analyzeHousehold ? api.analyzeHousehold(true) : null;
             state.householdCache = result;
             state.householdCacheSignature = signature;
@@ -140538,6 +140619,19 @@ window.openAddNewProjectModal = function(editProject) {
         }
         function isInteriorProcess(name) {
             return /\uc218\uc7a5/.test(String(name || '').replace(/\s+/g, ''));
+        }
+        function inferUnparsedInteriorLocation(item) {
+            item = item || {};
+            var project = item.project || {};
+            var name = String(item.projectName || project.name || project.projectName || project['\uc720\uc9c0\uad00\ub9ac\uba85'] || '')
+                .replace(/[‐‑‒–—―−]/g, '-').replace(/\s+/g, ' ').trim();
+            var match = name.match(/(?:\uc0ac\ud0dd|\uae30\uc219\uc0ac)?\s*([A-Za-z]{1,3}|\d{1,3})\s*(?:\ub3d9\s*)?[-/]\s*(\d{2,4})\s*(?:\ud638\s*)?/i) ||
+                name.match(/(?:\uc0ac\ud0dd|\uae30\uc219\uc0ac)?\s*([A-Za-z]{1,3}|\d{1,3})\s*\ub3d9\s*(\d{2,4})\s*\ud638?/i);
+            var rawBuilding = match ? match[1] : (project.building || project['\uac74\ubb3c\ub3d9'] || (project.customFields && project.customFields['\uac74\ubb3c\ub3d9']) || '');
+            return {
+                building: normalizeBuilding(rawBuilding) || '\uba85\uce6d \ubbf8\ud30c\uc2f1',
+                household: match ? String(match[2]).replace(/^0+(?=\d)/, '') : 'N/A'
+            };
         }
         function normalizeOtherProcessText(value) {
             var text = String(value || '');
@@ -140664,6 +140758,48 @@ window.openAddNewProjectModal = function(editProject) {
             if (total > 0) return '\uc99d\uc561 ' + formatWonAmount(overrun) + ' - \uc808\uac10\uc561 ' + formatWonAmount(saving) + ' = \uc21c\uc99d\uc561 ' + formatWonAmount(total);
             return '\uc808\uac10\uc561 ' + formatWonAmount(saving) + ' - \uc99d\uc561 ' + formatWonAmount(overrun) + ' = \uc21c\ucc28\uc561 0\uc6d0';
         }
+        function buildInteriorDetailRow(project, key, household, settingsByYear, sourceType, forceUnmatched) {
+            project = project || {};
+            var projectPo = Number(project.poAmount || 0);
+            var bounds = analysisPeriodBounds(project);
+            var rateYear = rateYearFromBounds(bounds);
+            var yearSettings = settingsByYear[rateYear] || Object.create(null);
+            var setting = forceUnmatched ? null : (yearSettings[key] || null);
+            var rateSource = setting ? (state.sourceByYear[rateYear] || 'manual-file') : 'missing';
+            var excluded = !!(setting && setting.excluded);
+            var baseCost = setting ? Number(setting.cost || 0) : 0;
+            var fee = setting ? Number(setting.fee || 0) : 0;
+            var confirmed = setting ? Math.round(baseCost * (1 + fee / 100)) : 0;
+            var delta = setting && !excluded ? projectPo - confirmed : 0;
+            var status = !setting ? 'unmatched' : (excluded ? 'excluded' : (delta < 0 ? 'saving' : (delta > 0 ? 'overrun' : 'compliant')));
+            return {
+                building: key,
+                household: household || 'N/A',
+                maintenanceCode: String(project.maintenanceCode || ''),
+                projectName: String(project.projectName || ''),
+                projectId: String(project.projectId || ''),
+                rateYear: rateYear,
+                rateSource: rateSourceLabel(rateSource),
+                rateSourceKey: rateSource,
+                baseCost: baseCost,
+                fee: fee,
+                confirmed: confirmed,
+                actualPo: projectPo,
+                delta: delta,
+                status: status,
+                processes: String(project.taskName || ''),
+                sourceType: sourceType || 'parsed',
+                periodStart: bounds.start,
+                periodEnd: bounds.end,
+                periodBasis: bounds.basis,
+                settlementDate: bounds.settlementDate || '',
+                projectStart: bounds.projectStart || '',
+                projectEnd: bounds.projectEnd || '',
+                crossYearSettlement: isCrossYearSettlement(bounds),
+                projectCount: 1,
+                project: project
+            };
+        }
         function buildAnalysis() {
             var household = getHouseholdAnalysis();
             var years = availableAnalysisYears(household);
@@ -140681,50 +140817,19 @@ window.openAddNewProjectModal = function(editProject) {
             var parsedSourcePo = 0;
             var interiorPo = 0;
             var parsedOtherPo = 0;
+            var sourceScopedCount = 0;
+            var accountedScopedCount = 0;
+            var unparsedInteriorCount = 0;
             (household && household.buildings || []).forEach(function(building) {
                 (building.households || []).forEach(function(unit) {
                     var key = normalizeBuilding(building.building);
                     (unit.projects || []).forEach(function(project) {
                         var projectPo = Number(project.poAmount || 0);
-                        var bounds = analysisPeriodBounds(project);
-                        var rateYear = rateYearFromBounds(bounds);
-                        var yearSettings = settingsByYear[rateYear] || Object.create(null);
-                        var setting = yearSettings[key] || null;
-                        var rateSource = setting ? (state.sourceByYear[rateYear] || 'manual-file') : 'missing';
                         if (isInteriorProcess(project.taskName)) {
-                            var excluded = !!(setting && setting.excluded);
-                            var baseCost = setting ? Number(setting.cost || 0) : 0;
-                            var fee = setting ? Number(setting.fee || 0) : 0;
-                            var confirmed = setting ? Math.round(baseCost * (1 + fee / 100)) : 0;
-                            var delta = setting && !excluded ? projectPo - confirmed : 0;
-                            var status = !setting ? 'unmatched' : (excluded ? 'excluded' : (delta < 0 ? 'saving' : (delta > 0 ? 'overrun' : 'compliant')));
-                            var detailRow = {
-                                building: key,
-                                household: unit.household || 'N/A',
-                                maintenanceCode: String(project.maintenanceCode || ''),
-                                projectName: String(project.projectName || ''),
-                                projectId: String(project.projectId || ''),
-                                rateYear: rateYear,
-                                rateSource: rateSourceLabel(rateSource),
-                                rateSourceKey: rateSource,
-                                baseCost: baseCost,
-                                fee: fee,
-                                confirmed: confirmed,
-                                actualPo: projectPo,
-                                delta: delta,
-                                status: status,
-                                processes: String(project.taskName || ''),
-                                periodStart: bounds.start,
-                                periodEnd: bounds.end,
-                                periodBasis: bounds.basis,
-                                settlementDate: bounds.settlementDate || '',
-                                projectStart: bounds.projectStart || '',
-                                projectEnd: bounds.projectEnd || '',
-                                crossYearSettlement: isCrossYearSettlement(bounds),
-                                projectCount: 1,
-                                project: project
-                            };
+                            var detailRow = buildInteriorDetailRow(project, key, unit.household || 'N/A', settingsByYear, 'parsed', false);
                             if (matchesSelectedPeriod(detailRow)) {
+                                sourceScopedCount += 1;
+                                accountedScopedCount += 1;
                                 parsedSourcePo += projectPo;
                                 interiorPo += projectPo;
                                 detailRows.push(detailRow);
@@ -140732,6 +140837,8 @@ window.openAddNewProjectModal = function(editProject) {
                         } else {
                             var otherRow = otherProjectView(project, 'parsed');
                             if (matchesSelectedPeriod(otherRow)) {
+                                sourceScopedCount += 1;
+                                accountedScopedCount += 1;
                                 parsedSourcePo += projectPo;
                                 parsedOtherPo += projectPo;
                                 otherProjects.push(otherRow);
@@ -140741,9 +140848,41 @@ window.openAddNewProjectModal = function(editProject) {
                 });
             });
             (household && household.unparsedProjects || []).forEach(function(item) {
-                if (!isInteriorProcess(item && item.projectName)) {
+                if (isInteriorProcess(item && item.projectName)) {
+                    var rawProject = item && item.project || {};
+                    var location = inferUnparsedInteriorLocation(item);
+                    var unparsedInterior = {
+                        project: rawProject,
+                        projectId: String(item.projectId || rawProject.id || ''),
+                        maintenanceCode: String(item.maintenanceCode || rawProject.maintenanceCode || ''),
+                        projectName: String(item.projectName || rawProject.name || ''),
+                        building: location.building,
+                        household: location.household,
+                        taskName: '\uc218\uc7a5\uc791\uc5c5 (\uba85\uce6d \ubbf8\ud30c\uc2f1)',
+                        poAmount: rawProjectPo(rawProject),
+                        progress: parseNumber(rawProject.progress),
+                        settlement: analysisSettlementDate(rawProject),
+                        workStart: '',
+                        workEnd: ''
+                    };
+                    var interiorRow = buildInteriorDetailRow(unparsedInterior, location.building, location.household, settingsByYear, 'unparsed-interior', true);
+                    if (matchesSelectedPeriod(interiorRow)) {
+                        sourceScopedCount += 1;
+                        accountedScopedCount += 1;
+                        unparsedInteriorCount += 1;
+                        parsedSourcePo += Number(unparsedInterior.poAmount || 0);
+                        interiorPo += Number(unparsedInterior.poAmount || 0);
+                        detailRows.push(interiorRow);
+                    }
+                } else {
                     var row = otherProjectView(item, 'unparsed');
-                    if (matchesSelectedPeriod(row)) otherProjects.push(row);
+                    if (matchesSelectedPeriod(row)) {
+                        sourceScopedCount += 1;
+                        accountedScopedCount += 1;
+                        parsedSourcePo += Number(row.poAmount || 0);
+                        parsedOtherPo += Number(row.poAmount || 0);
+                        otherProjects.push(row);
+                    }
                 }
             });
             var categories = groupOtherProjects(otherProjects);
@@ -140765,6 +140904,10 @@ window.openAddNewProjectModal = function(editProject) {
                 parsedOtherPo: parsedOtherPo,
                 otherPo: otherPo,
                 poIntegrityOk: Math.abs(parsedSourcePo - interiorPo - parsedOtherPo) < 0.5,
+                sourceScopedCount: sourceScopedCount,
+                accountedScopedCount: accountedScopedCount,
+                sourceCoverageOk: sourceScopedCount === accountedScopedCount,
+                unparsedInteriorCount: unparsedInteriorCount,
                 calculationAudit: calculationAudit,
                 totalDelta: totalDelta,
                 financialSummary: financialSummary,
@@ -141476,6 +141619,8 @@ window.openAddNewProjectModal = function(editProject) {
                     project.endDateStr || project.endDate || project.end || project['종료일'] || '',
                     project.poAmount || project['PO금액'] || custom['PO금액'] || '',
                     project.progress != null ? project.progress : (project.processRate != null ? project.processRate : ''),
+                    project.taskType || project['작업유형'] || '',
+                    project.building || project['건물동'] || custom['건물동'] || '',
                     project.manualSettlementDate || project.settlementMonth || project['정산 월'] || custom['정산 월'] || ''
                 ].forEach(add);
             });
@@ -141648,7 +141793,7 @@ window.openAddNewProjectModal = function(editProject) {
             window.addEventListener('resize', scheduleEntryButtonSync, { passive: true });
         }
         window.CostEstimationAnalysis = {
-            version: '2026.07.24.2', open: open, close: close, loadDefault: loadDefault,
+            version: '2026.07.26.1', open: open, close: close, loadDefault: loadDefault,
             analyze: buildAnalysis, remoteSave: remoteSave, getRemotePath: getRemotePath,
             openEvidence: openEvidence, downloadAnalysisWorkbook: downloadAnalysisWorkbook, downloadEvidenceWorkbook: downloadEvidenceWorkbook,
             getState: function() { return { sourceMode: state.sourceMode, source: state.source, rows: state.rows.slice(), rowsByYear: Object.keys(state.rowsByYear).reduce(function(out, year) { out[year] = (state.rowsByYear[year] || []).slice(); return out; }, {}), sourceByYear: Object.assign({}, state.sourceByYear), errorByYear: Object.assign({}, state.errorByYear), remoteCatalog: state.remoteCatalog.map(function(entry) { return Object.assign({}, entry); }), activeRateYear: state.activeRateYear, sourceWarnings: state.sourceWarnings.slice(), sourceNotices: state.sourceNotices.slice(), verifiedMetaByYear: Object.assign({}, state.verifiedMetaByYear), startupStarted: state.startupStarted, startupPending: !!state.startupPromise, remotePath: state.remotePath, remoteSha: state.remoteSha, analysis: state.analysis, evidence: state.evidence, filterYear: state.filterYear, filterYears: state.filterYears.slice(), filterType: state.filterType, filterValue: state.filterValue, filterValues: state.filterValues.slice(), periodBasis: state.periodBasis, lastError: state.lastError }; }
