@@ -1668,6 +1668,15 @@
             appearance: none; background-color: transparent; outline: none; padding: 0; flex-shrink: 0;
             border: none;
         }
+        .billiard-ball > span {
+            display: block;
+            max-width: 26px;
+            font-size: var(--billiard-label-font-size, 11px);
+            line-height: 1;
+            letter-spacing: -0.03em;
+            white-space: nowrap;
+            text-align: center;
+        }
         .billiard-ball:hover {
             transform: scale(1.15) translateY(-2px);
             box-shadow: 
@@ -66387,7 +66396,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             const safeMonth = safeEscapeAttr(settlementMonth);
                             return `<div class="project-settlement flex justify-center items-center gap-1" style="width: var(--settlement-col-width); display: ${cellDisplay};" data-display-type="settlementAssign">
                                     <input type="checkbox" class="settlement-checkbox" data-project-id="${safeId}" ${isSelected ? 'checked' : ''} title="${safeTitle}" style="display: ${ganttDisplayVisible ? '' : 'none'}">
-                                    <input type="month" class="settlement-gantt-month-input border rounded p-1 text-xs" style="width: 100px; display: ${ganttDisplayVisible ? 'inline-block' : 'none'};" data-project-id="${safeId}" value="${safeMonth}" title="${safeTitle}">
+                                    <input type="month" min="2000-01" max="2100-12" step="1" class="settlement-gantt-month-input border rounded p-1 text-xs" style="width: 100px; display: ${ganttDisplayVisible ? 'inline-block' : 'none'};" data-project-id="${safeId}" value="${safeMonth}" title="${safeTitle}">
                                 </div>`;
                         } catch (e) {
                             // \uc624\ub958 \uc2dc \ube48 \ubb38\uc790\uc5f4 \ubc18\ud658 - ensureSettlementColumnInContainer\uac00 \ub098\uc911\uc5d0 \uc8fc\uc785
@@ -84140,6 +84149,9 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         if (!monthInput) {
                             monthInput = document.createElement('input');
                             monthInput.type = 'month';
+                            monthInput.min = '2000-01';
+                            monthInput.max = '2100-12';
+                            monthInput.step = '1';
                             monthInput.className = 'w-full px-1 py-0.5 text-xs border border-transparent hover:border-gray-300 rounded focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-transparent settlement-gantt-month-input';
                             monthInput.dataset.projectId = String(pid);
                             monthInput.style.setProperty('display', GanttDisplayOptions.settlementAssign ? 'inline-block' : 'none', 'important');
@@ -84172,7 +84184,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                     cell.innerHTML = `
                         <input type="checkbox" class="settlement-checkbox" data-project-id="${escapeAttr(pid)}" ${selected ? 'checked' : ''} title="${escapeAttr(title)}" style="display: ${ganttDisplayVisible ? '' : 'none'}">
-                        <input type="month" class="w-full px-1 py-0.5 text-xs border border-transparent hover:border-gray-300 rounded focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-transparent settlement-gantt-month-input" data-project-id="${escapeAttr(pid)}" value="${escapeAttr(assignedMonth)}" title="\uc815\uc0b0\uc6d4 \uc9c1\uc811 \uc785\ub825" style="display: ${ganttDisplayVisible ? 'inline-block' : 'none'}; width: 100px;">
+                        <input type="month" min="2000-01" max="2100-12" step="1" class="w-full px-1 py-0.5 text-xs border border-transparent hover:border-gray-300 rounded focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 bg-transparent settlement-gantt-month-input" data-project-id="${escapeAttr(pid)}" value="${escapeAttr(assignedMonth)}" title="\uc815\uc0b0\uc6d4 \uc9c1\uc811 \uc785\ub825 (2000\ub144~2100\ub144)" style="display: ${ganttDisplayVisible ? 'inline-block' : 'none'}; width: 100px;">
                     `;
 
                     if (progressSummary) rowRight.insertBefore(cell, progressSummary);
@@ -87308,7 +87320,11 @@ function showPendingSettlementModal(periodType, projects) {
                                     const isStripe = mVal > 8 || mVal === 0;
                                     ball.className = `billiard-ball ball-${mVal}${isStripe ? ' ball-stripe' : ''} settlement-doc-dynamic-btn`;
                                     const suffix = docs.length > 1 ? `-${idx + 1}` : '';
-                                    ball.innerHTML = `<span>${mVal ? String(mVal).padStart(2, '0') + suffix : '?'}</span>`;
+                                    const ballLabel = mVal ? String(mVal).padStart(2, '0') + suffix : '?';
+                                    const labelUnits = Math.max(1, Array.from(ballLabel).length * 0.62);
+                                    const labelFontSize = Math.max(6, Math.min(11, Math.floor((25 / labelUnits) * 10) / 10));
+                                    ball.style.setProperty('--billiard-label-font-size', `${labelFontSize}px`);
+                                    ball.innerHTML = `<span>${ballLabel}</span>`;
                                     ball.dataset.tooltip = `${mVal ? mVal + '월' : '월 미상'} 증빙${suffix}${item.customer ? '(' + item.customer + ')' : ''}`;
                                     ball.title = `${ball.dataset.tooltip} - DOC_URL 열기`;
                                     ball.addEventListener('click', (e) => {
@@ -88207,11 +88223,33 @@ function showPendingSettlementModal(periodType, projects) {
                     dashboardScroller.__settlementTouchForwarderInstalled = true;
                     let touchSession = null;
                     const resetTouchSession = () => { touchSession = null; };
-                    const getBounds = () => ({
-                        maxLeft: Math.max(0, bodyScroller.scrollWidth - bodyScroller.clientWidth),
-                        maxTop: Math.max(0, bodyScroller.scrollHeight - bodyScroller.clientHeight)
-                    });
-                    dashboardScroller.style.touchAction = 'pan-x pan-y pinch-zoom';
+                    const collectScrollCandidates = () => {
+                        const candidates = [bodyScroller, dashboardScroller, wrapper, wrapper.querySelector('[data-settlement-table-scroll="1"]')];
+                        let ancestor = bodyScroller && bodyScroller.parentElement;
+                        while (ancestor && !ancestor.classList.contains('settlement-modal-overlay')) {
+                            candidates.push(ancestor);
+                            ancestor = ancestor.parentElement;
+                        }
+                        return Array.from(new Set(candidates.filter(Boolean)));
+                    };
+                    const resolveAxisScroller = (axis) => collectScrollCandidates().reduce((best, candidate) => {
+                        const range = axis === 'x'
+                            ? Math.max(0, candidate.scrollWidth - candidate.clientWidth)
+                            : Math.max(0, candidate.scrollHeight - candidate.clientHeight);
+                        return !best || range > best.range ? { element: candidate, range } : best;
+                    }, null) || { element: bodyScroller, range: 0 };
+                    const getBounds = () => {
+                        const horizontal = resolveAxisScroller('x');
+                        const vertical = resolveAxisScroller('y');
+                        return {
+                            horizontalScroller: horizontal.element,
+                            verticalScroller: vertical.element,
+                            maxLeft: horizontal.range,
+                            maxTop: vertical.range
+                        };
+                    };
+                    // The outer modal body owns X; the nested detail table owns Y.
+                    dashboardScroller.style.touchAction = 'none';
                     dashboardScroller.style.webkitOverflowScrolling = 'touch';
                     dashboardScroller.addEventListener('touchstart', (e) => {
                         if (!e.touches || e.touches.length !== 1) {
@@ -88223,11 +88261,12 @@ function showPendingSettlementModal(periodType, projects) {
                             return;
                         }
                         const touch = e.touches[0];
+                        const bounds = getBounds();
                         touchSession = {
                             x: touch.clientX,
                             y: touch.clientY,
-                            left: bodyScroller.scrollLeft,
-                            top: bodyScroller.scrollTop,
+                            left: bounds.horizontalScroller.scrollLeft,
+                            top: bounds.verticalScroller.scrollTop,
                             mode: null
                         };
                     }, { passive: true });
@@ -88250,11 +88289,11 @@ function showPendingSettlementModal(periodType, projects) {
                         }
                         let moved = false;
                         if ((touchSession.mode === 'x' || touchSession.mode === 'xy') && canScrollX) {
-                            bodyScroller.scrollLeft = Math.max(0, Math.min(bounds.maxLeft, touchSession.left - deltaX));
+                            bounds.horizontalScroller.scrollLeft = Math.max(0, Math.min(bounds.maxLeft, touchSession.left - deltaX));
                             moved = true;
                         }
                         if ((touchSession.mode === 'y' || touchSession.mode === 'xy') && canScrollY) {
-                            bodyScroller.scrollTop = Math.max(0, Math.min(bounds.maxTop, touchSession.top - deltaY));
+                            bounds.verticalScroller.scrollTop = Math.max(0, Math.min(bounds.maxTop, touchSession.top - deltaY));
                             moved = true;
                         }
                         if (moved) {
@@ -88537,6 +88576,7 @@ function showPendingSettlementModal(periodType, projects) {
 
                 const tableScrollContainer = document.createElement('div');
                 tableScrollContainer.className = 'flex-1 w-full min-w-0 overflow-auto relative bg-white';
+                tableScrollContainer.dataset.settlementTableScroll = '1';
                 // [FIX-SIAV-V6.45] Keep STL horizontal scroll ownership on this element, not the outer flex wrapper.
                 tableScrollContainer.style.overscrollBehavior = 'contain';
                 tableScrollContainer.style.minWidth = '0';
@@ -119451,7 +119491,7 @@ window.openAddNewProjectModal = function(editProject) {
             if (window.WebSavePlugin && window.WebSavePlugin.__installed20260529) return;
 
             var LOG = '[WebSavePlugin]';
-            var INTEGRITY_BUILD = '2026.07.26.6';
+            var INTEGRITY_BUILD = '2026.07.26.7';
             try { window.__codexWebSaveIntegrityBuild = INTEGRITY_BUILD; } catch (integrityBuildError) { }
             var CONFIG = {
                 apiBase: 'https://api.github.com/repos/jonggunelee/wyggkr04/contents/',
@@ -123380,7 +123420,7 @@ window.openAddNewProjectModal = function(editProject) {
                     .filter(function(key) { return key.charAt(0) !== '!'; }).sort();
                 var count = 0;
                 var samples = [];
-                var fallbackCounts = { settlementMonthVba: 0, changedTextCellFormat: 0 };
+                var fallbackCounts = { settlementMonthVba: 0, clearedSettlementMonth: 0, changedTextCellFormat: 0 };
                 var safe = true;
                 var rejected = null;
                 addresses.some(function(addr) {
@@ -123412,6 +123452,18 @@ window.openAddNewProjectModal = function(editProject) {
                         count += 1;
                         fallbackCounts.changedTextCellFormat += 1;
                         if (samples.length < 5) samples.push({ address: addr, field: 'Note', beforeFormat: beforeCell.z || '', afterFormat: afterCell.z || '', fallback: 'changed-text-cell-format-normalized' });
+                        return false;
+                    }
+                    var expectedValueBlank = beforeCell.v == null || String(beforeCell.v).trim() === '';
+                    var actualValueBlank = afterCell.v == null || String(afterCell.v).trim() === '';
+                    var explicitlyClearedSettlementMonth = decoded.c === monthCol &&
+                        touchedFieldByAddress[addr] === 'Settlement Month' && !monthKey &&
+                        expectedValueBlank && actualValueBlank && linkCommentSame &&
+                        !beforeRgb && !afterRgb && remainderSame;
+                    if (explicitlyClearedSettlementMonth) {
+                        count += 1;
+                        fallbackCounts.clearedSettlementMonth += 1;
+                        if (samples.length < 5) samples.push({ address: addr, field: 'Settlement Month', fallback: 'explicit-blank-cell-format-dropped' });
                         return false;
                     }
                     if (decoded.c !== monthCol || !monthKey || beforeRgb !== expectedRgb || afterRgb || !metadataSame || !remainderSame) {
