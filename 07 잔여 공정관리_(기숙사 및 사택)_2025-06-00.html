@@ -119347,7 +119347,7 @@ window.openAddNewProjectModal = function(editProject) {
             if (window.WebSavePlugin && window.WebSavePlugin.__installed20260529) return;
 
             var LOG = '[WebSavePlugin]';
-            var INTEGRITY_BUILD = '2026.07.26.1';
+            var INTEGRITY_BUILD = '2026.07.26.2';
             try { window.__codexWebSaveIntegrityBuild = INTEGRITY_BUILD; } catch (integrityBuildError) { }
             var CONFIG = {
                 apiBase: 'https://api.github.com/repos/jonggunelee/wyggkr04/contents/',
@@ -123706,6 +123706,130 @@ window.openAddNewProjectModal = function(editProject) {
                 return String(content || '').replace(/\s+/g, '');
             }
 
+            function normalizePendingUploadStatsForWebSave(stats) {
+                stats = stats && typeof stats === 'object' ? stats : {};
+                var out = {};
+                ['projects', 'work', 'dependencies', 'milestones', 'links'].forEach(function(key) {
+                    var value = Number(stats[key]);
+                    out[key] = Number.isFinite(value) && value >= 0 ? Math.floor(value) : null;
+                });
+                return out;
+            }
+
+            function pendingUploadWorkbookStatsForWebSave(workbook) {
+                if (!workbook || !workbook.Sheets || !Array.isArray(workbook.SheetNames)) {
+                    throw new Error('대기 큐 XLSB 워크북 구조를 확인할 수 없습니다.');
+                }
+                var requiredSheets = [
+                    ['Project Data', 'ProjectData', '프로젝트'],
+                    ['Work', 'WorkDate', '작업일'],
+                    ['Links(Work-Work)', 'Links (Work-Work)', 'Dependencies', 'Dependency', '의존성'],
+                    ['Milestone', 'Milestones', '마일스톤'],
+                    ['Links', 'Link', '링크']
+                ];
+                var missingSheets = requiredSheets.filter(function(candidates) {
+                    return !findWorkbookSheetName(workbook, candidates, false);
+                }).map(function(candidates) { return candidates[0]; });
+                if (missingSheets.length) {
+                    throw new Error('대기 큐 XLSB 필수 시트 누락: ' + missingSheets.join(', '));
+                }
+                var projects = readProjectDataProjectsFromWorkbookForWebSave(workbook);
+                if (!projects.length) throw new Error('대기 큐 XLSB의 Project Data가 비어 있습니다.');
+                var maps = buildMaintenanceMaps(projects);
+                return {
+                    projects: projects.length,
+                    work: buildWorkRowsFromRawSheet(projects, maps, workSheetAoAForWebSave(workbook)).length,
+                    dependencies: dependencyRowsFromWorkbookForWebSave(workbook).length,
+                    milestones: readSourceMilestoneRowsForWebSave(workbook).length,
+                    links: linkRowsFromWorkbookForWebSave(workbook).length,
+                    sheets: workbook.SheetNames.length,
+                    vbaBytes: workbook.vbaraw && (workbook.vbaraw.byteLength || workbook.vbaraw.length) || 0
+                };
+            }
+
+            async function sha256HexForWebSaveBuffer(buffer) {
+                if (!window.crypto || !window.crypto.subtle || typeof window.crypto.subtle.digest !== 'function') {
+                    throw new Error('대기 큐 무결성 SHA-256을 계산할 수 없는 브라우저입니다.');
+                }
+                var digest = await window.crypto.subtle.digest('SHA-256', buffer);
+                return Array.prototype.map.call(new Uint8Array(digest), function(value) {
+                    return value.toString(16).padStart(2, '0');
+                }).join('').toUpperCase();
+            }
+
+            async function createPendingUploadIntegrityForWebSave(content, baseSha, stats) {
+                var normalized = normalizeBase64(content);
+                var authoritativeBaseSha = String(baseSha || '').trim();
+                if (!authoritativeBaseSha) throw new Error('오프라인 대기 큐 기준 SHA가 없습니다.');
+                if (!normalized) throw new Error('오프라인 대기 큐 XLSB 콘텐츠가 비어 있습니다.');
+                var buffer = base64ToArrayBufferForWebSave(normalized);
+                var workbook = readWorkbookFromBase64ForWebSave(normalized);
+                var workbookStats = pendingUploadWorkbookStatsForWebSave(workbook);
+                var expectedStats = normalizePendingUploadStatsForWebSave(stats || workbookStats);
+                ['projects', 'work', 'dependencies', 'milestones', 'links'].forEach(function(key) {
+                    if (expectedStats[key] != null && Number(expectedStats[key]) !== Number(workbookStats[key])) {
+                        throw new Error('오프라인 대기 큐 생성 수량 불일치: ' + key + ' ' + expectedStats[key] + '/' + workbookStats[key]);
+                    }
+                });
+                return {
+                    version: 2,
+                    algorithm: 'SHA-256',
+                    digest: await sha256HexForWebSaveBuffer(buffer),
+                    byteLength: buffer.byteLength,
+                    baseSha: authoritativeBaseSha,
+                    targetPath: CONFIG.targetPath,
+                    build: INTEGRITY_BUILD,
+                    stats: normalizePendingUploadStatsForWebSave(workbookStats),
+                    sheets: workbookStats.sheets,
+                    vbaBytes: workbookStats.vbaBytes,
+                    createdAt: new Date().toISOString()
+                };
+            }
+
+            async function validatePendingUploadQueueItemForWebSave(item) {
+                try {
+                    if (!item || !item.payload) throw new Error('대기 큐 payload가 없습니다.');
+                    var integrity = item.integrity;
+                    if (!integrity || Number(integrity.version) !== 2 || integrity.algorithm !== 'SHA-256') {
+                        throw new Error('검증되지 않은 이전 형식의 대기 큐입니다.');
+                    }
+                    var itemBaseSha = String(item.baseSha || item.payload.sha || '').trim();
+                    if (!itemBaseSha || itemBaseSha !== String(integrity.baseSha || '').trim()) {
+                        throw new Error('대기 큐 기준 SHA가 없거나 envelope와 일치하지 않습니다.');
+                    }
+                    if (String(integrity.targetPath || '') !== CONFIG.targetPath) {
+                        throw new Error('대기 큐 저장 대상 경로가 현재 원본과 다릅니다.');
+                    }
+                    var normalized = normalizeBase64(item.payload.content);
+                    if (!normalized) throw new Error('대기 큐 XLSB 콘텐츠가 비어 있습니다.');
+                    var buffer = base64ToArrayBufferForWebSave(normalized);
+                    if (Number(integrity.byteLength) !== buffer.byteLength) {
+                        throw new Error('대기 큐 XLSB 바이트 길이가 변경되었습니다.');
+                    }
+                    var digest = await sha256HexForWebSaveBuffer(buffer);
+                    if (digest !== String(integrity.digest || '').toUpperCase()) {
+                        throw new Error('대기 큐 XLSB SHA-256이 변경되었습니다.');
+                    }
+                    var workbook = readWorkbookFromBase64ForWebSave(normalized);
+                    var actualStats = pendingUploadWorkbookStatsForWebSave(workbook);
+                    var expectedStats = normalizePendingUploadStatsForWebSave(integrity.stats);
+                    ['projects', 'work', 'dependencies', 'milestones', 'links'].forEach(function(key) {
+                        if (expectedStats[key] == null || Number(expectedStats[key]) !== Number(actualStats[key])) {
+                            throw new Error('대기 큐 XLSB 수량 검증 실패: ' + key + ' ' + expectedStats[key] + '/' + actualStats[key]);
+                        }
+                    });
+                    if (Number(integrity.sheets) !== Number(actualStats.sheets)) {
+                        throw new Error('대기 큐 XLSB 시트 수가 변경되었습니다.');
+                    }
+                    if (Number(integrity.vbaBytes || 0) !== Number(actualStats.vbaBytes || 0)) {
+                        throw new Error('대기 큐 XLSB VBA 바이트가 변경되었습니다.');
+                    }
+                    return { ok: true, baseSha: itemBaseSha, digest: digest, byteLength: buffer.byteLength, stats: actualStats };
+                } catch (error) {
+                    return { ok: false, reason: String(error && error.message || error || '대기 큐 무결성 검사 실패') };
+                }
+            }
+
 
             function sanitizeWebSaveClientIp(value) {
                 var text = String(value || '').trim();
@@ -125912,13 +126036,25 @@ window.openAddNewProjectModal = function(editProject) {
                             content: newContent
                         };
                         var offlineBaseSha = state.initialSha || window.currentBaseSha || window.initialXlsbSha || '';
-                        if (offlineBaseSha) offlinePayload.sha = offlineBaseSha;
+                        if (!offlineBaseSha) {
+                            state.status = 'conflict';
+                            state.dirty = true;
+                            state.remoteDirty = true;
+                            state.dirtyReasons = Object.assign({}, dirtyReasonsAtStart || {}, state.dirtyReasons || {});
+                            state.dirtyReasons['pending-queue:base-sha-required'] = Date.now();
+                            finishSaveProgress('기준 SHA 필요');
+                            notify('오프라인 저장 중단: 권위 원본 SHA가 없어 대기 큐를 만들지 않았습니다. 온라인에서 최신 원본을 다시 불러온 뒤 저장하세요.', 'error', 6000);
+                            return { ok: false, reason: 'offline-base-sha-required' };
+                        }
+                        offlinePayload.sha = offlineBaseSha;
+                        var offlineIntegrity = await createPendingUploadIntegrityForWebSave(newContent, offlineBaseSha, built.stats);
                         var queue = JSON.parse(localStorage.getItem('pendingUploadQueue') || '[]');
                         queue.push({
                             id: Date.now() + '_' + Math.random().toString(36).substring(2, 9),
                             payload: offlinePayload,
                             options: options,
                             baseSha: offlineBaseSha,
+                            integrity: offlineIntegrity,
                             dirtyReasons: Object.assign({}, state.dirtyReasons || {}),
                             timestamp: Date.now()
                         });
@@ -126196,6 +126332,35 @@ window.openAddNewProjectModal = function(editProject) {
                             userInitiated: true
                         }));
                     }
+                    if (error && error.isWebSaveShaConflict && options.userInitiated === true && options.__shaRaceRetry !== true && options.dryRun !== true) {
+                        state.busy = false;
+                        state.status = 'dirty';
+                        state.lastError = '';
+                        state.dirty = true;
+                        state.remoteDirty = true;
+                        state.dirtyReasons = Object.assign({}, dirtyReasonsAtStart || {}, state.dirtyReasons || {});
+                        state.dirtyReasons['websave:sha-race-rebase'] = Date.now();
+                        try {
+                            window.__codexWebSaveShaRaceRetry = {
+                                at: new Date().toISOString(),
+                                previousSha: latestSha || '',
+                                competingSha: error.latestSha || '',
+                                attempt: 1
+                            };
+                        } catch (raceAuditError) { }
+                        finishSaveProgress('최신 원본 재병합');
+                        updateButton();
+                        notify('다른 사용자가 저장을 먼저 완료했습니다. 최신 XLSB에 내 변경 필드만 한 번 자동 재병합합니다.', 'info', 3500);
+                        return await executeRemoteSync(Object.assign({}, options, {
+                            token: token || options.token || '',
+                            __shaRaceRetry: true,
+                            forceSave: true,
+                            userInitiated: true,
+                            skipConfirm: true,
+                            sourceWorkbookOverride: null,
+                            latestRemoteContentBase64: ''
+                        }));
+                    }
                     if (error && error.isWebSaveFieldConflict) {
                         state.status = 'conflict';
                         state.lastError = error.message;
@@ -126230,12 +126395,27 @@ window.openAddNewProjectModal = function(editProject) {
                         }
                         if (payload) {
                             try {
+                                var fallbackBaseSha = String(payload.sha || state.initialSha || window.currentBaseSha || window.initialXlsbSha || '').trim();
+                                if (!fallbackBaseSha) {
+                                    state.status = 'conflict';
+                                    state.dirty = true;
+                                    state.remoteDirty = true;
+                                    state.dirtyReasons = Object.assign({}, dirtyReasonsAtStart || {}, state.dirtyReasons || {});
+                                    state.dirtyReasons['pending-queue:base-sha-required'] = Date.now();
+                                    updateButton();
+                                    notify('네트워크 실패 후 대기 큐 저장 중단: 권위 원본 SHA를 확인할 수 없습니다.', 'error', 6000);
+                                    return { ok: false, reason: 'offline-base-sha-required' };
+                                }
+                                payload.sha = fallbackBaseSha;
+                                var fallbackQueueStats = built && built.stats ? built.stats : null;
+                                var fallbackIntegrity = await createPendingUploadIntegrityForWebSave(payload.content, fallbackBaseSha, fallbackQueueStats);
                                 var queue = JSON.parse(localStorage.getItem('pendingUploadQueue') || '[]');
                                 queue.push({
                                     id: Date.now() + '_' + Math.random().toString(36).substring(2, 9),
                                     payload: payload,
                                     options: options,
-                                    baseSha: payload.sha || state.initialSha || window.currentBaseSha || window.initialXlsbSha || '',
+                                    baseSha: fallbackBaseSha,
+                                    integrity: fallbackIntegrity,
                                     dirtyReasons: Object.assign({}, dirtyReasonsAtStart || state.dirtyReasons || {}),
                                     timestamp: Date.now()
                                 });
@@ -126462,6 +126642,8 @@ window.openAddNewProjectModal = function(editProject) {
                 getContentUrl: encodedContentUrl,
                 cleanupWebSaveTransientStorage: cleanupWebSaveTransientStorage,
                 ensureButton: ensureButton,
+                createPendingUploadIntegrity: createPendingUploadIntegrityForWebSave,
+                validatePendingUploadQueueItem: validatePendingUploadQueueItemForWebSave,
                 processPendingUploadQueue: processPendingUploadQueue,
                 syncData: executeRemoteSync
             };
@@ -126501,6 +126683,26 @@ window.openAddNewProjectModal = function(editProject) {
                         }
                         var item = queue[0];
                         var success = false;
+                        var queueIntegrityAudit = await validatePendingUploadQueueItemForWebSave(item);
+                        if (!queueIntegrityAudit.ok) {
+                            state.status = 'conflict';
+                            state.lastError = '대기 큐 업로드 차단: ' + queueIntegrityAudit.reason;
+                            state.dirty = true;
+                            state.remoteDirty = true;
+                            state.dirtyReasons = Object.assign({}, item && item.dirtyReasons || {}, state.dirtyReasons || {});
+                            state.dirtyReasons['pending-queue:integrity-blocked'] = Date.now();
+                            try {
+                                window.__codexWebSavePendingQueueIntegrity = {
+                                    ok: false,
+                                    itemId: item && item.id || '',
+                                    reason: queueIntegrityAudit.reason,
+                                    at: new Date().toISOString()
+                                };
+                            } catch (queueAuditError) { }
+                            updateButton();
+                            notify(state.lastError + ' 최신 원본을 다시 불러온 뒤 변경사항을 재검토하세요.', 'error', 6500);
+                            break;
+                        }
                         if (typeof location !== 'undefined' && (location.hostname === '127.0.0.1' || location.hostname === 'localhost') && !new URLSearchParams(location.search).has('codexRealGithub') && (navigator.webdriver || window.__supremeAudit || window.__codexLocalMockFetch === true)) {
                             success = true;
                             var dummySha = 'local-dummy-sha-' + Date.now();
@@ -126511,7 +126713,7 @@ window.openAddNewProjectModal = function(editProject) {
                             try {
                                 var token = await ensureToken({ userInitiated: false, source: 'pending-queue' });
                                 if (token) {
-                                    var queuedBaseSha = item.baseSha || (item.payload && item.payload.sha) || '';
+                                    var queuedBaseSha = queueIntegrityAudit.baseSha;
                                     var latestQueueInfo = await fetchRemoteFileInfo(token, CONFIG.targetPath);
                                     var latestQueueSha = latestQueueInfo && latestQueueInfo.sha || '';
                                     if (queuedBaseSha && latestQueueSha && queuedBaseSha !== latestQueueSha) {
