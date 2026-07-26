@@ -114208,6 +114208,71 @@ function showPendingSettlementModal(periodType, projects) {
             }
         }
     </style>
+    <style id="codex-settlement-responsive-dashboard-fit-20260726">
+        /* Keep the settlement dashboard fluid while the wide detail table owns horizontal scrolling. */
+        html body .settlement-modal-overlay .settlement-summary-dashboard,
+        html body .pending-settlement-modal-overlay .settlement-summary-dashboard,
+        html body #dataDetailModal[data-modal-type="settlement"] .settlement-summary-dashboard {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: none !important;
+            box-sizing: border-box !important;
+        }
+
+        html body .settlement-modal-overlay .settlement-summary-dashboard [data-dashboard-shell="1"],
+        html body .pending-settlement-modal-overlay .settlement-summary-dashboard [data-dashboard-shell="1"],
+        html body #dataDetailModal[data-modal-type="settlement"] .settlement-summary-dashboard [data-dashboard-shell="1"],
+        html body .settlement-modal-overlay .settlement-summary-dashboard [data-dashboard-body],
+        html body .pending-settlement-modal-overlay .settlement-summary-dashboard [data-dashboard-body],
+        html body #dataDetailModal[data-modal-type="settlement"] .settlement-summary-dashboard [data-dashboard-body],
+        html body .settlement-modal-overlay .settlement-summary-dashboard [data-dashboard-body] > div,
+        html body .pending-settlement-modal-overlay .settlement-summary-dashboard [data-dashboard-body] > div,
+        html body #dataDetailModal[data-modal-type="settlement"] .settlement-summary-dashboard [data-dashboard-body] > div {
+            width: 100% !important;
+            min-width: 0 !important;
+            max-width: none !important;
+            box-sizing: border-box !important;
+        }
+
+        @media screen and (max-width: 768px) and (orientation: portrait) {
+            html body div.settlement-modal-overlay div.settlement-modal-content div.settlement-summary-dashboard [data-dashboard-body] > div,
+            html body div.pending-settlement-modal-overlay div.pending-settlement-modal-content div.settlement-summary-dashboard [data-dashboard-body] > div,
+            html body div#dataDetailModal[data-modal-type="settlement"] div.settlement-summary-dashboard [data-dashboard-body] > div {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) !important;
+                gap: 8px !important;
+            }
+
+            html body div.settlement-modal-content div.settlement-summary-dashboard .settlement-customer-card,
+            html body div.settlement-modal-content div.settlement-summary-dashboard .settlement-costAccount-card,
+            html body div.settlement-modal-content div.settlement-summary-dashboard .settlement-costAllocation-card,
+            html body div.settlement-modal-content div.settlement-summary-dashboard .settlement-taskType-card,
+            html body div.settlement-modal-content div.settlement-summary-dashboard .settlement-building-card,
+            html body div.settlement-modal-content div.settlement-summary-dashboard .settlement-constructor-card,
+            html body div.pending-settlement-modal-content div.settlement-summary-dashboard .settlement-customer-card,
+            html body div.pending-settlement-modal-content div.settlement-summary-dashboard .settlement-costAccount-card,
+            html body div.pending-settlement-modal-content div.settlement-summary-dashboard .settlement-costAllocation-card,
+            html body div.pending-settlement-modal-content div.settlement-summary-dashboard .settlement-taskType-card,
+            html body div.pending-settlement-modal-content div.settlement-summary-dashboard .settlement-building-card,
+            html body div.pending-settlement-modal-content div.settlement-summary-dashboard .settlement-constructor-card {
+                grid-column: auto !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
+            }
+
+            html body div.settlement-modal-content div.settlement-summary-dashboard .settlement-constructor-card,
+            html body div.pending-settlement-modal-content div.settlement-summary-dashboard .settlement-constructor-card {
+                grid-column: 1 / -1 !important;
+            }
+
+            html body .settlement-summary-dashboard .settlement-dashboard-toolbar {
+                flex-wrap: wrap !important;
+                width: 100% !important;
+                min-width: 0 !important;
+            }
+        }
+    </style>
     <script id="codex-mobile-settlement-customer-gesture-pan-20260513">
         (function codexMobileSettlementCustomerGesturePan20260513() {
             'use strict';
@@ -139886,7 +139951,7 @@ window.openAddNewProjectModal = function(editProject) {
         #costSavingAnalysisModal.cost-analysis-fullscreen { align-items:stretch; justify-content:stretch; padding:0; background:rgba(15,23,42,.72); }
         #costSavingAnalysisModal.cost-analysis-fullscreen .cost-analysis-panel { width:100vw; height:100dvh; max-width:none; max-height:none; border:0; border-radius:0; box-shadow:none; }
         .cost-analysis-fullscreen-close { display:none; }
-        #costSavingAnalysisModal.cost-analysis-fullscreen [data-cost-fullscreen-open],#costSavingAnalysisModal.cost-analysis-fullscreen [data-cost-close] { display:none; }
+        #costSavingAnalysisModal.cost-analysis-fullscreen [data-cost-fullscreen-open] { display:none; }
         #costSavingAnalysisModal.cost-analysis-fullscreen .cost-analysis-fullscreen-close { display:inline-flex; }
         .cost-analysis-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding:12px 14px; border-bottom:1px solid #e2e8f0; background:#f8fafc; }
         .cost-analysis-title { margin:0; color:#0f172a; font-size:17px; font-weight:900; }
@@ -141272,7 +141337,7 @@ window.openAddNewProjectModal = function(editProject) {
             modal.setAttribute('role', 'dialog');
             modal.setAttribute('aria-modal', 'true');
             modal.setAttribute('aria-labelledby', 'costAnalysisTitle');
-            modal.innerHTML = '<div class="cost-analysis-panel"><header class="cost-analysis-head"><button type="button" class="cost-analysis-btn icon cost-analysis-left-close mr-3" data-cost-close aria-label="닫기" title="닫기">&times;</button><div><h3 id="costAnalysisTitle" class="cost-analysis-title">\uc138\ub300\ub0b4 \uc218\uc7a5\uc791\uc5c5 \ube44\uc6a9 \uc808\uac10 \uc2ec\uce35 \ubd84\uc11d</h3><div class="cost-analysis-status" aria-live="polite"></div></div><div class="cost-analysis-head-actions"><button type="button" class="cost-analysis-btn icon" data-cost-fullscreen-open aria-label="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" title="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" aria-expanded="false">\u26f6</button><button type="button" class="cost-analysis-btn icon cost-analysis-fullscreen-close" data-cost-fullscreen-close aria-label="\uc804\uccb4 \ud654\uba74 \ub2eb\uae30" title="\uc804\uccb4 \ud654\uba74 \ub2eb\uae30">\u00d7</button><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors px-2 leading-none cursor-pointer focus:outline-none" data-cost-close aria-label="닫기" title="닫기">&times;</button></div></header>' +
+            modal.innerHTML = '<div class="cost-analysis-panel"><header class="cost-analysis-head"><button type="button" class="cost-analysis-btn icon cost-analysis-left-close mr-3" data-cost-close aria-label="닫기" title="닫기">&times;</button><div><h3 id="costAnalysisTitle" class="cost-analysis-title">\uc138\ub300\ub0b4 \uc218\uc7a5\uc791\uc5c5 \ube44\uc6a9 \uc808\uac10 \uc2ec\uce35 \ubd84\uc11d</h3><div class="cost-analysis-status" aria-live="polite"></div></div><div class="cost-analysis-head-actions"><button type="button" class="cost-analysis-btn icon" data-cost-fullscreen-open aria-label="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" title="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" aria-expanded="false">\u26f6</button><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors px-2 leading-none cursor-pointer focus:outline-none" data-cost-close aria-label="닫기" title="닫기">&times;</button></div></header>' +
                 '<div class="cost-analysis-toolbar"><div class="cost-analysis-source" role="group" aria-label="\ub2e8\uac00 \ucd9c\ucc98"><button type="button" data-source-mode="auto">\uc790\ub3d9</button><button type="button" data-source-mode="manual">\uc218\ub3d9</button></div><button type="button" class="cost-analysis-btn" data-cost-remote-load>\uc6d0\uaca9 \ubd88\ub7ec\uc624\uae30</button><button type="button" class="cost-analysis-btn primary" data-cost-remote-save>\uc6d0\uaca9 \uc800\uc7a5</button><button type="button" class="cost-analysis-btn" data-cost-local-open>\ud30c\uc77c \ubd88\ub7ec\uc624\uae30</button><button type="button" class="cost-analysis-btn" data-cost-download>\ub2e8\uac00 XLSB</button><button type="button" class="cost-analysis-btn primary" data-cost-export-all title="Excel \uc804\uccb4 \ub2e4\uc6b4\ub85c\ub4dc">\u21e9 Excel \uc804\uccb4</button><div class="cost-analysis-period-filter" data-cost-period-filter></div><input type="file" data-cost-file accept=".xlsb,.xlsx" hidden><span class="cost-analysis-toolbar-spacer"></span><div class="cost-analysis-column-menu"><button type="button" class="cost-analysis-btn" data-cost-columns>\uc5f4 \ud45c\uc2dc</button><div class="cost-analysis-column-pop hidden" data-cost-column-pop></div></div></div>' +
                 '<main class="cost-analysis-body"><div data-cost-source-audit></div><div data-cost-rollover></div><div class="cost-analysis-top-sections"><details class="cost-analysis-section" data-cost-section="settings"><summary>\uac74\ubb3c\ub3d9 \ub2e8\uac00 \uc124\uc815</summary><div data-cost-settings></div></details><details class="cost-analysis-section" data-cost-section="other"><summary>\uae30\ud0c0 \uc791\uc5c5 \ubd84\ub958 (\uc218\uc7a5\uc791\uc5c5 \uc81c\uc678)</summary><div data-cost-exceptions></div></details></div><section class="cost-analysis-kpis" data-cost-kpis></section><div class="cost-analysis-detail-head"><h4>\uc218\uc7a5\uc791\uc5c5 \uc138\ub300 \uc0c1\uc138</h4><div class="cost-analysis-detail-actions"><button type="button" class="cost-analysis-btn icon" data-cost-table-fullscreen-open aria-label="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" title="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30">\u26f6</button><button type="button" class="cost-analysis-btn" data-cost-evidence="all">\uc804\uccb4 \uc99d\ube59</button></div></div><span data-cost-table-anchor hidden></span><section data-cost-table></section></main></div>' +
                 '<div id="costAnalysisTableFullscreen" class="hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="costAnalysisTableFullscreenTitle"><div class="cost-analysis-table-fullscreen-panel"><header class="cost-analysis-head"><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors mr-3 leading-none cursor-pointer focus:outline-none" data-cost-table-fullscreen-close aria-label="닫기" title="닫기">&times;</button><h3 id="costAnalysisTableFullscreenTitle" class="cost-analysis-title">\uc218\uc7a5\uc791\uc5c5 \uc138\ub300 \uc0c1\uc138 - \uc804\uccb4 \ud654\uba74</h3><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors px-2 leading-none cursor-pointer focus:outline-none" data-cost-table-fullscreen-close aria-label="닫기" title="닫기">&times;</button></header><main class="cost-analysis-table-fullscreen-body" data-cost-table-fullscreen-body></main></div></div>' +
