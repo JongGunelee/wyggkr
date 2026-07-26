@@ -27630,6 +27630,80 @@
                 </div>
 
 <!-- [NEW] Annual Setting Logic -->
+<style id="codex-settlement-detail-sticky-viewport-v81">
+    /*
+     * [v81] 월별·분기별·연도별 정산 상세표 무결성
+     * - 대시보드는 바깥 모달과 함께 자연스럽게 이동
+     * - 상세표가 세로 스크롤을 직접 소유하여 2행 제목 헤더를 한 덩어리로 고정
+     * - 상단 불투명 실드가 대시보드/표 경계에서 tbody 비침을 차단
+     */
+    html body .settlement-modal-overlay .settlement-summary-dashboard {
+        position: relative !important;
+        top: auto !important;
+    }
+
+    html body .settlement-modal-overlay [data-settlement-table-scroll="1"].settlement-detail-scroll-viewport {
+        --settlement-table-shield-height: 8px;
+        flex: 0 1 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        max-height: min(720px, calc(100dvh - 220px)) !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        overscroll-behavior-x: contain !important;
+        overscroll-behavior-y: contain !important;
+        touch-action: pan-x pan-y pinch-zoom !important;
+        -webkit-overflow-scrolling: touch !important;
+        clip-path: none !important;
+        contain: none !important;
+        isolation: isolate !important;
+        background: #ffffff !important;
+        border-top: 1px solid #e5e7eb;
+        scrollbar-gutter: stable;
+    }
+
+    html body .settlement-modal-overlay [data-settlement-table-scroll="1"] > .settlement-table-top-shield {
+        position: sticky;
+        top: 0;
+        left: 0;
+        z-index: 120;
+        display: block;
+        width: 100%;
+        height: var(--settlement-table-shield-height);
+        margin-bottom: calc(-1 * var(--settlement-table-shield-height));
+        pointer-events: none;
+        background: #ffffff;
+        box-shadow: 0 1px 0 rgba(15, 23, 42, 0.08);
+    }
+
+    html body .settlement-modal-overlay [data-settlement-table-scroll="1"] > table {
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+    }
+
+    html body .settlement-modal-overlay [data-settlement-table-scroll="1"] > table > thead {
+        position: sticky !important;
+        top: var(--settlement-table-shield-height) !important;
+        z-index: 100 !important;
+        background: #f1f5f9 !important;
+    }
+
+    html body .settlement-modal-overlay [data-settlement-table-scroll="1"] > table > thead th {
+        position: static !important;
+        top: auto !important;
+        z-index: auto !important;
+        background-clip: padding-box !important;
+        background-color: #f1f5f9 !important;
+    }
+
+    @media screen and (max-width: 768px) and (orientation: portrait) {
+        html body .settlement-modal-overlay [data-settlement-table-scroll="1"].settlement-detail-scroll-viewport {
+            max-height: calc(100dvh - 176px) !important;
+            scrollbar-gutter: auto;
+        }
+    }
+</style>
 <script>
 (function _initAnnualFilterSafe_v3() {
     var isGenerated = false;
@@ -88581,12 +88655,17 @@ function showPendingSettlementModal(periodType, projects) {
                 const tableScrollContainer = document.createElement('div');
                 tableScrollContainer.className = 'flex-1 w-full min-w-0 overflow-auto relative bg-white';
                 tableScrollContainer.dataset.settlementTableScroll = '1';
+                tableScrollContainer.classList.add('settlement-detail-scroll-viewport');
                 // [FIX-SIAV-V6.45] Keep STL horizontal scroll ownership on this element, not the outer flex wrapper.
                 tableScrollContainer.style.overscrollBehaviorX = 'contain';
                 tableScrollContainer.style.overscrollBehaviorY = 'auto';
                 tableScrollContainer.style.minWidth = '0';
                 tableScrollContainer.style.maxWidth = '100%';
 
+                const settlementTableTopShield = document.createElement('div');
+                settlementTableTopShield.className = 'settlement-table-top-shield';
+                settlementTableTopShield.setAttribute('aria-hidden', 'true');
+                tableScrollContainer.appendChild(settlementTableTopShield);
                 tableScrollContainer.appendChild(table);
                 if (typeof dashboardEl !== "undefined" && dashboardEl) {
                     dashboardEl.style.overflowX = 'hidden';
