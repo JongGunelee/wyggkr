@@ -123456,10 +123456,12 @@ window.openAddNewProjectModal = function(editProject) {
                     }
                     var expectedValueBlank = beforeCell.v == null || String(beforeCell.v).trim() === '';
                     var actualValueBlank = afterCell.v == null || String(afterCell.v).trim() === '';
+                    var blankMonthFormatCompatible = (!beforeCell.z || beforeCell.z === 'yyyy/mm') &&
+                        (!afterCell.z || afterCell.z === 'yyyy/mm');
                     var explicitlyClearedSettlementMonth = decoded.c === monthCol &&
                         touchedFieldByAddress[addr] === 'Settlement Month' && !monthKey &&
                         expectedValueBlank && actualValueBlank && linkCommentSame &&
-                        !beforeRgb && !afterRgb && remainderSame;
+                        !beforeRgb && !afterRgb && remainderSame && blankMonthFormatCompatible;
                     if (explicitlyClearedSettlementMonth) {
                         count += 1;
                         fallbackCounts.clearedSettlementMonth += 1;
