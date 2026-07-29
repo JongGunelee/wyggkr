@@ -109165,7 +109165,7 @@ function showPendingSettlementModal(periodType, projects) {
         } else if (action === 'right') {
             setMode(chartWrapper, mode === MODE_RIGHT_COLLAPSED ? MODE_NORMAL : MODE_RIGHT_COLLAPSED);
         } else {
-            if (!isMobilePortrait() && (mode === MODE_LEFT_COLLAPSED || mode === MODE_RIGHT_COLLAPSED)) {
+            if (mode === MODE_LEFT_COLLAPSED || mode === MODE_RIGHT_COLLAPSED) {
                 setMode(chartWrapper, MODE_NORMAL);
             } else {
                 setMode(chartWrapper, mode === MODE_RIGHT_MIN ? MODE_NORMAL : MODE_RIGHT_MIN);
@@ -141000,9 +141000,19 @@ window.openAddNewProjectModal = function(editProject) {
         .cost-analysis-rate-editor-head span { min-width:0; overflow-wrap:anywhere; color:#64748b; font-size:9px; font-weight:800; }
         .cost-analysis-rate-editor-head button { min-height:28px; border:1px solid #0f766e; border-radius:5px; padding:4px 8px; background:#fff; color:#0f766e; font-size:9px; font-weight:900; cursor:pointer; white-space:nowrap; }
         .cost-analysis-rate-editor .cost-analysis-table-wrap,.cost-analysis-rate-trend .cost-analysis-table-wrap { border:0; border-radius:0; }
+        .cost-analysis-rate-trend .cost-analysis-table-wrap { max-height:min(48vh,520px); overflow:auto; overscroll-behavior:contain; }
         .cost-analysis-rate-trend-table { min-width:760px; table-layout:auto; }
         .cost-analysis-rate-trend-table th,.cost-analysis-rate-trend-table td { min-width:94px; font-variant-numeric:tabular-nums; }
         .cost-analysis-rate-trend-table th:first-child,.cost-analysis-rate-trend-table td:first-child { min-width:78px; }
+        .cost-analysis-rate-trend-table thead tr:first-child th { top:0; z-index:7; height:38px; }
+        .cost-analysis-rate-trend-table thead tr:nth-child(2) th { top:38px; z-index:6; height:48px; }
+        .cost-analysis-rate-trend-table thead th[rowspan="2"] { top:0; z-index:8; }
+        .cost-analysis-rate-trend-table th button { display:flex; align-items:center; justify-content:center; gap:4px; min-height:100%; white-space:normal; line-height:1.15; }
+        .cost-analysis-rate-header-label { display:grid; gap:2px; min-width:0; }
+        .cost-analysis-rate-header-label > span { display:block; }
+        .cost-analysis-rate-formula { display:block; color:#64748b; font-size:8px; font-weight:800; line-height:1.15; white-space:nowrap; }
+        .cost-analysis-rate-sort-icon { flex:0 0 auto; color:#0891b2; font-size:10px; }
+        .cost-analysis-rate-trend-table .cost-analysis-rate-year-start { border-left:2px solid #0f766e !important; }
         .cost-analysis-rate-trend-table td { text-align:right; }
         .cost-analysis-rate-trend-table td:first-child { text-align:center; font-weight:900; }
         .cost-analysis-rate-change-up { color:#b91c1c; font-weight:900; }
@@ -141141,6 +141151,7 @@ window.openAddNewProjectModal = function(editProject) {
             .cost-analysis-settings-stack { gap:6px; padding:6px; }
             .cost-analysis-rate-trend > summary,.cost-analysis-rate-editor > summary { align-items:flex-start; min-height:38px; padding:7px; }
             .cost-analysis-rate-trend > summary small,.cost-analysis-rate-editor > summary small { max-width:52%; white-space:normal; }
+            .cost-analysis-rate-trend .cost-analysis-table-wrap { max-height:min(48dvh,460px); }
             .cost-analysis-rate-editor-head { align-items:flex-start; flex-wrap:wrap; padding:6px 7px; }
             .cost-analysis-rate-editor-head button { min-height:34px; }
             .cost-analysis-period-filter { width:100%; flex-wrap:nowrap; overflow-x:auto; }
@@ -141189,7 +141200,7 @@ window.openAddNewProjectModal = function(editProject) {
             rows: [], sourceMode: 'auto', source: 'idle', remotePath: '', remoteSha: '',
             rowsByYear: Object.create(null), sourceByYear: Object.create(null), errorByYear: Object.create(null), verifiedMetaByYear: Object.create(null), remoteCatalog: [], activeRateYear: '', rateYearOverride: '', openRateYears: Object.create(null), rateTrendOpen: true, sourceWarnings: [], sourceNotices: [], startupStarted: false, startupPromise: null, verifiedCacheLoaded: false,
             sortKey: 'building', sortDir: 'asc', hiddenColumns: Object.create(null),
-            evidenceSortKey: '', evidenceSortDir: 'asc', analysisPage: 0, evidencePage: 0, otherPage: 0, filterYear: '', filterYears: [], filterType: 'all', filterValue: '', filterValues: [], periodBasis: 'settlement', periodFilterInitialized: false,
+            evidenceSortKey: '', evidenceSortDir: 'asc', rateTrendSortKey: 'building', rateTrendSortDir: 'asc', analysisPage: 0, evidencePage: 0, otherPage: 0, filterYear: '', filterYears: [], filterType: 'all', filterValue: '', filterValues: [], periodBasis: 'settlement', periodFilterInitialized: false,
             analysis: null, householdCache: null, householdCacheSignature: '', evidence: null, loadPromise: null, saveTimersByYear: Object.create(null), renderRaf: 0, lifecycleToken: 0, periodUiInteracting: false, periodRenderPending: false, busy: false, lastError: '', initialized: false
         };
         var columnDefs = [
@@ -142149,6 +142160,49 @@ window.openAddNewProjectModal = function(editProject) {
             var num = Number(value);
             return num > 0 ? 'cost-analysis-rate-change-up' : (num < 0 ? 'cost-analysis-rate-change-down' : 'cost-analysis-rate-change-flat');
         }
+        function rateTrendSortAttributes(key) {
+            var active = state.rateTrendSortKey === key;
+            var direction = active ? (state.rateTrendSortDir === 'desc' ? 'descending' : 'ascending') : 'none';
+            return ' data-cost-rate-sort-key="' + escapeHtml(key) + '" aria-sort="' + direction + '"';
+        }
+        function renderRateTrendSortButton(key, label, formula) {
+            var icon = state.rateTrendSortKey === key ? (state.rateTrendSortDir === 'desc' ? '\u2193' : '\u2191') : '\u2195';
+            var formulaHtml = formula ? '<small class="cost-analysis-rate-formula">' + escapeHtml(formula) + '</small>' : '';
+            return '<button type="button" data-cost-rate-trend-sort="' + escapeHtml(key) + '" aria-label="' + escapeHtml(label + ' \uc815\ub82c') + '"><span class="cost-analysis-rate-header-label"><span>' + escapeHtml(label) + '</span>' + formulaHtml + '</span><span class="cost-analysis-rate-sort-icon" aria-hidden="true">' + icon + '</span></button>';
+        }
+        function rateTrendSortValue(building, key, years, books) {
+            if (key === 'building') return String(building || '');
+            var parts = String(key || '').split(':');
+            var year = parts[0];
+            var metric = parts[1] || 'cost';
+            var index = years.indexOf(year);
+            var current = books[year] && books[year][building];
+            var currentCost = current ? Number(current.cost || 0) : NaN;
+            if (metric === 'cost') return Number.isFinite(currentCost) ? currentCost : null;
+            if (index < 1) return null;
+            var previous = books[years[index - 1]] && books[years[index - 1]][building];
+            var previousCost = previous ? Number(previous.cost || 0) : NaN;
+            if (!Number.isFinite(currentCost) || !Number.isFinite(previousCost)) return null;
+            var delta = currentCost - previousCost;
+            if (metric === 'delta') return delta;
+            return previousCost !== 0 ? delta / previousCost * 100 : (currentCost === 0 ? 0 : null);
+        }
+        function sortRateTrendBuildings(buildingKeys, years, books) {
+            var key = state.rateTrendSortKey || 'building';
+            var direction = state.rateTrendSortDir === 'desc' ? -1 : 1;
+            return buildingKeys.map(function(building, index) { return { building:building, index:index }; }).sort(function(a, b) {
+                var av = rateTrendSortValue(a.building, key, years, books);
+                var bv = rateTrendSortValue(b.building, key, years, books);
+                if (key === 'building') {
+                    var textOrder = String(av).localeCompare(String(bv), 'ko-KR', { numeric:true });
+                    return textOrder ? textOrder * direction : a.index - b.index;
+                }
+                var aMissing = !Number.isFinite(av);
+                var bMissing = !Number.isFinite(bv);
+                if (aMissing || bMissing) return aMissing === bMissing ? a.index - b.index : (aMissing ? 1 : -1);
+                return av === bv ? a.index - b.index : (av - bv) * direction;
+            }).map(function(item) { return item.building; });
+        }
         function renderRateTrendAnalysis() {
             var years = availableRateYears().filter(function(year) { return state.rowsByYear[year] && state.rowsByYear[year].length; }).sort(function(a, b) { return Number(a) - Number(b); });
             var open = state.rateTrendOpen ? ' open' : '';
@@ -142166,16 +142220,23 @@ window.openAddNewProjectModal = function(editProject) {
                     buildings[key] = true;
                 });
             });
-            var buildingKeys = Object.keys(buildings).sort(function(a, b) { return String(a).localeCompare(String(b), 'ko-KR', { numeric:true }); });
-            var firstHeader = '<th rowspan="2">\uac74\ubb3c\ub3d9</th>' + years.map(function(year, index) { return '<th colspan="' + (index ? '3' : '1') + '">' + escapeHtml(rateYearPrefix(year)) + '</th>'; }).join('');
-            var secondHeader = years.map(function(year, index) { return index ? '<th>\ub2e8\uac00</th><th>\uc99d\uac10</th><th>\uc99d\uac10\ub960</th>' : '<th>\ub2e8\uac00</th>'; }).join('');
+            var buildingKeys = sortRateTrendBuildings(Object.keys(buildings).sort(function(a, b) { return String(a).localeCompare(String(b), 'ko-KR', { numeric:true }); }), years, books);
+            var firstHeader = '<th rowspan="2"' + rateTrendSortAttributes('building') + '>' + renderRateTrendSortButton('building', '\uac74\ubb3c\ub3d9', '') + '</th>' + years.map(function(year, index) { return '<th class="cost-analysis-rate-year-start" colspan="' + (index ? '3' : '1') + '">' + escapeHtml(rateYearPrefix(year)) + '</th>'; }).join('');
+            var secondHeader = years.map(function(year, index) {
+                var costKey = year + ':cost';
+                var costHeader = '<th class="cost-analysis-rate-year-start"' + rateTrendSortAttributes(costKey) + '>' + renderRateTrendSortButton(costKey, '\ub2e8\uac00', '') + '</th>';
+                if (!index) return costHeader;
+                var deltaKey = year + ':delta';
+                var percentKey = year + ':percent';
+                return costHeader + '<th' + rateTrendSortAttributes(deltaKey) + '>' + renderRateTrendSortButton(deltaKey, '\uc99d\uac10', '\ub2f9\ud574 - \uc9c1\uc804') + '</th><th' + rateTrendSortAttributes(percentKey) + '>' + renderRateTrendSortButton(percentKey, '\uc99d\uac10\ub960', '\uc99d\uac10 \u00f7 \uc9c1\uc804 \u00d7 100') + '</th>';
+            }).join('');
             var body = buildingKeys.map(function(building) {
                 var cells = '';
                 years.forEach(function(year, index) {
                     var current = books[year][building];
                     var currentCost = current ? Number(current.cost || 0) : NaN;
                     var currentTitle = current && current.excluded ? ' title="\ubd84\uc11d \uc81c\uc678 \ub2e8\uac00"' : '';
-                    cells += '<td' + currentTitle + '>' + (Number.isFinite(currentCost) ? formatAccountingInput(currentCost) + '\uc6d0' : '-') + '</td>';
+                    cells += '<td class="cost-analysis-rate-year-start"' + currentTitle + '>' + (Number.isFinite(currentCost) ? formatAccountingInput(currentCost) + '\uc6d0' : '-') + '</td>';
                     if (index) {
                         var previous = books[years[index - 1]][building];
                         var previousCost = previous ? Number(previous.cost || 0) : NaN;
@@ -142185,7 +142246,7 @@ window.openAddNewProjectModal = function(editProject) {
                         cells += '<td class="' + rateChangeTone(delta) + '">' + formatRateChangeWon(delta) + '</td><td class="' + rateChangeTone(percent) + '">' + (comparable && previousCost === 0 && currentCost !== 0 ? '\uc2e0\uaddc' : formatRateChangePercent(percent)) + '</td>';
                     }
                 });
-                return '<tr><td>' + escapeHtml(buildingLabel(building)) + '</td>' + cells + '</tr>';
+                return '<tr tabindex="0" data-cost-rate-trend-row><td>' + escapeHtml(buildingLabel(building)) + '</td>' + cells + '</tr>';
             }).join('');
             var tableWidth = Math.max(760, 96 + 104 * (1 + (years.length - 1) * 3));
             return '<details class="cost-analysis-rate-trend" data-cost-rate-trend' + open + '><summary><span>\uc5f0\ub3c4\ubcc4 \ub3d9 \ub2e8\uac00 \uc99d\uac10 \ubd84\uc11d</span><small>' + escapeHtml(rateYearPrefix(years[0])) + ' \u2192 ' + escapeHtml(rateYearPrefix(years[years.length - 1])) + ' \u00b7 ' + buildingKeys.length.toLocaleString('ko-KR') + '\uac1c \ub3d9</small></summary><div class="cost-analysis-table-wrap"><table class="cost-analysis-table cost-analysis-rate-trend-table" style="min-width:' + tableWidth + 'px"><thead><tr>' + firstHeader + '</tr><tr>' + secondHeader + '</tr></thead><tbody>' + body + '</tbody></table></div></details>';
@@ -142863,11 +142924,19 @@ window.openAddNewProjectModal = function(editProject) {
                     renderEvidenceBody();
                     return;
                 }
+                var rateTrendSort = target.closest('[data-cost-rate-trend-sort]');
+                if (rateTrendSort) {
+                    var rateTrendKey = rateTrendSort.dataset.costRateTrendSort;
+                    if (state.rateTrendSortKey === rateTrendKey) state.rateTrendSortDir = state.rateTrendSortDir === 'asc' ? 'desc' : 'asc';
+                    else { state.rateTrendSortKey = rateTrendKey; state.rateTrendSortDir = 'asc'; }
+                    render();
+                    return;
+                }
                 var evidenceButton = target.closest('[data-cost-evidence]');
                 if (evidenceButton) { openEvidence(evidenceButton.dataset.costEvidence || 'all', evidenceButton.dataset.costEvidenceKey || ''); return; }
                 var sort = target.closest('[data-cost-sort]');
                 if (sort) { var key = sort.dataset.costSort; if (state.sortKey === key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'; else { state.sortKey = key; state.sortDir = 'asc'; } state.analysisPage = 0; render(); return; }
-                var row = target.closest('[data-cost-row],[data-cost-evidence-row]');
+                var row = target.closest('[data-cost-row],[data-cost-evidence-row],[data-cost-rate-trend-row]');
                 if (row && !target.closest('button,input,select,a,label')) {
                     var focusScope = row.closest('#costAnalysisEvidenceModal') || modal;
                     focusScope.querySelectorAll('tr.stl-row-focused').forEach(function(item) { item.classList.remove('stl-row-focused'); }); row.classList.add('stl-row-focused');
