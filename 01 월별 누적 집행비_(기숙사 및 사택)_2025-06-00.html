@@ -1,5 +1,8 @@
-<html lang="ko"><head>
-  <meta charset="UTF-8">
+<!doctype html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8" />
   <title>월별 누적 집행비 대시보드</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
@@ -1103,7 +1106,7 @@
       }
     }
   </script>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     /* --- 헤더 접기/펼치기 스타일 시작 --- */
     #header-wrapper {
@@ -2560,23 +2563,12 @@
   </style>
 </head>
 
-<body class="">
-  <div id="header-wrapper" class="">
-    <h1 id="main-title">월별 누적 집행비 대시보드 (2026년)</h1>
+<body>
+  <div id="header-wrapper">
+    <h1 id="main-title">월별 누적 집행비 대시보드</h1>
     <div id="title-icons-container">
-        <a href="https://jonggunelee.github.io/wyggkr04/RawData/26년 작업 관리 개선.html" class="title-detail-link" target="_blank" title="잔여 공정관리">
-          <svg class="detail-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="5" width="10" height="3" rx="0.5"></rect><rect x="3" y="10" width="15" height="3" rx="0.5"></rect><rect x="3" y="15" width="8" height="3" rx="0.5"></rect><rect x="19" y="5" width="1" height="3"></rect><rect x="19" y="10" width="1" height="3"></rect><rect x="19" y="15" width="1" height="3"></rect></svg>
-          <span>잔여 공정관리</span>
-        </a>
-        <a href="https://jonggunelee.github.io/wyggkr/04 월별 비용 절감_(기숙사 및 사택)_2025-06-00.html" class="title-detail-link cost-savings-link" target="_blank" title="절감비 현황">
-          <svg class="detail-icon" width="22" height="22" viewBox="0 0 32 28"><text x="2.5" y="20" font-family="Arial, sans-serif" font-size="19.2" font-weight="bold" fill="currentColor">₩</text><path d="M14 7 L19 7 L19 12 L24 12 L24 18" stroke-width="3.5" fill="none" stroke-linecap="round"></path><polygon points="21,18 27,18 24,24" stroke-width="3.5" stroke-linejoin="round"></polygon></svg>
-          <span>절감비 현황</span>
-        </a>
-        <a href="https://jonggunelee.github.io/wyggkr/03 작업 유형별 현황_2025-06-00.html" class="title-detail-link" target="_blank" title="유형별 분석">
-          <svg class="detail-icon" width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V2zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V2zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V2zM1 7a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V7zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1V7zM1 12a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1v-2zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-2zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-2z"></path></svg>
-          <span>유형별 분석</span>
-        </a>
-      </div>
+      <!-- Icons populated by script -->
+    </div>
                 <div id="controls">
       <!-- 상단: 파일 업로드 -->
       <div id="file-upload-controls" style="display: flex; align-items: center; gap: 10px;">
@@ -2585,7 +2577,7 @@
           <option value="single">단일 파일 업로드</option>
           <option value="multiple">다중 파일 업로드</option>
         </select>
-        <input type="file" id="file-input" accept=".csv" style="display: none" multiple="">
+        <input type="file" id="file-input" accept=".csv" style="display: none" />
         <button id="upload-csv-btn" title="CSV 파일을 업로드합니다." style="padding: 5px 14px; font-size: 14.5px;">CSV 업로드</button>
         <button id="download-csv" title="CSV 다운로드" style="padding: 5px 14px; font-size: 14.5px;">CSV 다운로드</button>
         <button id="download-chart-excel" class="icon-btn" title="Excel 저장" style="padding: 3px 8px;">
@@ -2596,7 +2588,7 @@
       
       <!-- 하단: 차액 및 확대/제어 통합 -->
       <div id="controls-row-2" style="display: flex; align-items: center; gap: 10px; border-top: 1px dashed #ddd; padding-top: 8px; margin-top: 8px;">
-        <span style="font-size: 15px; color: #1a237e; font-weight: 800; white-space: nowrap;">차액 &amp; 제어 :</span>
+        <span style="font-size: 15px; color: #1a237e; font-weight: 800; white-space: nowrap;">차액 & 제어 :</span>
         <div id="label-pos-controls" style="display: flex; gap: 6px;">
           <button id="label-pos-auto" class="active" title="자동" style="padding: 4px 11px; font-size: 14px;">자동</button>
           <button id="label-pos-top" title="위" style="padding: 4px 11px; font-size: 14px;">위</button>
@@ -2615,12 +2607,12 @@
       <!-- Row 1: Year Selector + Quick Toggles -->
       <div id="year-display-control" style="display: flex; align-items: center;">
         <label for="yearDisplaySelector" style="font-size: 15px; color: #1a237e; font-weight: 800; white-space: nowrap; display: inline-block;">표시 연도 :</label>
-        <select id="yearDisplaySelector" style="padding: 4px; font-size: 14px; border-radius: 4px; background: white; border: 1px solid #ced4da; margin-right: 5px;"><option value="2026">2026년</option><option value="2025">2025년</option><option value="2024">2024년</option><option value="2023">2023년</option></select>
-        <div id="comparisonChipsContainer" class="chips-container" style="margin-left: 10px; border-left: 1px solid #eee; padding-left: 10px; display: inline-flex; gap: 5px;"><span style="font-size: 15px; color: #1a237e; font-weight: 800; white-space: nowrap; margin-right: 8px;">연도 비교:</span><button class="comp-year-chip">2025년</button><button class="comp-year-chip">2024년</button><button class="comp-year-chip">2023년</button></div>
+        <select id="yearDisplaySelector" style="padding: 4px; font-size: 14px; border-radius: 4px; background: white; border: 1px solid #ced4da; margin-right: 5px;"></select>
+        <div id="comparisonChipsContainer" class="chips-container" style="margin-left: 10px; border-left: 1px solid #eee; padding-left: 10px; display: inline-flex; gap: 5px;"></div>
         
         <div class="header-btn-group">
-          <button id="toggle-all" title="전체 계열 토글">전체 숨기기</button>
-          <button id="toggle-jiphaeng" title="집행 계열 토글">집행 숨기기</button>
+          <button id="toggle-all" title="전체 계열 토글">전체 전체</button>
+          <button id="toggle-jiphaeng" title="집행 계열 토글">집행 전체</button>
         </div>
       </div>
       
@@ -2633,29 +2625,33 @@
         </div>
         
         <div class="header-btn-group">
-          <button id="toggle-mokpyo" title="목표 계열 토글">목표 숨기기</button>
-          <button id="toggle-siljeok" title="실적 계열 토글">실적 숨기기</button>
-          <button id="toggle-average" title="평균선 토글" class="active">평균만 보이기</button>
+          <button id="toggle-mokpyo" title="목표 계열 토글">목표 전체</button>
+          <button id="toggle-siljeok" title="실적 계열 토글">실적 전체</button>
+          <button id="toggle-average" title="평균선 토글">평균만 전체</button>
         </div>
       </div>
     </div>
 
     <div id="header-toggle-handle" title="헤더 영역 접기/펼치기">
-      <svg class="arrow-up" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg class="arrow-up" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="18 15 12 9 6 15"></polyline>
       </svg>
-      <svg class="arrow-down" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <svg class="arrow-down" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+        stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <polyline points="6 9 12 15 18 9"></polyline>
       </svg>
     </div>
   </div>
-  <div id="chart-container" style="padding-top: 120px;">
+  <div id="chart-container">
     <!-- 플로팅 연산 모드 배지 (Shift/Ctrl 사전 감지 연동) -->
     <div id="keyboard-calc-indicator" class="calc-mode-badge-floating" style="display: flex; align-items: center; justify-content: space-between; gap: 15px;">
       <span id="keyboard-calc-text">
         <span class="badge-icon">➕</span> 현재 연산: <span class="mode-text">합계(+)</span> <span class="key-hint">(Shift: 차액)</span>
       </span>
-      <span id="toggle-grey-tooltips-floating" style="cursor: pointer; background: rgba(255,255,255,0.15); padding: 3px 10px; border-radius: 20px; font-size: 12.5px; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); display: inline-flex; align-items: center; gap: 4px; user-select: none; transition: all 0.2s;" title="일반 툴팁 보이기/숨기기 토글">👁️ 일반 툴팁 보이기</span>
+      <span id="toggle-grey-tooltips-floating" style="cursor: pointer; background: rgba(255,255,255,0.15); padding: 3px 10px; border-radius: 20px; font-size: 12.5px; font-weight: 800; border: 1px solid rgba(255,255,255,0.25); display: inline-flex; align-items: center; gap: 4px; user-select: none; transition: all 0.2s;" title="일반 툴팁 보이기/숨기기 토글">
+        👁️ 일반 툴팁 보이기
+      </span>
       <!-- 툴팁 가이드 추가 -->
       <div class="calc-guide-tooltip">
         <h4>💡 연산모드 상세 사용 가이드</h4>
@@ -2669,93 +2665,63 @@
         </ul>
       </div>
     </div>
-    <canvas id="budgetChart" style="box-sizing: border-box; display: block; height: 603.175px; width: 1523.81px;" width="1920" height="760"></canvas>
-    <div id="data-table" style="display: none; left: 50%; top: 60px; transform: translateX(-50%) scale(0.7); transform-origin: center center;"><div id="table-resize-handle" style="display: none;"></div><table><thead><tr><th id="table-drag-handle" colspan="14" style="position: relative; vertical-align: middle; line-height: 1.5; text-align: center; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            <div style="display:inline-flex; align-items:center; justify-content:center;">
-            <div style="display:inline-flex; align-items:center; justify-content:center; gap: 10px;">
-                상세 내역 (2026년)
-            </div>
-            <div id="table-header-icons" style="position: absolute; top: 8px; right: 10px; display: flex; align-items: center; gap: 8px;">
-                <button class="icon-btn-table" onclick="downloadTableAsExcel(event)" title="현재 테이블을 Excel 파일로 저장합니다.">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M10.5,19.5L8,17L10.5,14.5L11.2,15.2L9.4,17L11.2,18.8L10.5,19.5M13.5,19.5L12.8,18.8L14.6,17L12.8,15.2L13.5,14.5L16,17L13.5,19.5M18,12H6V4H13V9H18V12Z"></path></svg>
-                </button>
-                <button id="close-table-btn" class="close-table-btn" title="테이블 닫기">×</button>
-            </div>
-        </div></th></tr><tr><th colspan="14" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">(단위 : <span style="font-size: 1.2em;">백만원</span>)</th></tr><tr><th style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">구분<input type="checkbox" id="select-all-months-checkbox" title="모든 월 선택/해제"><input type="checkbox" id="select-current-range-checkbox" title="1월~현재월 선택/해제" style="margin-left: 3px;"><label for="select-current-range-checkbox" class="checkbox-label" style="margin-left:0px;">1월~현재월</label></th><th data-month-index="0" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 1월<input type="checkbox" class="month-filter-checkbox" data-month-index="0" data-month-name="1월" checked=""></th><th data-month-index="1" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 2월<input type="checkbox" class="month-filter-checkbox" data-month-index="1" data-month-name="2월" checked=""></th><th data-month-index="2" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 3월<input type="checkbox" class="month-filter-checkbox" data-month-index="2" data-month-name="3월" checked=""></th><th data-month-index="3" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 4월<input type="checkbox" class="month-filter-checkbox" data-month-index="3" data-month-name="4월" checked=""></th><th data-month-index="4" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 5월<input type="checkbox" class="month-filter-checkbox" data-month-index="4" data-month-name="5월" checked=""></th><th data-month-index="5" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 6월<input type="checkbox" class="month-filter-checkbox" data-month-index="5" data-month-name="6월"></th><th data-month-index="6" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 7월<input type="checkbox" class="month-filter-checkbox" data-month-index="6" data-month-name="7월"></th><th data-month-index="7" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 8월<input type="checkbox" class="month-filter-checkbox" data-month-index="7" data-month-name="8월"></th><th data-month-index="8" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 9월<input type="checkbox" class="month-filter-checkbox" data-month-index="8" data-month-name="9월"></th><th data-month-index="9" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 10월<input type="checkbox" class="month-filter-checkbox" data-month-index="9" data-month-name="10월"></th><th data-month-index="10" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 11월<input type="checkbox" class="month-filter-checkbox" data-month-index="10" data-month-name="11월"></th><th data-month-index="11" style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"> 12월<input type="checkbox" class="month-filter-checkbox" data-month-index="11" data-month-name="12월"></th><th style="max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">소계</th></tr></thead><tbody><tr class="group-jiphaeng"><td style="font-weight: bold; color: rgb(0, 0, 0); max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">집행B</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">12.98</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">124.82</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">65.06</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">35.21</td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">78.86</td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: bold; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">238.07</td></tr><tr class="group-jiphaeng"><td style="font-weight: bold; color: rgb(0, 0, 0); max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">집행B 평균</td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">52.82</td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">12.98</td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">124.82</td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">65.06</td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">35.21</td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">78.86</td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: bold; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">47.61</td></tr><tr class="group-mokpyo"><td style="font-weight: bold; color: rgb(0, 0, 0); max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">목표A</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: bold; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">0.00</td></tr><tr class="group-mokpyo"><td style="font-weight: bold; color: rgb(0, 0, 0); max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">목표A 평균</td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td class="avg-number-cell" style="font-weight: bold; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">0.00</td></tr><tr class="group-siljeok"><td style="font-weight: bold; color: rgb(0, 0, 0); max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">실적C</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">23.59</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">6.61</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">25.07</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">58.09</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">44.30</td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">31.46</td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">68.75</td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">56.67</td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">52.26</td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">42.92</td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">121.97</td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">210.56</td><td style="font-weight: bold; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">157.66</td></tr><tr class="group-siljeok"><td style="font-weight: bold; color: rgb(0, 0, 0); max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">실적C 평균</td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">23.59</td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">6.61</td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">25.07</td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">58.09</td><td class="avg-number-cell" style="font-weight: bold; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">44.30</td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">31.46</td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">68.75</td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">56.67</td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">52.26</td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">42.92</td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">121.97</td><td class="avg-number-cell" style="font-weight: normal; user-select: none; color: transparent !important; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">210.56</td><td class="avg-number-cell" style="font-weight: bold; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">31.53</td></tr><tr><th style="font-weight: bold; color: rgb(0, 0, 0); max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">소계(평균제외)</th><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">23.59</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">19.59</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">149.90</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">123.15</td><td style="font-weight: bold; color: rgb(33, 37, 41); opacity: 1; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">79.50</td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: normal; color: rgb(108, 117, 125); opacity: 0.4; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></td><td style="font-weight: bold; max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">395.73</td></tr></tbody></table></div>
+    <canvas id="budgetChart"></canvas>
+    <div id="data-table">
+      <div id="table-resize-handle"></div>
+    </div>
     <div id="legend-controls" style="visibility: hidden; width: 1px;"></div>
   </div>
-  <div id="status-message" class="success" style="display: block; animation: 4s ease-in-out 0s 1 normal forwards running fadeInOut;">4개 파일 업로드 성공.</div>
-  <div id="showTableIcon" title="숨겨진 데이터 테이블을 다시 표시합니다." style="display: flex;">
+  <div id="status-message"></div>
+  <div id="showTableIcon" title="숨겨진 데이터 테이블을 다시 표시합니다.">
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-      <path d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z"></path>
+      <path
+        d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 4H6v3h4V8z" />
     </svg>
   </div>
   <div id="bottom-controls"></div>
     <button id="toggleXAxisOrderBtn" class="icon-btn" title="X축 월 순서를 좌우 반전/원복합니다." aria-label="월 순서 반전 토글">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-        <path d="M1 8a.75.75 0 0 1 .75-.75h9.69l-2.22-2.22a.75.75 0 1 1 1.06-1.06l3.5 3.5c.3.3.3.79 0 1.09l-3.5 3.5a.75.75 0 1 1-1.06-1.06l2.22-2.22H1.75A.75.75 0 0 1 1 8zm14 0a.75.75 0 0 0-.75-.75H4.56l2.22-2.22a.75.75 0 1 0-1.06-1.06l-3.5 3.5a.75.75 0 0 0 0 1.06l3.5 3.5a.75.75 0 1 0 1.06-1.06L4.56 8.75h9.69A.75.75 0 0 0 15 8z"></path>
+        <path
+          d="M1 8a.75.75 0 0 1 .75-.75h9.69l-2.22-2.22a.75.75 0 1 1 1.06-1.06l3.5 3.5c.3.3.3.79 0 1.09l-3.5 3.5a.75.75 0 1 1-1.06-1.06l2.22-2.22H1.75A.75.75 0 0 1 1 8zm14 0a.75.75 0 0 0-.75-.75H4.56l2.22-2.22a.75.75 0 1 0-1.06-1.06l-3.5 3.5a.75.75 0 0 0 0 1.06l3.5 3.5a.75.75 0 1 0 1.06-1.06L4.56 8.75h9.69A.75.75 0 0 0 15 8z" />
       </svg>
     </button>
-  
+  </div>
 
   <script>
     // Global CONFIG for fallback links if not found in year-specific data
     const CONFIG = {
-    "detailLink": "https://1drv.ms/x/s!AsCQKqiE2QoYk50MExUrehO1AhaUhw?e=OxoWul",
-    "workTypeDetailLink": "https://1drv.ms/x/s!AsCQKqiE2QoYk50MExUrehO1AhaUhw?e=OxoWul",
-    "costSavingsLink": "https://1drv.ms/x/s!AsCQKqiE2QoYk50MExUrehO1AhaUhw?e=OxoWul"
-};
+      detailLink:
+        "https://1drv.ms/x/s!AsCQKqiE2QoYk50MExUrehO1AhaUhw?e=OxoWul",
+      workTypeDetailLink:
+        "https://1drv.ms/x/s!AsCQKqiE2QoYk50MExUrehO1AhaUhw?e=OxoWul",
+      costSavingsLink:
+        "https://1drv.ms/x/s!AsCQKqiE2QoYk50MExUrehO1AhaUhw?e=OxoWul",
+    };
 
     const YEAR_DATA_SEPARATOR_PREFIX = "// YEAR_DATA_SEPARATOR:";
     const YEAR_DATA_SEPARATOR_SUFFIX = "//";
 
     let shouldAutoActivateAllComparisonYearsOnLoad = false;
-    let preferRemoteCsvOnInitialLoad = false;
+    let preferRemoteCsvOnInitialLoad = true;
 
-    let initialCsvData = `// YEAR_DATA_SEPARATOR:2026//
-상세내역 보기,#HYPERLINK#,undefined
-유형별 분석,#WORKTYPELINK#,https://jonggunelee.github.io/wyggkr/03 작업 유형별 현황_2025-06-00.html
-절감비 현황,#COSTSAVINGSLINK#,https://jonggunelee.github.io/wyggkr/04 월별 비용 절감_(기숙사 및 사택)_2025-06-00.html
+    let initialCsvData = `// YEAR_DATA_SEPARATOR:2024//
+상세내역 보기,#HYPERLINK#,https://example.com/details/2024
+유형별 분석,#WORKTYPELINK#,https://example.com/worktype/2024
+절감비 현황,#COSTSAVINGSLINK#,https://example.com/savings/2024
 구분,1월,2월,3월,4월,5월,6월,7월,8월,9월,10월,11월,12월
-목표A,,,,,,,,,,,,
-목표A 평균,,,,,,,,,,,,
-실적C,23590875,6608025,25072225,58085475,44299675,31460950,68754850,56670775,52263275,42916150,121974679,210562400
-실적C 평균,23590875,6608025,25072225,58085475,44299675,31460950,68754850,56670775,52263275,42916150,121974679,210562400
-집행B,,12978475,124823625,65062225,35205175,78858775,,,,,,
-집행B 평균,52821379,12978475,124823625,65062225,35205175,78858775,,,,,,
-// YEAR_DATA_SEPARATOR:2025//
-상세내역 보기,#HYPERLINK#,undefined
-유형별 분석,#WORKTYPELINK#,https://jonggunelee.github.io/wyggkr/03 작업 유형별 현황_2025-06-00.html
-절감비 현황,#COSTSAVINGSLINK#,https://jonggunelee.github.io/wyggkr/04 월별 비용 절감_(기숙사 및 사택)_2025-06-00.html
-구분,1월,2월,3월,4월,5월,6월,7월,8월,9월,10월,11월,12월
-목표A,35000000,35000000,40000000,50000000,35000000,35000000,41000000,90000000,49000000,128000000,77000000,86000000
-목표A 평균,35000000,35000000,40000000,50000000,35000000,35000000,41000000,90000000,49000000,128000000,77000000,86000000
-실적C,53340425,32366100,38981650,56357950,52021400,83410325,107452700,105457500,118168300,57185700,65954475,166166835
-실적C 평균,53340425,32366100,38981650,56357950,52021400,83410325,107452700,105457500,118168300,57185700,65954475,166166835
-집행B,23590875,6608025,25072225,58085475,44299675,31460950,68754850,56670775,52263275,42916150,121974679,210562400
-집행B 평균,23590875,6608025,25072225,58085475,44299675,31460950,68754850,56670775,52263275,42916150,121974679,210562400
-// YEAR_DATA_SEPARATOR:2024//
-상세내역 보기,#HYPERLINK#,N/A
-유형별 분석,#WORKTYPELINK#,N/A
-절감비 현황,#COSTSAVINGSLINK#,N/A
-구분,1월,2월,3월,4월,5월,6월,7월,8월,9월,10월,11월,12월
-목표A,,,,,,,,,,,,
-목표A 평균,,,,,,,,,,,,
-실적C,94534375,127024050,91754425,87464100,95109450,78775950,51443050,103374100,75550900,160617750,158413137,270704802
-실적C 평균,94534375,127024050,91754425,87464100,95109450,78775950,51443050,103374100,75550900,160617750,158413137,270704802
-집행B,53340425,32366100,38981650,56357950,52021400,83410325,107452700,105457500,118168300,57185700,65954475,166166835
-집행B 평균,53340425,32366100,38981650,56357950,52021400,83410325,107452700,105457500,118168300,57185700,65954475,166166835
+목표A,100000,200000,300000,,,,,,,,,
+목표A 평균,100000,200000,300000,,,,,,,,,
+집행B,80000,180000,280000,,,,,,,,,
+집행B 평균,70000,180000,280000,,,,,,,,,
+실적C,90000,190000,290000,,,,,,,,,
+실적C 평균,90000,190000,290000,,,,,,,,,
 // YEAR_DATA_SEPARATOR:2023//
-상세내역 보기,#HYPERLINK#,N/A
-유형별 분석,#WORKTYPELINK#,N/A
-절감비 현황,#COSTSAVINGSLINK#,N/A
+상세내역 보기,#HYPERLINK#,https://example.com/details/2023
+유형별 분석,#WORKTYPELINK#,https://example.com/worktype/2023
+절감비 현황,#COSTSAVINGSLINK#,https://example.com/savings/2023
 구분,1월,2월,3월,4월,5월,6월,7월,8월,9월,10월,11월,12월
-목표A,,,,,,,,,,,,
-목표A 평균,,,,,,,,,,,,
-실적C,52272950,27323225,80845275,52040750,138551075,79840200,96550925,190099551,56460075,294094995,27683350,15313375
-실적C 평균,52272950,27323225,80845275,52040750,138551075,79840200,96550925,190099551,56460075,294094995,27683350,15313375
-집행B,94534375,127024050,91754425,87464100,95109450,78775950,51443050,103374100,75550900,160617750,158413137,270704802
-집행B 평균,94534375,127024050,91754425,87464100,95109450,78775950,51443050,103374100,75550900,160617750,158413137,270704802
+목표A,150000,250000,,,,,,,,,,,
+집행B,120000,220000,,,,,,,,,,,
 `;
 
     let currentMonthLineAnimationFrameId = null;
@@ -3355,7 +3321,7 @@
 
       setupLegendControls();
       setupLabelPositionControls();
-      window.isInitialLoadComplete = false;
+      window.isInitialLoadComplete = true;
 
       const avgBtn = document.getElementById("toggle-average");
       if (avgBtn && !avgBtn.classList.contains("active")) {
@@ -7159,7 +7125,6 @@
       document.body.classList.remove("is-clicking");
     });
   </script>
+</body>
 
-
-
-</body></html>
+</html>
