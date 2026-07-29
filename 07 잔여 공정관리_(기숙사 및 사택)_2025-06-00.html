@@ -5026,6 +5026,148 @@
             opacity: 1 !important;
         }
 
+        /* [LEGEND-SELECT-PROXY-20260729] Keep native selects as the data contract. */
+        #shortcutContainer .codex-legend-select-host {
+            position: relative !important;
+            display: inline-flex !important;
+            align-items: stretch !important;
+            flex: 0 0 auto !important;
+            min-width: 0 !important;
+            overflow: visible !important;
+            vertical-align: middle !important;
+        }
+
+        #shortcutContainer select.codex-legend-select-source {
+            visibility: hidden !important;
+            pointer-events: none !important;
+        }
+
+        #legendSection .codex-legend-select-trigger {
+            position: absolute !important;
+            inset: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            height: 100% !important;
+            box-sizing: border-box !important;
+            border: 1px solid #cbd5e1 !important;
+            border-radius: 4px !important;
+            background: #ffffff !important;
+            color: #1f2937 !important;
+            padding: 0 22px 0 8px !important;
+            font: inherit !important;
+            line-height: 1.2 !important;
+            letter-spacing: 0 !important;
+            text-align: left !important;
+            cursor: pointer !important;
+            box-shadow: none !important;
+            transition: none !important;
+        }
+
+        #legendSection .codex-legend-select-trigger:hover {
+            border-color: #94a3b8 !important;
+        }
+
+        #legendSection .codex-legend-select-trigger:focus-visible,
+        #legendSection .codex-legend-select-trigger[aria-expanded="true"] {
+            outline: 2px solid #8b5cf6 !important;
+            outline-offset: 0 !important;
+            border-color: #8b5cf6 !important;
+        }
+
+        #legendSection .codex-legend-select-trigger:disabled {
+            cursor: default !important;
+            color: #94a3b8 !important;
+            background: #f8fafc !important;
+        }
+
+        #legendSection .codex-legend-select-label {
+            display: block !important;
+            min-width: 0 !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            white-space: nowrap !important;
+        }
+
+        #legendSection .codex-legend-select-chevron {
+            position: absolute !important;
+            right: 8px !important;
+            top: 50% !important;
+            width: 7px !important;
+            height: 7px !important;
+            border-right: 2px solid currentColor !important;
+            border-bottom: 2px solid currentColor !important;
+            transform: translateY(-65%) rotate(45deg) !important;
+            pointer-events: none !important;
+        }
+
+        .codex-legend-select-popover {
+            position: fixed !important;
+            z-index: 2147483000 !important;
+            display: block !important;
+            box-sizing: border-box !important;
+            max-width: calc(100vw - 16px) !important;
+            max-height: min(320px, calc(100vh - 16px)) !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            border: 1px solid #94a3b8 !important;
+            border-radius: 4px !important;
+            background: #ffffff !important;
+            color: #1f2937 !important;
+            padding: 2px !important;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18) !important;
+            color-scheme: light !important;
+            contain: layout paint !important;
+            transition: none !important;
+        }
+
+        .codex-legend-select-option {
+            display: block !important;
+            width: 100% !important;
+            min-height: 32px !important;
+            box-sizing: border-box !important;
+            border: 0 !important;
+            border-radius: 3px !important;
+            background: #ffffff !important;
+            color: #1f2937 !important;
+            padding: 6px 10px !important;
+            font: inherit !important;
+            line-height: 1.25 !important;
+            letter-spacing: 0 !important;
+            text-align: left !important;
+            white-space: normal !important;
+            overflow-wrap: anywhere !important;
+            cursor: pointer !important;
+            transition: none !important;
+        }
+
+        .codex-legend-select-option:hover,
+        .codex-legend-select-option:focus-visible {
+            outline: none !important;
+            background: #ecfeff !important;
+            color: #0f766e !important;
+        }
+
+        .codex-legend-select-option[aria-selected="true"] {
+            background: #e0f2fe !important;
+            color: #075985 !important;
+            font-weight: 700 !important;
+        }
+
+        .codex-legend-select-option:disabled {
+            color: #94a3b8 !important;
+            cursor: default !important;
+        }
+
+        @media screen and (max-width: 767px) {
+            .codex-legend-select-option {
+                min-height: 44px !important;
+                padding: 10px 12px !important;
+            }
+        }
+
         /* Tailwind transition 클래스 무효화 - select 요소 */
         select.transition,
         select.transition-all,
@@ -41807,10 +41949,253 @@
             }
         }
         // \uac1c\uc120 \uc0ac\ud56d 1: \ubc14\ub85c\uac00\uae30 \uba54\ub274 \uc5c5\ub370\uc774\ud2b8 \ud568\uc218
+        let codexLegendSelectState20260729 = null;
+
+        function codexLegendSelectLabel20260729(select) {
+            const option = select && select.options && select.options[select.selectedIndex];
+            return (option && option.textContent ? option.textContent.trim() : '') || (select ? select.value : '');
+        }
+
+        function codexLegendSelectTypography20260729(select, ...targets) {
+            if (!select || typeof getComputedStyle !== 'function') return;
+            const sourceStyle = getComputedStyle(select);
+            const properties = [
+                ['font-family', sourceStyle.fontFamily],
+                ['font-size', sourceStyle.fontSize],
+                ['font-weight', sourceStyle.fontWeight],
+                ['font-style', sourceStyle.fontStyle],
+                ['line-height', sourceStyle.lineHeight],
+                ['letter-spacing', sourceStyle.letterSpacing]
+            ];
+            targets.filter(Boolean).forEach((target) => {
+                properties.forEach(([name, value]) => {
+                    if (target.style.getPropertyValue(name) !== value || target.style.getPropertyPriority(name) !== 'important') {
+                        target.style.setProperty(name, value, 'important');
+                    }
+                });
+            });
+        }
+
+        function codexLegendSelectSync20260729(select) {
+            if (!select || !select.parentElement) return;
+            const trigger = select.parentElement.querySelector('.codex-legend-select-trigger');
+            if (!trigger) return;
+            const label = trigger.querySelector('.codex-legend-select-label');
+            const text = codexLegendSelectLabel20260729(select);
+            if (label) label.textContent = text;
+            trigger.disabled = !!select.disabled;
+            trigger.title = text;
+            codexLegendSelectTypography20260729(select, trigger);
+        }
+
+        function codexLegendSelectRemoveOpenListeners20260729() {
+            document.removeEventListener('pointerdown', codexLegendSelectOutsidePointer20260729, true);
+            document.removeEventListener('keydown', codexLegendSelectDocumentKey20260729, true);
+            window.removeEventListener('resize', codexLegendSelectViewportChange20260729, false);
+            window.removeEventListener('scroll', codexLegendSelectViewportChange20260729, false);
+        }
+
+        function codexLegendSelectClose20260729(restoreFocus = true) {
+            const state = codexLegendSelectState20260729;
+            if (!state) return;
+            codexLegendSelectState20260729 = null;
+            codexLegendSelectRemoveOpenListeners20260729();
+            if (state.menu && state.menu.parentNode) state.menu.parentNode.removeChild(state.menu);
+            if (state.trigger) {
+                state.trigger.setAttribute('aria-expanded', 'false');
+                state.trigger.removeAttribute('aria-controls');
+                if (restoreFocus && state.trigger.isConnected) state.trigger.focus({ preventScroll: true });
+            }
+        }
+
+        function codexLegendSelectOutsidePointer20260729(event) {
+            const state = codexLegendSelectState20260729;
+            if (!state) return;
+            if (state.trigger.contains(event.target) || state.menu.contains(event.target)) return;
+            codexLegendSelectClose20260729(false);
+        }
+
+        function codexLegendSelectDocumentKey20260729(event) {
+            if (event.key !== 'Escape' || !codexLegendSelectState20260729) return;
+            event.preventDefault();
+            event.stopPropagation();
+            codexLegendSelectClose20260729(true);
+        }
+
+        function codexLegendSelectViewportChange20260729() {
+            codexLegendSelectClose20260729(false);
+        }
+
+        function codexLegendSelectPosition20260729(trigger, menu) {
+            const rect = trigger.getBoundingClientRect();
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 320;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 480;
+            const maxWidth = Math.max(120, viewportWidth - 16);
+            const minimumWidth = Math.min(maxWidth, Math.max(120, Math.ceil(rect.width)));
+            menu.style.minWidth = minimumWidth + 'px';
+            menu.style.maxWidth = maxWidth + 'px';
+            menu.style.width = 'max-content';
+            const width = Math.min(maxWidth, Math.max(minimumWidth, Math.ceil(menu.scrollWidth)));
+            menu.style.width = width + 'px';
+            const height = menu.offsetHeight;
+            const left = Math.max(8, Math.min(rect.left, viewportWidth - width - 8));
+            let top = rect.bottom + 4;
+            if (top + height > viewportHeight - 8 && rect.top - height - 4 >= 8) {
+                top = rect.top - height - 4;
+            }
+            if (top + height > viewportHeight - 8) {
+                menu.style.maxHeight = Math.max(96, viewportHeight - top - 8) + 'px';
+            }
+            menu.style.left = Math.round(left) + 'px';
+            menu.style.top = Math.round(Math.max(8, top)) + 'px';
+        }
+
+        function codexLegendSelectMenuKey20260729(event) {
+            const state = codexLegendSelectState20260729;
+            if (!state || state.menu !== event.currentTarget) return;
+            if (event.key === 'Tab') {
+                codexLegendSelectClose20260729(false);
+                return;
+            }
+            if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+            const options = Array.from(state.menu.querySelectorAll('.codex-legend-select-option:not(:disabled)'));
+            if (!options.length) return;
+            event.preventDefault();
+            const currentIndex = options.indexOf(document.activeElement);
+            let nextIndex = currentIndex;
+            if (event.key === 'Home') nextIndex = 0;
+            else if (event.key === 'End') nextIndex = options.length - 1;
+            else if (event.key === 'ArrowDown') nextIndex = Math.min(options.length - 1, currentIndex + 1);
+            else if (event.key === 'ArrowUp') nextIndex = Math.max(0, currentIndex < 0 ? options.length - 1 : currentIndex - 1);
+            options[nextIndex].focus({ preventScroll: true });
+        }
+
+        function codexLegendSelectOpen20260729(select, trigger) {
+            if (!select || select.disabled) return;
+            if (codexLegendSelectState20260729 && codexLegendSelectState20260729.select === select) {
+                codexLegendSelectClose20260729(true);
+                return;
+            }
+            codexLegendSelectClose20260729(false);
+            codexLegendSelectSync20260729(select);
+
+            const menu = document.createElement('div');
+            menu.className = 'codex-legend-select-popover';
+            menu.id = (select.id || 'legend-select') + '-proxy-menu';
+            menu.setAttribute('role', 'listbox');
+            menu.setAttribute('aria-label', trigger.title || 'Filter options');
+            menu.style.visibility = 'hidden';
+            menu.addEventListener('keydown', codexLegendSelectMenuKey20260729);
+
+            let selectedButton = null;
+            Array.from(select.options).forEach((option, index) => {
+                const optionButton = document.createElement('button');
+                optionButton.type = 'button';
+                optionButton.className = 'codex-legend-select-option';
+                optionButton.setAttribute('role', 'option');
+                optionButton.setAttribute('aria-selected', index === select.selectedIndex ? 'true' : 'false');
+                optionButton.dataset.optionIndex = String(index);
+                optionButton.disabled = !!option.disabled;
+                optionButton.textContent = option.textContent || option.value;
+                optionButton.title = optionButton.textContent;
+                optionButton.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const nextIndex = Number(optionButton.dataset.optionIndex);
+                    const changed = select.selectedIndex !== nextIndex;
+                    codexLegendSelectClose20260729(false);
+                    select.selectedIndex = nextIndex;
+                    codexLegendSelectSync20260729(select);
+                    if (changed) {
+                        select.dispatchEvent(new Event('input', { bubbles: true }));
+                        select.dispatchEvent(new Event('change', { bubbles: true }));
+                    } else if (trigger.isConnected) {
+                        trigger.focus({ preventScroll: true });
+                    }
+                });
+                if (index === select.selectedIndex) selectedButton = optionButton;
+                menu.appendChild(optionButton);
+            });
+
+            codexLegendSelectTypography20260729(
+                select,
+                menu,
+                ...Array.from(menu.querySelectorAll('.codex-legend-select-option'))
+            );
+
+            document.body.appendChild(menu);
+            codexLegendSelectState20260729 = { select, trigger, menu };
+            trigger.setAttribute('aria-expanded', 'true');
+            trigger.setAttribute('aria-controls', menu.id);
+            codexLegendSelectPosition20260729(trigger, menu);
+            menu.style.visibility = 'visible';
+            document.addEventListener('pointerdown', codexLegendSelectOutsidePointer20260729, true);
+            document.addEventListener('keydown', codexLegendSelectDocumentKey20260729, true);
+            window.addEventListener('resize', codexLegendSelectViewportChange20260729, { passive: true });
+            window.addEventListener('scroll', codexLegendSelectViewportChange20260729, { passive: true });
+            if (selectedButton) selectedButton.focus({ preventScroll: true });
+        }
+
+        function codexLegendSelectEnhance20260729(select) {
+            if (!select || select.dataset.codexLegendSelectProxy === 'true' || !select.parentNode) return;
+            const host = document.createElement('span');
+            host.className = 'codex-legend-select-host';
+            select.parentNode.insertBefore(host, select);
+            host.appendChild(select);
+            select.classList.add('codex-legend-select-source');
+            select.dataset.codexLegendSelectProxy = 'true';
+            select.setAttribute('aria-hidden', 'true');
+            select.tabIndex = -1;
+
+            const trigger = document.createElement('button');
+            trigger.type = 'button';
+            trigger.className = 'codex-legend-select-trigger';
+            trigger.setAttribute('aria-haspopup', 'listbox');
+            trigger.setAttribute('aria-expanded', 'false');
+            const label = document.createElement('span');
+            label.className = 'codex-legend-select-label';
+            const chevron = document.createElement('span');
+            chevron.className = 'codex-legend-select-chevron';
+            chevron.setAttribute('aria-hidden', 'true');
+            trigger.appendChild(label);
+            trigger.appendChild(chevron);
+            trigger.addEventListener('pointerdown', (event) => {
+                if (event.button !== 0) return;
+                event.preventDefault();
+                event.stopPropagation();
+                codexLegendSelectOpen20260729(select, trigger);
+            });
+            trigger.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (event.detail === 0 && (!codexLegendSelectState20260729 || codexLegendSelectState20260729.select !== select)) {
+                    codexLegendSelectOpen20260729(select, trigger);
+                }
+            });
+            trigger.addEventListener('keydown', (event) => {
+                if (!['Enter', ' ', 'ArrowDown', 'ArrowUp'].includes(event.key)) return;
+                event.preventDefault();
+                event.stopPropagation();
+                if (!codexLegendSelectState20260729 || codexLegendSelectState20260729.select !== select) {
+                    codexLegendSelectOpen20260729(select, trigger);
+                }
+            });
+            select.addEventListener('change', () => codexLegendSelectSync20260729(select));
+            host.appendChild(trigger);
+            codexLegendSelectSync20260729(select);
+        }
+
+        window.__codexLegendSelectProxy20260729 = {
+            close: codexLegendSelectClose20260729,
+            enhance: codexLegendSelectEnhance20260729,
+            sync: codexLegendSelectSync20260729
+        };
+
         function updateShortcuts() {
             const shortcutContainer = document.getElementById('shortcutContainer');
             if (!shortcutContainer) return;
 
+            codexLegendSelectClose20260729(false);
             shortcutContainer.innerHTML = '';
             const controlContainer = document.getElementById('controlsPanel');
             if (!controlContainer) return;
@@ -41952,6 +42337,9 @@
                     shortcutWrapper.appendChild(clonedElement);
                 }
                 shortcutContainer.appendChild(shortcutWrapper);
+                if (clonedElement.tagName === 'SELECT') {
+                    codexLegendSelectEnhance20260729(clonedElement);
+                }
             });
 
             initializeSortDirectionButtons(shortcutContainer);
@@ -41995,6 +42383,9 @@
                         if (id === 'searchInput') {
                             autoResizeShortcutSearch(shortcutElement);
                         }
+                    }
+                    if (shortcutElement.tagName === 'SELECT') {
+                        codexLegendSelectSync20260729(shortcutElement);
                     }
                 }
             });
@@ -88269,12 +88660,15 @@ function showPendingSettlementModal(periodType, projects) {
                         th.style.position = 'relative';
                         th.appendChild(resizer);
 
-                        let startX, startTargetW, startNeighborW, targetCol, neighborCol, tableW;
+                        let startX, startTargetW, startNeighborW, targetCol, neighborCol, tableW, activeInputType, didResize;
 
                         const onStart = (e) => {
                             const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
-                            if (e.type !== 'touchstart') { e.preventDefault(); }
+                            if (e.cancelable) e.preventDefault();
                             e.stopPropagation();
+
+                            activeInputType = e.type === 'touchstart' ? 'touch' : 'mouse';
+                            didResize = false;
 
                             const colEnd = parseInt(th.dataset.colEnd);
                             targetCol = cols[colEnd];
@@ -88304,6 +88698,12 @@ function showPendingSettlementModal(periodType, projects) {
                             const MIN_PX = 30;
                             const safeTableW = Math.max(1, tableW || 1);
 
+                            if (Math.abs(diff) < 5) {
+                                if (e.cancelable) e.preventDefault();
+                                return;
+                            }
+                            didResize = true;
+
                             let nextTarget = (startTargetW || 0) + diff;
                             if (neighborCol && startNeighborW > 0) {
                                 let nextNeighbor = (startNeighborW || 0) - diff;
@@ -88321,13 +88721,24 @@ function showPendingSettlementModal(periodType, projects) {
                         };
 
                         const onEnd = () => {
+                            const wasTouch = activeInputType === 'touch';
+                            const wasResize = !!didResize;
                             document.removeEventListener('mousemove', onMove);
                             document.removeEventListener('mouseup', onEnd);
                             document.removeEventListener('touchmove', onMove);
                             document.removeEventListener('touchend', onEnd);
                             resizer.classList.remove('resizing');
-                            const trap = (c) => { c.stopPropagation(); th.removeEventListener('click', trap, true); };
+
+                            const trap = (c) => {
+                                if (wasTouch && !wasResize && c.target !== resizer) return;
+                                c.preventDefault();
+                                c.stopImmediatePropagation();
+                                th.removeEventListener('click', trap, true);
+                            };
                             th.addEventListener('click', trap, true);
+                            setTimeout(() => th.removeEventListener('click', trap, true), 900);
+
+                            if (wasTouch && !wasResize) th.click();
                         };
 
                         resizer.addEventListener('mousedown', onStart);
@@ -90534,8 +90945,22 @@ function showPendingSettlementModal(periodType, projects) {
                         document.body.appendChild(customTooltip);
                     }
 
+                    const hideCustomTooltip = () => {
+                        customTooltip.style.display = 'none';
+                        customTooltip.style.visibility = 'hidden';
+                        customTooltip.style.opacity = '0';
+                        customTooltip.setAttribute('aria-hidden', 'true');
+                    };
+
+                    const hasFineHover = () => !window.matchMedia
+                        || window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
                     document.body.addEventListener('mouseover', (e) => {
                         try {
+                            if (!hasFineHover() || (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents)) {
+                                hideCustomTooltip();
+                                return;
+                            }
                             const cell = e.target?.closest?.('td,th');
                             if (!cell) return;
 
@@ -90568,6 +90993,9 @@ function showPendingSettlementModal(periodType, projects) {
                             // Show custom tooltip
                             customTooltip.textContent = text;
                             customTooltip.style.display = 'block';
+                            customTooltip.style.visibility = 'visible';
+                            customTooltip.style.opacity = '1';
+                            customTooltip.setAttribute('aria-hidden', 'false');
 
                             // Position
                             const rect = cell.getBoundingClientRect();
@@ -90595,6 +91023,8 @@ function showPendingSettlementModal(periodType, projects) {
 
                         } catch (err) { console.warn(err); }
                     }, true);
+                    document.body.addEventListener('touchstart', hideCustomTooltip, { capture: true, passive: true });
+                    document.addEventListener('scroll', hideCustomTooltip, { capture: true, passive: true });
                 }
             }
 
@@ -108281,7 +108711,7 @@ function showPendingSettlementModal(periodType, projects) {
                 left: var(--codex-gantt-pane-control-left, 50%);
                 transform: translateX(-50%);
                 z-index: 140;
-                display: none;
+                display: inline-flex;
                 align-items: center;
                 gap: 2px;
                 padding: 2px;
@@ -108373,12 +108803,6 @@ function showPendingSettlementModal(periodType, projects) {
             #ganttChartWrapper[data-mobile-pane-mode="left-collapsed"] .gantt-titles,
             #ganttChartWrapper[data-mobile-pane-mode="right-collapsed"] .gantt-timeline-wrapper {
                 pointer-events: none !important;
-            }
-
-            @media screen and (max-width: 767px) and (orientation: portrait) {
-                #ganttChartWrapper .codex-mobile-gantt-pane-toggle {
-                    display: inline-flex;
-                }
             }
     </style>
 
@@ -109061,15 +109485,10 @@ function showPendingSettlementModal(periodType, projects) {
         scheduled = 0;
         Array.prototype.forEach.call(document.querySelectorAll('#ganttChartWrapper'), function (chartWrapper) {
             var mode = chartWrapper.dataset.mobilePaneMode || MODE_NORMAL;
-            if (isMobilePortrait()) {
+            if (isMobilePortrait() || mode !== MODE_NORMAL) {
                 applyMobileGanttPaneMode(chartWrapper);
             } else {
-                if (mode !== MODE_NORMAL) {
-                    chartWrapper.dataset.mobilePaneMode = MODE_NORMAL;
-                    applyMobileGanttPaneMode(chartWrapper);
-                }
-                var control = chartWrapper.querySelector('.' + CONTROL_CLASS);
-                if (control) control.remove();
+                refreshPaneControlPositionOnly(chartWrapper);
             }
         });
     }
@@ -109100,14 +109519,7 @@ function showPendingSettlementModal(periodType, projects) {
         __installed: true,
         apply: scheduleApply,
         refreshPosition: function () {
-            Array.prototype.forEach.call(document.querySelectorAll('#ganttChartWrapper'), function (chartWrapper) {
-                if (isMobilePortrait()) {
-                    refreshPaneControlPositionOnly(chartWrapper);
-                    return;
-                }
-                var control = chartWrapper.querySelector('.' + CONTROL_CLASS);
-                if (control) control.remove();
-            });
+            Array.prototype.forEach.call(document.querySelectorAll('#ganttChartWrapper'), refreshPaneControlPositionOnly);
         },
         setMode: function (mode) {
             Array.prototype.forEach.call(document.querySelectorAll('#ganttChartWrapper'), function (chartWrapper) {
@@ -140575,6 +140987,27 @@ window.openAddNewProjectModal = function(editProject) {
         .cost-analysis-source-audit li strong,.cost-analysis-source-audit li span,.cost-analysis-source-audit li small { font-size:9px; line-height:1.3; }
         .cost-analysis-source-audit li small { color:#b91c1c; }
         .cost-analysis-settings-year { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 9px; background:#f8fafc; color:#334155; font-size:10px; font-weight:900; }
+        .cost-analysis-rate-year-control { display:flex; align-items:center; gap:6px; min-height:34px; border:1px solid #cbd5e1; border-radius:6px; padding:3px 6px; background:#f8fafc; color:#334155; }
+        .cost-analysis-rate-year-control > span { font-size:10px; font-weight:900; white-space:nowrap; }
+        .cost-analysis-rate-year-control select { min-height:26px; border:1px solid #cbd5e1; border-radius:5px; padding:3px 24px 3px 7px; background:#fff; color:#334155; font-size:10px; font-weight:800; }
+        .cost-analysis-rate-year-control small { color:#0f766e; font-size:9px; font-weight:900; white-space:nowrap; }
+        .cost-analysis-settings-stack { display:grid; gap:8px; padding:8px; background:#fff; }
+        .cost-analysis-rate-trend,.cost-analysis-rate-editor { min-width:0; border:1px solid #cbd5e1; border-radius:6px; overflow:hidden; background:#fff; }
+        .cost-analysis-rate-trend > summary,.cost-analysis-rate-editor > summary { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:34px; padding:7px 9px; background:#f8fafc; color:#334155; font-size:10px; font-weight:900; cursor:pointer; }
+        .cost-analysis-rate-trend > summary small,.cost-analysis-rate-editor > summary small { color:#64748b; font-size:9px; font-weight:800; text-align:right; }
+        .cost-analysis-rate-trend[open] > summary,.cost-analysis-rate-editor[open] > summary { border-bottom:1px solid #e2e8f0; color:#0f766e; }
+        .cost-analysis-rate-editor-head { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:7px 9px; background:#fff; }
+        .cost-analysis-rate-editor-head span { min-width:0; overflow-wrap:anywhere; color:#64748b; font-size:9px; font-weight:800; }
+        .cost-analysis-rate-editor-head button { min-height:28px; border:1px solid #0f766e; border-radius:5px; padding:4px 8px; background:#fff; color:#0f766e; font-size:9px; font-weight:900; cursor:pointer; white-space:nowrap; }
+        .cost-analysis-rate-editor .cost-analysis-table-wrap,.cost-analysis-rate-trend .cost-analysis-table-wrap { border:0; border-radius:0; }
+        .cost-analysis-rate-trend-table { min-width:760px; table-layout:auto; }
+        .cost-analysis-rate-trend-table th,.cost-analysis-rate-trend-table td { min-width:94px; font-variant-numeric:tabular-nums; }
+        .cost-analysis-rate-trend-table th:first-child,.cost-analysis-rate-trend-table td:first-child { min-width:78px; }
+        .cost-analysis-rate-trend-table td { text-align:right; }
+        .cost-analysis-rate-trend-table td:first-child { text-align:center; font-weight:900; }
+        .cost-analysis-rate-change-up { color:#b91c1c; font-weight:900; }
+        .cost-analysis-rate-change-down { color:#047857; font-weight:900; }
+        .cost-analysis-rate-change-flat { color:#475569; font-weight:800; }
         .cost-analysis-head-actions,.cost-analysis-toolbar,.cost-analysis-source,.cost-analysis-column-menu { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
         .cost-analysis-btn { min-height:34px; border:1px solid #cbd5e1; border-radius:6px; padding:6px 10px; background:#fff; color:#334155; font-size:12px; font-weight:900; cursor:pointer; white-space:nowrap; }
         .cost-analysis-btn:hover,.cost-analysis-btn:focus-visible { border-color:#0891b2; color:#0e7490; background:#ecfeff; outline:2px solid rgba(8,145,178,.2); outline-offset:1px; }
@@ -140629,6 +141062,7 @@ window.openAddNewProjectModal = function(editProject) {
         button.cost-analysis-kpi { width:100%; min-width:0; border:1px solid #e2e8f0; border-radius:6px; padding:9px 10px; background:#fff; font:inherit; text-align:left; cursor:pointer; }
         button.cost-analysis-kpi:hover,button.cost-analysis-kpi:focus-visible { border-color:#0891b2; outline:2px solid rgba(8,145,178,.18); outline-offset:1px; }
         .cost-analysis-top-sections { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.35fr); gap:10px; margin-bottom:10px; }
+        .cost-analysis-top-sections.cost-analysis-settings-expanded { grid-template-columns:minmax(0,1fr); }
         .cost-analysis-top-sections .cost-analysis-section { min-width:0; margin-top:0; border:1px solid #e2e8f0; border-radius:6px; overflow:hidden; }
         .cost-analysis-top-sections .cost-analysis-section > summary { padding:9px 10px; background:#f8fafc; }
         .cost-analysis-detail-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin:10px 0 6px; }
@@ -140702,6 +141136,13 @@ window.openAddNewProjectModal = function(editProject) {
             .cost-analysis-source-audit ul { justify-content:flex-start; flex-wrap:nowrap; overflow-x:auto; }
             .cost-analysis-source-audit li { flex:0 0 118px; }
             .cost-analysis-toolbar { padding:7px 8px; gap:4px; }
+            .cost-analysis-rate-year-control { order:2; width:100%; min-width:0; overflow-x:auto; }
+            .cost-analysis-rate-year-control select { flex:0 0 auto; min-height:30px; }
+            .cost-analysis-settings-stack { gap:6px; padding:6px; }
+            .cost-analysis-rate-trend > summary,.cost-analysis-rate-editor > summary { align-items:flex-start; min-height:38px; padding:7px; }
+            .cost-analysis-rate-trend > summary small,.cost-analysis-rate-editor > summary small { max-width:52%; white-space:normal; }
+            .cost-analysis-rate-editor-head { align-items:flex-start; flex-wrap:wrap; padding:6px 7px; }
+            .cost-analysis-rate-editor-head button { min-height:34px; }
             .cost-analysis-period-filter { width:100%; flex-wrap:nowrap; overflow-x:auto; }
             .cost-analysis-period-filter select { flex:0 0 auto; }
             .cost-analysis-period-monitor { flex:0 0 auto; }
@@ -140735,20 +141176,21 @@ window.openAddNewProjectModal = function(editProject) {
     <script id="codex-cost-estimation-analysis-20260711">
     (function installCostEstimationAnalysis20260711() {
         'use strict';
-        if (window.CostEstimationAnalysis && window.CostEstimationAnalysis.version === '2026.07.28.2') return;
+        if (window.CostEstimationAnalysis && window.CostEstimationAnalysis.version === '2026.07.29.1') return;
 
         var STORAGE_KEY = 'codex_cost_estimation_vault_v1';
         var MODE_KEY = 'codex_cost_estimation_source_mode_v1';
         var VERIFIED_REMOTE_CACHE_KEY = 'codex_cost_estimation_verified_remote_v2';
+        var RATE_YEAR_PREF_KEY = 'codex_cost_estimation_rate_year_preference_v1';
         var ANALYSIS_PAGE_SIZE = 300;
         var EVIDENCE_PAGE_SIZE = 300;
         var OTHER_PAGE_SIZE = 300;
         var state = {
             rows: [], sourceMode: 'auto', source: 'idle', remotePath: '', remoteSha: '',
-            rowsByYear: Object.create(null), sourceByYear: Object.create(null), errorByYear: Object.create(null), verifiedMetaByYear: Object.create(null), remoteCatalog: [], activeRateYear: '', sourceWarnings: [], sourceNotices: [], startupStarted: false, startupPromise: null, verifiedCacheLoaded: false,
+            rowsByYear: Object.create(null), sourceByYear: Object.create(null), errorByYear: Object.create(null), verifiedMetaByYear: Object.create(null), remoteCatalog: [], activeRateYear: '', rateYearOverride: '', openRateYears: Object.create(null), rateTrendOpen: true, sourceWarnings: [], sourceNotices: [], startupStarted: false, startupPromise: null, verifiedCacheLoaded: false,
             sortKey: 'building', sortDir: 'asc', hiddenColumns: Object.create(null),
             evidenceSortKey: '', evidenceSortDir: 'asc', analysisPage: 0, evidencePage: 0, otherPage: 0, filterYear: '', filterYears: [], filterType: 'all', filterValue: '', filterValues: [], periodBasis: 'settlement', periodFilterInitialized: false,
-            analysis: null, householdCache: null, householdCacheSignature: '', evidence: null, loadPromise: null, saveTimer: 0, renderRaf: 0, lifecycleToken: 0, periodUiInteracting: false, periodRenderPending: false, busy: false, lastError: '', initialized: false
+            analysis: null, householdCache: null, householdCacheSignature: '', evidence: null, loadPromise: null, saveTimersByYear: Object.create(null), renderRaf: 0, lifecycleToken: 0, periodUiInteracting: false, periodRenderPending: false, busy: false, lastError: '', initialized: false
         };
         var columnDefs = [
             ['building', '\uac74\ubb3c\ub3d9'], ['household', '\uc138\ub300\ud638\uc218'], ['maintenanceCode', '\uc720\uc9c0\uad00\ub9ac\ubc88\ud638'], ['projectName', '\uc720\uc9c0\uad00\ub9ac\uba85(\ud504\ub85c\uc81d\ud2b8\uba85)'], ['rateYear', '\ub2e8\uac00 \uc5f0\ub3c4'], ['rateSource', '\ub2e8\uac00 \ucd9c\ucc98'], ['baseCost', '\uae30\ubcf8 \uacac\uc801 \ucf54\uc2a4\ud2b8'],
@@ -140931,27 +141373,47 @@ window.openAddNewProjectModal = function(editProject) {
             var basis = state.periodBasis === 'project' ? '\ud504\ub85c\uc81d\ud2b8 \uae30\uac04 \uae30\uc900' : '\ube44\uc6a9 \uc815\uc0b0 \uae30\uc900';
             return (years.length ? years.join(', ') + '\ub144' : '\uc804\uccb4 \uc5f0\ub3c4') + ' \u00b7 ' + suffix + ' \u00b7 ' + basis;
         }
-        function getYearPrefix() {
-            var target = '';
-            try { target = window.WebSavePlugin && window.WebSavePlugin.config && window.WebSavePlugin.config.targetPath || ''; } catch (e) { }
-            var match = String(target).match(/(\d{2,4})\s*\ub144/);
-            return (match ? match[1] : '26') + '\ub144';
-        }
         function normalizeRateYear(value) {
             var digits = String(value == null ? '' : value).match(/\d{2,4}/);
             if (!digits) return '';
             var year = digits[0];
             return year.length === 2 ? '20' + year : year;
         }
+        function currentCalendarRateYear() {
+            return String(new Date().getFullYear());
+        }
         function getTargetRateYear() {
-            return normalizeRateYear(getYearPrefix()) || String(new Date().getFullYear());
+            return normalizeRateYear(state.rateYearOverride) || currentCalendarRateYear();
         }
         function rateYearPrefix(year) {
             var normalized = normalizeRateYear(year) || getTargetRateYear();
             return normalized.slice(-2) + '\ub144';
         }
+        function getYearPrefix(year) {
+            return rateYearPrefix(year || state.activeRateYear || getTargetRateYear());
+        }
         function getRemotePath(year) {
             return 'RawData/\uacf5\uc815\uad00\ub9ac/' + rateYearPrefix(year) + '_\uae30\ubcf8\uacac\uc801 \ub2e8\uac00.xlsb';
+        }
+        function availableRateYears() {
+            var found = Object.create(null);
+            Object.keys(state.rowsByYear).forEach(function(year) { if (normalizeRateYear(year)) found[normalizeRateYear(year)] = true; });
+            Object.keys(state.sourceByYear).forEach(function(year) { if (normalizeRateYear(year)) found[normalizeRateYear(year)] = true; });
+            state.remoteCatalog.forEach(function(entry) { var year = normalizeRateYear(entry && entry.year); if (year) found[year] = true; });
+            [currentCalendarRateYear(), getTargetRateYear(), state.activeRateYear].forEach(function(year) { year = normalizeRateYear(year); if (year) found[year] = true; });
+            return Object.keys(found).sort(function(a, b) { return Number(b) - Number(a); });
+        }
+        function activateRateYear(year) {
+            year = normalizeRateYear(year) || getTargetRateYear();
+            var rows = state.rowsByYear[year] || [];
+            Object.keys(state.openRateYears).forEach(function(openYear) { state.openRateYears[openYear] = false; });
+            state.activeRateYear = year;
+            state.rows = rows;
+            state.source = state.sourceByYear[year] || (rows.length ? state.source : 'remote-error');
+            state.remotePath = state.verifiedMetaByYear[year] && state.verifiedMetaByYear[year].path || getRemotePath(year);
+            state.remoteSha = state.verifiedMetaByYear[year] && state.verifiedMetaByYear[year].sha || '';
+            state.openRateYears[year] = true;
+            return rows.length > 0;
         }
         function rateSourceLabel(source) {
             return ({ github: 'GitHub \uc2e4\uc2dc\uac04', 'github-saved': 'GitHub \uc800\uc7a5\ubcf8', 'github-cache': 'GitHub \ucd5c\uc885 \uac80\uc99d\ubcf8', 'manual-cache': '\uc218\ub3d9 \ub85c\uceec', 'manual-file': '\uc218\ub3d9 \ud30c\uc77c', 'remote-error': 'GitHub \ub2e8\uac00 \uc0ac\uc6a9 \ubd88\uac00', missing: '\uc5f0\ub3c4 \ub2e8\uac00 \uc5c6\uc74c', invalid: 'GitHub \uac80\uc99d \uc2e4\ud328' })[source] || String(source || '-');
@@ -141053,8 +141515,9 @@ window.openAddNewProjectModal = function(editProject) {
                 return { building: row[buildingIndex], cost: row[costIndex], fee: row[feeIndex], excluded: excludedIndex >= 0 ? row[excludedIndex] : false };
             }));
         }
-        function buildWorkbookBytes() {
-            var rows = [['\uac74\ubb3c\ub3d9', '\ucf54\uc2a4\ud2b8(\uc6d0)', 'Fee(%)', '\ubd84\uc11d \uc81c\uc678 \uc5ec\ubd80']].concat(state.rows.map(function(row) {
+        function buildWorkbookBytes(rateRows) {
+            var sourceRows = Array.isArray(rateRows) ? rateRows : state.rows;
+            var rows = [['\uac74\ubb3c\ub3d9', '\ucf54\uc2a4\ud2b8(\uc6d0)', 'Fee(%)', '\ubd84\uc11d \uc81c\uc678 \uc5ec\ubd80']].concat(sourceRows.map(function(row) {
                 return [buildingLabel(row.building), Number(row.cost || 0), Number(row.fee || 0), !!row.excluded];
             }));
             var workbook = window.XLSX.utils.book_new();
@@ -141067,14 +141530,24 @@ window.openAddNewProjectModal = function(editProject) {
             try {
                 if (state.sourceMode === 'manual' && state.rows.length) localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 2, savedAt: new Date().toISOString(), year: state.activeRateYear || getTargetRateYear(), rows: state.rows }));
                 localStorage.setItem(MODE_KEY, state.sourceMode);
+                localStorage.setItem(RATE_YEAR_PREF_KEY, state.rateYearOverride || 'auto');
             } catch (e) { }
         }
-        function loadCache() {
+        function loadCache(expectedYear) {
             try {
                 var parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+                var savedYear = normalizeRateYear(parsed && parsed.year);
+                var targetYear = normalizeRateYear(expectedYear);
+                if (targetYear && savedYear && targetYear !== savedYear) return [];
                 if (parsed && Array.isArray(parsed.rows) && parsed.rows.length) return validateRows(parsed.rows);
             } catch (e) { }
             return [];
+        }
+        function loadRateYearPreference() {
+            try {
+                var saved = String(localStorage.getItem(RATE_YEAR_PREF_KEY) || 'auto');
+                state.rateYearOverride = saved === 'auto' ? '' : normalizeRateYear(saved);
+            } catch (e) { state.rateYearOverride = ''; }
         }
         function persistVerifiedRemoteCache() {
             try {
@@ -141104,13 +141577,7 @@ window.openAddNewProjectModal = function(editProject) {
                     state.verifiedMetaByYear[year] = Object.assign({}, books[year].meta || {});
                 });
                 var targetYear = getTargetRateYear();
-                if (state.rowsByYear[targetYear] && (forceTarget || !state.rows.length)) {
-                    state.activeRateYear = targetYear;
-                    state.rows = state.rowsByYear[targetYear];
-                    state.source = 'github-cache';
-                    state.remotePath = state.verifiedMetaByYear[targetYear] && state.verifiedMetaByYear[targetYear].path || getRemotePath(targetYear);
-                    state.remoteSha = state.verifiedMetaByYear[targetYear] && state.verifiedMetaByYear[targetYear].sha || '';
-                }
+                if (state.rowsByYear[targetYear] && (forceTarget || !state.rows.length)) activateRateYear(targetYear);
             } catch (e) { }
         }
         function activateAutomaticTarget() {
@@ -141118,14 +141585,11 @@ window.openAddNewProjectModal = function(editProject) {
             var targetYear = getTargetRateYear();
             var source = state.sourceByYear[targetYear] || '';
             if ((source === 'github' || source === 'github-cache' || source === 'github-saved') && state.rowsByYear[targetYear] && state.rowsByYear[targetYear].length) {
-                state.activeRateYear = targetYear;
-                state.rows = state.rowsByYear[targetYear];
+                activateRateYear(targetYear);
                 state.source = source === 'github-saved' ? 'github-saved' : (source === 'github' ? 'github' : 'github-cache');
                 return true;
             }
-            state.activeRateYear = targetYear;
-            state.rows = [];
-            state.source = 'remote-error';
+            activateRateYear(targetYear);
             return false;
         }
         function setStatus(text, error) {
@@ -141197,7 +141661,7 @@ window.openAddNewProjectModal = function(editProject) {
                 try {
                     await waitForXlsxRuntime();
                     if (state.sourceMode === 'manual' && !options.forceRemote) {
-                        var manualRows = loadCache();
+                        var manualRows = loadCache(targetYear);
                         if (manualRows.length) {
                             state.rows = manualRows;
                             state.rowsByYear[targetYear] = manualRows;
@@ -141660,10 +142124,89 @@ window.openAddNewProjectModal = function(editProject) {
             var notice = state.sourceNotices.length ? '<div class="cost-analysis-source-notice"><span>' + escapeHtml(state.sourceNotices.join(' / ')) + '</span></div>' : '';
             return warning + notice + '<div class="cost-analysis-source-audit"><div><strong>\uc790\ub3d9 \ub2e8\uac00 \uc6d0\ucc9c</strong><span>' + escapeHtml(state.remotePath || getRemotePath()) + '</span></div><ul>' + (entries || '<li><span>\ud655\uc778\ub41c GitHub \uc5f0\ub3c4\ubcc4 \ub2e8\uac00\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.</span></li>') + '</ul></div>';
         }
+        function renderRateYearControl() {
+            var currentYear = currentCalendarRateYear();
+            var preference = state.rateYearOverride ? normalizeRateYear(state.rateYearOverride) : 'auto';
+            var options = '<option value="auto"' + (preference === 'auto' ? ' selected' : '') + '>\uc790\ub3d9 \u00b7 \uae08\ub144\ub3c4 ' + escapeHtml(currentYear) + '\ub144</option>';
+            options += availableRateYears().map(function(year) {
+                return '<option value="' + escapeHtml(year) + '"' + (preference === year ? ' selected' : '') + '>' + escapeHtml(year) + '\ub144 \uc218\ub3d9</option>';
+            }).join('');
+            return '<label class="cost-analysis-rate-year-control"><span>\uae30\ubcf8 \ub2e8\uac00 \uc5f0\ub3c4</span><select data-cost-rate-year-preference aria-label="\uae30\ubcf8 \ub2e8\uac00 \uc5f0\ub3c4 \uc120\ud0dd">' + options + '</select><small>' + (preference === 'auto' ? '\uae08\ub144\ub3c4 \uc790\ub3d9' : '\uc218\ub3d9 \uace0\uc815') + ' \u00b7 ' + escapeHtml(rateYearPrefix(getTargetRateYear())) + '</small></label>';
+        }
+        function formatRateChangeWon(value) {
+            var num = Number(value);
+            if (!Number.isFinite(num)) return '-';
+            if (Math.round(num) === 0) return '0\uc6d0';
+            return (num > 0 ? '+' : '-') + Math.abs(Math.round(num)).toLocaleString('ko-KR') + '\uc6d0';
+        }
+        function formatRateChangePercent(value) {
+            var num = Number(value);
+            if (!Number.isFinite(num)) return '-';
+            if (Math.abs(num) < 0.00001) return '0.0%';
+            return (num > 0 ? '+' : '-') + Math.abs(num).toLocaleString('ko-KR', { minimumFractionDigits:1, maximumFractionDigits:1 }) + '%';
+        }
+        function rateChangeTone(value) {
+            var num = Number(value);
+            return num > 0 ? 'cost-analysis-rate-change-up' : (num < 0 ? 'cost-analysis-rate-change-down' : 'cost-analysis-rate-change-flat');
+        }
+        function renderRateTrendAnalysis() {
+            var years = availableRateYears().filter(function(year) { return state.rowsByYear[year] && state.rowsByYear[year].length; }).sort(function(a, b) { return Number(a) - Number(b); });
+            var open = state.rateTrendOpen ? ' open' : '';
+            if (years.length < 2) {
+                return '<details class="cost-analysis-rate-trend" data-cost-rate-trend' + open + '><summary><span>\uc5f0\ub3c4\ubcc4 \ub3d9 \ub2e8\uac00 \uc99d\uac10 \ubd84\uc11d</span><small>' + (years.length ? escapeHtml(rateYearPrefix(years[0])) + ' 1\uac1c \uc5f0\ub3c4' : '\uac80\uc99d\ub41c \uc5f0\ub3c4 \uc5c6\uc74c') + '</small></summary><div class="cost-analysis-empty">\ube44\uad50 \uac00\ub2a5\ud55c GitHub \uc5f0\ub3c4\ubcc4 \ub2e8\uac00\uac00 2\uac1c \uc774\uc0c1\uc774\uba74 \ub3d9\ubcc4 \uc99d\uac10\uc561\uacfc \uc99d\uac10\ub960\uc774 \uc790\ub3d9 \ud45c\uc2dc\ub429\ub2c8\ub2e4.</div></details>';
+            }
+            var books = Object.create(null);
+            var buildings = Object.create(null);
+            years.forEach(function(year) {
+                books[year] = Object.create(null);
+                (state.rowsByYear[year] || []).forEach(function(row) {
+                    var key = normalizeBuilding(row.building);
+                    if (!key) return;
+                    books[year][key] = row;
+                    buildings[key] = true;
+                });
+            });
+            var buildingKeys = Object.keys(buildings).sort(function(a, b) { return String(a).localeCompare(String(b), 'ko-KR', { numeric:true }); });
+            var firstHeader = '<th rowspan="2">\uac74\ubb3c\ub3d9</th>' + years.map(function(year, index) { return '<th colspan="' + (index ? '3' : '1') + '">' + escapeHtml(rateYearPrefix(year)) + '</th>'; }).join('');
+            var secondHeader = years.map(function(year, index) { return index ? '<th>\ub2e8\uac00</th><th>\uc99d\uac10</th><th>\uc99d\uac10\ub960</th>' : '<th>\ub2e8\uac00</th>'; }).join('');
+            var body = buildingKeys.map(function(building) {
+                var cells = '';
+                years.forEach(function(year, index) {
+                    var current = books[year][building];
+                    var currentCost = current ? Number(current.cost || 0) : NaN;
+                    var currentTitle = current && current.excluded ? ' title="\ubd84\uc11d \uc81c\uc678 \ub2e8\uac00"' : '';
+                    cells += '<td' + currentTitle + '>' + (Number.isFinite(currentCost) ? formatAccountingInput(currentCost) + '\uc6d0' : '-') + '</td>';
+                    if (index) {
+                        var previous = books[years[index - 1]][building];
+                        var previousCost = previous ? Number(previous.cost || 0) : NaN;
+                        var comparable = Number.isFinite(currentCost) && Number.isFinite(previousCost);
+                        var delta = comparable ? currentCost - previousCost : NaN;
+                        var percent = comparable && previousCost !== 0 ? delta / previousCost * 100 : NaN;
+                        cells += '<td class="' + rateChangeTone(delta) + '">' + formatRateChangeWon(delta) + '</td><td class="' + rateChangeTone(percent) + '">' + (comparable && previousCost === 0 && currentCost !== 0 ? '\uc2e0\uaddc' : formatRateChangePercent(percent)) + '</td>';
+                    }
+                });
+                return '<tr><td>' + escapeHtml(buildingLabel(building)) + '</td>' + cells + '</tr>';
+            }).join('');
+            var tableWidth = Math.max(760, 96 + 104 * (1 + (years.length - 1) * 3));
+            return '<details class="cost-analysis-rate-trend" data-cost-rate-trend' + open + '><summary><span>\uc5f0\ub3c4\ubcc4 \ub3d9 \ub2e8\uac00 \uc99d\uac10 \ubd84\uc11d</span><small>' + escapeHtml(rateYearPrefix(years[0])) + ' \u2192 ' + escapeHtml(rateYearPrefix(years[years.length - 1])) + ' \u00b7 ' + buildingKeys.length.toLocaleString('ko-KR') + '\uac1c \ub3d9</small></summary><div class="cost-analysis-table-wrap"><table class="cost-analysis-table cost-analysis-rate-trend-table" style="min-width:' + tableWidth + 'px"><thead><tr>' + firstHeader + '</tr><tr>' + secondHeader + '</tr></thead><tbody>' + body + '</tbody></table></div></details>';
+        }
+        function renderRateYearEditor(year) {
+            var rows = state.rowsByYear[year] || [];
+            var source = state.sourceByYear[year] || (rows.length ? state.source : 'missing');
+            var hasOpenState = Object.prototype.hasOwnProperty.call(state.openRateYears, year);
+            var open = hasOpenState ? !!state.openRateYears[year] : year === state.activeRateYear;
+            var badges = [rateSourceLabel(source), rows.length.toLocaleString('ko-KR') + '\uac1c \uac74\ubb3c\ub3d9'];
+            if (year === currentCalendarRateYear()) badges.push('\uae08\ub144\ub3c4');
+            if (year === state.activeRateYear) badges.push('\uae30\ubcf8 \ud3b8\uc9d1');
+            var table = rows.length ? '<div class="cost-analysis-table-wrap"><table class="cost-analysis-table" style="min-width:620px"><thead><tr><th>\uac74\ubb3c\ub3d9</th><th>\ucf54\uc2a4\ud2b8(\uc6d0)</th><th>Fee(%)</th><th>\ubd84\uc11d \uc81c\uc678</th></tr></thead><tbody>' + rows.map(function(row, index) {
+                return '<tr data-setting-year="' + escapeHtml(year) + '" data-setting-index="' + index + '"><td><strong>' + escapeHtml(buildingLabel(row.building)) + '</strong></td><td><input type="text" inputmode="numeric" pattern="[0-9,]*" autocomplete="off" data-setting-field="cost" value="' + escapeHtml(formatAccountingInput(row.cost)) + '"></td><td><input type="number" min="0" max="100" step="0.1" data-setting-field="fee" value="' + Number(row.fee || 0) + '"></td><td><input type="checkbox" data-setting-field="excluded"' + (row.excluded ? ' checked' : '') + '></td></tr>';
+            }).join('') + '</tbody></table></div>' : '<div class="cost-analysis-empty">' + escapeHtml(rateYearPrefix(year)) + ' GitHub \ub2e8\uac00\uac00 \uc5c6\uac70\ub098 \uac80\uc99d\ub418\uc9c0 \uc54a\uc558\uc2b5\ub2c8\ub2e4.</div>';
+            var actions = rows.length ? '<button type="button" data-cost-rate-save-year="' + escapeHtml(year) + '">' + escapeHtml(rateYearPrefix(year)) + ' GitHub \uc800\uc7a5</button>' : '';
+            return '<details class="cost-analysis-rate-editor" data-cost-rate-editor="' + escapeHtml(year) + '"' + (open ? ' open' : '') + '><summary><span>' + escapeHtml(rateYearPrefix(year)) + ' \ud3b8\uc9d1 \ub2e8\uac00</span><small>' + escapeHtml(badges.join(' \u00b7 ')) + '</small></summary><div class="cost-analysis-rate-editor-head"><span>' + escapeHtml(state.verifiedMetaByYear[year] && state.verifiedMetaByYear[year].path || getRemotePath(year)) + '</span>' + actions + '</div>' + table + '</details>';
+        }
         function renderSettings() {
-            return '<div class="cost-analysis-settings-year"><strong>' + escapeHtml(rateYearPrefix(state.activeRateYear)) + ' \ud3b8\uc9d1 \ub2e8\uac00</strong><span>' + escapeHtml(rateSourceLabel(state.sourceByYear[state.activeRateYear])) + '</span></div><div class="cost-analysis-table-wrap"><table class="cost-analysis-table" style="min-width:620px"><thead><tr><th>\uac74\ubb3c\ub3d9</th><th>\ucf54\uc2a4\ud2b8(\uc6d0)</th><th>Fee(%)</th><th>\ubd84\uc11d \uc81c\uc678</th></tr></thead><tbody>' + state.rows.map(function(row, index) {
-                return '<tr data-setting-index="' + index + '"><td><strong>' + escapeHtml(buildingLabel(row.building)) + '</strong></td><td><input type="text" inputmode="numeric" pattern="[0-9,]*" autocomplete="off" data-setting-field="cost" value="' + escapeHtml(formatAccountingInput(row.cost)) + '"></td><td><input type="number" min="0" max="100" step="0.1" data-setting-field="fee" value="' + Number(row.fee || 0) + '"></td><td><input type="checkbox" data-setting-field="excluded"' + (row.excluded ? ' checked' : '') + '></td></tr>';
-            }).join('') + '</tbody></table></div>';
+            var years = availableRateYears();
+            return '<div class="cost-analysis-settings-stack">' + renderRateTrendAnalysis() + years.map(renderRateYearEditor).join('') + '</div>';
         }
         function renderDetailCell(row, key, evidenceMode) {
             var classes = [];
@@ -141936,15 +142479,23 @@ window.openAddNewProjectModal = function(editProject) {
                 '<button type="button" class="cost-analysis-kpi" data-tone="good" data-cost-evidence="compliant"><span>\uae30\uc900 \uc900\uc218 \uc138\ub300</span><strong>' + financial.compliant.count.toLocaleString('ko-KR') + '\uc138\ub300</strong><small class="cost-analysis-kpi-amount">\uc2e4\uc81c PO ' + formatWonAmount(financial.compliant.actualPo) + ' \u00b7 \ucc28\uc561 ' + formatWonAmount(financial.compliant.delta) + '</small></button>' +
                 '<button type="button" class="cost-analysis-kpi" data-tone="bad" data-cost-evidence="overrun"><span>\uae30\uc900 \ucd08\uacfc \uc138\ub300</span><strong>' + financial.overrun.count.toLocaleString('ko-KR') + '\uc138\ub300</strong><small class="cost-analysis-kpi-amount">\uc99d\uc561 \ud569\uacc4 ' + formatWonAmount(Math.abs(financial.overrun.delta)) + '</small></button>' +
                 '<button type="button" class="cost-analysis-kpi" data-tone="warn" data-cost-evidence="other"><span>\uae30\ud0c0 \uc791\uc5c5 \ubd84\ub958</span><strong>' + financial.other.count.toLocaleString('ko-KR') + '\uac74</strong><small class="cost-analysis-kpi-amount">\uc2e4\uc81c PO \ud569\uacc4 ' + formatWonAmount(financial.other.actualPo) + '</small></button>' +
-                '<button type="button" class="cost-analysis-kpi" data-tone="bad" data-cost-evidence="unmatched"><span>\ub2e8\uac00 \ubbf8\ub9e4\uce6d</span><strong>' + analysis.unmatchedCount.toLocaleString('ko-KR') + '\uc138\ub300</strong><small>\ud655\uc815 \uacac\uc801 \uc0b0\ucd9c \ubd88\uac00</small></button>';
+                 '<button type="button" class="cost-analysis-kpi" data-tone="bad" data-cost-evidence="unmatched"><span>\ub2e8\uac00 \ubbf8\ub9e4\uce6d</span><strong>' + analysis.unmatchedCount.toLocaleString('ko-KR') + '\uc138\ub300</strong><small>\ud655\uc815 \uacac\uc801 \uc0b0\ucd9c \ubd88\uac00</small></button>';
+        }
+        function hasAnyRateRows() {
+            return Object.keys(state.rowsByYear).some(function(year) { return state.rowsByYear[year] && state.rowsByYear[year].length; });
         }
         function renderRateUnavailable(modal) {
             var loading = state.busy || state.loadPromise;
             var label = loading ? '\uc6d0\uaca9 \ub2e8\uac00 \ud655\uc778 \uc911' : 'GitHub \ub2e8\uac00 \uc0ac\uc6a9 \ubd88\uac00';
+            var yearControlHost = modal.querySelector('[data-cost-rate-year-control]');
+            if (yearControlHost) yearControlHost.innerHTML = renderRateYearControl();
             modal.querySelector('[data-cost-kpis]').innerHTML = '<div class="cost-analysis-kpi cost-analysis-kpi-pending"><span>' + label + '</span><strong>-</strong><small>' + escapeHtml(state.remotePath || getRemotePath()) + '</small></div>';
             modal.querySelector('[data-cost-table]').innerHTML = '<div class="cost-analysis-empty">' + (loading ? 'GitHub \uc5f0\ub3c4\ubcc4 XLSB \ub2e8\uac00\ub97c \uac80\uc99d \uc911\uc785\ub2c8\ub2e4.' : 'GitHub \ub2e8\uac00\ub97c \ud655\uc778\ud558\uac70\ub098 \uc218\ub3d9 \ud30c\uc77c\uc744 \ubd88\ub7ec\uc624\uc138\uc694.') + '</div>';
             var sourceAuditHost = modal.querySelector('[data-cost-source-audit]');
             if (sourceAuditHost) sourceAuditHost.innerHTML = renderRateSourceAudit();
+            var settingsDetails = modal.querySelector('[data-cost-section="settings"]');
+            var settingsHost = modal.querySelector('[data-cost-settings]');
+            if (settingsHost) settingsHost.innerHTML = settingsDetails && settingsDetails.open ? renderSettings() : '';
             modal.querySelector('[data-cost-period-filter]').innerHTML = '';
             modal.querySelector('[data-cost-rollover]').innerHTML = '';
             modal.querySelectorAll('[data-source-mode]').forEach(function(button) { button.classList.toggle('is-active', button.dataset.sourceMode === state.sourceMode); });
@@ -141954,7 +142505,9 @@ window.openAddNewProjectModal = function(editProject) {
             var modal = ensureModal();
             if (modal.classList.contains('hidden')) { state.analysis = null; return; }
             if (state.periodUiInteracting) { state.periodRenderPending = true; return; }
-            if (state.sourceMode === 'auto' && !state.rows.length) { state.analysis = null; renderRateUnavailable(modal); return; }
+            var yearControlHost = modal.querySelector('[data-cost-rate-year-control]');
+            if (yearControlHost) yearControlHost.innerHTML = renderRateYearControl();
+            if (state.sourceMode === 'auto' && !hasAnyRateRows()) { state.analysis = null; renderRateUnavailable(modal); return; }
             var analysis = buildAnalysis();
             modal.querySelector('[data-cost-kpis]').innerHTML = renderCostKpis(analysis);
             modal.querySelector('[data-cost-table]').innerHTML = analysis.rows.length ? renderAnalysisTable(analysis) : '<div class="cost-analysis-empty">\ubd84\uc11d\ud560 \uc138\ub300 \ub370\uc774\ud130\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.</div>';
@@ -141994,7 +142547,7 @@ window.openAddNewProjectModal = function(editProject) {
             modal.setAttribute('aria-modal', 'true');
             modal.setAttribute('aria-labelledby', 'costAnalysisTitle');
             modal.innerHTML = '<div class="cost-analysis-panel"><header class="cost-analysis-head"><button type="button" class="cost-analysis-btn icon cost-analysis-left-close mr-3" data-cost-close aria-label="닫기" title="닫기">&times;</button><div><h3 id="costAnalysisTitle" class="cost-analysis-title">\uc138\ub300\ub0b4 \uc218\uc7a5\uc791\uc5c5 \ube44\uc6a9 \uc808\uac10 \uc2ec\uce35 \ubd84\uc11d</h3><div class="cost-analysis-status" aria-live="polite"></div></div><div class="cost-analysis-head-actions"><button type="button" class="cost-analysis-btn icon" data-cost-fullscreen-open aria-label="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" title="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" aria-expanded="false">\u26f6</button><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors px-2 leading-none cursor-pointer focus:outline-none" data-cost-close aria-label="닫기" title="닫기">&times;</button></div></header>' +
-                '<div class="cost-analysis-toolbar"><div class="cost-analysis-source" role="group" aria-label="\ub2e8\uac00 \ucd9c\ucc98"><button type="button" data-source-mode="auto">\uc790\ub3d9</button><button type="button" data-source-mode="manual">\uc218\ub3d9</button></div><button type="button" class="cost-analysis-btn" data-cost-remote-load>\uc6d0\uaca9 \ubd88\ub7ec\uc624\uae30</button><button type="button" class="cost-analysis-btn primary" data-cost-remote-save>\uc6d0\uaca9 \uc800\uc7a5</button><button type="button" class="cost-analysis-btn" data-cost-local-open>\ud30c\uc77c \ubd88\ub7ec\uc624\uae30</button><button type="button" class="cost-analysis-btn" data-cost-download>\ub2e8\uac00 XLSB</button><button type="button" class="cost-analysis-btn primary" data-cost-export-all title="Excel \uc804\uccb4 \ub2e4\uc6b4\ub85c\ub4dc">\u21e9 Excel \uc804\uccb4</button><div class="cost-analysis-period-filter" data-cost-period-filter></div><input type="file" data-cost-file accept=".xlsb,.xlsx" hidden><span class="cost-analysis-toolbar-spacer"></span><div class="cost-analysis-column-menu"><button type="button" class="cost-analysis-btn" data-cost-columns>\uc5f4 \ud45c\uc2dc</button><div class="cost-analysis-column-pop hidden" data-cost-column-pop></div></div></div>' +
+                '<div class="cost-analysis-toolbar"><div class="cost-analysis-source" role="group" aria-label="\ub2e8\uac00 \ucd9c\ucc98"><button type="button" data-source-mode="auto">\uc790\ub3d9</button><button type="button" data-source-mode="manual">\uc218\ub3d9</button></div><div data-cost-rate-year-control></div><button type="button" class="cost-analysis-btn" data-cost-remote-load>\uc6d0\uaca9 \ubd88\ub7ec\uc624\uae30</button><button type="button" class="cost-analysis-btn primary" data-cost-remote-save>\uc6d0\uaca9 \uc800\uc7a5</button><button type="button" class="cost-analysis-btn" data-cost-local-open>\ud30c\uc77c \ubd88\ub7ec\uc624\uae30</button><button type="button" class="cost-analysis-btn" data-cost-download>\ub2e8\uac00 XLSB</button><button type="button" class="cost-analysis-btn primary" data-cost-export-all title="Excel \uc804\uccb4 \ub2e4\uc6b4\ub85c\ub4dc">\u21e9 Excel \uc804\uccb4</button><div class="cost-analysis-period-filter" data-cost-period-filter></div><input type="file" data-cost-file accept=".xlsb,.xlsx" hidden><span class="cost-analysis-toolbar-spacer"></span><div class="cost-analysis-column-menu"><button type="button" class="cost-analysis-btn" data-cost-columns>\uc5f4 \ud45c\uc2dc</button><div class="cost-analysis-column-pop hidden" data-cost-column-pop></div></div></div>' +
                 '<main class="cost-analysis-body"><div data-cost-source-audit></div><div data-cost-rollover></div><div class="cost-analysis-top-sections"><details class="cost-analysis-section" data-cost-section="settings"><summary>\uac74\ubb3c\ub3d9 \ub2e8\uac00 \uc124\uc815</summary><div data-cost-settings></div></details><details class="cost-analysis-section" data-cost-section="other"><summary>\uae30\ud0c0 \uc791\uc5c5 \ubd84\ub958 (\uc218\uc7a5\uc791\uc5c5 \uc81c\uc678)</summary><div data-cost-exceptions></div></details></div><section class="cost-analysis-kpis" data-cost-kpis></section><div class="cost-analysis-detail-head"><h4>\uc218\uc7a5\uc791\uc5c5 \uc138\ub300 \uc0c1\uc138</h4><div class="cost-analysis-detail-actions"><button type="button" class="cost-analysis-btn cost-analysis-compare-entry" data-cost-compare-open title="선택한 연도를 같은 조건으로 비교">선택↔비교</button><button type="button" class="cost-analysis-btn icon" data-cost-table-fullscreen-open aria-label="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30" title="\uc804\uccb4 \ud654\uba74 \ubcf4\uae30">\u26f6</button><button type="button" class="cost-analysis-btn" data-cost-evidence="all">\uc804\uccb4 \uc99d\ube59</button></div></div><span data-cost-table-anchor hidden></span><section data-cost-table></section></main></div>' +
                 '<div id="costAnalysisTableFullscreen" class="hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="costAnalysisTableFullscreenTitle"><div class="cost-analysis-table-fullscreen-panel"><header class="cost-analysis-head"><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors mr-3 leading-none cursor-pointer focus:outline-none" data-cost-table-fullscreen-close aria-label="닫기" title="닫기">&times;</button><h3 id="costAnalysisTableFullscreenTitle" class="cost-analysis-title">\uc218\uc7a5\uc791\uc5c5 \uc138\ub300 \uc0c1\uc138 - \uc804\uccb4 \ud654\uba74</h3><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors px-2 leading-none cursor-pointer focus:outline-none" data-cost-table-fullscreen-close aria-label="닫기" title="닫기">&times;</button></header><main class="cost-analysis-table-fullscreen-body" data-cost-table-fullscreen-body></main></div></div>' +
                 '<div id="costAnalysisEvidenceModal" class="hidden" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="costAnalysisEvidenceTitle"><div class="cost-analysis-evidence-panel"><header class="cost-analysis-head"><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors mr-3 leading-none cursor-pointer focus:outline-none" data-cost-evidence-close aria-label="닫기" title="닫기">&times;</button><div><h3 id="costAnalysisEvidenceTitle" class="cost-analysis-title" data-cost-evidence-title>\uc0c1\uc138 \uc99d\ube59</h3></div><div class="cost-analysis-head-actions"><button type="button" class="cost-analysis-btn primary" data-cost-evidence-export title="Excel \ub2e4\uc6b4\ub85c\ub4dc">\u21e9 Excel</button><button type="button" class="text-2xl font-bold text-slate-500 hover:text-slate-800 transition-colors px-2 leading-none cursor-pointer focus:outline-none" data-cost-evidence-close aria-label="닫기" title="닫기">&times;</button></div></header><div class="cost-analysis-evidence-formula" data-cost-evidence-formula></div><div class="cost-analysis-evidence-summary" data-cost-evidence-summary></div><main class="cost-analysis-evidence-body" data-cost-evidence-body></main></div></div>';
@@ -142002,9 +142555,13 @@ window.openAddNewProjectModal = function(editProject) {
             document.body.appendChild(modal);
             return modal;
         }
-        function scheduleRemoteSave() {
-            clearTimeout(state.saveTimer);
-            state.saveTimer = setTimeout(function() { if (state.sourceMode === 'auto') remoteSave(false); }, 3000);
+        function scheduleRemoteSave(year, delay) {
+            year = normalizeRateYear(year) || state.activeRateYear || getTargetRateYear();
+            clearTimeout(state.saveTimersByYear[year]);
+            state.saveTimersByYear[year] = setTimeout(function() {
+                delete state.saveTimersByYear[year];
+                if (state.sourceMode === 'auto') remoteSave(false, year);
+            }, Math.max(500, Number(delay || 3000)));
         }
         async function importFile(file) {
             if (!file) return;
@@ -142018,12 +142575,14 @@ window.openAddNewProjectModal = function(editProject) {
                 notifyUser('\ub2e8\uac00 \ud30c\uc77c\uc744 \ubd88\ub7ec\uc654\uc2b5\ub2c8\ub2e4.', 'success');
             } catch (error) { setStatus(error.message || error, true); notifyUser('\ub2e8\uac00 \ud30c\uc77c \ubd88\ub7ec\uc624\uae30\uc5d0 \uc2e4\ud328\ud588\uc2b5\ub2c8\ub2e4.', 'error'); }
         }
-        function downloadWorkbook() {
-            var bytes = buildWorkbookBytes();
+        function downloadWorkbook(year) {
+            year = normalizeRateYear(year) || state.activeRateYear || getTargetRateYear();
+            var rateRows = state.rowsByYear[year] || (year === state.activeRateYear ? state.rows : []);
+            var bytes = buildWorkbookBytes(rateRows);
             var blob = new Blob([bytes], { type: 'application/vnd.ms-excel.sheet.binary.macroEnabled.12' });
             var url = URL.createObjectURL(blob);
             var link = document.createElement('a');
-            link.href = url; link.download = getYearPrefix() + '_\uae30\ubcf8\uacac\uc801 \ub2e8\uac00.xlsb'; document.body.appendChild(link); link.click(); link.remove();
+            link.href = url; link.download = getYearPrefix(year) + '_\uae30\ubcf8\uacac\uc801 \ub2e8\uac00.xlsb'; document.body.appendChild(link); link.click(); link.remove();
             setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
         }
         function appendAnalysisSheet(workbook, name, rows, widths) {
@@ -142112,20 +142671,32 @@ window.openAddNewProjectModal = function(editProject) {
             var file = String(path).split('/').pop().replace(/\.xlsb$/i, '');
             return 'RawData/\uacf5\uc815\uad00\ub9ac/Backup/' + file + '_backup_' + stamp + '.xlsb';
         }
-        async function remoteSave(userInitiated) {
+        async function remoteSave(userInitiated, requestedYear) {
+            var year = normalizeRateYear(requestedYear) || state.activeRateYear || getTargetRateYear();
+            if (state.saveTimersByYear[year]) { clearTimeout(state.saveTimersByYear[year]); delete state.saveTimersByYear[year]; }
+            var rateRows = state.rowsByYear[year] || (year === state.activeRateYear ? state.rows : []);
+            if (!rateRows.length) {
+                setStatus(rateYearPrefix(year) + ' \uc800\uc7a5 \ub2e8\uac00\uac00 \uc5c6\uc2b5\ub2c8\ub2e4.', true);
+                if (userInitiated) notifyUser(rateYearPrefix(year) + ' \ub2e8\uac00\ub97c \uba3c\uc800 \ubd88\ub7ec\uc624\uc138\uc694.', 'error');
+                return false;
+            }
             var plugin = window.WebSavePlugin;
             if (!plugin || typeof plugin.ensureToken !== 'function') { setStatus('WebSavePlugin API missing', true); return false; }
             if (!userInitiated && !(plugin.state && plugin.state.sessionToken)) {
                 setStatus('\ub85c\uceec \uc800\uc7a5 \uc644\ub8cc \u00b7 \uc6d0\uaca9 \uc800\uc7a5\uc740 \uc218\ub3d9 \uc778\uc99d \ud6c4 \uc790\ub3d9 \uc5f0\uacb0', false);
                 return false;
             }
-            if (state.busy) return false;
+            if (state.busy) {
+                if (!userInitiated) scheduleRemoteSave(year, 1200);
+                else notifyUser('\ub2e4\ub978 \ub2e8\uac00 \uc791\uc5c5\uc774 \uc644\ub8cc\ub41c \ud6c4 \ub2e4\uc2dc \uc800\uc7a5\ud558\uc138\uc694.', 'info');
+                return false;
+            }
             state.busy = true;
             try {
                 persist();
                 var token = await plugin.ensureToken({ userInitiated: !!userInitiated, source: 'cost-estimation' });
                 if (!token) { setStatus('\ub85c\uceec \uc800\uc7a5 \uc644\ub8cc \u00b7 \uc6d0\uaca9 \uc800\uc7a5\uc740 \uc778\uc99d \ud544\uc694', false); return false; }
-                var path = getRemotePath();
+                var path = getRemotePath(year);
                 var latest = null;
                 try { latest = await plugin.fetchRemoteFileInfo(token, path); } catch (infoError) {
                     var status = Number(infoError && (infoError.status || infoError.githubStatus) || 0);
@@ -142138,19 +142709,21 @@ window.openAddNewProjectModal = function(editProject) {
                     backupPath = backupPathFor(path);
                     await plugin.putRemoteContent(backupPath, token, { message: plugin.formatWebSaveCommitMessage('Cost estimation backup before sync', await plugin.resolveClientIpForWebSave()), content: oldContent });
                 }
-                var content = bytesToBase64(buildWorkbookBytes());
+                var content = bytesToBase64(buildWorkbookBytes(rateRows));
                 var payload = { message: plugin.formatWebSaveCommitMessage('Cost estimation sync', await plugin.resolveClientIpForWebSave()), content: content };
                 if (latest && latest.sha) payload.sha = latest.sha;
                 var result = await plugin.putRemoteContentWithShaRebaseRetry(path, token, payload, { expectedRemoteContentBase64: oldContent, attempts: 2, allowConflictOverride: false });
-                state.remoteSha = result && result.content && result.content.sha || '';
-                state.remotePath = path; state.source = 'github-saved';
-                state.rowsByYear[state.activeRateYear || getTargetRateYear()] = state.rows;
-                state.sourceByYear[state.activeRateYear || getTargetRateYear()] = 'github-saved';
-                state.errorByYear[state.activeRateYear || getTargetRateYear()] = '';
+                var savedSha = result && result.content && result.content.sha || '';
+                state.rowsByYear[year] = rateRows;
+                state.sourceByYear[year] = 'github-saved';
+                state.errorByYear[year] = '';
+                state.verifiedMetaByYear[year] = Object.assign({}, state.verifiedMetaByYear[year] || {}, { year: year, path: path, sha: savedSha, verifiedAt: new Date().toISOString() });
+                if (year === state.activeRateYear) { state.remoteSha = savedSha; state.remotePath = path; state.source = 'github-saved'; state.rows = rateRows; }
                 state.sourceWarnings = [];
+                persistVerifiedRemoteCache();
                 setStatus('GitHub \uc800\uc7a5 \uc644\ub8cc \u00b7 ' + path + (backupPath ? ' \u00b7 Backup ' + backupPath : ''), false);
-                notifyUser('\uae30\ubcf8\uacac\uc801 \ub2e8\uac00\ub97c GitHub\uc5d0 \uc800\uc7a5\ud588\uc2b5\ub2c8\ub2e4.', 'success');
-                document.dispatchEvent(new CustomEvent('cost-estimation:remote-saved', { detail: { path: path, backupPath: backupPath, sha: state.remoteSha } }));
+                notifyUser(rateYearPrefix(year) + ' \uae30\ubcf8\uacac\uc801 \ub2e8\uac00\ub97c GitHub\uc5d0 \uc800\uc7a5\ud588\uc2b5\ub2c8\ub2e4.', 'success');
+                document.dispatchEvent(new CustomEvent('cost-estimation:remote-saved', { detail: { year: year, path: path, backupPath: backupPath, sha: savedSha } }));
                 return true;
             } catch (error) {
                 setStatus(error.message || error, true);
@@ -142164,7 +142737,10 @@ window.openAddNewProjectModal = function(editProject) {
             }, true);
             modal.addEventListener('toggle', function(event) {
                 var details = event.target;
+                if (details && details.matches && details.matches('[data-cost-rate-trend]')) { state.rateTrendOpen = !!details.open; return; }
+                if (details && details.matches && details.matches('[data-cost-rate-editor]')) { state.openRateYears[details.dataset.costRateEditor] = !!details.open; return; }
                 if (!details || !details.matches || !details.matches('[data-cost-section]')) return;
+                if (details.dataset.costSection === 'settings' && details.parentElement) details.parentElement.classList.toggle('cost-analysis-settings-expanded', !!details.open);
                 if (modal.classList.contains('hidden')) {
                     var hiddenHost = details.querySelector(details.dataset.costSection === 'settings' ? '[data-cost-settings]' : '[data-cost-exceptions]');
                     if (hiddenHost) hiddenHost.textContent = '';
@@ -142229,7 +142805,7 @@ window.openAddNewProjectModal = function(editProject) {
                         render();
                         startAutomaticRateLoad(true).then(render).catch(function(error) { setStatus(error.message || error, true); });
                     } else {
-                        var manualRows = loadCache();
+                        var manualRows = loadCache(state.activeRateYear || getTargetRateYear());
                         if (manualRows.length) { state.rows = manualRows; state.rowsByYear[state.activeRateYear || getTargetRateYear()] = manualRows; state.source = 'manual-cache'; }
                         render();
                     }
@@ -142238,7 +142814,9 @@ window.openAddNewProjectModal = function(editProject) {
                 if (target.closest('[data-cost-remote-load]')) {
                     state.sourceMode = 'auto'; persist(); activateAutomaticTarget(); render(); startAutomaticRateLoad(true).then(render).catch(function(error) { setStatus(error.message || error, true); }); return;
                 }
-                if (target.closest('[data-cost-remote-save]')) { remoteSave(true); return; }
+                var rateSaveButton = target.closest('[data-cost-rate-save-year]');
+                if (rateSaveButton) { remoteSave(true, rateSaveButton.dataset.costRateSaveYear); return; }
+                if (target.closest('[data-cost-remote-save]')) { remoteSave(true, state.activeRateYear); return; }
                 if (target.closest('[data-cost-local-open]')) { modal.querySelector('[data-cost-file]').click(); return; }
                 if (target.closest('[data-cost-download]')) { downloadWorkbook(); return; }
                 if (target.closest('[data-cost-export-all]')) { downloadAnalysisWorkbook(); return; }
@@ -142300,6 +142878,16 @@ window.openAddNewProjectModal = function(editProject) {
                 if (target.matches('[data-cost-file]')) { importFile(target.files && target.files[0]); target.value = ''; return; }
                 if (target.matches('[data-cost-column]')) { state.hiddenColumns[target.dataset.costColumn] = !target.checked; syncColumnVisibility(modal); return; }
                 if (target.matches('[data-cost-multi-option]')) { return; }
+                if (target.matches('[data-cost-rate-year-preference]')) {
+                    state.rateYearOverride = target.value === 'auto' ? '' : normalizeRateYear(target.value);
+                    persist();
+                    var selectedRateYear = getTargetRateYear();
+                    activateRateYear(selectedRateYear);
+                    state.analysis = null;
+                    render();
+                    if (state.sourceMode === 'auto' && !state.rows.length) startAutomaticRateLoad(true).then(render).catch(function(error) { setStatus(error.message || error, true); });
+                    return;
+                }
                 if (target.matches('[data-cost-filter-type]')) {
                     state.filterType = target.value || 'all'; state.filterValues = []; state.filterValue = '';
                     if (state.renderRaf) { cancelAnimationFrame(state.renderRaf); state.renderRaf = 0; }
@@ -142314,12 +142902,16 @@ window.openAddNewProjectModal = function(editProject) {
                 var row = target.closest('[data-setting-index]');
                 if (field && row) {
                     var index = Number(row.dataset.settingIndex);
-                    if (!state.rows[index]) return;
-                    state.rows[index][field] = field === 'excluded' ? !!target.checked : Math.max(0, parseNumber(target.value));
-                    if (field === 'cost') target.value = formatAccountingInput(state.rows[index][field]);
-                    state.rowsByYear[state.activeRateYear || getTargetRateYear()] = state.rows;
-                    state.sourceByYear[state.activeRateYear || getTargetRateYear()] = state.sourceMode === 'manual' ? 'manual-file' : (state.sourceByYear[state.activeRateYear || getTargetRateYear()] || state.source);
-                    persist(); scheduleRender(); scheduleRemoteSave();
+                    var settingYear = normalizeRateYear(row.dataset.settingYear) || state.activeRateYear || getTargetRateYear();
+                    var settingRows = state.rowsByYear[settingYear] || [];
+                    if (!settingRows[index]) return;
+                    settingRows[index][field] = field === 'excluded' ? !!target.checked : Math.max(0, parseNumber(target.value));
+                    if (field === 'cost') target.value = formatAccountingInput(settingRows[index][field]);
+                    state.rowsByYear[settingYear] = settingRows;
+                    if (settingYear === state.activeRateYear) state.rows = settingRows;
+                    state.sourceByYear[settingYear] = state.sourceMode === 'manual' ? 'manual-file' : (state.sourceByYear[settingYear] || state.source);
+                    state.analysis = null;
+                    persist(); scheduleRender(); scheduleRemoteSave(settingYear);
                 }
             });
             modal.addEventListener('keydown', function(event) {
@@ -142523,6 +143115,7 @@ window.openAddNewProjectModal = function(editProject) {
             state.initialized = true;
             state.sourceMode = 'auto';
             try { localStorage.setItem(MODE_KEY, 'auto'); } catch (e) { }
+            loadRateYearPreference();
             hydrateVerifiedRemoteCache(false);
             ensureEntryButton();
             bindWorkContentApiSync();
@@ -142535,10 +143128,10 @@ window.openAddNewProjectModal = function(editProject) {
             window.addEventListener('resize', scheduleEntryButtonSync, { passive: true });
         }
         window.CostEstimationAnalysis = {
-            version: '2026.07.28.2', open: open, close: close, loadDefault: loadDefault,
+            version: '2026.07.29.1', open: open, close: close, loadDefault: loadDefault,
             analyze: buildAnalysis, getComparisonSource: function() { return buildAnalysis({ ignorePeriodFilter: true, commit: false }); }, remoteSave: remoteSave, getRemotePath: getRemotePath,
             openEvidence: openEvidence, downloadAnalysisWorkbook: downloadAnalysisWorkbook, downloadEvidenceWorkbook: downloadEvidenceWorkbook,
-            getState: function() { return { sourceMode: state.sourceMode, source: state.source, rows: state.rows.slice(), rowsByYear: Object.keys(state.rowsByYear).reduce(function(out, year) { out[year] = (state.rowsByYear[year] || []).slice(); return out; }, {}), sourceByYear: Object.assign({}, state.sourceByYear), errorByYear: Object.assign({}, state.errorByYear), remoteCatalog: state.remoteCatalog.map(function(entry) { return Object.assign({}, entry); }), activeRateYear: state.activeRateYear, sourceWarnings: state.sourceWarnings.slice(), sourceNotices: state.sourceNotices.slice(), verifiedMetaByYear: Object.assign({}, state.verifiedMetaByYear), startupStarted: state.startupStarted, startupPending: !!state.startupPromise, remotePath: state.remotePath, remoteSha: state.remoteSha, analysis: state.analysis, evidence: state.evidence, filterYear: state.filterYear, filterYears: state.filterYears.slice(), filterType: state.filterType, filterValue: state.filterValue, filterValues: state.filterValues.slice(), periodBasis: state.periodBasis, analysisPage: state.analysisPage, evidencePage: state.evidencePage, otherPage: state.otherPage, lastError: state.lastError }; }
+            getState: function() { return { sourceMode: state.sourceMode, source: state.source, rows: state.rows.slice(), rowsByYear: Object.keys(state.rowsByYear).reduce(function(out, year) { out[year] = (state.rowsByYear[year] || []).slice(); return out; }, {}), sourceByYear: Object.assign({}, state.sourceByYear), errorByYear: Object.assign({}, state.errorByYear), remoteCatalog: state.remoteCatalog.map(function(entry) { return Object.assign({}, entry); }), activeRateYear: state.activeRateYear, rateYearPreference: state.rateYearOverride || 'auto', targetRateYear: getTargetRateYear(), availableRateYears: availableRateYears(), sourceWarnings: state.sourceWarnings.slice(), sourceNotices: state.sourceNotices.slice(), verifiedMetaByYear: Object.assign({}, state.verifiedMetaByYear), startupStarted: state.startupStarted, startupPending: !!state.startupPromise, remotePath: state.remotePath, remoteSha: state.remoteSha, analysis: state.analysis, evidence: state.evidence, filterYear: state.filterYear, filterYears: state.filterYears.slice(), filterType: state.filterType, filterValue: state.filterValue, filterValues: state.filterValues.slice(), periodBasis: state.periodBasis, analysisPage: state.analysisPage, evidencePage: state.evidencePage, otherPage: state.otherPage, lastError: state.lastError }; }
         };
         window.CostEstimationAnalysis.syncEntryButton = syncEntryButton;
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, { once: true }); else init();
@@ -143796,6 +144389,64 @@ window.openAddNewProjectModal = function(editProject) {
             pointer-events: none;
         }
     </style>
+    <style id="codex-gantt-toggle-axis-header-contract-20260729">
+        @media (min-width: 769px) {
+            #projectView > .accordion-header #scheduleHeaderToggle,
+            #projectView #legendSection #legendToggle,
+            #projectView #ganttChartWrapper .header-toggle-btn-container {
+                left: calc(50% - 96px) !important;
+            }
+        }
+
+        @media (max-width: 768px) and (orientation: portrait) {
+            #projectView #ganttChartWrapper .gantt-titles > .header > .header-col {
+                box-sizing: border-box !important;
+                flex-shrink: 0 !important;
+                overflow: hidden !important;
+            }
+
+            #projectView #ganttChartWrapper .gantt-titles > .header > .header-col:has(> .toggle-col-btn[data-col="project-po"]) {
+                flex: 0 0 72px !important;
+                width: 72px !important;
+                min-width: 72px !important;
+                max-width: 72px !important;
+            }
+
+            #projectView #ganttChartWrapper .gantt-titles > .header > .header-col:has(> .toggle-col-btn[data-col="project-dates"]) {
+                flex: 0 0 170px !important;
+                width: 170px !important;
+                min-width: 170px !important;
+                max-width: 170px !important;
+            }
+
+            #projectView #ganttChartWrapper .gantt-titles > .header > .header-col:has(> .toggle-col-btn[data-col="project-progress"]) {
+                flex: 0 0 72px !important;
+                width: 72px !important;
+                min-width: 72px !important;
+                max-width: 72px !important;
+            }
+
+            #projectView #ganttChartWrapper .gantt-titles > .header > .header-col:has(> .toggle-col-btn[data-col="project-settlement"]) {
+                flex: 0 0 74px !important;
+                width: 74px !important;
+                min-width: 74px !important;
+                max-width: 74px !important;
+            }
+
+            #projectView #ganttChartWrapper .gantt-titles > .header > .header-col:has(> .toggle-col-btn[data-col="project-progress-summary"]) {
+                flex: 0 0 120px !important;
+                width: 120px !important;
+                min-width: 120px !important;
+                max-width: 120px !important;
+            }
+
+            #projectView #ganttChartWrapper .gantt-titles > .header > .header-col > .toggle-col-btn,
+            #projectView #ganttChartWrapper .gantt-titles > .header > .header-col > .font-semibold {
+                flex: 0 0 auto !important;
+                white-space: nowrap !important;
+            }
+        }
+    </style>
     <script id="modal-no-sort-integrity-v1">
     (function() {
         'use strict';
@@ -143828,6 +144479,10 @@ window.openAddNewProjectModal = function(editProject) {
         function isNoHeader(th) {
             var label = headerLabel(th);
             return label === 'no' || label === '\uff4e\uff4f';
+        }
+
+        function hasFineHover() {
+            return !window.matchMedia || window.matchMedia('(hover: hover) and (pointer: fine)').matches;
         }
 
         function logicalColumnIndex(th) {
@@ -143948,7 +144603,8 @@ window.openAddNewProjectModal = function(editProject) {
             th.setAttribute('data-modal-no-sort-column', String(columnIndex));
             if (!th.hasAttribute('tabindex')) th.tabIndex = 0;
             if (!th.hasAttribute('role')) th.setAttribute('role', 'button');
-            th.setAttribute('title', '\uc624\ub984\ucc28\uc21c/\ub0b4\ub9bc\ucc28\uc21c \uc815\ub82c');
+            if (hasFineHover()) th.setAttribute('title', '\uc624\ub984\ucc28\uc21c/\ub0b4\ub9bc\ucc28\uc21c \uc815\ub82c');
+            else if (th.getAttribute('title') === '\uc624\ub984\ucc28\uc21c/\ub0b4\ub9bc\ucc28\uc21c \uc815\ub82c') th.removeAttribute('title');
             setHeaderDirection(th, detectedDirection(table, columnIndex));
             table.setAttribute('data-modal-no-sort-enhanced', VERSION);
             return true;
