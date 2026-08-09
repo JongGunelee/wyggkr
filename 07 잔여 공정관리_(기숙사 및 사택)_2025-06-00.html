@@ -1910,6 +1910,31 @@
             flex: 0 0 34px !important;
         }
 
+        /* 포켓이 열린 동안에만 MM-NN-고객사 전체 라벨을 읽을 수 있는 공 모양 캡슐로 확장한다. */
+        .settlement-evidence-pocket-balls .billiard-ball.is-pocket-label {
+            width: auto !important;
+            min-width: 132px !important;
+            max-width: 100% !important;
+            height: auto !important;
+            min-height: 34px !important;
+            padding: 5px 10px !important;
+            flex: 0 1 auto !important;
+            border-radius: 999px !important;
+            box-sizing: border-box !important;
+        }
+
+        .settlement-evidence-pocket-balls .billiard-ball.is-pocket-label > span {
+            width: 100% !important;
+            max-width: none !important;
+            font-size: 10px !important;
+            line-height: 1.25 !important;
+            letter-spacing: -0.02em !important;
+            white-space: normal !important;
+            word-break: keep-all !important;
+            overflow-wrap: anywhere !important;
+            text-align: center !important;
+        }
+
         .settlement-modal-overlay .settlement-header-collapsible.settlement-evidence-pocket-active.collapsed {
             min-height: 44px !important;
             height: 44px !important;
@@ -88426,6 +88451,10 @@ function showPendingSettlementModal(periodType, projects) {
                             return Number.isFinite(n) && n >= 1 && n <= 12 ? n : 0;
                         };
                         const getCustomer = (p) => {
+                            const resolved = (typeof window.resolveCustomerText === 'function')
+                                ? window.resolveCustomerText(p)
+                                : '';
+                            if (resolved && String(resolved).trim()) return String(resolved).trim();
                             const direct = p && (p.customer || p.Customer);
                             if (direct) return String(direct);
                             const cf = p && p.customFields;
@@ -88485,12 +88514,16 @@ function showPendingSettlementModal(periodType, projects) {
                                     ball.className = `billiard-ball ball-${mVal}${isStripe ? ' ball-stripe' : ''} settlement-doc-dynamic-btn`;
                                     const suffix = docs.length > 1 ? `-${idx + 1}` : '';
                                     const ballLabel = mVal ? String(mVal).padStart(2, '0') + suffix : '?';
+                                    const pocketCustomer = String(item.customer || '').trim() || '미지정';
+                                    const pocketBallLabel = `${mVal ? String(mVal).padStart(2, '0') : '?'}-${String(idx + 1).padStart(2, '0')}-${pocketCustomer}`;
                                     const labelUnits = Math.max(1, Array.from(ballLabel).length * 0.62);
                                     const labelFontSize = Math.max(6, Math.min(11, Math.floor((25 / labelUnits) * 10) / 10));
                                     ball.style.setProperty('--billiard-label-font-size', `${labelFontSize}px`);
                                     ball.innerHTML = `<span>${ballLabel}</span>`;
                                     ball.dataset.settlementMonth = String(mVal);
                                     ball.dataset.settlementQuarter = String(mVal ? Math.floor((mVal - 1) / 3) + 1 : 0);
+                                    ball.dataset.settlementCompactLabel = ballLabel;
+                                    ball.dataset.settlementPocketLabel = pocketBallLabel;
                                     ball.dataset.tooltip = `${mVal ? mVal + '월' : '월 미상'} 증빙${suffix}${item.customer ? '(' + item.customer + ')' : ''}`;
                                     ball.title = `${ball.dataset.tooltip} - DOC_URL 열기`;
                                     ball.addEventListener('click', (e) => {
@@ -88526,6 +88559,21 @@ function showPendingSettlementModal(periodType, projects) {
                                 const groupButtons = new Map();
                                 const groups = new Map();
                                 let activeGroup = '';
+
+                                const setPocketBallLabel = (ball, expanded) => {
+                                    const label = ball.querySelector('span');
+                                    if (!label) return;
+                                    const text = expanded
+                                        ? ball.dataset.settlementPocketLabel
+                                        : ball.dataset.settlementCompactLabel;
+                                    label.textContent = text || '';
+                                    ball.classList.toggle('is-pocket-label', expanded);
+                                    if (expanded) {
+                                        ball.setAttribute('aria-label', `${text} 증빙 열기`);
+                                    } else {
+                                        ball.removeAttribute('aria-label');
+                                    }
+                                };
 
                                 parent.classList.add('settlement-evidence-host');
                                 launcherHost.className = 'settlement-evidence-group-launchers';
@@ -88574,6 +88622,7 @@ function showPendingSettlementModal(periodType, projects) {
                                 const closePocket = (restoreFocus) => {
                                     pocket.hidden = true;
                                     activeGroup = '';
+                                    originalBalls.forEach((ball) => setPocketBallLabel(ball, false));
                                     groupButtons.forEach((button) => {
                                         button.classList.remove('is-active');
                                         button.setAttribute('aria-expanded', 'false');
@@ -88592,7 +88641,9 @@ function showPendingSettlementModal(periodType, projects) {
                                         const ballGroup = groupMode === 'quarter'
                                             ? String(ball.dataset.settlementQuarter || '0')
                                             : String(ball.dataset.settlementMonth || '0');
-                                        ball.hidden = ballGroup !== groupKey;
+                                        const selected = ballGroup === groupKey;
+                                        ball.hidden = !selected;
+                                        setPocketBallLabel(ball, selected);
                                     });
                                     pocketTitle.textContent = `${meta.spoken} 정산 증빙 ${visibleBalls.length}개`;
                                     pocket.setAttribute('aria-label', `${meta.spoken} 정산 증빙 포켓`);
