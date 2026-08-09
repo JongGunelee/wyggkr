@@ -78406,24 +78406,23 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         }
                     };
 
-                    // \ud074\ub9ad \uc774\ubca4\ud2b8\ub294 \ud55c \ubc88\ub9cc \ub4f1\ub85d
-                    if (!btn._workdateClickAttached) {
-                        btn.ontouchstart = () => {
-                            if (isMobileWorkdateViewport()) {
-                                window.__workdatePopoverOpeningAt = Date.now();
-                                hideTooltip();
-                            }
-                        };
-                        btn.addEventListener('click', (e) => {
-                            e.stopPropagation();
+                    // [2026-08-09] Web Save/re-render may leave a stale one-shot listener flag.
+                    // Reassign one current handler atomically so every sync repairs the button without duplicates.
+                    btn.ontouchstart = () => {
+                        if (isMobileWorkdateViewport()) {
                             window.__workdatePopoverOpeningAt = Date.now();
                             hideTooltip();
-                            const planStart = normalizeDate(project?.startDate || project?.startDateStr);
-                            const planEnd = normalizeDate(project?.endDate || project?.endDateStr);
-                            createWorkDatePopover(projectId, project?.name || '\uc791\uc5c5', planStart, planEnd);
-                        });
-                        btn._workdateClickAttached = true;
-                    }
+                        }
+                    };
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        window.__workdatePopoverOpeningAt = Date.now();
+                        hideTooltip();
+                        const planStart = normalizeDate(project?.startDate || project?.startDateStr);
+                        const planEnd = normalizeDate(project?.endDate || project?.endDateStr);
+                        createWorkDatePopover(projectId, project?.name || '\uc791\uc5c5', planStart, planEnd);
+                    };
+                    btn._workdateClickAttached = true;
                 });
 
                 if (dayOfWeekUtil && typeof dayOfWeekUtil.decorateExistingGanttDates === 'function') {
@@ -120504,7 +120503,9 @@ window.openAddNewProjectModal = function(editProject) {
 
             var LOG = '[WebSavePlugin]';
             var INTEGRITY_BUILD = '2026.07.27.8';
+            var ATTENTION_BUILD = '2026.08.09.1';
             try { window.__codexWebSaveIntegrityBuild = INTEGRITY_BUILD; } catch (integrityBuildError) { }
+            try { window.__codexWebSaveAttentionBuild = ATTENTION_BUILD; } catch (attentionBuildError) { }
             var CONFIG = {
                 apiBase: 'https://api.github.com/repos/jonggunelee/wyggkr04/contents/',
                 targetPath: 'RawData/공정관리/26년 잔여 공사 공정관리_(입력).xlsb',
@@ -126199,15 +126200,24 @@ window.openAddNewProjectModal = function(editProject) {
             function initBackgroundShaFetch() {
                 if (state.shaFetchStarted) return;
                 state.shaFetchStarted = true;
+                function canPublishBackgroundShaStatus() {
+                    var status = String(state.status || 'idle');
+                    var hasPendingReason = Object.keys(state.dirtyReasons || {}).length > 0;
+                    return !state.busy && !state.remoteDirty && !hasPendingReason && /^(idle|sha-pending|sha-ready)$/.test(status);
+                }
                 runWhenIdle(function () {
                     fetchRemoteSha('').then(function (sha) {
-                        state.status = 'sha-ready';
-                        state.lastError = '';
+                        if (canPublishBackgroundShaStatus()) {
+                            state.status = 'sha-ready';
+                            state.lastError = '';
+                        }
                         updateButton();
                         try { console.log(LOG, 'initial sha captured', sha); } catch (e) { }
                     }).catch(function (error) {
-                        state.status = 'sha-pending';
-                        state.lastError = error && error.message ? error.message : String(error);
+                        if (canPublishBackgroundShaStatus()) {
+                            state.status = 'sha-pending';
+                            state.lastError = error && error.message ? error.message : String(error);
+                        }
                         updateButton();
                         try { console.warn(LOG, 'background sha fetch skipped', state.lastError); } catch (e2) { }
                     });
@@ -127825,6 +127835,7 @@ window.openAddNewProjectModal = function(editProject) {
                 btn.title = hasUserPendingChange
                     ? '웹 저장 필요 - ' + dirtyReasonKeys.join(', ')
                     : ('웹 저장 - ' + label + (state.lastError ? ' / ' + state.lastError : ''));
+                btn.setAttribute('aria-label', hasUserPendingChange ? '웹 저장 필요: 변경 사항을 GitHub XLSB에 저장' : '웹 저장');
                 var stateEl = btn.querySelector('.codex-websave-state');
                 if (stateEl) stateEl.textContent = progressActive ? ((state.progressLabel || label) + ' ' + progress + '%') : label;
             }
@@ -127869,7 +127880,7 @@ window.openAddNewProjectModal = function(editProject) {
                 var style = document.createElement('style');
                 style.id = 'websave-plugin-style-20260529';
                 style.textContent = [
-                    '.codex-websave-btn{--websave-progress:0%;position:relative!important;overflow:hidden!important;display:inline-flex!important;align-items:center!important;gap:5px!important;background:#eefdf8!important;border:1px solid #14b8a6!important;color:#0f766e!important;font-weight:800!important;box-shadow:0 1px 2px rgba(15,118,110,.12)!important;}',
+                    '.codex-websave-btn{--websave-progress:0%;position:relative!important;overflow:hidden!important;display:inline-flex!important;align-items:center!important;gap:5px!important;background:#eefdf8;border:1px solid #14b8a6!important;color:#0f766e!important;font-weight:800!important;box-shadow:0 1px 2px rgba(15,118,110,.12);}',
                     '.codex-websave-btn:hover{background:#14b8a6!important;color:#fff!important;}',
                     '.codex-websave-btn:disabled{opacity:.64!important;cursor:wait!important;}',
                     '.codex-websave-progress-fill{position:absolute!important;left:0!important;top:0!important;bottom:0!important;width:var(--websave-progress)!important;background:linear-gradient(90deg,rgba(254,202,202,.62),rgba(248,113,113,.52),rgba(185,28,28,.50))!important;transition:width .18s ease!important;pointer-events:none!important;}',
@@ -127878,9 +127889,11 @@ window.openAddNewProjectModal = function(editProject) {
                     '.codex-websave-state{display:none!important;font-size:11px!important;font-weight:900!important;border-left:1px solid rgba(15,118,110,.25)!important;padding-left:6px!important;white-space:nowrap!important;}',
                     '.codex-websave-btn[data-websave-progress-active="1"] .codex-websave-state{display:inline!important;}',
                     '.codex-websave-btn:hover .codex-websave-state{border-left-color:rgba(255,255,255,.36)!important;}',
-                    '@keyframes codexPendingWebSavePulse{0%,100%{background:#fff7ed!important;border-color:#fb923c!important;color:#9a3412!important;box-shadow:0 0 0 0 rgba(248,113,113,.20)!important}50%{background:#fee2e2!important;border-color:#ef4444!important;color:#991b1b!important;box-shadow:0 0 0 5px rgba(248,113,113,.15)!important}}',
-                    '.codex-websave-btn.has-pending-web-save,.codex-xlsb-upload-btn.has-pending-web-upload{animation:codexPendingWebSavePulse 1.5s ease-in-out infinite!important;}',
-                    '@media(prefers-reduced-motion:reduce){.codex-websave-btn.has-pending-web-save,.codex-xlsb-upload-btn.has-pending-web-upload{animation:none!important;background:#fee2e2!important;border-color:#ef4444!important;color:#991b1b!important}}',
+                    '@keyframes codexProjApplyPendingPulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.12);background:#0891b2}50%{box-shadow:0 0 0 6px rgba(239,68,68,.24);background:#dc2626}}',
+                    '@keyframes codexPendingWebUploadPulse{0%,100%{background:#fff7ed!important;border-color:#fb923c!important;color:#9a3412!important;box-shadow:0 0 0 0 rgba(248,113,113,.20)!important}50%{background:#fee2e2!important;border-color:#ef4444!important;color:#991b1b!important;box-shadow:0 0 0 5px rgba(248,113,113,.15)!important}}',
+                    '.codex-websave-btn.has-pending-web-save{animation:codexProjApplyPendingPulse 1.15s ease-in-out infinite!important;border-color:#dc2626!important;color:#fff!important;}',
+                    '.codex-xlsb-upload-btn.has-pending-web-upload{animation:codexPendingWebUploadPulse 1.5s ease-in-out infinite!important;}',
+                    '@media(prefers-reduced-motion:reduce){.codex-websave-btn.has-pending-web-save{animation:none!important;background:#dc2626!important;border-color:#dc2626!important;color:#fff!important}.codex-xlsb-upload-btn.has-pending-web-upload{animation:none!important;background:#fee2e2!important;border-color:#ef4444!important;color:#991b1b!important}}',
                     '@media(max-width:520px){.codex-websave-btn{padding:6px 8px!important;gap:4px!important}.codex-websave-label{display:inline!important}.codex-websave-state{font-size:10px!important;padding-left:4px!important}}'
                 ].join('');
                 document.head.appendChild(style);
@@ -127928,6 +127941,7 @@ window.openAddNewProjectModal = function(editProject) {
             window.WebSavePlugin = {
                 __installed20260529: true,
                 integrityBuild: INTEGRITY_BUILD,
+                attentionBuild: ATTENTION_BUILD,
                 config: CONFIG,
                 state: state,
                 initBackgroundShaFetch: initBackgroundShaFetch,
@@ -144537,7 +144551,7 @@ window.openAddNewProjectModal = function(editProject) {
     <script id="codex-cost-year-compare-20260728">
     (function installCostYearCompare20260728() {
         'use strict';
-        if (window.CostYearCompare && window.CostYearCompare.version === '2026.08.08.4') return;
+        if (window.CostYearCompare && window.CostYearCompare.version === '2026.08.09.1') return;
 
         var PAGE_SIZE = 80;
         var STATUS_ORDER = ['saving', 'compliant', 'overrun', 'excluded', 'unmatched'];
@@ -145733,11 +145747,9 @@ window.openAddNewProjectModal = function(editProject) {
                         color:chartStatusColor(row.status, index)
                     };
                 }).filter(function(row) { return row.value > .5; });
-                var statusShareTotal = statusShareRows.reduce(function(sum, row) { return sum + row.value; }, 0);
                 spec.headers = ['판정',baseLabel + ' 실제 PO'];
                 spec.rows = statusShareRows.map(function(row) {
-                    var pct = statusShareTotal > 0 ? (row.value / statusShareTotal * 100).toFixed(1) + '%' : '0.0%';
-                    return [row.label + '   ' + pct, row.value];
+                    return [row.label, row.value];
                 });
                 spec.rows.forEach(function(row, index) { spec.inputCells.push('B' + (index + 2)); });
                 spec.nativeKind = 'doughnut';
@@ -146284,7 +146296,7 @@ window.openAddNewProjectModal = function(editProject) {
             } else if (spec.key === 'detail-table') {
                 eachRow(function(row) { set('H' + row, 'money-input'); set('I' + row, 'money-input'); set('J' + row, 'money-formula'); });
             } else if (spec.key === 'status-share') {
-                eachRow(function(row) { set('B' + row, 'money-input'); set('C' + row, 'money-formula'); });
+                eachRow(function(row) { set('A' + row, 'text-formula'); set('B' + row, 'money-input'); set('C' + row, 'money-formula'); });
                 if (spec.rows.length) { set('D2', 'money-formula'); set('E2', 'text-formula'); }
             }
             spec.dataCellRoles = roles;
@@ -146324,9 +146336,14 @@ window.openAddNewProjectModal = function(editProject) {
                 spec.rows.forEach(function(row, index) {
                     var excelRow = index + 2;
                     var absolute = Math.abs(number(row[1]));
+                    var categoryLabel = String(row[0] == null ? '' : row[0]);
+                    var percentage = total > 0 ? absolute / total : 0;
+                    var categoryValue = categoryLabel + '   ' + (percentage * 100).toFixed(1) + '%';
                     row.push(absolute, index === 0 ? total : null, index === 0 ? chartCompactWonUnsigned(total) : '');
+                    row[0] = categoryValue;
+                    spec.formulas.push({ cell:'A' + excelRow, formula:'"' + categoryLabel.replace(/"/g, '""') + '   "&TEXT(IF($D$2=0,0,C' + excelRow + '/$D$2),"0.0%")', value:categoryValue, type:'s' });
                     spec.formulas.push({ cell:'C' + excelRow, formula:'ABS(B' + excelRow + ')', value:absolute });
-                    spec.formulaCells.push('C' + excelRow);
+                    spec.formulaCells.push('A' + excelRow, 'C' + excelRow);
                 });
                 if (spec.rows.length) {
                     spec.formulas.push({ cell:'D2', formula:'SUM(C2:C' + (spec.rows.length + 1) + ')', value:total });
@@ -146872,7 +146889,7 @@ window.openAddNewProjectModal = function(editProject) {
         document.addEventListener('data:changed', refresh, { passive:true });
 
         window.CostYearCompare = {
-            version:'2026.08.08.4',
+            version:'2026.08.09.1',
             open:open,
             close:close,
             refresh:refresh,
