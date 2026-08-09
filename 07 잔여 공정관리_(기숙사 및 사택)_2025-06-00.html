@@ -1713,6 +1713,235 @@
         .ball-12::after { background: #1A237E; }
         .ball-stripe span { position: relative; z-index: 2; color: #000 !important; text-shadow: none !important; font-weight: 900; }
         .ball-4 span, .ball-8 span { color: #fff !important; }
+
+        /* [MOBILE-SETTLEMENT-QUARTER-POCKET-20260809]
+           연도 정산의 증빙 공이 많을 때 헤더 높이를 늘리지 않고 분기별로 지연 표시한다. */
+        .settlement-quarter-launchers[hidden],
+        .settlement-quarter-pocket[hidden],
+        .settlement-quarter-pocket .billiard-ball[hidden] {
+            display: none !important;
+        }
+
+        @media (max-width: 768px) and (orientation: portrait) {
+            .settlement-modal-overlay .settlement-header-collapsible.settlement-quarter-pocket-active {
+                min-height: 71px !important;
+                height: 71px !important;
+                padding: 10px 8px !important;
+                overflow: visible !important;
+            }
+
+            .settlement-quarter-pocket-active > .settlement-evidence-host {
+                position: static !important;
+                min-width: 0 !important;
+            }
+
+            .settlement-quarter-pocket-active > .settlement-evidence-host > h2 {
+                position: absolute !important;
+                left: 50% !important;
+                bottom: 7px !important;
+                width: min(160px, calc(100vw - 170px)) !important;
+                max-width: min(160px, calc(100vw - 170px)) !important;
+                transform: translateX(-50%) !important;
+                margin: 0 !important;
+                font-size: 13px !important;
+                line-height: 16px !important;
+                text-align: center !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                pointer-events: none !important;
+            }
+
+            .settlement-quarter-pocket-active .settlement-evidence-buttons-container.settlement-quarter-launcher-mode {
+                position: absolute !important;
+                top: 4px !important;
+                left: 50% !important;
+                width: auto !important;
+                max-width: calc(100vw - 160px) !important;
+                min-height: 36px !important;
+                transform: translateX(-50%) !important;
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 5px !important;
+                margin: 0 !important;
+                padding: 0 3px !important;
+                overflow-x: auto !important;
+                overflow-y: visible !important;
+                scrollbar-width: none !important;
+                contain: layout style !important;
+                z-index: 102 !important;
+            }
+
+            .settlement-quarter-pocket-active .settlement-evidence-buttons-container.settlement-quarter-launcher-mode::-webkit-scrollbar {
+                display: none !important;
+            }
+
+            .settlement-quarter-launchers {
+                display: flex !important;
+                flex: 0 0 auto !important;
+                align-items: center !important;
+                justify-content: center !important;
+                gap: 5px !important;
+            }
+
+            .settlement-quarter-ball {
+                position: relative !important;
+                width: 34px !important;
+                min-width: 34px !important;
+                height: 34px !important;
+                min-height: 34px !important;
+                padding: 0 !important;
+                border: 1px solid rgba(255, 255, 255, 0.42) !important;
+                border-radius: 50% !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                color: #fff !important;
+                font-size: 8.5px !important;
+                line-height: 1 !important;
+                font-weight: 900 !important;
+                letter-spacing: -0.08em !important;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55) !important;
+                box-shadow: 0 3px 7px rgba(15, 23, 42, 0.35), inset -3px -3px 5px rgba(15, 23, 42, 0.32), inset 2px 2px 4px rgba(255, 255, 255, 0.36) !important;
+                cursor: pointer !important;
+                touch-action: manipulation !important;
+                flex-shrink: 0 !important;
+            }
+
+            .settlement-quarter-ball[data-quarter="1"] { background: radial-gradient(circle at 30% 25%, #60a5fa, #1d4ed8 72%) !important; }
+            .settlement-quarter-ball[data-quarter="2"] { background: radial-gradient(circle at 30% 25%, #4ade80, #15803d 72%) !important; }
+            .settlement-quarter-ball[data-quarter="3"] { background: radial-gradient(circle at 30% 25%, #fbbf24, #c2410c 72%) !important; }
+            .settlement-quarter-ball[data-quarter="4"] { background: radial-gradient(circle at 30% 25%, #c084fc, #7e22ce 72%) !important; }
+            .settlement-quarter-ball[data-quarter="0"] { background: radial-gradient(circle at 30% 25%, #94a3b8, #334155 72%) !important; }
+
+            .settlement-quarter-ball.is-active {
+                outline: 2px solid #ffffff !important;
+                outline-offset: 2px !important;
+                transform: translateY(-1px) scale(1.04) !important;
+            }
+
+            .settlement-quarter-ball-count {
+                position: absolute !important;
+                top: -5px !important;
+                right: -5px !important;
+                min-width: 14px !important;
+                height: 14px !important;
+                padding: 0 3px !important;
+                border: 1px solid rgba(255, 255, 255, 0.8) !important;
+                border-radius: 999px !important;
+                background: #0f172a !important;
+                color: #fff !important;
+                font-size: 8px !important;
+                line-height: 12px !important;
+                letter-spacing: 0 !important;
+                text-align: center !important;
+                text-shadow: none !important;
+                box-sizing: border-box !important;
+            }
+
+            .settlement-quarter-pocket {
+                position: absolute !important;
+                top: calc(100% + 18px) !important;
+                left: 50% !important;
+                width: min(330px, calc(100vw - 20px)) !important;
+                max-height: min(210px, calc(100dvh - 150px)) !important;
+                transform: translateX(-50%) !important;
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 9px !important;
+                padding: 10px 12px 14px !important;
+                border: 2px solid #a7f3d0 !important;
+                border-radius: 20px 20px 34px 34px !important;
+                background: radial-gradient(circle at 50% 5%, #15803d, #065f46 68%, #064e3b) !important;
+                box-shadow: 0 14px 30px rgba(15, 23, 42, 0.38), inset 0 0 0 2px rgba(255, 255, 255, 0.08) !important;
+                color: #fff !important;
+                box-sizing: border-box !important;
+                z-index: 100006 !important;
+                isolation: isolate !important;
+            }
+
+            .settlement-quarter-pocket::before,
+            .settlement-quarter-pocket::after {
+                content: '' !important;
+                position: absolute !important;
+                bottom: -5px !important;
+                width: 22px !important;
+                height: 22px !important;
+                border: 3px solid rgba(167, 243, 208, 0.9) !important;
+                border-radius: 50% !important;
+                background: #020617 !important;
+                box-shadow: inset 0 2px 5px #000 !important;
+                z-index: -1 !important;
+            }
+
+            .settlement-quarter-pocket::before { left: 9px !important; }
+            .settlement-quarter-pocket::after { right: 9px !important; }
+
+            .settlement-quarter-pocket-head {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                gap: 8px !important;
+                min-height: 26px !important;
+                padding: 0 2px 4px !important;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.24) !important;
+            }
+
+            .settlement-quarter-pocket-title {
+                min-width: 0 !important;
+                font-size: 13px !important;
+                line-height: 18px !important;
+                font-weight: 900 !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+
+            .settlement-quarter-pocket-close {
+                width: 28px !important;
+                min-width: 28px !important;
+                height: 28px !important;
+                min-height: 28px !important;
+                padding: 0 !important;
+                border: 1px solid rgba(255, 255, 255, 0.42) !important;
+                border-radius: 50% !important;
+                background: rgba(15, 23, 42, 0.42) !important;
+                color: #fff !important;
+                display: inline-flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                font-size: 18px !important;
+                line-height: 1 !important;
+                cursor: pointer !important;
+                touch-action: manipulation !important;
+            }
+
+            .settlement-quarter-pocket-balls {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                justify-content: center !important;
+                align-content: flex-start !important;
+                gap: 10px !important;
+                max-height: 142px !important;
+                padding: 4px 8px 8px !important;
+                overflow-x: hidden !important;
+                overflow-y: auto !important;
+                overscroll-behavior: contain !important;
+                touch-action: pan-y pinch-zoom !important;
+            }
+
+            .settlement-quarter-pocket-balls .billiard-ball {
+                width: 34px !important;
+                min-width: 34px !important;
+                height: 34px !important;
+                min-height: 34px !important;
+                padding: 0 !important;
+                flex: 0 0 34px !important;
+            }
+        }
 /* [v21.0-PRO] CONDITIONAL MOBILE MASTER (Show Summary only when Closed) */
     @media (max-width: 480px) {
         /* [1] Dashboard Accordion Header Grid */
@@ -88208,6 +88437,8 @@ function showPendingSettlementModal(periodType, projects) {
                                     const labelFontSize = Math.max(6, Math.min(11, Math.floor((25 / labelUnits) * 10) / 10));
                                     ball.style.setProperty('--billiard-label-font-size', `${labelFontSize}px`);
                                     ball.innerHTML = `<span>${ballLabel}</span>`;
+                                    ball.dataset.settlementMonth = String(mVal);
+                                    ball.dataset.settlementQuarter = String(mVal ? Math.floor((mVal - 1) / 3) + 1 : 0);
                                     ball.dataset.tooltip = `${mVal ? mVal + '월' : '월 미상'} 증빙${suffix}${item.customer ? '(' + item.customer + ')' : ''}`;
                                     ball.title = `${ball.dataset.tooltip} - DOC_URL 열기`;
                                     ball.addEventListener('click', (e) => {
@@ -88220,7 +88451,149 @@ function showPendingSettlementModal(periodType, projects) {
                             });
                         }
 
-                        if (box.children.length) parent.insertBefore(box, btnTemplate);
+                        if (box.children.length) {
+                            parent.insertBefore(box, btnTemplate);
+
+                            // [MOBILE-SETTLEMENT-QUARTER-POCKET-20260809]
+                            // 연도 상세에서 공이 많을 때만 실제 월 공 노드를 분기 포켓으로 옮긴다.
+                            // 월 공의 URL/클릭 핸들러는 복제하거나 재해석하지 않는다.
+                            const yearlyEvidence = /^\d{4}$/.test(currentModalKey);
+                            const originalBalls = Array.from(box.querySelectorAll('.billiard-ball'));
+                            if (yearlyEvidence && originalBalls.length > 4) {
+                                const header = parent.parentElement;
+                                const launcherHost = document.createElement('div');
+                                const pocket = document.createElement('div');
+                                const pocketHead = document.createElement('div');
+                                const pocketTitle = document.createElement('strong');
+                                const pocketClose = document.createElement('button');
+                                const pocketBalls = document.createElement('div');
+                                const quarterButtons = new Map();
+                                const groups = new Map();
+                                let activeQuarter = '';
+
+                                parent.classList.add('settlement-evidence-host');
+                                launcherHost.className = 'settlement-quarter-launchers';
+                                launcherHost.setAttribute('aria-label', '분기별 정산 증빙');
+                                box.appendChild(launcherHost);
+
+                                pocket.className = 'settlement-quarter-pocket';
+                                pocket.hidden = true;
+                                pocket.setAttribute('role', 'dialog');
+                                pocket.setAttribute('aria-modal', 'false');
+                                pocket.setAttribute('aria-label', '분기별 정산 증빙 포켓');
+                                pocketHead.className = 'settlement-quarter-pocket-head';
+                                pocketTitle.className = 'settlement-quarter-pocket-title';
+                                pocketClose.type = 'button';
+                                pocketClose.className = 'settlement-quarter-pocket-close';
+                                pocketClose.textContent = '\u00d7';
+                                pocketClose.setAttribute('aria-label', '증빙 포켓 닫기');
+                                pocketClose.title = '닫기';
+                                pocketBalls.className = 'settlement-quarter-pocket-balls';
+                                pocketHead.appendChild(pocketTitle);
+                                pocketHead.appendChild(pocketClose);
+                                pocket.appendChild(pocketHead);
+                                pocket.appendChild(pocketBalls);
+                                header.appendChild(pocket);
+
+                                originalBalls.forEach((ball) => {
+                                    const quarter = String(ball.dataset.settlementQuarter || '0');
+                                    if (!groups.has(quarter)) groups.set(quarter, []);
+                                    groups.get(quarter).push(ball);
+                                });
+
+                                const quarterLabel = (quarter) => quarter === '0' ? '기타' : `${quarter}분기`;
+                                const closePocket = (restoreFocus) => {
+                                    pocket.hidden = true;
+                                    activeQuarter = '';
+                                    quarterButtons.forEach((button) => {
+                                        button.classList.remove('is-active');
+                                        button.setAttribute('aria-expanded', 'false');
+                                    });
+                                    if (restoreFocus && restoreFocus.isConnected) restoreFocus.focus({ preventScroll: true });
+                                };
+                                const openPocket = (quarter, launcher) => {
+                                    if (!pocket.hidden && activeQuarter === quarter) {
+                                        closePocket(launcher);
+                                        return;
+                                    }
+                                    activeQuarter = quarter;
+                                    const visibleBalls = groups.get(quarter) || [];
+                                    originalBalls.forEach((ball) => {
+                                        ball.hidden = ball.dataset.settlementQuarter !== quarter;
+                                    });
+                                    pocketTitle.textContent = `${quarterLabel(quarter)} 월별 증빙 ${visibleBalls.length}개`;
+                                    pocket.setAttribute('aria-label', `${quarterLabel(quarter)} 월별 정산 증빙 포켓`);
+                                    pocket.hidden = false;
+                                    quarterButtons.forEach((button, key) => {
+                                        const selected = key === quarter;
+                                        button.classList.toggle('is-active', selected);
+                                        button.setAttribute('aria-expanded', selected ? 'true' : 'false');
+                                    });
+                                };
+
+                                Array.from(groups.keys()).sort((a, b) => Number(a || 99) - Number(b || 99)).forEach((quarter) => {
+                                    const button = document.createElement('button');
+                                    const label = document.createElement('span');
+                                    const count = document.createElement('small');
+                                    button.type = 'button';
+                                    button.className = 'settlement-quarter-ball';
+                                    button.dataset.quarter = quarter;
+                                    button.setAttribute('aria-expanded', 'false');
+                                    button.setAttribute('aria-haspopup', 'dialog');
+                                    button.setAttribute('aria-label', `${quarterLabel(quarter)} 증빙 ${groups.get(quarter).length}개 열기`);
+                                    button.title = `${quarterLabel(quarter)} 증빙 ${groups.get(quarter).length}개`;
+                                    label.textContent = quarterLabel(quarter);
+                                    count.className = 'settlement-quarter-ball-count';
+                                    count.textContent = String(groups.get(quarter).length);
+                                    count.setAttribute('aria-hidden', 'true');
+                                    button.appendChild(label);
+                                    button.appendChild(count);
+                                    button.addEventListener('click', (event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        openPocket(quarter, button);
+                                    });
+                                    quarterButtons.set(quarter, button);
+                                    launcherHost.appendChild(button);
+                                });
+
+                                pocketClose.addEventListener('click', (event) => {
+                                    event.preventDefault();
+                                    event.stopPropagation();
+                                    closePocket(quarterButtons.get(activeQuarter));
+                                });
+                                header.addEventListener('keydown', (event) => {
+                                    if (event.key === 'Escape' && !pocket.hidden) {
+                                        event.preventDefault();
+                                        closePocket(quarterButtons.get(activeQuarter));
+                                    }
+                                });
+                                modal.addEventListener('pointerdown', (event) => {
+                                    if (pocket.hidden || pocket.contains(event.target) || launcherHost.contains(event.target)) return;
+                                    closePocket();
+                                });
+
+                                modal.__syncSettlementEvidencePocket = () => {
+                                    const mobilePortrait = window.matchMedia('(max-width: 768px) and (orientation: portrait)').matches;
+                                    if (mobilePortrait) {
+                                        header.classList.add('settlement-quarter-pocket-active');
+                                        box.classList.add('settlement-quarter-launcher-mode');
+                                        launcherHost.hidden = false;
+                                        originalBalls.forEach((ball) => pocketBalls.appendChild(ball));
+                                    } else {
+                                        closePocket();
+                                        header.classList.remove('settlement-quarter-pocket-active');
+                                        box.classList.remove('settlement-quarter-launcher-mode');
+                                        launcherHost.hidden = true;
+                                        originalBalls.forEach((ball) => {
+                                            ball.hidden = false;
+                                            box.appendChild(ball);
+                                        });
+                                    }
+                                };
+                                modal.__syncSettlementEvidencePocket();
+                            }
+                        }
                     } catch (e) {
                         console.error('[initSettlementDocLink] restore failed:', e);
                     }
@@ -139341,6 +139714,9 @@ window.openAddNewProjectModal = function(editProject) {
         if (!modal) return;
         const headerBar = modal.querySelector('.settlement-header-collapsible')
             || modal.querySelector('.settlement-modal-content > div:first-child');
+        try { modal.__syncSettlementEvidencePocket?.(); } catch (e) {
+            console.warn('[SettlementEvidencePocket] responsive sync failed:', e);
+        }
         const dashboard = modal.querySelector('.settlement-summary-dashboard');
         const freshBadge = dashboard?.querySelector('.settlement-dashboard-toggle');
         const rehomedBadges = Array.from(modal.querySelectorAll('.settlement-dashboard-toggle[data-v80-rehomed="1"]'));
