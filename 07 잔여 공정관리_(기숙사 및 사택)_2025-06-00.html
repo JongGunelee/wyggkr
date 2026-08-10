@@ -88479,6 +88479,7 @@ function showPendingSettlementModal(periodType, projects) {
                         if (!evidence.length) return;
 
                         const isPeriodic = /^(\d{4})-Q(\d)$/i.test(currentModalKey) || /^(\d{4})$/.test(currentModalKey);
+                        const isQuarterlyEvidenceKey = /^(\d{4})-Q[1-4]$/i.test(currentModalKey);
                         const box = document.createElement('div');
                         box.className = 'settlement-evidence-buttons-container ml-2 mt-1 flex items-center gap-2 flex-wrap';
 
@@ -88513,7 +88514,7 @@ function showPendingSettlementModal(periodType, projects) {
                                     const isStripe = mVal > 8 || mVal === 0;
                                     ball.className = `billiard-ball ball-${mVal}${isStripe ? ' ball-stripe' : ''} settlement-doc-dynamic-btn`;
                                     const suffix = docs.length > 1 ? `-${idx + 1}` : '';
-                                    const ballLabel = mVal ? String(mVal).padStart(2, '0') + suffix : '?';
+                                    const ballLabel = mVal ? String(mVal).padStart(2, '0') + (isQuarterlyEvidenceKey ? '월' : '') + suffix : '?';
                                     const pocketCustomer = String(item.customer || '').trim() || '미지정';
                                     const pocketBallLabel = `${mVal ? String(mVal).padStart(2, '0') : '?'}-${String(idx + 1).padStart(2, '0')}-${pocketCustomer}`;
                                     const labelUnits = Math.max(1, Array.from(ballLabel).length * 0.62);
@@ -88543,7 +88544,7 @@ function showPendingSettlementModal(periodType, projects) {
                             // 연도 상세는 분기 공, 분기 상세는 월 공으로 묶되 실제 증빙 공 노드를 포켓에 옮긴다.
                             // 원본 공의 URL/클릭 핸들러는 복제하거나 재해석하지 않는다.
                             const yearlyEvidence = /^\d{4}$/.test(currentModalKey);
-                            const quarterlyEvidence = /^\d{4}-Q[1-4]$/i.test(currentModalKey);
+                            const quarterlyEvidence = isQuarterlyEvidenceKey;
                             const originalBalls = Array.from(box.querySelectorAll('.billiard-ball'));
                             const groupMode = yearlyEvidence ? 'quarter' : (quarterlyEvidence ? 'month' : '');
                             const shouldGroup = (yearlyEvidence && originalBalls.length > 4)
@@ -88615,7 +88616,7 @@ function showPendingSettlementModal(periodType, projects) {
                                     }
                                     const month = parseInt(groupKey, 10) || 0;
                                     return {
-                                        visual: month ? String(month).padStart(2, '0') : '?',
+                                        visual: month ? `${String(month).padStart(2, '0')}월` : '?',
                                         spoken: month ? `${month}월` : '월 미상'
                                     };
                                 };
