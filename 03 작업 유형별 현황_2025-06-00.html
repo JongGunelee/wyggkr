@@ -9344,7 +9344,8 @@
     }
 
     // --- 전역 변수 선언 ---
-    let initialMasterRawEntries = [
+    // 과거 데모 저장본 판별 전용. 런타임 원천 데이터로 사용하지 않는다.
+    const legacyBuiltInDemoRawEntries = [
       // Default initial data, can be overridden by saved settings or CSV upload
       {
         "회계 연도": "17년",
@@ -9545,6 +9546,30 @@
         "전체 세대수": "30",
       },
     ];
+
+    function isLegacyBuiltInDemoDataset(entries) {
+      if (
+        !Array.isArray(entries) ||
+        entries.length !== legacyBuiltInDemoRawEntries.length
+      ) {
+        return false;
+      }
+      const signatureOf = (entry) =>
+        [
+          entry?.["계약명"],
+          entry?.["PO번호"],
+          entry?.["PR번호"],
+          entry?.["PO금액"],
+        ]
+          .map((value) => String(value ?? "").trim())
+          .join("\u241f");
+      const legacySignatures = new Set(
+        legacyBuiltInDemoRawEntries.map(signatureOf),
+      );
+      return entries.every((entry) => legacySignatures.has(signatureOf(entry)));
+    }
+
+    let initialMasterRawEntries = [];
     let initialMasterCsvHeaders = [
       {
         name: "회계 연도",
@@ -9584,7 +9609,9 @@
       },
       {
         name: "PO번호",
-        originalName: "PO번호,발주번호,PO Number,NO.",
+        // `NO.`는 원천 행 번호이며 PO번호의 별칭이 아니다. 두 열을 섞으면
+        // PO가 비어 있는 행에 원천 순번이 PO번호로 오인 매핑된다.
+        originalName: "PO번호,발주번호,PO Number",
         required: true,
         type: "text",
       },
@@ -13518,7 +13545,8 @@
     // --- [v5.00] IndexedDB 기반 XLSB 완전 스냅샷 캐싱 (v2 아키텍처) ---
     const WYGGKR_DB_NAME = "WyggkrCacheDB";
     const WYGGKR_STORE_NAME = "xlsbDataStore";
-    const WYGGKR_DB_VERSION = 2;
+    // v3: PO 공란 행 보존 + 원천-매핑 대조 보고서가 없는 구버전 캐시는 폐기한다.
+    const WYGGKR_DB_VERSION = 3;
 
     function initWyggkrCacheDB() {
       return new Promise((resolve, reject) => {
@@ -13550,7 +13578,7 @@
     function captureFullSnapshot() {
       try {
         return {
-          _snapshotVersion: 2,
+          _snapshotVersion: 3,
           masterRawEntries: cloneSerializableData(masterRawEntries),
           masterCsvHeaders: cloneSerializableData(masterCsvHeaders),
           allYearsGlobal: [...allYearsGlobal],
@@ -13570,6 +13598,9 @@
           summaryCache: summaryCache ? cloneSerializableData(summaryCache) : null,
           dashboardFilterCache: dashboardFilterCache ? cloneSerializableData(dashboardFilterCache) : null,
           lastDashboardRenderStateKey: lastDashboardRenderStateKey,
+          mappingIntegrityReport: cloneSerializableData(
+            window.__lastMappingIntegrityReport || null,
+          ),
         };
       } catch (e) {
         console.warn("[v5.00] 스냅샷 캡처 실패:", e);
@@ -13604,6 +13635,9 @@
       summaryCache = snapshot.summaryCache || null;
       dashboardFilterCache = snapshot.dashboardFilterCache || null;
       lastDashboardRenderStateKey = snapshot.lastDashboardRenderStateKey || null;
+      window.__lastMappingIntegrityReport = cloneSerializableData(
+        snapshot.mappingIntegrityReport || null,
+      );
 
       // 런타임 인덱스 및 필터 캐시 무효화
       rawEntryRuntimeIndexes = null;
@@ -13699,7 +13733,10 @@
         const isCached = await processXlsbArrayBuffer(arrayBuffer, updateProgress, "GitHub");
         
         if (uploadStatusEl && !isCached) {
-          uploadStatusEl.textContent = "GitHub XLSB 로드 및 매핑 완료.";
+          const integrityReport = window.__lastMappingIntegrityReport;
+          uploadStatusEl.textContent = integrityReport?.status === "verified"
+            ? `GitHub XLSB 로드·원천 대조 완료 (${integrityReport.mappedEntryCount.toLocaleString()}행, 불일치 0건).`
+            : "GitHub XLSB 로드 및 매핑 완료.";
           uploadStatusEl.style.color = "green";
         }
         
@@ -13773,7 +13810,14 @@
           });
           // v2 스냅샷 형식인지 검증 및 다르면 비우기
           if (cached) {
-            if (cached._snapshotVersion === 2 && Array.isArray(cached.masterRawEntries)) {
+            if (
+              cached._snapshotVersion === 3 &&
+              Array.isArray(cached.masterRawEntries) &&
+              cached.mappingIntegrityReport?.status === "verified" &&
+              cached.mappingIntegrityReport?.mismatchCount === 0 &&
+              cached.mappingIntegrityReport?.sourceEntryCount ===
+                cached.masterRawEntries.length
+            ) {
               cachedSnapshot = cached;
             } else {
               console.log('%c[v5.00] 캐시 버전이 다르거나 손상되었습니다. 기존 캐시를 비웁니다.', 'color: #ef4444;');
@@ -13814,7 +13858,10 @@
 
         setProgress(100);
         if (uploadStatusEl) {
-          uploadStatusEl.textContent = `⚡ 캐시에서 즉시 로드 완료. (${sourceLabel})`;
+          const integrityReport = window.__lastMappingIntegrityReport;
+          uploadStatusEl.textContent = integrityReport?.status === "verified"
+            ? `⚡ 검증 캐시 로드 완료. (${sourceLabel}, ${integrityReport.mappedEntryCount.toLocaleString()}행, 불일치 0건)`
+            : `⚡ 캐시에서 즉시 로드 완료. (${sourceLabel})`;
           uploadStatusEl.style.color = "#16a34a";
         }
         try {
@@ -13861,7 +13908,13 @@
           console.log('[v4.76] 최초 로드 시작. 대시보드 렌더링 후 스냅샷 저장을 대기합니다.');
         }
 
+        window.__pendingXlsbIntegritySource = {
+          sourceLabel,
+          fileHash: fileHash || "",
+          byteLength: data.byteLength,
+        };
         const uploadResult = await processUploadedData(json, true);
+        window.__pendingXlsbIntegritySource = null;
         if (uploadResult === false) {
           window.__firstXlsbLoadPendingSave__ = null; // 실패 시 초기화
           throw new Error("데이터 매핑/처리 중 오류가 발생하여 롤백되었습니다. 콘솔을 확인하세요.");
@@ -14947,9 +15000,9 @@
       }
       const headerConfig = masterCsvHeaders.find((h) =>
         (h.originalName || h.name)
-          .split(",")
-          .map((n) => n.trim())
-          .includes(originalConceptName),
+              .split(",")
+              .map((n) => n.trim())
+              .includes(originalConceptName),
       );
       const resolvedName = headerConfig
         ? headerConfig.name
@@ -17836,6 +17889,69 @@
         topCostWorkTypesInsightTextEl.innerHTML = topCostWorkTypeInsightText;
     }
 
+    function getDetailDerivedColumnValue(item, columnKey) {
+      if (columnKey !== "전체 세대수" && columnKey !== "외벽 세대수") {
+        return item?.[columnKey];
+      }
+      const dongHeaderName = getHeaderName("건물동");
+      const rawDong = item?.[dongHeaderName];
+      const dongKey = rawDong === null || rawDong === undefined
+        ? ""
+        : String(rawDong).replace("사택 ", "").trim();
+      return columnKey === "전체 세대수"
+        ? totalUnitsPerDongStatic[dongKey]
+        : outerUnitsPerDongStatic[dongKey];
+    }
+
+    function isMeaningfulDetailValue(value, headerConfig = null) {
+      if (value === null || value === undefined) return false;
+      if (value instanceof Date) return !Number.isNaN(value.getTime());
+      const text = String(value).trim();
+      if (!text || text === "N/A" || text === "-") return false;
+      if (
+        headerConfig?.type === "number" &&
+        Number(String(value).replace(/,/g, "")) === 0
+      ) {
+        return false;
+      }
+      return true;
+    }
+
+    function getDetailModalHeaders(data) {
+      const rows = Array.isArray(data) ? data : [];
+      const headers = [];
+      masterCsvHeaders
+        .filter(
+          (headerConfig) =>
+            headerConfig.name !== "견적비교" &&
+            !isSourceRowNumberHeader(headerConfig.name),
+        )
+        .forEach((headerConfig) => {
+          const key = headerConfig.name;
+          const hasValue = rows.some((item) =>
+            isMeaningfulDetailValue(
+              getDetailDerivedColumnValue(item, key),
+              headerConfig,
+            ),
+          );
+          // 필수 열은 공란 자체가 검증 정보이므로 유지한다. 선택 열은 현재
+          // 상세 결과 전체가 공란일 때만 감춰 가짜 데이터로 채우지 않는다.
+          if (headerConfig.required || hasValue) {
+            headers.push(key);
+          }
+          if (key === "전체 세대수") {
+            const hasOuterUnits = rows.some((item) =>
+              isMeaningfulDetailValue(
+                getDetailDerivedColumnValue(item, "외벽 세대수"),
+                { type: "number" },
+              ),
+            );
+            if (hasOuterUnits) headers.push("외벽 세대수");
+          }
+        });
+      return headers;
+    }
+
     function populateTable(
       tableId,
       data,
@@ -17868,16 +17984,7 @@
         noTh.textContent = "No.";
         headerRow.appendChild(noTh);
 
-        const modalHeaders = [];
-        masterCsvHeaders
-          .map((h) => h.name)
-          .filter((h) => h !== "견적비교")
-          .forEach((key) => {
-            modalHeaders.push(key);
-            if (key === "전체 세대수") {
-              modalHeaders.push("외벽 세대수");
-            }
-          });
+        const modalHeaders = getDetailModalHeaders(data);
         modalHeaders.forEach((key) => {
           const th = document.createElement("th");
           th.dataset.sortKey = key;
@@ -17989,8 +18096,14 @@
           let value;
 
           if (isModal && colKey === "No.") {
-            value = String(index + 1).padStart(2, "0");
+            const rawSourceNumber = item?._sourceRowNumber;
+            value = rawSourceNumber === null || rawSourceNumber === undefined || rawSourceNumber === ""
+              ? String(index + 1).padStart(2, "0")
+              : String(rawSourceNumber);
             cell.textContent = value;
+            cell.dataset.sourceWorksheetRow = String(
+              item?._sourceWorksheetRow || "",
+            );
             cell.style.textAlign = "center";
             cell.style.fontWeight = "bold";
             cell.style.color = "#6b7280";
@@ -17998,10 +18111,7 @@
           }
 
           if (isModal && colKey === "전체 세대수") {
-            const dongHeaderName = getHeaderName("건물동");
-            const rawDong = item[dongHeaderName];
-            const dongKey = rawDong ? (typeof rawDong === "string" ? rawDong.replace("사택 ", "").trim() : String(rawDong).trim()) : "";
-            const totalU = totalUnitsPerDongStatic[dongKey];
+            const totalU = getDetailDerivedColumnValue(item, colKey);
             if (totalU === null || totalU === undefined || totalU === "" || isNaN(totalU)) {
               cell.textContent = "N/A";
               cell.classList.add("text-na");
@@ -18013,10 +18123,7 @@
           }
 
           if (isModal && colKey === "외벽 세대수") {
-            const dongHeaderName = getHeaderName("건물동");
-            const rawDong = item[dongHeaderName];
-            const dongKey = rawDong ? rawDong.replace("사택 ", "").trim() : "";
-            const outerU = outerUnitsPerDongStatic[dongKey];
+            const outerU = getDetailDerivedColumnValue(item, colKey);
             if (outerU === null || outerU === undefined || outerU === "" || isNaN(outerU)) {
               cell.textContent = "N/A";
               cell.classList.add("text-na");
@@ -18030,6 +18137,13 @@
           value = item[colKey];
           if (isModal && colKey === monthHeaderName) {
             value = normalizeMonthClosingValue(value);
+          } else if (isModal) {
+            const valueHeaderConfig = masterCsvHeaders.find(
+              (header) => header.name === colKey,
+            );
+            if (isAccountingClosingHeaderConfig(valueHeaderConfig)) {
+              value = normalizeAccountingClosingValue(value);
+            }
           }
           cell.className = "";
 
@@ -22219,6 +22333,9 @@
       if (isMonthClosingHeaderConfig(headerConfig)) {
         return normalizeMonthClosingValue(value);
       }
+      if (isAccountingClosingHeaderConfig(headerConfig)) {
+        return normalizeAccountingClosingValue(value);
+      }
       if (value instanceof Date) return value;
       if (headerConfig?.type !== "number")
         return typeof value === "string" ? value : String(value);
@@ -22341,12 +22458,58 @@
       return excelData.length > 1 ? excelData : null;
     }
 
+    function assertExportDatasetIntegrity() {
+      if (isLegacyBuiltInDemoDataset(masterRawEntries)) {
+        throw new Error("과거 데모 데이터는 Excel로 내보낼 수 없습니다.");
+      }
+      const report = window.__lastMappingIntegrityReport;
+      if (!report) return;
+      if (
+        report.status !== "verified" ||
+        report.mismatchCount !== 0 ||
+        report.mappedEntryCount !== masterRawEntries.length
+      ) {
+        throw new Error(
+          "원천-매핑 무결성 검증 상태가 유효하지 않아 내보내기를 중단했습니다.",
+        );
+      }
+    }
+
+    function appendMappingIntegritySheet(workbook) {
+      const report = window.__lastMappingIntegrityReport;
+      if (!report || report.status !== "verified") return false;
+      const auditRows = [
+        ["검증 항목", "검증값"],
+        ["검증 상태", "원천-매핑 일치"],
+        ["원천", report.source || "Excel"],
+        ["원천 SHA-256", report.sourceSha256 || ""],
+        ["원천 파일 크기(bytes)", report.sourceByteLength || 0],
+        ["원천 행 수", report.sourceEntryCount],
+        ["매핑 행 수", report.mappedEntryCount],
+        ["비교 헤더 수", report.comparedHeaderCount],
+        ["비교 셀 수", report.comparedCellCount],
+        ["불일치 수", report.mismatchCount],
+        ["원천 PO번호 공란 행", report.blankPoSourceCount],
+        ["매핑 PO번호 공란 행", report.blankPoMappedCount],
+        ["원천 PR번호 공란 행", report.blankPrSourceCount],
+        ["매핑 PR번호 공란 행", report.blankPrMappedCount],
+        ["원천 PO금액 합계", report.poAmountSourceTotal],
+        ["매핑 PO금액 합계", report.poAmountMappedTotal],
+        ["검증 시각(UTC)", report.verifiedAt || ""],
+      ];
+      const auditSheet = XLSX.utils.aoa_to_sheet(auditRows);
+      auditSheet["!cols"] = [{ wch: 24 }, { wch: 72 }];
+      XLSX.utils.book_append_sheet(workbook, auditSheet, "원천 검증");
+      return true;
+    }
+
     async function exportAllDataToExcel() {
       if (!(await window.ensureXlsxRuntime())) {
         alert("Excel 기능을 준비하지 못했습니다.");
         return;
       }
       try {
+        assertExportDatasetIntegrity();
         const wb = XLSX.utils.book_new();
         let sheetAdded = false;
 
@@ -22537,6 +22700,8 @@
         const dateSuffix = getFormattedDateSuffix();
         const finalFileName = `dashboard_export${dateSuffix}.xlsx`;
 
+        if (appendMappingIntegritySheet(wb)) sheetAdded = true;
+
         if (sheetAdded) {
           XLSX.writeFile(wb, finalFileName);
           if (document.getElementById("uploadStatus"))
@@ -22577,6 +22742,7 @@
       }
 
       try {
+        assertExportDatasetIntegrity();
         const detailData = extractTableDataForExcel(detailModalTableEl);
         if (detailData.length <= 1) {
           alert("테이블에 내보낼 데이터가 없습니다.");
@@ -22596,6 +22762,7 @@
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(detailData);
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        appendMappingIntegritySheet(wb);
 
         const dateSuffix = getFormattedDateSuffix();
         const finalFileName = `${sheetName}${dateSuffix}.xlsx`;
@@ -22697,6 +22864,12 @@
       const totalUnitsHeaderName = getHeaderName("전체 세대수");
       const poNumeroHeader = getHeaderName("PO번호");
       const monthHeaderName = getHeaderName("매입 마감 (월)");
+      const accountingClosingHeaderConfig = csvHeaderConfig.find(
+        (header) => isAccountingClosingHeaderConfig(header),
+      );
+      const accountingClosingHeaderName = accountingClosingHeaderConfig
+        ? accountingClosingHeaderConfig.name
+        : null;
 
       if (rawEntries.length === 0) {
         allYearsGlobal = [];
@@ -22765,6 +22938,11 @@
         
         const monthValRaw = normalizeMonthClosingValue(entry[monthHeaderName]);
         entry[monthHeaderName] = monthValRaw;
+        if (accountingClosingHeaderName) {
+          entry[accountingClosingHeaderName] = normalizeAccountingClosingValue(
+            entry[accountingClosingHeaderName],
+          );
+        }
         let parsedMonthInt = 0;
         if (monthValRaw) {
           const monthStr = String(monthValRaw).trim();
@@ -23123,6 +23301,16 @@ function normalizeHeaderKey(value) {
     .replace(/\s+/g, "");
 }
 
+function isSourceRowNumberHeader(value) {
+  return /^no\.?$/i.test(normalizeHeaderKey(value));
+}
+
+function hasMeaningfulSourceValue(value) {
+  if (value === null || value === undefined) return false;
+  if (value instanceof Date) return !Number.isNaN(value.getTime());
+  return typeof value === "string" ? value.trim() !== "" : true;
+}
+
 function normalizeMonthClosingValue(value) {
   if (value === null || value === undefined || value === "") return "";
 
@@ -23173,18 +23361,77 @@ function normalizeMonthClosingValue(value) {
 
 function isMonthClosingHeaderConfig(headerConfig) {
   if (!headerConfig) return false;
-  const canonicalKey = normalizeHeaderKey("매입 마감 (월)");
+  const acceptedKeys = new Set([normalizeHeaderKey("매입 마감 (월)")]);
   return [headerConfig.name, ...(headerConfig.originalName || "").split(",")]
-    .some((name) => normalizeHeaderKey(name) === canonicalKey);
+    .some((name) => acceptedKeys.has(normalizeHeaderKey(name)));
+}
+
+function isAccountingClosingHeaderConfig(headerConfig) {
+  if (!headerConfig) return false;
+  const accountingClosingKey = normalizeHeaderKey("회계 마감");
+  return [headerConfig.name, ...(headerConfig.originalName || "").split(",")]
+    .some((name) => normalizeHeaderKey(name) === accountingClosingKey);
+}
+
+function normalizeAccountingClosingValue(value) {
+  if (value === null || value === undefined || value === "") return "";
+
+  const formatDate = (year, month, day) => {
+    const yearNumber = Number(year);
+    const monthNumber = Number(month);
+    const dayNumber = Number(day);
+    if (
+      !Number.isInteger(yearNumber) ||
+      !Number.isInteger(monthNumber) ||
+      !Number.isInteger(dayNumber) ||
+      yearNumber < 1900 ||
+      yearNumber > 9999 ||
+      monthNumber < 1 ||
+      monthNumber > 12 ||
+      dayNumber < 1 ||
+      dayNumber > 31
+    ) {
+      return "";
+    }
+    return `${String(yearNumber).padStart(4, "0")}-${String(monthNumber).padStart(2, "0")}-${String(dayNumber).padStart(2, "0")}`;
+  };
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime())
+      ? ""
+      : formatDate(value.getFullYear(), value.getMonth() + 1, value.getDate());
+  }
+
+  const text = String(value).trim();
+  if (!text) return "";
+
+  let match = text.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})(?:[T\s]|$)/);
+  if (match) return formatDate(match[1], match[2], match[3]) || text;
+
+  match = text.match(/^(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일$/);
+  if (match) return formatDate(match[1], match[2], match[3]) || text;
+
+  match = text.match(
+    /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})\s+(\d{4})\b/i,
+  );
+  if (match) {
+    const englishMonths = {
+      jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+      jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+    };
+    return formatDate(match[3], englishMonths[match[1].toLowerCase()], match[2]) || text;
+  }
+
+  return text;
 }
 
 function resolveHeaderNameFromConfig(headerConfigs, originalConceptName) {
   const configs = Array.isArray(headerConfigs) ? headerConfigs : [];
   const headerConfig = configs.find((h) =>
     (h.originalName || h.name)
-      .split(",")
-      .map((n) => n.trim())
-      .includes(originalConceptName),
+          .split(",")
+          .map((n) => n.trim())
+          .includes(originalConceptName),
   );
   return headerConfig ? headerConfig.name : originalConceptName;
 }
@@ -23544,6 +23791,9 @@ function createUploadProcessingContextOptions() {
 }
 
 function createUploadMappingContext(fileHeaders, sourceHeaders) {
+  sourceHeaders = (Array.isArray(sourceHeaders) ? sourceHeaders : []).filter(
+    (headerConfig) => !isSourceRowNumberHeader(headerConfig?.name),
+  );
   const normalizedKnownHeaders = new Map();
   sourceHeaders.forEach((headerConfig) => {
     const names = [
@@ -23563,7 +23813,11 @@ function createUploadMappingContext(fileHeaders, sourceHeaders) {
     const normalizedFileHeader = normalizeHeaderKey(fileHeader);
     normalizedFileHeaderList.push(normalizedFileHeader);
 
-    if (!normalizedKnownHeaders.has(normalizedFileHeader)) {
+    // 원천 `NO.`는 화면 데이터 열이 아니라 행 추적용 메타데이터로 격리한다.
+    if (
+      !isSourceRowNumberHeader(fileHeader) &&
+      !normalizedKnownHeaders.has(normalizedFileHeader)
+    ) {
       const newHeaderConfig = {
         name: String(fileHeader).trim(),
         originalName: String(fileHeader).trim(),
@@ -23582,8 +23836,10 @@ function createUploadMappingContext(fileHeaders, sourceHeaders) {
   const missingRequiredHeaders = [];
   sourceHeaders.forEach((definedHeader) => {
     if (!definedHeader.required) return;
-    const alternativeNames = (definedHeader.originalName || definedHeader.name)
-      .split(",")
+    const alternativeNames = [
+      definedHeader.name,
+      ...(definedHeader.originalName || "").split(","),
+    ]
       .map((name) => normalizeHeaderKey(name));
     const found = alternativeNames.some((altName) =>
       normalizedFileHeadersSet.has(altName),
@@ -23594,25 +23850,44 @@ function createUploadMappingContext(fileHeaders, sourceHeaders) {
   });
 
   const headerKeyMap = new Map();
-  sourceHeaders.forEach((dashboardHeader) => {
-    const potentialNames = [
-      dashboardHeader.name,
-      ...(dashboardHeader.originalName || "").split(","),
-    ];
-    const targetKeys = new Set(
-      potentialNames.map((name) => normalizeHeaderKey(name)),
-    );
-    let matchedFileHeader = null;
-    for (let i = 0; i < fileHeaders.length; i++) {
-      const fileHeader = fileHeaders[i];
-      if (targetKeys.has(normalizeHeaderKey(fileHeader))) {
-        matchedFileHeader = fileHeader;
-        break;
+  const headerIndexMap = new Map();
+  const claimedFileHeaderIndexes = new Set();
+
+  const claimHeaderMatch = (dashboardHeader, candidateNames) => {
+    for (const candidateName of candidateNames) {
+      const candidateKey = normalizeHeaderKey(candidateName);
+      if (!candidateKey) continue;
+      const matchedIndex = normalizedFileHeaderList.findIndex(
+        (fileHeaderKey, index) =>
+          !claimedFileHeaderIndexes.has(index) && fileHeaderKey === candidateKey,
+      );
+      if (matchedIndex >= 0) {
+        headerKeyMap.set(dashboardHeader.name, fileHeaders[matchedIndex]);
+        headerIndexMap.set(dashboardHeader.name, matchedIndex);
+        claimedFileHeaderIndexes.add(matchedIndex);
+        return true;
       }
     }
-    if (matchedFileHeader) {
-      headerKeyMap.set(dashboardHeader.name, matchedFileHeader);
-    }
+    return false;
+  };
+
+  // 정확한 현재 헤더명을 전부 먼저 선점시켜 `No.` 같은 광범위 별칭이
+  // 뒤에 존재하는 실제 `PO번호` 열을 가로채지 못하게 한다.
+  sourceHeaders.forEach((dashboardHeader) => {
+    claimHeaderMatch(dashboardHeader, [dashboardHeader.name]);
+  });
+
+  sourceHeaders.forEach((dashboardHeader) => {
+    if (headerKeyMap.has(dashboardHeader.name)) return;
+    const alternativeNames = (dashboardHeader.originalName || "")
+      .split(",")
+      .map((name) => name.trim())
+      .filter(
+        (name) =>
+          name &&
+          normalizeHeaderKey(name) !== normalizeHeaderKey(dashboardHeader.name),
+      );
+    claimHeaderMatch(dashboardHeader, alternativeNames);
   });
 
   const fileHeaderIndexMap = new Map();
@@ -23620,13 +23895,21 @@ function createUploadMappingContext(fileHeaders, sourceHeaders) {
     fileHeaderIndexMap.set(fileHeader, index);
   });
 
+  const sourceRowNumberIndex = fileHeaders.findIndex((fileHeader) =>
+    isSourceRowNumberHeader(fileHeader),
+  );
+
   return {
     sourceHeaders: sourceHeaders,
     fileHeaders: fileHeaders,
     newHeadersFound: newHeadersFound,
     missingRequiredHeaders: missingRequiredHeaders,
     headerKeyMap: headerKeyMap,
+    headerIndexMap: headerIndexMap,
     fileHeaderIndexMap: fileHeaderIndexMap,
+    sourceRowNumberIndex: sourceRowNumberIndex,
+    sourceRowNumberKey:
+      sourceRowNumberIndex >= 0 ? fileHeaders[sourceRowNumberIndex] : null,
     numberTypeHeaders: new Set(
       sourceHeaders
         .filter((header) => header.type === "number")
@@ -23637,30 +23920,48 @@ function createUploadMappingContext(fileHeaders, sourceHeaders) {
       "매입 마감 (월)",
     ),
     yearHeaderNameLocal: resolveHeaderNameFromConfig(sourceHeaders, "회계 연도"),
-    poNumeroHeaderName: resolveHeaderNameFromConfig(sourceHeaders, "PO번호"),
   };
 }
 
-function appendMappedUploadEntry(rawEntry, csvValues, context, isExcel) {
+function appendMappedUploadEntry(
+  rawEntry,
+  csvValues,
+  context,
+  isExcel,
+  sourceWorksheetRow,
+) {
   const entry = {};
   const regexCommaForParse = /,/g;
+  let hasMappedSourceValue = false;
 
-  const getRawMappedValue = (rawKey) => {
+  const getRawMappedValue = (rawKey, dashboardHeaderName) => {
     if (!rawKey) return "";
     if (isExcel) return rawEntry[rawKey];
-    const index = context.fileHeaderIndexMap.get(rawKey);
+    const mappedIndex = context.headerIndexMap?.get(dashboardHeaderName);
+    const index = Number.isInteger(mappedIndex)
+      ? mappedIndex
+      : context.fileHeaderIndexMap.get(rawKey);
     return typeof index === "number" ? csvValues[index] : "";
   };
 
   for (const dashboardHeader of context.sourceHeaders) {
     const headerName = dashboardHeader.name;
     const rawKey = context.headerKeyMap.get(headerName);
-    const rawValue = getRawMappedValue(rawKey);
-    const value = headerName === context.monthHeaderNameLocal
-      ? normalizeMonthClosingValue(rawValue)
-      : rawValue !== null && rawValue !== undefined
+    const rawValue = getRawMappedValue(rawKey, headerName);
+    if (rawKey && hasMeaningfulSourceValue(rawValue)) {
+      hasMappedSourceValue = true;
+    }
+
+    let value;
+    if (isMonthClosingHeaderConfig(dashboardHeader)) {
+      value = normalizeMonthClosingValue(rawValue);
+    } else if (isAccountingClosingHeaderConfig(dashboardHeader)) {
+      value = normalizeAccountingClosingValue(rawValue);
+    } else {
+      value = rawValue !== null && rawValue !== undefined
         ? String(rawValue).trim()
         : "";
+    }
 
     if (context.numberTypeHeaders.has(headerName)) {
       if (value) {
@@ -23677,7 +23978,7 @@ function appendMappedUploadEntry(rawEntry, csvValues, context, isExcel) {
   const mappedYearKey = context.headerKeyMap.get(context.yearHeaderNameLocal);
   const rawMonthVal = entry[context.monthHeaderNameLocal] || "";
   const rawYearVal = mappedYearKey
-    ? getRawMappedValue(mappedYearKey) || ""
+    ? getRawMappedValue(mappedYearKey, context.yearHeaderNameLocal) || ""
     : entry[context.yearHeaderNameLocal] || "";
 
   let monthNum = 0;
@@ -23705,8 +24006,214 @@ function appendMappedUploadEntry(rawEntry, csvValues, context, isExcel) {
   entry._monthKey = entry._monthNum ? `${entry._monthNum}월` : "";
   entry._yearRaw = rawYearVal ? String(rawYearVal).trim() : "";
 
-  const poValue = entry[context.poNumeroHeaderName];
-  return poValue && poValue !== "" ? entry : null;
+  const sourceNumberRaw = context.sourceRowNumberKey
+    ? getRawMappedValue(context.sourceRowNumberKey, "")
+    : "";
+  const sourceNumberText = hasMeaningfulSourceValue(sourceNumberRaw)
+    ? String(sourceNumberRaw).trim()
+    : "";
+  entry._sourceRowNumber = /^[-+]?\d+(?:\.0+)?$/.test(sourceNumberText)
+    ? Number(sourceNumberText)
+    : sourceNumberText || Math.max(1, Number(sourceWorksheetRow || 2) - 1);
+  entry._sourceWorksheetRow = Number(sourceWorksheetRow || 0) || null;
+
+  // PO/PR가 비어 있더라도 원천의 나머지 값이 존재하는 행은 반드시 보존한다.
+  return hasMappedSourceValue ? entry : null;
+}
+
+function verifyExcelUploadMappingIntegrity(
+  rawJsonData,
+  mappedEntries,
+  headerConfigs,
+  sourceMetadata = null,
+) {
+  const rawRows = Array.isArray(rawJsonData) ? rawJsonData : [];
+  const mappedRows = Array.isArray(mappedEntries) ? mappedEntries : [];
+  const configs = (Array.isArray(headerConfigs) ? headerConfigs : []).filter(
+    (headerConfig) => !isSourceRowNumberHeader(headerConfig?.name),
+  );
+  const rawHeaders = rawRows.length > 0 ? Object.keys(rawRows[0]) : [];
+  const normalizedRawHeaders = rawHeaders.map((header) =>
+    normalizeHeaderKey(header),
+  );
+  const claimedRawHeaderIndexes = new Set();
+  const rawKeyByDashboardHeader = new Map();
+
+  const claimRawHeader = (headerConfig, candidates) => {
+    for (const candidate of candidates) {
+      const normalizedCandidate = normalizeHeaderKey(candidate);
+      if (!normalizedCandidate) continue;
+      const rawIndex = normalizedRawHeaders.findIndex(
+        (rawKey, index) =>
+          !claimedRawHeaderIndexes.has(index) && rawKey === normalizedCandidate,
+      );
+      if (rawIndex >= 0) {
+        claimedRawHeaderIndexes.add(rawIndex);
+        rawKeyByDashboardHeader.set(headerConfig.name, rawHeaders[rawIndex]);
+        return;
+      }
+    }
+  };
+
+  configs.forEach((headerConfig) =>
+    claimRawHeader(headerConfig, [headerConfig.name]),
+  );
+  configs.forEach((headerConfig) => {
+    if (rawKeyByDashboardHeader.has(headerConfig.name)) return;
+    claimRawHeader(
+      headerConfig,
+      (headerConfig.originalName || "")
+        .split(",")
+        .map((name) => name.trim())
+        .filter(Boolean),
+    );
+  });
+
+  const mappedRawKeys = new Set(rawKeyByDashboardHeader.values());
+  const expectedRows = rawRows
+    .map((row, index) => ({ row, worksheetRow: index + 2 }))
+    .filter(({ row }) =>
+      Array.from(mappedRawKeys).some((rawKey) =>
+        hasMeaningfulSourceValue(row?.[rawKey]),
+      ),
+    );
+  const mappedByWorksheetRow = new Map(
+    mappedRows.map((row) => [Number(row?._sourceWorksheetRow), row]),
+  );
+  const mismatchSamples = [];
+  let mismatchCount = 0;
+  let comparedCellCount = 0;
+
+  const normalizeForAudit = (value, headerConfig) => {
+    if (isMonthClosingHeaderConfig(headerConfig)) {
+      return normalizeMonthClosingValue(value);
+    }
+    if (isAccountingClosingHeaderConfig(headerConfig)) {
+      return normalizeAccountingClosingValue(value);
+    }
+    if (headerConfig?.type === "number") {
+      if (!hasMeaningfulSourceValue(value)) return 0;
+      const parsed = parseFloat(String(value).replace(/,/g, "").trim());
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    return value === null || value === undefined ? "" : String(value).trim();
+  };
+
+  expectedRows.forEach(({ row, worksheetRow }) => {
+    const mappedRow = mappedByWorksheetRow.get(worksheetRow);
+    if (!mappedRow) {
+      mismatchCount++;
+      if (mismatchSamples.length < 10) {
+        mismatchSamples.push({
+          worksheetRow,
+          header: "(행)",
+          expected: "원천 행 존재",
+          actual: "매핑 행 누락",
+        });
+      }
+      return;
+    }
+
+    configs.forEach((headerConfig) => {
+      const rawKey = rawKeyByDashboardHeader.get(headerConfig.name);
+      if (!rawKey) return;
+      comparedCellCount++;
+      const expectedValue = normalizeForAudit(row?.[rawKey], headerConfig);
+      const actualValue = normalizeForAudit(
+        mappedRow?.[headerConfig.name],
+        headerConfig,
+      );
+      const matches = headerConfig.type === "number"
+        ? Number(expectedValue) === Number(actualValue)
+        : String(expectedValue) === String(actualValue);
+      if (!matches) {
+        mismatchCount++;
+        if (mismatchSamples.length < 10) {
+          mismatchSamples.push({
+            worksheetRow,
+            header: headerConfig.name,
+            expected: expectedValue,
+            actual: actualValue,
+          });
+        }
+      }
+    });
+  });
+
+  if (mappedRows.length !== expectedRows.length) {
+    mismatchCount += Math.abs(mappedRows.length - expectedRows.length);
+    if (mismatchSamples.length < 10) {
+      mismatchSamples.push({
+        worksheetRow: null,
+        header: "(행 수)",
+        expected: expectedRows.length,
+        actual: mappedRows.length,
+      });
+    }
+  }
+
+  const poConfig = configs.find(
+    (headerConfig) => normalizeHeaderKey(headerConfig.name) === normalizeHeaderKey("PO번호"),
+  );
+  const prConfig = configs.find(
+    (headerConfig) => normalizeHeaderKey(headerConfig.name) === normalizeHeaderKey("PR번호"),
+  );
+  const amountConfig = configs.find(
+    (headerConfig) => normalizeHeaderKey(headerConfig.name) === normalizeHeaderKey("PO금액"),
+  );
+  const countBlankValues = (headerConfig, rows, isRaw) => {
+    if (!headerConfig) return 0;
+    const key = isRaw
+      ? rawKeyByDashboardHeader.get(headerConfig.name)
+      : headerConfig.name;
+    if (!key) return 0;
+    return rows.reduce(
+      (count, row) => count + (hasMeaningfulSourceValue(row?.[key]) ? 0 : 1),
+      0,
+    );
+  };
+  const sumValues = (headerConfig, rows, isRaw) => {
+    if (!headerConfig) return 0;
+    const key = isRaw
+      ? rawKeyByDashboardHeader.get(headerConfig.name)
+      : headerConfig.name;
+    if (!key) return 0;
+    return rows.reduce((sum, row) => {
+      const value = normalizeForAudit(row?.[key], headerConfig);
+      return sum + (Number.isFinite(Number(value)) ? Number(value) : 0);
+    }, 0);
+  };
+
+  const report = {
+    status: mismatchCount === 0 ? "verified" : "failed",
+    source: sourceMetadata?.sourceLabel || "Excel",
+    sourceSha256: sourceMetadata?.fileHash || "",
+    sourceByteLength: Number(sourceMetadata?.byteLength || 0),
+    sourceEntryCount: expectedRows.length,
+    mappedEntryCount: mappedRows.length,
+    comparedHeaderCount: rawKeyByDashboardHeader.size,
+    comparedCellCount,
+    mismatchCount,
+    blankPoSourceCount: countBlankValues(poConfig, expectedRows.map((item) => item.row), true),
+    blankPoMappedCount: countBlankValues(poConfig, mappedRows, false),
+    blankPrSourceCount: countBlankValues(prConfig, expectedRows.map((item) => item.row), true),
+    blankPrMappedCount: countBlankValues(prConfig, mappedRows, false),
+    poAmountSourceTotal: sumValues(amountConfig, expectedRows.map((item) => item.row), true),
+    poAmountMappedTotal: sumValues(amountConfig, mappedRows, false),
+    mismatchSamples,
+    verifiedAt: new Date().toISOString(),
+  };
+
+  if (
+    report.blankPoSourceCount !== report.blankPoMappedCount ||
+    report.blankPrSourceCount !== report.blankPrMappedCount ||
+    report.poAmountSourceTotal !== report.poAmountMappedTotal
+  ) {
+    report.status = "failed";
+    report.mismatchCount++;
+  }
+
+  return report;
 }
 
 function processUploadedDataCore(payload) {
@@ -23779,11 +24286,13 @@ function processUploadedDataCore(payload) {
         null,
         mappingContext,
         true,
+        i + 2,
       );
       if (entry) localRawEntries.push(entry);
     }
   } else {
     let lineStart = csvDataStartIndex;
+    let sourceWorksheetRow = 2;
     while (lineStart <= csvTextForRows.length) {
       let newlineIndex = csvTextForRows.indexOf("\n", lineStart);
       if (newlineIndex === -1) newlineIndex = csvTextForRows.length;
@@ -23798,10 +24307,12 @@ function processUploadedDataCore(payload) {
           parseCsvLine(line),
           mappingContext,
           false,
+          sourceWorksheetRow,
         );
         if (entry) localRawEntries.push(entry);
       }
       lineStart = newlineIndex + 1;
+      sourceWorksheetRow++;
     }
   }
 
@@ -23842,6 +24353,7 @@ function processUploadedCsvBlobChunked(payload, emit) {
   let aggregationState = null;
   let entryBatch = [];
   let parsedCount = 0;
+  let sourceWorksheetRow = 0;
   let lastProgressOffset = 0;
   let stoppedResult = null;
 
@@ -23864,6 +24376,7 @@ function processUploadedCsvBlobChunked(payload, emit) {
 
   const handleLine = (line) => {
     if (stoppedResult) return;
+    sourceWorksheetRow++;
     let currentLine = line;
     if (currentLine && currentLine.charCodeAt(0) === 0xfeff) {
       currentLine = currentLine.substring(1);
@@ -23900,6 +24413,7 @@ function processUploadedCsvBlobChunked(payload, emit) {
       parseCsvLine(currentLine),
       mappingContext,
       false,
+      sourceWorksheetRow,
     );
     if (!entry) return;
 
@@ -24002,7 +24516,12 @@ function createUploadProcessingWorker() {
     parseCsvLine.toString(),
     cloneSerializableData.toString(),
     normalizeHeaderKey.toString(),
+    isSourceRowNumberHeader.toString(),
+    hasMeaningfulSourceValue.toString(),
     normalizeMonthClosingValue.toString(),
+    isMonthClosingHeaderConfig.toString(),
+    normalizeAccountingClosingValue.toString(),
+    isAccountingClosingHeaderConfig.toString(),
     resolveHeaderNameFromConfig.toString(),
     createRawEntriesAggregationState.toString(),
     accumulateRawEntryForSnapshot.toString(),
@@ -24182,11 +24701,13 @@ async function processUploadedDataTransaction(data, isExcel = false) {
   }
 
   const isCsvBlobUpload = !isExcel && isCsvBlobSource(data);
+  const uploadSourceHeaderConfigs = cloneSerializableData(masterCsvHeaders)
+    .filter((headerConfig) => !isSourceRowNumberHeader(headerConfig?.name));
   const preparedResult = await prepareUploadedDataPayload({
     data: isCsvBlobUpload ? null : data,
     csvFile: isCsvBlobUpload ? data : null,
     isExcel: isExcel,
-    masterCsvHeaders: cloneSerializableData(masterCsvHeaders),
+    masterCsvHeaders: uploadSourceHeaderConfigs,
     processingOptions: createUploadProcessingContextOptions(),
     chunkBytes: CSV_BLOB_WORKER_CHUNK_BYTES,
     entryBatchSize: CSV_WORKER_ENTRY_BATCH_SIZE,
@@ -24234,10 +24755,11 @@ async function processUploadedDataTransaction(data, isExcel = false) {
     return false;
   }
 
+  const nextMasterCsvHeaders = cloneSerializableData(uploadSourceHeaderConfigs);
   if (Array.isArray(preparedResult.newHeadersFound)) {
     preparedResult.newHeadersFound.forEach((newHeaderConfig) => {
-      if (!masterCsvHeaders.some((header) => header.name === newHeaderConfig.name)) {
-        masterCsvHeaders.push(newHeaderConfig);
+      if (!nextMasterCsvHeaders.some((header) => header.name === newHeaderConfig.name)) {
+        nextMasterCsvHeaders.push(newHeaderConfig);
       }
     });
   }
@@ -24256,6 +24778,28 @@ async function processUploadedDataTransaction(data, isExcel = false) {
     }
     return false;
   } else {
+    if (isExcel && Array.isArray(data)) {
+      const integrityReport = verifyExcelUploadMappingIntegrity(
+        data,
+        localRawEntries,
+        nextMasterCsvHeaders,
+        window.__pendingXlsbIntegritySource || null,
+      );
+      window.__lastMappingIntegrityReport = integrityReport;
+      if (
+        integrityReport.status !== "verified" ||
+        integrityReport.mismatchCount !== 0
+      ) {
+        throw new Error(
+          `원천-매핑 무결성 검증 실패: ${integrityReport.mismatchCount}건 불일치`,
+        );
+      }
+    } else {
+      window.__lastMappingIntegrityReport = null;
+    }
+
+    masterCsvHeaders = nextMasterCsvHeaders;
+    invalidateHeaderNameCache();
     masterRawEntries = localRawEntries;
     rawEntryRuntimeIndexes = preparedResult.runtimeIndexes || null;
     if (rawEntryRuntimeIndexes) {
@@ -24485,11 +25029,16 @@ async function processUploadedData(data, isExcel = false) {
     summaryCache,
     lastDashboardRenderStateKey,
     yearDongBaseAmounts: window.yearDongBaseAmounts,
+    mappingIntegrityReport: window.__lastMappingIntegrityReport || null,
   };
   try {
     window.isInitialBootLoading = true; // [v5.01] 업로드 트랜잭션 중 중복 updateDashboard 무시
     return await processUploadedDataTransaction(data, isExcel);
   } catch (error) {
+    if (window.__lastMappingIntegrityReport?.status === "failed") {
+      window.__lastMappingIntegrityFailureReport =
+        window.__lastMappingIntegrityReport;
+    }
     masterRawEntries = previousState.masterRawEntries;
     masterCsvHeaders = previousState.masterCsvHeaders;
     totalUnitsPerDongStatic = previousState.totalUnitsPerDongStatic;
@@ -24506,6 +25055,8 @@ async function processUploadedData(data, isExcel = false) {
     summaryCache = previousState.summaryCache;
     lastDashboardRenderStateKey = previousState.lastDashboardRenderStateKey;
     window.yearDongBaseAmounts = previousState.yearDongBaseAmounts;
+    window.__lastMappingIntegrityReport =
+      previousState.mappingIntegrityReport;
     invalidateFilteredEntriesCache();
     const uploadStatusEl = document.getElementById("uploadStatus");
     if (uploadStatusEl) {
@@ -32459,15 +33010,22 @@ async function processUploadedData(data, isExcel = false) {
         return;
       }
 
-      const wb = XLSX.utils.book_new();
-      const pivotData = extractPivotTableDataForExcel(table);
-      const ws = XLSX.utils.aoa_to_sheet(pivotData.data);
-      ws["!merges"] = pivotData.merges;
+      try {
+        assertExportDatasetIntegrity();
+        const wb = XLSX.utils.book_new();
+        const pivotData = extractPivotTableDataForExcel(table);
+        const ws = XLSX.utils.aoa_to_sheet(pivotData.data);
+        ws["!merges"] = pivotData.merges;
 
-      XLSX.utils.book_append_sheet(wb, ws, "계층분석결과");
+        XLSX.utils.book_append_sheet(wb, ws, "계층분석결과");
+        appendMappingIntegritySheet(wb);
 
-      const dateSuffix = getFormattedDateSuffix();
-      XLSX.writeFile(wb, `계층분석_결과${dateSuffix}.xlsx`);
+        const dateSuffix = getFormattedDateSuffix();
+        XLSX.writeFile(wb, `계층분석_결과${dateSuffix}.xlsx`);
+      } catch (error) {
+        console.error("계층 분석 Excel 내보내기 중 오류 발생:", error);
+        alert(error.message || "Excel 내보내기 중 오류가 발생했습니다.");
+      }
     }
 
     function initializeNewComparisonModal(
@@ -33864,8 +34422,22 @@ async function processUploadedData(data, isExcel = false) {
             }
           },
         });
-        const savedSettings =
+        let savedSettings =
           restoredSavedState.settings || window.DASHBOARD_SAVED_SETTINGS;
+
+        if (isLegacyBuiltInDemoDataset(savedSettings?.masterRawEntries)) {
+          console.warn(
+            "[DataIntegrity] 과거 내장 데모 저장본을 실데이터로 복원하지 않습니다.",
+          );
+          savedSettings = null;
+          window.DASHBOARD_SAVED_SETTINGS = null;
+          const uploadStatusEl = document.getElementById("uploadStatus");
+          if (uploadStatusEl) {
+            uploadStatusEl.textContent =
+              "과거 데모 데이터가 제거되었습니다. GitHub 원천 XLSB를 불러옵니다.";
+            uploadStatusEl.style.color = "#b45309";
+          }
+        }
 
         if (savedSettings) {
           wasLoadedFromSave = true;
@@ -34807,6 +35379,15 @@ async function processUploadedData(data, isExcel = false) {
           closeDataManagementDropdown();
           const uploadStatusEl = document.getElementById("uploadStatus");
           if (masterRawEntries.length > 0 && masterCsvHeaders.length > 0) {
+            try {
+              assertExportDatasetIntegrity();
+            } catch (error) {
+              if (uploadStatusEl) {
+                uploadStatusEl.textContent = error.message || String(error);
+                uploadStatusEl.style.color = "red";
+              }
+              return;
+            }
             const dongHeaderName = getHeaderName("건물동");
             const totalUnitsHeaderName = getHeaderName("전체 세대수");
             const baseAmountHeaderName = getHeaderName("동별 기본 금액");
@@ -34825,11 +35406,14 @@ async function processUploadedData(data, isExcel = false) {
               return newEntry;
             });
             let csvContent =
-              masterCsvHeaders.map((h) => h.name).join(",") + "\n";
+              ["No.", ...masterCsvHeaders.map((h) => h.name)].join(",") + "\n";
             entriesWithExtraData.forEach((entry) => {
-              const rowValues = masterCsvHeaders.map((headerConfig) =>
-                escapeCsvField(entry[headerConfig.name]),
-              );
+              const rowValues = [
+                escapeCsvField(entry._sourceRowNumber ?? ""),
+                ...masterCsvHeaders.map((headerConfig) =>
+                  escapeCsvField(entry[headerConfig.name]),
+                ),
+              ];
               csvContent += rowValues.join(",") + "\n";
             });
             downloadFile(
@@ -34856,11 +35440,15 @@ async function processUploadedData(data, isExcel = false) {
           const uploadStatusEl = document.getElementById("uploadStatus");
           if (masterRawEntries.length > 0 && masterCsvHeaders.length > 0) {
             try {
+              assertExportDatasetIntegrity();
               const wb = XLSX.utils.book_new();
               const dongHeaderName = getHeaderName("건물동");
               const totalUnitsHeaderName = getHeaderName("전체 세대수");
               const baseAmountHeaderName = getHeaderName("동별 기본 금액");
-              const exportHeaders = masterCsvHeaders.map((header) => header.name);
+              const exportHeaders = [
+                "No.",
+                ...masterCsvHeaders.map((header) => header.name),
+              ];
               if (new Set(exportHeaders).size !== exportHeaders.length) {
                 throw new Error("Excel 내보내기 헤더가 중복되었습니다.");
               }
@@ -34870,6 +35458,7 @@ async function processUploadedData(data, isExcel = false) {
                   ? entry[dongHeaderName].replace("사택 ", "").trim()
                   : "";
                 const newEntry = {};
+                newEntry["No."] = entry._sourceRowNumber ?? "";
                 masterCsvHeaders.forEach((header) => {
                   newEntry[header.name] = convertConfiguredExcelValue(
                     entry[header.name],
@@ -34889,6 +35478,7 @@ async function processUploadedData(data, isExcel = false) {
                 header: exportHeaders,
               });
               XLSX.utils.book_append_sheet(wb, ws, "현재 데이터");
+              appendMappingIntegritySheet(wb);
 
               const dateSuffix = getFormattedDateSuffix();
               const finalFileName = `현재_데이터_상태${dateSuffix}.xlsx`;
