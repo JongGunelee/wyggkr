@@ -4768,10 +4768,11 @@
     position: fixed;
     bottom: 120px;
     right: 20px;
-    z-index: 1000;
+    z-index: 1800;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    isolation: isolate;
   }
 
   .droplet-bubble {
@@ -4831,13 +4832,17 @@
     position: absolute;
     bottom: 75px;
     right: 0;
-    width: 260px;
+    width: min(320px, calc(100vw - 16px));
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 20px);
     background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(14, 165, 233, 0.2);
     border-radius: 12px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
     transition: opacity 0.2s, transform 0.2s;
     transform-origin: bottom right;
   }
@@ -4850,7 +4855,8 @@
 
   .droplet-menu-header {
     background: #f0f9ff;
-    padding: 10px 12px;
+    min-height: 48px;
+    padding: 8px 8px 8px 12px;
     font-size: 0.85rem;
     font-weight: bold;
     color: #0369a1;
@@ -4858,6 +4864,33 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #e0f2fe;
+  }
+
+  .droplet-menu.is-manual-mode .droplet-menu-header {
+    background: #ecfdf5;
+    border-bottom-color: #d1fae5;
+    color: #047857;
+  }
+
+  .droplet-menu-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .droplet-menu-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+
+  .droplet-quick-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .droplet-menu-header button {
@@ -4882,13 +4915,239 @@
     background-color: #0369a1 !important;
   }
 
+  .droplet-menu-close-btn {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(14, 116, 144, 0.22) !important;
+    border-radius: 50% !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    color: #475569 !important;
+    font-size: 20px !important;
+    font-weight: 500 !important;
+    line-height: 1 !important;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+    transition: background-color 0.15s ease, border-color 0.15s ease,
+      color 0.15s ease, transform 0.15s ease;
+  }
+
+  .droplet-menu-close-btn:hover {
+    background: #ffffff !important;
+    border-color: rgba(2, 132, 199, 0.45) !important;
+    color: #0f172a !important;
+    transform: scale(1.04);
+  }
+
+  .droplet-menu-close-btn:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 2px;
+  }
+
+  .droplet-menu.is-manual-mode .droplet-quick-actions {
+    display: none;
+  }
+
   .droplet-options-list {
     padding: 8px;
     display: flex;
     flex-direction: column;
     gap: 6px;
-    max-height: 280px;
+    min-height: 0;
+    max-height: min(390px, calc(100vh - 218px));
+    flex: 1 1 auto;
     overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #dropletOrdererSelectorContainer {
+    flex: 0 0 auto;
+  }
+
+  .droplet-menu .scenario-orderer-dropdown-list {
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  .droplet-manual-intro {
+    margin: 0 0 2px;
+    padding: 7px 8px;
+    border: 1px solid #a7f3d0;
+    border-radius: 8px;
+    background: #f0fdf4;
+    color: #166534;
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1.4;
+  }
+
+  .droplet-manual-filter-item {
+    border: 1px solid #dbe5ee;
+    border-radius: 9px;
+    background: #f8fafc;
+    overflow: hidden;
+  }
+
+  .droplet-manual-filter-toggle {
+    width: 100%;
+    min-height: 40px;
+    padding: 7px 8px;
+    display: grid;
+    grid-template-columns: minmax(86px, auto) minmax(0, 1fr) 18px;
+    align-items: center;
+    gap: 6px;
+    color: #334155;
+    text-align: left;
+    background: #f8fafc;
+    border: 0;
+  }
+
+  .droplet-manual-filter-toggle:hover,
+  .droplet-manual-filter-toggle[aria-expanded="true"] {
+    background: #eff6ff;
+    color: #075985;
+  }
+
+  .droplet-manual-filter-name {
+    font-size: 11px;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+
+  .droplet-manual-filter-summary {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: #0284c7;
+    font-size: 10px;
+    font-weight: 750;
+    text-align: right;
+  }
+
+  .droplet-manual-filter-arrow {
+    color: #94a3b8;
+    font-size: 10px;
+    text-align: center;
+    transition: transform 0.15s ease;
+  }
+
+  .droplet-manual-filter-toggle[aria-expanded="true"]
+    .droplet-manual-filter-arrow {
+    transform: rotate(180deg);
+  }
+
+  .droplet-manual-filter-panel {
+    padding: 7px;
+    border-top: 1px solid #dbeafe;
+    background: #ffffff;
+  }
+
+  .droplet-manual-filter-panel.hidden {
+    display: none;
+  }
+
+  .droplet-manual-filter-tools {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+
+  .droplet-manual-filter-search {
+    width: 100%;
+    min-width: 0;
+    height: 30px;
+    padding: 4px 7px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #334155;
+    background: #ffffff;
+    font-size: 10px;
+  }
+
+  .droplet-manual-filter-search:focus {
+    outline: 2px solid rgba(56, 189, 248, 0.35);
+    border-color: #38bdf8;
+  }
+
+  .droplet-manual-filter-all-btn,
+  .droplet-manual-filter-apply-btn {
+    min-height: 30px;
+    padding: 4px 9px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 800;
+  }
+
+  .droplet-manual-filter-all-btn {
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    background: #f8fafc;
+  }
+
+  .droplet-manual-filter-choices {
+    max-height: 145px;
+    overflow-y: auto;
+    padding: 2px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8fafc;
+    overscroll-behavior: contain;
+  }
+
+  .droplet-manual-filter-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    width: 100%;
+    padding: 5px 4px;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.25;
+    cursor: pointer;
+  }
+
+  .droplet-manual-filter-choice input {
+    flex: 0 0 auto;
+    margin-top: 1px;
+  }
+
+  .droplet-manual-filter-choice.is-search-hidden {
+    display: none;
+  }
+
+  .droplet-manual-filter-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    margin-top: 6px;
+  }
+
+  .droplet-manual-filter-hint {
+    color: #64748b;
+    font-size: 9px;
+    line-height: 1.25;
+  }
+
+  .droplet-manual-filter-apply-btn {
+    min-width: 54px;
+    border: 1px solid #0284c7;
+    color: #ffffff;
+    background: #0284c7;
+  }
+
+  .droplet-manual-filter-apply-btn:disabled {
+    cursor: wait;
+    opacity: 0.65;
   }
 
   /* [v5.25] 모든 시나리오 표면이 공유하는 완전 수동모드 진입 UI */
@@ -4966,6 +5225,20 @@
     }
 
     .scenario-manual-mode-btn {
+      min-height: 44px;
+    }
+
+    .droplet-menu-close-btn {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+    }
+
+    .droplet-menu-header {
+      min-height: 52px;
+    }
+
+    .droplet-manual-filter-toggle {
       min-height: 44px;
     }
   }
@@ -10110,6 +10383,7 @@
     let activeScenarioShortName = null;
     let isCompleteManualModeActive = false;
     let completeManualModeTransitionPromise = null;
+    let scenarioOrdererApplyPromise = null;
     window.isCompleteManualModeActive = false;
     
     // [v5.17] 시나리오 연계 발주처 목록 (기본값: 엘지에너지솔루션)
@@ -10228,10 +10502,35 @@
           e.preventDefault();
           e.stopPropagation();
           if (completeManualModeTransitionPromise) return;
+          // 이미 활성화된 수동모드를 다시 실행하면 사용자가 만든 필터 조합이
+          // 중립값으로 초기화됩니다. 활성 버튼은 상태 보존형 포커스 이동만 수행합니다.
+          if (window.isCompleteManualModeActive) {
+            if (typeof populateDropletMenu === "function") {
+              populateDropletMenu();
+            }
+            const firstManualFilter = document.querySelector(
+              "#dropletOptionsContainer .droplet-manual-filter-toggle",
+            );
+            if (firstManualFilter && typeof firstManualFilter.focus === "function") {
+              firstManualFilter.focus({ preventScroll: true });
+            }
+            return;
+          }
           document.querySelectorAll(".scenario-manual-mode-btn").forEach((el) => {
             el.disabled = true;
             el.setAttribute("aria-busy", "true");
           });
+          const dropletMenu = document.getElementById("dropletMenu");
+          if (dropletMenu) {
+            dropletMenu.setAttribute("aria-busy", "true");
+            dropletMenu
+              .querySelectorAll(
+                ".droplet-apply-btn, .droplet-header-btn, .scenario-orderer-btn, .scenario-orderer-apply-btn",
+              )
+              .forEach((button) => {
+                button.disabled = true;
+              });
+          }
           await enterCompleteManualMode(typeSuffix || "scenario");
         });
       }
@@ -10260,8 +10559,9 @@
         });
         const applyBtn = list.querySelector(".scenario-orderer-apply-btn");
         if (applyBtn) {
-          applyBtn.addEventListener("click", (e) => {
+          applyBtn.addEventListener("click", async (e) => {
             e.stopPropagation();
+            if (scenarioOrdererApplyPromise) return;
             const checkboxes = list.querySelectorAll(".scenario-orderer-checkbox");
             const checkedValues = Array.from(checkboxes).filter(c => c.checked).map(c => c.value);
             
@@ -10270,10 +10570,27 @@
               return;
             }
             
-            window.scenarioTargetOrderers = checkedValues;
-            list.classList.add("hidden");
-            syncScenarioOrdererSelectors();
-            handleScenarioOrdererChange();
+            applyBtn.disabled = true;
+            applyBtn.setAttribute("aria-busy", "true");
+            scenarioOrdererApplyPromise = (async () => {
+              window.scenarioTargetOrderers = checkedValues;
+              list.classList.add("hidden");
+              await handleScenarioOrdererChange();
+              syncScenarioOrdererSelectors();
+              if (typeof populateDropletMenu === "function") {
+                populateDropletMenu();
+              }
+              if (typeof scheduleScenarioDropletVisibilityCheck === "function") {
+                scheduleScenarioDropletVisibilityCheck();
+              }
+            })();
+            try {
+              await scenarioOrdererApplyPromise;
+            } catch (error) {
+              console.error("[발주처 선택] 적용 실패:", error);
+            } finally {
+              scenarioOrdererApplyPromise = null;
+            }
           });
         }
       }
@@ -10354,8 +10671,19 @@
         (config) => config.headerName === ordererHeaderName,
       );
       if (ordererConfig) {
-        ordererConfig.selectedValues = [...window.scenarioTargetOrderers];
-        ordererConfig.selectionOrder = [...window.scenarioTargetOrderers];
+        const selectedOrderers = Array.isArray(window.scenarioTargetOrderers)
+          ? [...new Set(window.scenarioTargetOrderers.map((value) => String(value).trim()).filter(Boolean))]
+          : [];
+        const allOrderers = getScenarioOrderers();
+        const isWholeManualDomain =
+          isCompleteManualModeActive &&
+          allOrderers.length > 0 &&
+          selectedOrderers.length === allOrderers.length &&
+          allOrderers.every((value) => selectedOrderers.includes(value));
+        ordererConfig.selectedValues = isWholeManualDomain
+          ? []
+          : selectedOrderers;
+        ordererConfig.selectionOrder = [...ordererConfig.selectedValues];
       }
       invalidateFilteredEntriesCache();
 
@@ -11028,6 +11356,7 @@
       options = {},
     ) {
       const nextState = !!active;
+      const previousState = !!window.isCompleteManualModeActive;
       isCompleteManualModeActive = nextState;
       window.isCompleteManualModeActive = nextState;
 
@@ -11061,6 +11390,18 @@
           : "";
       }
       refreshCompleteManualModeIndicators();
+      if (
+        previousState !== nextState &&
+        options.deferDropletSurface !== true &&
+        document.getElementById("dropletOptionsContainer")
+      ) {
+        queueMicrotask(() => {
+          try {
+            populateDropletMenu();
+            scheduleScenarioDropletVisibilityCheck();
+          } catch (_) { }
+        });
+      }
     }
 
     function activateAutomaticFilteringMode() {
@@ -14089,7 +14430,436 @@
       }
     }
 
-    function populateDropletMenu() {
+    const DROPLET_MANUAL_FILTER_CONCEPTS = [
+      "회계 연도",
+      "작업유형",
+      "건물동",
+      "부서",
+      "매입 마감 (월)",
+    ];
+    let dropletManualFilterApplyPromise = null;
+
+    function normalizeDropletManualFilterValue(entry, headerName) {
+      let value = entry && typeof entry === "object" ? entry[headerName] : entry;
+      if (value === null || value === undefined) return "";
+      if (headerName === getHeaderName("건물동")) {
+        return String(value).replace(/^사택\s+/, "").trim();
+      }
+      if (headerName === getHeaderName("매입 마감 (월)")) {
+        const match = String(value).match(/(\d{1,2}월)/);
+        return match ? match[1] : "";
+      }
+      return String(value).trim();
+    }
+
+    function getDropletManualFilterMeta(headerName) {
+      if (headerName === getHeaderName("회계 연도")) {
+        return { icon: "📅", label: "연도" };
+      }
+      if (headerName === getHeaderName("작업유형")) {
+        return { icon: "🧰", label: "작업유형" };
+      }
+      if (headerName === getHeaderName("건물동")) {
+        return { icon: "🏢", label: "건물동" };
+      }
+      if (headerName === getHeaderName("부서")) {
+        return { icon: "🏷️", label: "부서" };
+      }
+      return { icon: "🗓️", label: "마감월" };
+    }
+
+    function getDropletManualFilterOptions(filterConfig) {
+      if (!filterConfig || !Array.isArray(masterRawEntries)) return [];
+      const headerName = filterConfig.headerName;
+      const values = [
+        ...new Set(
+          masterRawEntries
+            .map((entry) => normalizeDropletManualFilterValue(entry, headerName))
+            .filter(Boolean),
+        ),
+      ];
+      const direction = filterConfig.sort === "desc" ? -1 : 1;
+      values.sort((a, b) => {
+        if (headerName === getHeaderName("매입 마감 (월)")) {
+          return (parseInt(a, 10) - parseInt(b, 10)) * direction;
+        }
+        return (
+          String(a).localeCompare(String(b), "ko-KR", {
+            numeric: true,
+            sensitivity: "base",
+          }) * direction
+        );
+      });
+      return values;
+    }
+
+    function getDropletManualFilterSummary(filterConfig) {
+      const selected = Array.isArray(filterConfig?.selectedValues)
+        ? filterConfig.selectedValues
+        : [];
+      if (selected.length === 0) return "전체";
+      if (selected.length === 1) {
+        const value = String(selected[0]);
+        return filterConfig.headerName === getHeaderName("작업유형")
+          ? simplifyWorkTypeName(value)
+          : value;
+      }
+      return selected.length.toLocaleString("ko-KR") + "개 선택";
+    }
+
+    function setDropletStatus(message, color = "#047857") {
+      const uploadStatusEl = document.getElementById("uploadStatus");
+      if (!uploadStatusEl) return;
+      uploadStatusEl.textContent = message;
+      uploadStatusEl.style.color = color;
+    }
+
+    async function applyDropletManualFilterSelection(headerName, requestedValues) {
+      if (!window.isCompleteManualModeActive) return false;
+      if (dropletManualFilterApplyPromise) {
+        return dropletManualFilterApplyPromise;
+      }
+
+      dropletManualFilterApplyPromise = (async () => {
+        const previousState = {
+          activeFilterConfigs: cloneSerializableData(activeFilterConfigs),
+          selectedWorkTypesForComparison: [
+            ...(Array.isArray(selectedWorkTypesForComparison)
+              ? selectedWorkTypesForComparison
+              : []),
+          ],
+          scenarioTargetOrderers: [
+            ...(Array.isArray(window.scenarioTargetOrderers)
+              ? window.scenarioTargetOrderers
+              : []),
+          ],
+          manualFilterStateBeforeLoad: cloneSerializableData(
+            manualFilterStateBeforeLoad,
+          ),
+        };
+
+        try {
+          const config = activeFilterConfigs.find(
+            (item) => item.headerName === headerName,
+          );
+          if (!config) {
+            throw new Error("수동 필터 구성을 찾을 수 없습니다: " + headerName);
+          }
+
+          const domain = getDropletManualFilterOptions(config);
+          const domainSet = new Set(domain);
+          const normalizedValues = [
+            ...new Set(
+              (Array.isArray(requestedValues) ? requestedValues : [])
+                .map((value) =>
+                  normalizeDropletManualFilterValue(value, headerName),
+                )
+                .filter((value) => value && domainSet.has(value)),
+            ),
+          ];
+
+          // 모든 비공란 옵션을 명시 배열로 저장하면 원천의 빈 셀 행이 빠집니다.
+          // 전체 도메인을 선택한 경우에도 엔진의 진짜 중립값 []로 정규화합니다.
+          const isWholeDomain =
+            domain.length > 0 &&
+            normalizedValues.length === domain.length &&
+            domain.every((value) => normalizedValues.includes(value));
+          config.selectedValues = isWholeDomain ? [] : normalizedValues;
+          config.selectionOrder =
+            headerName === getHeaderName("회계 연도")
+              ? [...config.selectedValues]
+              : Array.isArray(config.selectionOrder)
+                ? config.selectionOrder.filter((value) =>
+                    config.selectedValues.includes(String(value)),
+                  )
+                : [];
+
+          projectCompleteManualFilterToConsumers(config);
+          invalidateFilteredEntriesCache();
+          invalidatePivotViewCache();
+          populateDynamicFilterOptions();
+          updateFilterSummaryBars();
+          updateFilterInteractivity();
+          updateQuickYearFilterButtonText();
+          updateYearFilterTexts();
+
+          const renderResult = await updateDashboard({ force: true });
+          if (renderResult === false) {
+            throw new Error("대시보드 갱신이 완료되지 않았습니다.");
+          }
+
+          const filteredEntries = ensureCurrentFilteredEntries();
+          manualFilterStateBeforeLoad = cloneSerializableData(
+            activeFilterConfigs,
+          );
+          window.__lastDropletManualFilterResult = {
+            status: "applied",
+            headerName,
+            selectedValues: [...config.selectedValues],
+            rowCount: filteredEntries.length,
+          };
+          setDropletStatus(
+            "완전 수동 필터 적용: " +
+              getDropletManualFilterMeta(headerName).label +
+              " · " +
+              getDropletManualFilterSummary(config) +
+              " · " +
+              filteredEntries.length.toLocaleString("ko-KR") +
+              "행",
+          );
+          populateDropletMenu({ expandedManualHeader: headerName });
+          adjustDropletMenuPosition();
+          window.dispatchEvent(
+            new CustomEvent("completeManualFilterChanged", {
+              detail: window.__lastDropletManualFilterResult,
+            }),
+          );
+          return true;
+        } catch (error) {
+          activeFilterConfigs = cloneSerializableData(
+            previousState.activeFilterConfigs,
+          );
+          selectedWorkTypesForComparison = [
+            ...previousState.selectedWorkTypesForComparison,
+          ];
+          window.scenarioTargetOrderers = [
+            ...previousState.scenarioTargetOrderers,
+          ];
+          manualFilterStateBeforeLoad = cloneSerializableData(
+            previousState.manualFilterStateBeforeLoad,
+          );
+          invalidateFilteredEntriesCache();
+          invalidatePivotViewCache();
+          try {
+            initializeDynamicFiltersUI();
+            await updateDashboard({ force: true });
+          } catch (rollbackError) {
+            console.error("[물방울 수동필터] 롤백 렌더 실패:", rollbackError);
+          }
+          syncScenarioOrdererSelectors();
+          updateFilterSummaryBars();
+          updateFilterInteractivity();
+          populateDropletMenu({ expandedManualHeader: headerName });
+          window.__lastDropletManualFilterResult = {
+            status: "rolled-back",
+            headerName,
+            error: error && error.message ? error.message : String(error),
+          };
+          setDropletStatus(
+            "수동 필터 적용 실패 · 이전 선택으로 복원했습니다: " +
+              window.__lastDropletManualFilterResult.error,
+            "#dc2626",
+          );
+          console.error("[물방울 수동필터] 적용 실패:", error);
+          return false;
+        }
+      })();
+
+      try {
+        return await dropletManualFilterApplyPromise;
+      } finally {
+        dropletManualFilterApplyPromise = null;
+        document
+          .querySelectorAll(".droplet-manual-filter-apply-btn")
+          .forEach((button) => {
+            button.disabled = false;
+            button.removeAttribute("aria-busy");
+          });
+      }
+    }
+
+    function renderDropletManualFilters(container, expandedHeaderName = "") {
+      if (!container) return;
+      const intro = document.createElement("p");
+      intro.className = "droplet-manual-intro";
+      intro.textContent =
+        "자동 시나리오는 중지되었습니다. 각 항목을 직접 조합하세요. 선택 없음은 결측값을 포함한 전체입니다.";
+      container.appendChild(intro);
+
+      const orderedHeaders = DROPLET_MANUAL_FILTER_CONCEPTS.map((concept) =>
+        getHeaderName(concept),
+      );
+      orderedHeaders.forEach((headerName, index) => {
+        const config = activeFilterConfigs.find(
+          (item) => item.headerName === headerName,
+        );
+        if (!config) return;
+
+        const meta = getDropletManualFilterMeta(headerName);
+        const options = getDropletManualFilterOptions(config);
+        const selectedSet = new Set(
+          (Array.isArray(config.selectedValues) ? config.selectedValues : []).map(
+            (value) => String(value),
+          ),
+        );
+        const item = document.createElement("section");
+        item.className = "droplet-manual-filter-item";
+        item.dataset.filterHeader = headerName;
+
+        const toggle = document.createElement("button");
+        toggle.type = "button";
+        toggle.className = "droplet-manual-filter-toggle";
+        toggle.setAttribute("aria-expanded", "false");
+        const panelId = "droplet-manual-filter-panel-" + index;
+        toggle.setAttribute("aria-controls", panelId);
+
+        const name = document.createElement("span");
+        name.className = "droplet-manual-filter-name";
+        name.textContent = meta.icon + " " + meta.label;
+        const summary = document.createElement("span");
+        summary.className = "droplet-manual-filter-summary";
+        summary.textContent = getDropletManualFilterSummary(config);
+        const arrow = document.createElement("span");
+        arrow.className = "droplet-manual-filter-arrow";
+        arrow.setAttribute("aria-hidden", "true");
+        arrow.textContent = "▼";
+        toggle.append(name, summary, arrow);
+
+        const panel = document.createElement("div");
+        panel.id = panelId;
+        panel.className = "droplet-manual-filter-panel hidden";
+
+        const tools = document.createElement("div");
+        tools.className = "droplet-manual-filter-tools";
+        const search = document.createElement("input");
+        search.type = "search";
+        search.className = "droplet-manual-filter-search";
+        search.placeholder = meta.label + " 검색";
+        search.setAttribute("aria-label", meta.label + " 필터 검색");
+        const allButton = document.createElement("button");
+        allButton.type = "button";
+        allButton.className = "droplet-manual-filter-all-btn";
+        allButton.textContent = "전체";
+        allButton.title = "선택을 비워 전체 원본 범위로 설정";
+        tools.append(search, allButton);
+
+        const choices = document.createElement("div");
+        choices.className = "droplet-manual-filter-choices";
+        options.forEach((optionValue) => {
+          const label = document.createElement("label");
+          label.className = "droplet-manual-filter-choice";
+          label.dataset.searchText = String(optionValue).toLocaleLowerCase("ko-KR");
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = optionValue;
+          checkbox.checked = selectedSet.has(String(optionValue));
+          const labelText = document.createElement("span");
+          labelText.textContent =
+            headerName === getHeaderName("작업유형")
+              ? simplifyWorkTypeName(optionValue)
+              : optionValue;
+          label.append(checkbox, labelText);
+          choices.appendChild(label);
+        });
+        if (options.length === 0) {
+          const empty = document.createElement("p");
+          empty.className = "droplet-manual-filter-hint";
+          empty.textContent = "현재 원본 데이터에 선택 가능한 값이 없습니다.";
+          choices.appendChild(empty);
+        }
+
+        const footer = document.createElement("div");
+        footer.className = "droplet-manual-filter-footer";
+        const hint = document.createElement("span");
+        hint.className = "droplet-manual-filter-hint";
+        hint.textContent = "선택 없음 = 전체";
+        const applyButton = document.createElement("button");
+        applyButton.type = "button";
+        applyButton.className = "droplet-manual-filter-apply-btn";
+        applyButton.textContent = "적용";
+        footer.append(hint, applyButton);
+        panel.append(tools, choices, footer);
+        item.append(toggle, panel);
+        container.appendChild(item);
+
+        const setExpanded = (expanded) => {
+          toggle.setAttribute("aria-expanded", String(expanded));
+          panel.classList.toggle("hidden", !expanded);
+          if (expanded) {
+            requestAnimationFrame(() => adjustDropletMenuPosition());
+          }
+        };
+        toggle.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          const shouldOpen = toggle.getAttribute("aria-expanded") !== "true";
+          container
+            .querySelectorAll(".droplet-manual-filter-toggle")
+            .forEach((otherToggle) => {
+              if (otherToggle === toggle) return;
+              otherToggle.setAttribute("aria-expanded", "false");
+              const controlled = document.getElementById(
+                otherToggle.getAttribute("aria-controls"),
+              );
+              if (controlled) controlled.classList.add("hidden");
+            });
+          setExpanded(shouldOpen);
+        });
+        panel.addEventListener("click", (event) => event.stopPropagation());
+        search.addEventListener("input", () => {
+          const query = search.value.trim().toLocaleLowerCase("ko-KR");
+          choices
+            .querySelectorAll(".droplet-manual-filter-choice")
+            .forEach((label) => {
+              label.classList.toggle(
+                "is-search-hidden",
+                !!query && !label.dataset.searchText.includes(query),
+              );
+            });
+        });
+        allButton.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          choices
+            .querySelectorAll('input[type="checkbox"]')
+            .forEach((checkbox) => {
+              checkbox.checked = false;
+            });
+        });
+        applyButton.addEventListener("click", async (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (dropletManualFilterApplyPromise) return;
+          applyButton.disabled = true;
+          applyButton.setAttribute("aria-busy", "true");
+          const checkedValues = Array.from(
+            choices.querySelectorAll('input[type="checkbox"]:checked'),
+          ).map((checkbox) => checkbox.value);
+          await applyDropletManualFilterSelection(headerName, checkedValues);
+        });
+
+        if (expandedHeaderName === headerName) {
+          setExpanded(true);
+        }
+      });
+    }
+
+    function setDropletMenuOpen(open, options = {}) {
+      const menu = document.getElementById("dropletMenu");
+      const handle = document.getElementById("dropletHandle");
+      if (!menu || !handle) return;
+      const shouldOpen = !!open;
+      if (shouldOpen) {
+        populateDropletMenu();
+        menu.classList.remove("hidden");
+        requestAnimationFrame(() => adjustDropletMenuPosition());
+      } else {
+        menu.classList.add("hidden");
+      }
+      menu.setAttribute("aria-hidden", String(!shouldOpen));
+      handle.setAttribute("aria-expanded", String(shouldOpen));
+      handle.setAttribute(
+        "aria-label",
+        shouldOpen
+          ? "시나리오 간편 선택 패널 닫기"
+          : "시나리오 간편 선택 패널 열기",
+      );
+      if (!shouldOpen && options.restoreFocus && typeof handle.focus === "function") {
+        handle.focus({ preventScroll: true });
+      }
+    }
+
+    function populateDropletMenu(options = {}) {
       const container = document.getElementById("dropletOptionsContainer");
       if (!container) return;
       container.innerHTML = "";
@@ -14110,6 +14880,24 @@
           }
         }
         renderScenarioOrdererSelector("dropletOrdererSelectorContainer", "mobile");
+      }
+
+      const isManualMode = !!window.isCompleteManualModeActive;
+      const title = document.getElementById("dropletMenuTitle");
+      if (dropletMenu) {
+        dropletMenu.classList.toggle("is-manual-mode", isManualMode);
+      }
+      if (title) {
+        title.textContent = isManualMode
+          ? "🧭 수동 필터 선택"
+          : "🎯 시나리오 선택";
+      }
+      if (isManualMode) {
+        renderDropletManualFilters(
+          container,
+          options.expandedManualHeader || "",
+        );
+        return;
       }
 
       const emojis = {
@@ -14216,8 +15004,7 @@
             }
           }
           
-          const menu = document.getElementById("dropletMenu");
-          if (menu) menu.classList.add("hidden");
+          setDropletMenuOpen(false);
           
           populateDropletMenu();
         });
@@ -14234,8 +15021,7 @@
           resetScenarioButton();
           await applyYearFilter(2);
           updateDropletState();
-          const menu = document.getElementById("dropletMenu");
-          if (menu) menu.classList.add("hidden");
+          setDropletMenuOpen(false);
           populateDropletMenu();
         };
       }
@@ -14249,8 +15035,7 @@
           resetScenarioButton();
           await applyYearFilter(3);
           updateDropletState();
-          const menu = document.getElementById("dropletMenu");
-          if (menu) menu.classList.add("hidden");
+          setDropletMenuOpen(false);
           populateDropletMenu();
         };
       }
@@ -14263,7 +15048,20 @@
       if (!droplet || !menu) return;
 
       const rect = droplet.getBoundingClientRect();
-      const menuWidth = 260; // .droplet-menu 고정 가로폭
+      const visualViewport = window.visualViewport;
+      const viewportLeft = visualViewport ? visualViewport.offsetLeft : 0;
+      const viewportTop = visualViewport ? visualViewport.offsetTop : 0;
+      const viewportWidth = visualViewport
+        ? visualViewport.width
+        : window.innerWidth;
+      const viewportHeight = visualViewport
+        ? visualViewport.height
+        : window.innerHeight;
+      const edge = 8;
+      const menuWidth = Math.max(0, Math.min(320, viewportWidth - edge * 2));
+      menu.style.position = "fixed";
+      menu.style.width = menuWidth + "px";
+      menu.style.maxHeight = Math.max(160, viewportHeight - edge * 2) + "px";
 
       // 팝업 메뉴의 높이를 미리 계산하기 위해 visibility를 가리고 임시 표출
       const wasHidden = menu.classList.contains("hidden");
@@ -14277,30 +15075,35 @@
         menu.style.visibility = "";
       }
 
-      // 절대 좌표계 복잡성을 피하기 위해 fixed 포지셔닝으로 전환
-      menu.style.position = "fixed";
-      menu.style.width = menuWidth + "px";
-
       // 1. 가로축 위치 계산 (우측 정렬 기본, 좌측 경계 충돌 시 우측으로 전개)
       let targetLeft = rect.right - menuWidth;
-      if (targetLeft < 10) {
+      if (targetLeft < viewportLeft + edge) {
         targetLeft = rect.left; // 물방울 기준 좌측 정렬로 꺾음
       }
       // 브라우저 뷰포트 범위 내 최종 클램핑
-      targetLeft = Math.max(10, Math.min(targetLeft, window.innerWidth - menuWidth - 10));
+      targetLeft = Math.max(
+        viewportLeft + edge,
+        Math.min(
+          targetLeft,
+          viewportLeft + viewportWidth - menuWidth - edge,
+        ),
+      );
 
       // 2. 세로축 위치 계산 (상단 노출 기본, 상단 경계 충돌 시 하단으로 전개)
-      let targetTop = rect.top - menuHeight - 10;
+      let targetTop = rect.top - menuHeight - edge;
       let transformOriginY = "bottom";
 
-      if (targetTop < 10) {
-        targetTop = rect.bottom + 10; // 물방울 하단으로 꺾어서 노출
+      if (targetTop < viewportTop + edge) {
+        targetTop = rect.bottom + edge; // 물방울 하단으로 꺾어서 노출
         transformOriginY = "top";
       }
 
       // 하단도 초과하는 극단적 케이스의 클램핑
-      if (targetTop + menuHeight > window.innerHeight - 10) {
-        targetTop = Math.max(10, window.innerHeight - menuHeight - 10);
+      if (targetTop + menuHeight > viewportTop + viewportHeight - edge) {
+        targetTop = Math.max(
+          viewportTop + edge,
+          viewportTop + viewportHeight - menuHeight - edge,
+        );
       }
 
       // 3. 인라인 스타일 주입 및 배치
@@ -14311,13 +15114,87 @@
 
       // 부드러운 스케일 업 애니메이션을 위해 꺾인 방향에 맞춰 transform-origin 동적 설정
       const transformOriginX = (targetLeft + (menuWidth / 2) < rect.left + (rect.width / 2)) ? "left" : "right";
-      menu.style.transformOrigin = `${transformOriginY} ${transformOriginX}`;
+      menu.style.transformOrigin = `${transformOriginX} ${transformOriginY}`;
     }
+
+    let dropletVisibilityTimers = [];
+    function ensureScenarioDropletVisible(options = {}) {
+      const droplet = document.getElementById("floatingScenarioDroplet");
+      const handle = document.getElementById("dropletHandle");
+      if (!droplet || !handle) return false;
+
+      droplet.style.display = "flex";
+      const visualViewport = window.visualViewport;
+      const viewportLeft = visualViewport ? visualViewport.offsetLeft : 0;
+      const viewportTop = visualViewport ? visualViewport.offsetTop : 0;
+      const viewportWidth = visualViewport
+        ? visualViewport.width
+        : window.innerWidth;
+      const viewportHeight = visualViewport
+        ? visualViewport.height
+        : window.innerHeight;
+      const edge = 8;
+      const rect = handle.getBoundingClientRect();
+      const width = rect.width || handle.offsetWidth || 74;
+      const height = rect.height || handle.offsetHeight || 74;
+      const maxLeft = Math.max(
+        viewportLeft + edge,
+        viewportLeft + viewportWidth - width - edge,
+      );
+      const maxTop = Math.max(
+        viewportTop + edge,
+        viewportTop + viewportHeight - height - edge,
+      );
+      const safeLeft = Math.max(
+        viewportLeft + edge,
+        Math.min(Number.isFinite(rect.left) ? rect.left : maxLeft, maxLeft),
+      );
+      const safeTop = Math.max(
+        viewportTop + edge,
+        Math.min(Number.isFinite(rect.top) ? rect.top : maxTop, maxTop),
+      );
+      const moved =
+        Math.abs(safeLeft - rect.left) > 0.5 ||
+        Math.abs(safeTop - rect.top) > 0.5;
+
+      if (moved || options.forceCoordinates) {
+        droplet.style.right = "auto";
+        droplet.style.bottom = "auto";
+        droplet.style.left = safeLeft + "px";
+        droplet.style.top = safeTop + "px";
+      }
+      if (moved || options.persist) {
+        try {
+          localStorage.setItem(
+            "dropletPosition",
+            JSON.stringify({ left: safeLeft, top: safeTop }),
+          );
+        } catch (_) { }
+      }
+      const menu = document.getElementById("dropletMenu");
+      if (menu && !menu.classList.contains("hidden")) {
+        adjustDropletMenuPosition();
+      }
+      return true;
+    }
+
+    function scheduleScenarioDropletVisibilityCheck() {
+      dropletVisibilityTimers.forEach((timer) => clearTimeout(timer));
+      dropletVisibilityTimers = [0, 180, 420].map((delay) =>
+        setTimeout(() => ensureScenarioDropletVisible(), delay),
+      );
+    }
+
+    window.ensureScenarioDropletVisible = ensureScenarioDropletVisible;
+    window.scheduleScenarioDropletVisibilityCheck =
+      scheduleScenarioDropletVisibilityCheck;
 
     function setupDropletDragAndDrop() {
       const droplet = document.getElementById("floatingScenarioDroplet");
       const handle = document.getElementById("dropletHandle");
       if (!droplet || !handle) return;
+      if (droplet.dataset.dragInitialized === "true") return;
+      droplet.dataset.dragInitialized = "true";
 
       let isDragging = false;
       let startX, startY, initialLeft, initialTop;
@@ -14349,20 +15226,30 @@
           if (!dragMoved) {
             dragMoved = true;
             // 드래그가 확실시되는 순간에만 메뉴를 닫습니다.
-            const menu = document.getElementById("dropletMenu");
-            if (menu) {
-              menu.classList.add("hidden");
-            }
+            setDropletMenuOpen(false);
           }
         }
 
         let newLeft = initialLeft + dx;
         let newTop = initialTop + dy;
         
-        const maxLeft = window.innerWidth - 70;
-        const maxTop = window.innerHeight - 70;
-        newLeft = Math.max(10, Math.min(newLeft, maxLeft));
-        newTop = Math.max(10, Math.min(newTop, maxTop));
+        const visualViewport = window.visualViewport;
+        const viewportLeft = visualViewport ? visualViewport.offsetLeft : 0;
+        const viewportTop = visualViewport ? visualViewport.offsetTop : 0;
+        const viewportWidth = visualViewport
+          ? visualViewport.width
+          : window.innerWidth;
+        const viewportHeight = visualViewport
+          ? visualViewport.height
+          : window.innerHeight;
+        const handleRect = handle.getBoundingClientRect();
+        const edge = 8;
+        const maxLeft =
+          viewportLeft + viewportWidth - (handleRect.width || 74) - edge;
+        const maxTop =
+          viewportTop + viewportHeight - (handleRect.height || 74) - edge;
+        newLeft = Math.max(viewportLeft + edge, Math.min(newLeft, maxLeft));
+        newTop = Math.max(viewportTop + edge, Math.min(newTop, maxTop));
         
         droplet.style.left = newLeft + "px";
         droplet.style.top = newTop + "px";
@@ -14374,22 +15261,12 @@
         if (isDragging) {
           isDragging = false;
           if (dragMoved) {
-            const rect = droplet.getBoundingClientRect();
-            localStorage.setItem("dropletPosition", JSON.stringify({
-              left: rect.left,
-              top: rect.top
-            }));
+            ensureScenarioDropletVisible({ persist: true });
           } else {
             // 드래그가 발생하지 않은 탭/클릭의 경우 정밀 토글 수행
             const menu = document.getElementById("dropletMenu");
             if (menu) {
-              if (menu.classList.contains("hidden")) {
-                populateDropletMenu();
-                adjustDropletMenuPosition();
-                menu.classList.remove("hidden");
-              } else {
-                menu.classList.add("hidden");
-              }
+              setDropletMenuOpen(menu.classList.contains("hidden"));
             }
           }
         }
@@ -14441,17 +15318,93 @@
       const droplet = document.getElementById("floatingScenarioDroplet");
       if (!droplet) return;
 
-      const savedPos = localStorage.getItem("dropletPosition");
-      if (savedPos) {
-        try {
-          const pos = JSON.parse(savedPos);
-          droplet.style.bottom = "auto";
-          droplet.style.right = "auto";
-          droplet.style.left = pos.left + "px";
-          droplet.style.top = pos.top + "px";
-        } catch (e) {
-          console.warn("[Droplet] Failed to restore position:", e);
+      if (droplet.dataset.initialized !== "true") {
+        const savedPos = localStorage.getItem("dropletPosition");
+        if (savedPos) {
+          try {
+            const pos = JSON.parse(savedPos);
+            if (Number.isFinite(pos.left) && Number.isFinite(pos.top)) {
+              droplet.style.bottom = "auto";
+              droplet.style.right = "auto";
+              droplet.style.left = pos.left + "px";
+              droplet.style.top = pos.top + "px";
+            } else {
+              localStorage.removeItem("dropletPosition");
+            }
+          } catch (e) {
+            localStorage.removeItem("dropletPosition");
+            console.warn("[Droplet] Failed to restore position:", e);
+          }
         }
+        droplet.dataset.initialized = "true";
+
+        const handle = document.getElementById("dropletHandle");
+        const menu = document.getElementById("dropletMenu");
+        const closeButton = document.getElementById("dropletMenuCloseButton");
+        if (closeButton) {
+          closeButton.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            setDropletMenuOpen(false, { restoreFocus: true });
+          });
+        }
+        if (handle) {
+          handle.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault();
+              setDropletMenuOpen(
+                !menu || menu.classList.contains("hidden"),
+              );
+            } else if (event.key === "Escape") {
+              event.preventDefault();
+              setDropletMenuOpen(false, { restoreFocus: true });
+            }
+          });
+        }
+        document.addEventListener("keydown", (event) => {
+          if (
+            event.key === "Escape" &&
+            menu &&
+            !menu.classList.contains("hidden")
+          ) {
+            event.preventDefault();
+            setDropletMenuOpen(false, { restoreFocus: true });
+          }
+        });
+        document.addEventListener(
+          "click",
+          (event) => {
+            if (
+              event.target.closest(
+                ".section-accordion-header, .filter-accordion-header, .layout-control-button, #sidebarPinButton, #sidebarCloseButton, #mobileSidebarToggle",
+              )
+            ) {
+              scheduleScenarioDropletVisibilityCheck();
+            }
+          },
+          true,
+        );
+        window.addEventListener("resize", scheduleScenarioDropletVisibilityCheck);
+        window.addEventListener(
+          "orientationchange",
+          scheduleScenarioDropletVisibilityCheck,
+        );
+        if (window.visualViewport) {
+          window.visualViewport.addEventListener(
+            "resize",
+            scheduleScenarioDropletVisibilityCheck,
+          );
+          window.visualViewport.addEventListener(
+            "scroll",
+            scheduleScenarioDropletVisibilityCheck,
+          );
+        }
+        window.addEventListener("completeManualModeChanged", () => {
+          const wasOpen = menu && !menu.classList.contains("hidden");
+          populateDropletMenu();
+          if (wasOpen) setDropletMenuOpen(true);
+          scheduleScenarioDropletVisibilityCheck();
+        });
       }
 
       droplet.style.display = "flex";
@@ -14459,14 +15412,8 @@
       updateDropletState();
       setupDropletDragAndDrop();
       syncScenarioOrdererSelectors();
-
-      // [v4.92] 창 크기 조절 시 열려 있는 팝업 위치 실시간 보정
-      window.addEventListener("resize", () => {
-        const menu = document.getElementById("dropletMenu");
-        if (menu && !menu.classList.contains("hidden")) {
-          adjustDropletMenuPosition();
-        }
-      });
+      ensureScenarioDropletVisible({ forceCoordinates: true, persist: true });
+      scheduleScenarioDropletVisibilityCheck();
     }
 
     function setupMobilePortraitLayout() {
@@ -14519,6 +15466,7 @@
             }
           });
         }
+        scheduleScenarioDropletVisibilityCheck();
       }
 
       if (typeof mql.addEventListener === "function") {
@@ -27552,6 +28500,12 @@ async function processUploadedData(data, isExcel = false) {
       if (completeManualModeTransitionPromise) {
         return completeManualModeTransitionPromise;
       }
+      if (window.isCompleteManualModeActive) {
+        refreshCompleteManualModeIndicators();
+        populateDropletMenu();
+        scheduleScenarioDropletVisibilityCheck();
+        return true;
+      }
 
       completeManualModeTransitionPromise = (async () => {
         const indicatorKey = "complete-manual-mode";
@@ -27568,7 +28522,7 @@ async function processUploadedData(data, isExcel = false) {
             "자동 기준·예외·임시 분석 상태를 초기화하고 있습니다.",
           );
           cancelScheduledDashboardUpdate();
-          setCompleteManualModeState(true);
+          setCompleteManualModeState(true, { deferDropletSurface: true });
 
           resetScenarioButton();
           resetQuickYearFilterState();
@@ -27681,6 +28635,8 @@ async function processUploadedData(data, isExcel = false) {
           updateFilterInteractivity();
           updateDropletState();
           refreshCompleteManualModeIndicators();
+          populateDropletMenu();
+          scheduleScenarioDropletVisibilityCheck();
 
           const uploadStatusEl = document.getElementById("uploadStatus");
           if (uploadStatusEl) {
@@ -27793,6 +28749,12 @@ async function processUploadedData(data, isExcel = false) {
         try {
           refreshCompleteManualModeIndicators();
         } catch (_) { }
+        try {
+          populateDropletMenu();
+          scheduleScenarioDropletVisibilityCheck();
+        } catch (_) { }
+        const dropletMenu = document.getElementById("dropletMenu");
+        if (dropletMenu) dropletMenu.removeAttribute("aria-busy");
       }
     }
 
@@ -29710,7 +30672,10 @@ async function processUploadedData(data, isExcel = false) {
             try {
               const pairNames = ["건물 동별", "작업 유형"];
               const ht = headerText.trim();
-              if (pairNames.includes(ht)) {
+              if (
+                !window.matchMedia("(max-width: 767px) and (orientation: portrait)").matches &&
+                pairNames.includes(ht)
+              ) {
                 const otherName = pairNames.find((n) => n !== ht);
                 const otherHeader = Array.from(
                   document.querySelectorAll(".section-accordion-header"),
@@ -29856,7 +30821,10 @@ async function processUploadedData(data, isExcel = false) {
             try {
               const pairNames = ["건물 동별", "작업 유형"];
               const ht = headerText || (content && content.id) || "";
-              if (pairNames.includes((ht || "").trim())) {
+              if (
+                !window.matchMedia("(max-width: 767px) and (orientation: portrait)").matches &&
+                pairNames.includes((ht || "").trim())
+              ) {
                 const otherName = pairNames.find((n) => n !== ht.trim());
                 const otherHeader = Array.from(
                   document.querySelectorAll(".section-accordion-header"),
@@ -34165,6 +35133,9 @@ async function processUploadedData(data, isExcel = false) {
       const finalizeLayoutSwitch = (delay = 220) => {
         if (!silentIndicator) {
           hideLayoutSwitchIndicator(delay);
+        }
+        if (typeof scheduleScenarioDropletVisibilityCheck === "function") {
+          scheduleScenarioDropletVisibilityCheck();
         }
       };
       try {
@@ -40294,7 +41265,7 @@ async function processUploadedData(data, isExcel = false) {
               try {
                 const pairNames = ["건물 동별", "작업 유형"];
                 const htClose = headerText.trim();
-                if (pairNames.includes(htClose)) {
+                if (!isMobilePortrait && pairNames.includes(htClose)) {
                   const otherName = pairNames.find((n) => n !== htClose);
                   const otherHeader = Array.from(
                     document.querySelectorAll(".section-accordion-header"),
@@ -40367,20 +41338,26 @@ async function processUploadedData(data, isExcel = false) {
               toggledThisClick = true;
               announceAccordionAction("open");
 
-              // [v5.28] 종합 개요를 제외한 모든 아코디언 펼칠 시 '금년' 시나리오 자동 적용, 종합 개요 펼칠 시 '최신 3년' 자동 적용
-              if (headerText === "종합 개요") {
-                await resetToInitialState();
-              } else {
-                if (!activeScenarioApplied || activeScenarioValue !== "cost_concentration_current_year") {
-                  window.skipScenarioAccordionRedirect = true;
-                  await applyScenario(
-                    "cost_concentration_current_year",
-                    undefined,
-                    "금년도 집행비",
-                    undefined,
-                    "금년",
-                  );
-                  window.skipScenarioAccordionRedirect = false;
+              // 자동모드에서만 아코디언별 기본 시나리오를 적용합니다.
+              // 완전 수동모드에서는 사용자가 만든 교집합을 화면 전환이 절대 덮지 않습니다.
+              if (!isCompleteManualModeActive) {
+                if (headerText === "종합 개요") {
+                  await resetToInitialState();
+                } else {
+                  if (!activeScenarioApplied || activeScenarioValue !== "cost_concentration_current_year") {
+                    window.skipScenarioAccordionRedirect = true;
+                    try {
+                      await applyScenario(
+                        "cost_concentration_current_year",
+                        undefined,
+                        "금년도 집행비",
+                        undefined,
+                        "금년",
+                      );
+                    } finally {
+                      window.skipScenarioAccordionRedirect = false;
+                    }
+                  }
                 }
               }
               
@@ -40486,7 +41463,7 @@ async function processUploadedData(data, isExcel = false) {
               try {
                 const pairNames = ["건물 동별", "작업 유형"];
                 const ht = headerText.trim();
-                if (pairNames.includes(ht)) {
+                if (!isMobilePortrait && pairNames.includes(ht)) {
                   const otherName = pairNames.find((n) => n !== ht);
                   const otherHeader = Array.from(
                     document.querySelectorAll(".section-accordion-header"),
@@ -40630,6 +41607,7 @@ async function processUploadedData(data, isExcel = false) {
                 }
               }
             } catch (_) { }
+            scheduleScenarioDropletVisibilityCheck();
           });
         });
 
@@ -43786,17 +44764,24 @@ async function processUploadedData(data, isExcel = false) {
 
   <!-- ▼▼▼ [v4.84] 모바일 세로 모드 전용 플로팅 시나리오 물방울 제어기 ▼▼▼ -->
   <div id="floatingScenarioDroplet" class="floating-scenario-droplet-widget" style="display: none;">
-    <div id="dropletHandle" class="droplet-bubble" title="시나리오 간편 선택 (드래그 가능)">
+    <div id="dropletHandle" class="droplet-bubble" title="시나리오 간편 선택 (드래그 가능)"
+      role="button" tabindex="0" aria-controls="dropletMenu" aria-expanded="false"
+      aria-label="시나리오 간편 선택 패널 열기">
       <span class="droplet-emoji">솔루션
 화학</span>
       <span id="dropletCurrentScenario" class="droplet-text">시나리오</span>
     </div>
-    <div id="dropletMenu" class="droplet-menu hidden">
+    <div id="dropletMenu" class="droplet-menu hidden" role="dialog" aria-modal="false"
+      aria-labelledby="dropletMenuTitle" aria-hidden="true">
       <div class="droplet-menu-header">
-        <span>🎯 시나리오 선택</span>
-        <div style="display: flex; gap: 6px; align-items: center;">
-          <button id="dropletBtnLatest2Years" class="droplet-header-btn">최신 2년</button>
-          <button id="dropletBtnLatest3Years" class="droplet-header-btn">최신 3년</button>
+        <span id="dropletMenuTitle" class="droplet-menu-title">🎯 시나리오 선택</span>
+        <div class="droplet-menu-header-actions">
+          <div class="droplet-quick-actions">
+            <button type="button" id="dropletBtnLatest2Years" class="droplet-header-btn">최신 2년</button>
+            <button type="button" id="dropletBtnLatest3Years" class="droplet-header-btn">최신 3년</button>
+          </div>
+          <button type="button" id="dropletMenuCloseButton" class="droplet-menu-close-btn"
+            aria-label="시나리오 선택 패널 닫기" title="패널 닫기">&times;</button>
         </div>
       </div>
       <div id="dropletOptionsContainer" class="droplet-options-list">
