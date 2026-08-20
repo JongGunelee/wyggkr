@@ -10053,19 +10053,46 @@
       },
     ];
 
-    // GitHub XLSB의 `전체 세대수` 열이 전 행 공란이어도 HTML에 명시된
-    // 사택 기준값은 잃지 않는다. 원본에 양의 정수가 들어오면 아래 기준보다
-    // 우선하며, 출처에 값이 없는 동은 추정하지 않고 N/A로 남긴다.
+    // GitHub XLSB의 `전체 세대수` 열이 전 행 공란이어도 동일 저장소의
+    // `RawData/26년 예산분석-예측.html`에 2026-02-05 검증값으로 명시된
+    // 사택 기준을 잃지 않는다. XLSB에 양의 정수가 들어오면 아래 기준보다
+    // 우선하며, 두 출처에 값이 없는 동은 추정하지 않고 N/A로 남긴다.
+    const BUILT_IN_TOTAL_UNITS_REFERENCE_VERSION = 2;
+    const BUILT_IN_TOTAL_UNITS_REFERENCE_SOURCE =
+      "GitHub RawData/26년 예산분석-예측.html (Verified: 2026-02-05)";
     const BUILT_IN_TOTAL_UNITS_REFERENCE = Object.freeze({
+      "1동": 32,
       "2동": 32,
       "5동": 30,
+      "6동": 24,
       "7동": 40,
       "8동": 44,
       "9동": 30,
       "101동": 16,
       "102동": 24,
       "103동": 24,
+      "104동": 12,
     });
+    function mergeBuiltInTotalUnitsReference(
+      candidateMap,
+      options = {},
+    ) {
+      const candidate =
+        candidateMap && typeof candidateMap === "object"
+          ? cloneSerializableData(candidateMap)
+          : {};
+      const migrateOlderCatalog = options.migrateOlderCatalog === true;
+      Object.entries(BUILT_IN_TOTAL_UNITS_REFERENCE).forEach(([dong, units]) => {
+        const hasCandidate = Object.prototype.hasOwnProperty.call(candidate, dong);
+        if (
+          !hasCandidate ||
+          (migrateOlderCatalog && parsePositiveWholeNumber(candidate[dong]) === null)
+        ) {
+          candidate[dong] = units;
+        }
+      });
+      return candidate;
+    }
     let initialTotalUnitsPerDongStatic = {
       ...BUILT_IN_TOTAL_UNITS_REFERENCE,
     };
@@ -10499,6 +10526,7 @@
     let activeScenarioShortName = null;
     let isCompleteManualModeActive = false;
     let completeManualModeTransitionPromise = null;
+    let completeManualModePreviousAutomaticState = null;
     let scenarioOrdererApplyPromise = null;
     window.isCompleteManualModeActive = false;
     
@@ -10611,25 +10639,28 @@
         }
         if (description) {
           description.textContent = isCompleteManual
-            ? "자동 기준·예외 해제 · 모든 필터 직접 조합"
+            ? "클릭하여 이전 자동모드로 복원"
             : "모든 자동 기준·예외를 해제하고 직접 조합";
         }
+        manualModeBtn.title = isCompleteManual
+          ? "완전 수동모드를 종료하고 진입 직전의 자동 필터 상태로 복원"
+          : "모든 자동 기준·예외를 해제하고 직접 조합";
+        manualModeBtn.setAttribute(
+          "aria-label",
+          isCompleteManual
+            ? "완전 수동모드 적용됨. 클릭하면 이전 자동모드로 복원"
+            : "완전 수동모드 적용",
+        );
         manualModeBtn.addEventListener("click", async (e) => {
           e.preventDefault();
           e.stopPropagation();
           if (completeManualModeTransitionPromise) return;
-          // 이미 활성화된 수동모드를 다시 실행하면 사용자가 만든 필터 조합이
-          // 중립값으로 초기화됩니다. 활성 버튼은 상태 보존형 포커스 이동만 수행합니다.
           if (window.isCompleteManualModeActive) {
-            if (typeof populateDropletMenu === "function") {
-              populateDropletMenu();
-            }
-            const firstManualFilter = document.querySelector(
-              "#dropletOptionsContainer .droplet-manual-filter-toggle",
-            );
-            if (firstManualFilter && typeof firstManualFilter.focus === "function") {
-              firstManualFilter.focus({ preventScroll: true });
-            }
+            document.querySelectorAll(".scenario-manual-mode-btn").forEach((el) => {
+              el.disabled = true;
+              el.setAttribute("aria-busy", "true");
+            });
+            await restorePreviousAutomaticMode(typeSuffix || "scenario");
             return;
           }
           document.querySelectorAll(".scenario-manual-mode-btn").forEach((el) => {
@@ -11454,9 +11485,18 @@
         }
         if (description) {
           description.textContent = isActive
-            ? "자동 기준·예외 해제 · 모든 필터 직접 조합"
+            ? "클릭하여 이전 자동모드로 복원"
             : "모든 자동 기준·예외를 해제하고 직접 조합";
         }
+        button.title = isActive
+          ? "완전 수동모드를 종료하고 진입 직전의 자동 필터 상태로 복원"
+          : "모든 자동 기준·예외를 해제하고 직접 조합";
+        button.setAttribute(
+          "aria-label",
+          isActive
+            ? "완전 수동모드 적용됨. 클릭하면 이전 자동모드로 복원"
+            : "완전 수동모드 적용",
+        );
       });
 
       const pivotOverrideCheckbox = document.getElementById(
@@ -12649,6 +12689,7 @@
 
     let detailModalCurrentData = [];
     let detailModalSortConfig = { key: "PO금액", direction: "desc" };
+    const DETAIL_MODAL_ROW_NUMBER_KEY = "__detailModalRowNumber";
 
     const specificDongColors = {
       "2동": "#672D93",
@@ -14002,8 +14043,8 @@
     // --- [v5.00] IndexedDB 기반 XLSB 완전 스냅샷 캐싱 (v2 아키텍처) ---
     const WYGGKR_DB_NAME = "WyggkrCacheDB";
     const WYGGKR_STORE_NAME = "xlsbDataStore";
-    // v5: 원천-매핑·세대수와 금액/월 런타임 파생 필드 보고서가 없는 캐시는 폐기한다.
-    const WYGGKR_DB_VERSION = 5;
+    // v6: 1·6·104동을 포함한 검증 기준 카탈로그 이전 캐시는 폐기한다.
+    const WYGGKR_DB_VERSION = 6;
 
     function initWyggkrCacheDB() {
       return new Promise((resolve, reject) => {
@@ -14035,7 +14076,7 @@
     function captureFullSnapshot() {
       try {
         return {
-          _snapshotVersion: 5,
+          _snapshotVersion: 6,
           masterRawEntries: cloneSerializableData(masterRawEntries),
           masterCsvHeaders: cloneSerializableData(masterCsvHeaders),
           allYearsGlobal: [...allYearsGlobal],
@@ -14298,7 +14339,7 @@
           // v2 스냅샷 형식인지 검증 및 다르면 비우기
           if (cached) {
             if (
-              cached._snapshotVersion === 5 &&
+              cached._snapshotVersion === 6 &&
               Array.isArray(cached.masterRawEntries) &&
               cached.mappingIntegrityReport?.status === "verified" &&
               cached.mappingIntegrityReport?.mismatchCount === 0 &&
@@ -19640,12 +19681,7 @@
         tableHead.innerHTML = "";
         const headerRow = tableHead.insertRow();
 
-        const noTh = document.createElement("th");
-        noTh.textContent = "No.";
-        headerRow.appendChild(noTh);
-
-        const modalHeaders = getDetailModalHeaders(data);
-        modalHeaders.forEach((key) => {
+        const appendDetailSortableHeader = (key, labelText = key) => {
           const th = document.createElement("th");
           th.dataset.sortKey = key;
 
@@ -19653,16 +19689,18 @@
           wrapper.className = "th-content-wrapper";
 
           const titleSpan = document.createElement("span");
-          titleSpan.textContent = key;
+          titleSpan.textContent = labelText;
           wrapper.appendChild(titleSpan);
 
           const controls = document.createElement("div");
           controls.className = "th-sort-controls";
 
           const ascBtn = document.createElement("button");
+          ascBtn.type = "button";
           ascBtn.className = "th-sort-button";
-          ascBtn.innerHTML = "▲";
+          ascBtn.textContent = "▲";
           ascBtn.title = "오름차순 정렬";
+          ascBtn.setAttribute("aria-label", `${labelText} 오름차순 정렬`);
           ascBtn.onclick = (e) => {
             e.stopPropagation();
             setDetailModalSort(key, "asc");
@@ -19670,9 +19708,11 @@
           controls.appendChild(ascBtn);
 
           const descBtn = document.createElement("button");
+          descBtn.type = "button";
           descBtn.className = "th-sort-button";
-          descBtn.innerHTML = "▼";
+          descBtn.textContent = "▼";
           descBtn.title = "내림차순 정렬";
+          descBtn.setAttribute("aria-label", `${labelText} 내림차순 정렬`);
           descBtn.onclick = (e) => {
             e.stopPropagation();
             setDetailModalSort(key, "desc");
@@ -19694,7 +19734,11 @@
           };
 
           headerRow.appendChild(th);
-        });
+        };
+
+        appendDetailSortableHeader("No.");
+        const modalHeaders = getDetailModalHeaders(data);
+        modalHeaders.forEach((key) => appendDetailSortableHeader(key));
         columns = ["No.", ...modalHeaders];
       }
 
@@ -19757,8 +19801,13 @@
 
           if (isModal && colKey === "No.") {
             // 상세 화면의 No.는 원천 NO.가 아니라 현재 정렬 결과 안에서의
-            // 연속 행 번호다. 원천 번호/워크시트 행은 감사용 data-*로만 보존한다.
-            value = String(index + 1);
+            // 연속 행 번호다. No. 자체를 정렬할 때는 직전 표 순번을 유지하여
+            // 내림차순에서 N..1이 보이도록 하고, 다른 열 정렬 시 다시 1..N으로 갱신한다.
+            const rowNumber =
+              detailModalSortConfig.key === "No."
+                ? Number(item?.[DETAIL_MODAL_ROW_NUMBER_KEY]) || index + 1
+                : index + 1;
+            value = String(rowNumber);
             cell.textContent = value;
             cell.dataset.sourceRowNumber = String(
               item?._sourceRowNumber ?? "",
@@ -24021,7 +24070,11 @@
       const excelRows = [["No.", ...detailHeaders]];
 
       rows.forEach((item, index) => {
-        const row = [index + 1];
+        const rowNumber =
+          detailModalSortConfig.key === "No."
+            ? Number(item?.[DETAIL_MODAL_ROW_NUMBER_KEY]) || index + 1
+            : index + 1;
+        const row = [rowNumber];
         detailHeaders.forEach((headerName) => {
           if (headerName === "전체 세대수" || headerName === "외벽 세대수") {
             const derivedValue = getDetailDerivedColumnValue(item, headerName);
@@ -24229,6 +24282,19 @@
         auditRows.push([]);
         auditRows.push(["전체 세대수 파이프라인", "검증값"]);
         auditRows.push(["세대수 검증 상태", unitsReport.status]);
+        auditRows.push(["검증 기준 출처", unitsReport.referenceSource || ""]);
+        auditRows.push([
+          "검증 기준 카탈로그 동",
+          unitsReport.referenceCatalogDongCount || 0,
+        ]);
+        auditRows.push([
+          "주거동 기준표 적용 범위",
+          `${unitsReport.residentialMappedDongCount || 0}/${unitsReport.residentialDongCount || 0}`,
+        ]);
+        auditRows.push([
+          "주거동 기준 누락",
+          (unitsReport.residentialMissingDongs || []).join(", ") || "없음",
+        ]);
         auditRows.push(["XLSB 제공 동", unitsReport.sourceProvidedDongCount]);
         auditRows.push(["검증 기준값 적용 동", unitsReport.referenceFallbackDongCount]);
         auditRows.push(["원천·기준값 모두 누락 동", unitsReport.missingDongCount]);
@@ -25511,6 +25577,11 @@ function finalizeRawEntriesAggregationState(state) {
   const baseEstimateAmountsSnapshot = {};
   const totalUnitsIntegrity = {
     status: "verified",
+    referenceVersion: BUILT_IN_TOTAL_UNITS_REFERENCE_VERSION,
+    referenceSource: BUILT_IN_TOTAL_UNITS_REFERENCE_SOURCE,
+    referenceCatalogDongCount: Object.keys(
+      BUILT_IN_TOTAL_UNITS_REFERENCE,
+    ).length,
     sourceProvidedDongCount: 0,
     referenceFallbackDongCount: 0,
     missingDongCount: 0,
@@ -25591,6 +25662,20 @@ function finalizeRawEntriesAggregationState(state) {
       };
     }
   });
+
+  const residentialDongsInData = Array.from(state.dongsSet)
+    .filter((dongName) => /^\d+동$/.test(String(dongName || "").trim()))
+    .sort((a, b) => a.localeCompare(b, "ko-KR", { numeric: true }));
+  const residentialMissingDongs = residentialDongsInData.filter(
+    (dongName) =>
+      parsePositiveWholeNumber(totalUnitsPerDong[dongName]) === null,
+  );
+  totalUnitsIntegrity.residentialDongCount = residentialDongsInData.length;
+  totalUnitsIntegrity.residentialMappedDongCount =
+    residentialDongsInData.length - residentialMissingDongs.length;
+  totalUnitsIntegrity.residentialMissingDongs = residentialMissingDongs;
+  totalUnitsIntegrity.residentialCoverageStatus =
+    residentialMissingDongs.length === 0 ? "complete" : "incomplete";
 
   const allYearsSnapshot = Array.from(state.yearsSet).sort(
     (a, b) =>
@@ -27099,7 +27184,10 @@ async function processUploadedData(data, isExcel = false) {
     function openDetailModal(title, data, isFromPopup = false) {
       const detailModalEl = document.getElementById("detailModal");
 
-      detailModalCurrentData = [...data];
+      // 상세 순번 메타데이터가 원천 행 객체로 역류하지 않도록 얕은 복제한다.
+      detailModalCurrentData = (Array.isArray(data) ? data : []).map((item) =>
+        item && typeof item === "object" ? { ...item } : item,
+      );
       setDetailModalSort(getHeaderName("회계 연도"), "desc");
 
       document.getElementById("detailModalTitle").innerHTML =
@@ -27150,13 +27238,21 @@ async function processUploadedData(data, isExcel = false) {
     function sortAndPopulateDetailModal() {
       const { key, direction } = detailModalSortConfig;
       const headerConfig = masterCsvHeaders.find((h) => h.name === key);
-      const isNumeric = (headerConfig && headerConfig.type === "number") || key === "외벽 세대수";
+      const isRowNumberSort = key === "No.";
+      const isNumeric =
+        isRowNumberSort ||
+        (headerConfig && headerConfig.type === "number") ||
+        key === "외벽 세대수";
 
       const yearHeaderName = getHeaderName("회계 연도");
 
       detailModalCurrentData.sort((a, b) => {
-        let valA = a[key];
-        let valB = b[key];
+        let valA = isRowNumberSort
+          ? a?.[DETAIL_MODAL_ROW_NUMBER_KEY]
+          : a?.[key];
+        let valB = isRowNumberSort
+          ? b?.[DETAIL_MODAL_ROW_NUMBER_KEY]
+          : b?.[key];
 
         if (key === "외벽 세대수") {
           const dongHeaderName = getHeaderName("건물동");
@@ -27189,7 +27285,7 @@ async function processUploadedData(data, isExcel = false) {
           }
         }
 
-        if (key !== yearHeaderName) {
+        if (key !== yearHeaderName && !isRowNumberSort) {
           const yearA =
             parseInt(String(a[yearHeaderName]).replace("년", ""), 10) || 0;
           const yearB =
@@ -27201,6 +27297,18 @@ async function processUploadedData(data, isExcel = false) {
 
         return 0;
       });
+
+      if (!isRowNumberSort) {
+        detailModalCurrentData.forEach((item, index) => {
+          if (!item || typeof item !== "object") return;
+          Object.defineProperty(item, DETAIL_MODAL_ROW_NUMBER_KEY, {
+            value: index + 1,
+            writable: true,
+            configurable: true,
+            enumerable: false,
+          });
+        });
+      }
 
       populateTable("detailModalTable", detailModalCurrentData, [], true);
     }
@@ -29571,6 +29679,150 @@ async function processUploadedData(data, isExcel = false) {
       resetUiBestEffort("saved-chart-previews", clearAllSavedChartPreviews);
     }
 
+    async function restorePreviousAutomaticMode(sourceSurface = "scenario") {
+      if (completeManualModeTransitionPromise) {
+        return completeManualModeTransitionPromise;
+      }
+      if (!window.isCompleteManualModeActive) return true;
+
+      completeManualModeTransitionPromise = (async () => {
+        const indicatorKey = "complete-manual-mode";
+        const previousCheckboxSyncState = checkboxFilterSyncEnabled;
+        const manualRollbackState = captureCompleteManualModeRollbackState();
+        const automaticState = completeManualModePreviousAutomaticState;
+        try {
+          setProcessingIndicator(
+            indicatorKey,
+            true,
+            "이전 자동모드 복원 중",
+            "수동 필터를 종료하고 진입 직전의 자동 상태를 복원하고 있습니다.",
+          );
+          cancelScheduledDashboardUpdate();
+          checkboxFilterSyncEnabled = false;
+
+          if (automaticState && !automaticState.isCompleteManualModeActive) {
+            restoreCompleteManualModeRollbackState(automaticState);
+            setCompleteManualModeState(false, { deferDropletSurface: true });
+            invalidateFilteredEntriesCache();
+            invalidatePivotViewCache();
+            ensureCurrentFilteredEntries();
+            await updateDashboard({ force: true });
+            // 종속 옵션 정규화는 의미상 같은 전체 선택 배열을 축약할 수
+            // 있으므로 배열 길이가 아니라 원천 행 집합의 동일성을 단정한다.
+            const restoredEntries = ensureCurrentFilteredEntries();
+            const expectedRowCount = Array.isArray(
+              automaticState.currentFilteredEntries,
+            )
+              ? automaticState.currentFilteredEntries.length
+              : restoredEntries.length;
+            const expectedRowIds = Array.isArray(
+              automaticState.currentFilteredEntries,
+            )
+              ? automaticState.currentFilteredEntries.map(
+                  (entry) => entry?._sourceWorksheetRow ?? entry?._sourceRowNumber,
+                )
+              : [];
+            const restoredRowIds = restoredEntries.map(
+              (entry) => entry?._sourceWorksheetRow ?? entry?._sourceRowNumber,
+            );
+            const hasSameRows =
+              restoredEntries.length === expectedRowCount &&
+              (expectedRowIds.length === 0 ||
+                expectedRowIds.every(
+                  (rowId, index) => rowId === restoredRowIds[index],
+                ));
+            if (!hasSameRows) {
+              throw new Error(
+                `이전 자동모드 행 집합 검증 실패: 이전 ${expectedRowCount}행 / 복원 ${restoredEntries.length}행`,
+              );
+            }
+          } else {
+            // 저장본에서 이미 수동모드였던 경우에는 진입 전 스냅샷이 없으므로
+            // 검증된 기본 자동 범위(최신 3개년)로 명시적으로 복원한다.
+            setCompleteManualModeState(false, {
+              automatic: true,
+              deferDropletSurface: true,
+            });
+            await resetToInitialState();
+            await applyYearFilter(3);
+          }
+
+          completeManualModePreviousAutomaticState = null;
+          syncScenarioOrdererSelectors();
+          updateFilterSummaryBars();
+          updateFilterInteractivity();
+          updateDropletState();
+          refreshCompleteManualModeIndicators();
+          populateScenarioDropdown();
+          populateDropletMenu();
+          scheduleScenarioDropletVisibilityCheck();
+
+          const restoredLabel = automaticState?.activeScenarioApplied
+            ? automaticState.activeScenarioName || "이전 시나리오"
+            : automaticState?.activeQuickYearFilterApplied
+              ? automaticState.activeQuickYearFilterName || "이전 연도 필터"
+              : "기본 자동 필터";
+          const uploadStatusEl = document.getElementById("uploadStatus");
+          if (uploadStatusEl) {
+            uploadStatusEl.textContent =
+              `완전 수동모드를 종료하고 '${restoredLabel}' 상태로 복원했습니다.`;
+            uploadStatusEl.style.color = "#047857";
+          }
+          window.dispatchEvent(
+            new CustomEvent("completeManualModeChanged", {
+              detail: {
+                active: false,
+                restored: true,
+                source: sourceSurface,
+                restoredLabel,
+                rowCount: ensureCurrentFilteredEntries().length,
+              },
+            }),
+          );
+          return true;
+        } catch (error) {
+          console.error("[완전 수동모드] 이전 자동모드 복원 실패:", error);
+          checkboxFilterSyncEnabled = false;
+          restoreCompleteManualModeRollbackState(manualRollbackState);
+          try {
+            await updateDashboard({ force: true });
+          } catch (rollbackRenderError) {
+            console.error(
+              "[완전 수동모드] 복원 실패 후 수동 화면 재렌더링 실패:",
+              rollbackRenderError,
+            );
+          }
+          const uploadStatusEl = document.getElementById("uploadStatus");
+          if (uploadStatusEl) {
+            uploadStatusEl.textContent =
+              "이전 자동모드 복원에 실패하여 현재 수동 필터를 유지했습니다: " +
+              (error?.message || String(error));
+            uploadStatusEl.style.color = "#dc2626";
+          }
+          return false;
+        } finally {
+          checkboxFilterSyncEnabled = previousCheckboxSyncState;
+          try {
+            setProcessingIndicator(indicatorKey, false);
+          } catch (_) { }
+        }
+      })();
+
+      try {
+        return await completeManualModeTransitionPromise;
+      } finally {
+        completeManualModeTransitionPromise = null;
+        try {
+          syncScenarioOrdererSelectors();
+          refreshCompleteManualModeIndicators();
+          populateDropletMenu();
+          scheduleScenarioDropletVisibilityCheck();
+        } catch (_) { }
+        const dropletMenu = document.getElementById("dropletMenu");
+        if (dropletMenu) dropletMenu.removeAttribute("aria-busy");
+      }
+    }
+
     async function enterCompleteManualMode(sourceSurface = "scenario") {
       if (completeManualModeTransitionPromise) {
         return completeManualModeTransitionPromise;
@@ -29700,6 +29952,10 @@ async function processUploadedData(data, isExcel = false) {
           invalidateFilteredEntriesCache();
           invalidatePivotViewCache();
           ensureCurrentFilteredEntries();
+
+          // 진입이 성공한 시점의 자동 상태만 복귀점으로 커밋한다. 수동모드
+          // 재렌더·데이터 복원 과정에서는 이 스냅샷을 덮어쓰지 않는다.
+          completeManualModePreviousAutomaticState = rollbackState;
 
           // 첫 중립 단정과 대시보드 갱신이 모두 성공한 뒤에만 파괴적인
           // 모달/피벗 컨트롤/프리뷰 초기화를 커밋합니다.
@@ -29834,6 +30090,7 @@ async function processUploadedData(data, isExcel = false) {
     }
 
     window.enterCompleteManualMode = enterCompleteManualMode;
+    window.restorePreviousAutomaticMode = restorePreviousAutomaticMode;
 
     async function resetToInitialState() {
       setCompleteManualModeState(false);
@@ -36521,7 +36778,14 @@ async function processUploadedData(data, isExcel = false) {
             savedRuntimeHydrationReport,
           );
 
-          totalUnitsPerDongStatic = fastDeepClone(savedSettings.totalUnitsPerDongStatic);
+          totalUnitsPerDongStatic = mergeBuiltInTotalUnitsReference(
+            fastDeepClone(savedSettings.totalUnitsPerDongStatic),
+            {
+              migrateOlderCatalog:
+                Number(savedSettings.totalUnitsReferenceVersion || 0) <
+                BUILT_IN_TOTAL_UNITS_REFERENCE_VERSION,
+            },
+          );
           outerUnitsPerDongStatic = fastDeepClone(savedSettings.outerUnitsPerDongStatic || {});
           activeFilterConfigs = fastDeepClone(savedSettings.activeFilterConfigs);
 
@@ -37626,6 +37890,8 @@ async function processUploadedData(data, isExcel = false) {
                 masterRawEntries: [],
                 masterCsvHeaders: masterCsvHeaders,
                 totalUnitsPerDongStatic: totalUnitsPerDongStatic,
+                totalUnitsReferenceVersion:
+                  BUILT_IN_TOTAL_UNITS_REFERENCE_VERSION,
                 isAutoExclusionActive: isAutoExclusionActive, // 필터링 규칙 상태 저장
                 isCompleteManualModeActive: isCompleteManualModeActive,
                 scenarioTargetOrderers: Array.isArray(
@@ -45574,7 +45840,7 @@ async function processUploadedData(data, isExcel = false) {
       </div>
 
       <div class="diag-section">
-        <div class="diag-section-title">🔧 데이터 결함 즉시 조정 (세대수 누락)</div>
+        <div class="diag-section-title">🔧 데이터 결함 즉시 조정 (주거동 세대수 누락)</div>
         <div id="diagDefectsList" style="max-height: 120px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
           <!-- Dynamic defect corrections -->
         </div>
@@ -45600,6 +45866,17 @@ async function processUploadedData(data, isExcel = false) {
       }
     }
 
+    function getManagedResidentialMissingDongs() {
+      const auditedMissing =
+        window.__lastTotalUnitsIntegrityReport?.residentialMissingDongs;
+      if (Array.isArray(auditedMissing)) return [...auditedMissing];
+      return allDongsGlobal.filter((dong) => {
+        const normalized = String(dong || "").trim();
+        if (!/^\d+동$/.test(normalized)) return false;
+        return parsePositiveWholeNumber(totalUnitsPerDongStatic[normalized]) === null;
+      });
+    }
+
     function updateDiagnosticTriggerLabel() {
       const btn = document.getElementById("diagnosticTriggerBtn");
       if (!btn) return;
@@ -45615,12 +45892,7 @@ async function processUploadedData(data, isExcel = false) {
         return !mapped || (mapped === h && !masterCsvHeaders.some(head => head.name === h));
       });
 
-      const missingDongs = allDongsGlobal.filter(
-        (d) =>
-          totalUnitsPerDongStatic[d] === null ||
-          totalUnitsPerDongStatic[d] === undefined ||
-          totalUnitsPerDongStatic[d] === 0
-      );
+      const missingDongs = getManagedResidentialMissingDongs();
 
       if (masterRawEntries.length === 0) {
         statusText = "누수 → 파일 업로드 없음";
@@ -45664,7 +45936,7 @@ async function processUploadedData(data, isExcel = false) {
                         `1. 데이터 흐름 상태 (원활):\n` +
                         `   - 업로드된 Excel 파일의 주요 데이터(회계연도, 건물동, 작업유형, 금액 등) 파싱과 매핑은 무결하게 수집 및 처리되고 있습니다.\n` +
                         `2. 데이터 구성 결함 (세대수 누락):\n` +
-                        `   - 일부 건물동의 '전체 세대수' 설정이 누락되어 대시보드 내 특정 동의 진행률(%)이 'N/A'로 출력되는 구성 오류가 존재합니다.\n` +
+                        `   - 일부 주거동의 '전체 세대수' 설정이 누락되어 대시보드 내 특정 동의 진행률(%)이 'N/A'로 출력되는 구성 오류가 존재합니다.\n` +
                         `   - 누락 대상: [${missingDongs.join(", ")}]\n` +
                         `3. 조치 방법:\n` +
                         `   - 우측 상단 '데이터 관리' > '동별 세대수 관리' 모달을 열어 값을 입력하시거나, 화면 우측 하단의 '시스템 진단 모니터' 패널 내 '결함 즉시 조정' 영역에서 즉석으로 세대수를 보정하십시오.`;
@@ -45676,7 +45948,7 @@ async function processUploadedData(data, isExcel = false) {
                         `1. 데이터 흐름 상태 (원활):\n` +
                         `   - 모든 필수 컬럼들이 규격에 맞게 파싱되어 누수 없이 실시간으로 원활히 적재/집계되고 있습니다.\n` +
                         `2. 데이터 구성 상태 (원활):\n` +
-                        `   - 모든 건물동의 전체 세대수 데이터 구성이 완전하여 진행률 및 세대당 평균 통계가 정상 계산됩니다.\n` +
+                        `   - 관리 대상 주거동의 전체 세대수 데이터 구성이 완전하여 진행률 및 세대당 평균 통계가 정상 계산됩니다. 비주거 시설의 N/A는 결함으로 판정하지 않습니다.\n` +
                         `3. 조치:\n` +
                         `   - 분석 보고서 발행이나 대시보드 열람을 진행하시면 됩니다. 추가 조치가 필요하지 않습니다.`;
         }
@@ -45749,13 +46021,9 @@ async function processUploadedData(data, isExcel = false) {
       // 3. 결함 즉시 보정 데이터 바인딩
       const defectsContainer = document.getElementById("diagDefectsList");
       if (defectsContainer) {
-        // 세대수가 누락되거나 0인 건물 동 찾기
-        const missingDongs = allDongsGlobal.filter(
-          (d) =>
-            totalUnitsPerDongStatic[d] === null ||
-            totalUnitsPerDongStatic[d] === undefined ||
-            totalUnitsPerDongStatic[d] === 0
-        );
+        // 전체 세대수 분모가 적용되는 숫자형 사택 동만 결함 대상으로 본다.
+        // 연구동·Pilot동·기숙사 공용동 등 비주거 시설의 N/A는 정상 상태다.
+        const missingDongs = getManagedResidentialMissingDongs();
 
         if (missingDongs.length === 0) {
           const emptyMessage = document.createElement("p");
