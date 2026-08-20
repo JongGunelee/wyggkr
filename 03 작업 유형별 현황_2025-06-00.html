@@ -17934,6 +17934,7 @@
       let lastYear = null;
       let yearGroupCounter = 0;
       const yearHeaderName = getHeaderName("회계 연도");
+      const monthHeaderName = getHeaderName("매입 마감 (월)");
 
       data.forEach((item, index) => {
         const row = document.createElement("tr");
@@ -18027,6 +18028,9 @@
           }
 
           value = item[colKey];
+          if (isModal && colKey === monthHeaderName) {
+            value = normalizeMonthClosingValue(value);
+          }
           cell.className = "";
 
           if (tableId === "tableBuildingSummary" && colKey === "dong") {
@@ -18171,7 +18175,7 @@
                 headerConfigForModal?.name === getHeaderName("계약명") ||
                 headerConfigForModal?.name === getHeaderName("PO번호") ||
                 headerConfigForModal?.name === getHeaderName("PR번호") ||
-                headerConfigForModal?.name === getHeaderName("매입 마감 (월)")
+                headerConfigForModal?.name === monthHeaderName
               ) {
                 cell.classList.add("text-left");
               } else {
@@ -22145,41 +22149,147 @@
       setTimeout(() => URL.revokeObjectURL(objectUrl), 5000);
     }
 
-    function extractTableDataForExcel(tableElement) {
-      const data = [];
-      if (!tableElement) return data;
-      const headerRow = tableElement.querySelector("thead tr");
-      if (headerRow) {
-        const headers = Array.from(headerRow.querySelectorAll("th")).map(
-          (th) => th.textContent.trim(),
-        );
-        data.push(headers);
+    function getExcelCellText(cell) {
+      if (!cell) return "";
+      const clone = cell.cloneNode(true);
+      clone
+        .querySelectorAll(
+          ".th-sort-controls, .pivot-sort-glyph, .column-resizer, .row-resizer, .resize-handle",
+        )
+        .forEach((control) => control.remove());
+      return String(clone.textContent || "")
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function getExcelColumnType(headerCell, headerLabel) {
+      const columnKey = headerCell?.dataset?.sortKey || headerLabel;
+      const configuredHeader = masterCsvHeaders.find(
+        (header) => header.name === columnKey || header.name === headerLabel,
+      );
+      if (configuredHeader) {
+        if (configuredHeader.type !== "number") return "text";
+        return /금액|비용|집행|cost|amount/i.test(
+          `${columnKey || ""} ${headerLabel || ""}`,
+        )
+          ? "currency"
+          : "number";
       }
-      const bodyRows = tableElement.querySelectorAll("tbody tr");
-      bodyRows.forEach((tr) => {
-        const rowData = Array.from(tr.querySelectorAll("td")).map((td) => {
-          const text = td.textContent.trim();
-          if (text === "N/A" || text === "-") return text;
 
-          // 우선 통화 단위를 원 단위 숫자로 역변환 시도
-          const parsedCurrency = parseFormattedCurrencyToNumber(text);
-          if (!isNaN(parsedCurrency)) return parsedCurrency;
+      const semanticName = `${columnKey || ""} ${headerLabel || ""}`;
+      if (/진행률|증감률|비율|퍼센트|%|rate/i.test(semanticName))
+        return "percent";
+      if (/금액|비용|집행|cost|amount/i.test(semanticName))
+        return "currency";
+      if (/^\s*No\.?\s*$/i.test(headerLabel) || /건수|세대수|수량|count/i.test(semanticName))
+        return "number";
+      return "text";
+    }
 
-          // 퍼센트 처리 (표시값을 소수로 저장)
-          if (/^[-+]?\d*[\.,]?\d+%$/.test(text)) {
-            const num = parseFloat(text.replace("%", ""));
-            return !isNaN(num) ? num / 100 : text;
-          }
+    function convertExcelCellValue(cell, exportType = "text") {
+      const text = getExcelCellText(cell);
+      if (text === "" || text === "N/A" || text === "-") return text;
+      if (exportType === "text") return text;
 
-          // 숫자 형태(콤마 포함) 처리
-          const numeric = parseFloat(String(text).replace(/,/g, ""));
-          if (!isNaN(numeric) && /[0-9]/.test(text)) return numeric;
+      const explicitNumericValue = cell?.dataset?.sortValue;
+      if (explicitNumericValue !== undefined && explicitNumericValue !== "") {
+        const numericValue = Number(String(explicitNumericValue).replace(/,/g, ""));
+        if (Number.isFinite(numericValue)) {
+          return exportType === "percent" ? numericValue / 100 : numericValue;
+        }
+      }
 
-          return text;
-        });
+      if (exportType === "currency") {
+        const parsedCurrency = parseFormattedCurrencyToNumber(text);
+        return Number.isFinite(parsedCurrency) ? parsedCurrency : text;
+      }
+      if (exportType === "percent") {
+        const percentMatch = text.match(/^([-+]?(?:\d+(?:\.\d+)?|\.\d+))%$/);
+        return percentMatch ? Number(percentMatch[1]) / 100 : text;
+      }
+
+      const normalizedNumber = text.replace(/,/g, "");
+      return /^[-+]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalizedNumber)
+        ? Number(normalizedNumber)
+        : text;
+    }
+
+    function convertConfiguredExcelValue(value, headerConfig) {
+      if (value === null || value === undefined) return "";
+      if (isMonthClosingHeaderConfig(headerConfig)) {
+        return normalizeMonthClosingValue(value);
+      }
+      if (value instanceof Date) return value;
+      if (headerConfig?.type !== "number")
+        return typeof value === "string" ? value : String(value);
+      if (typeof value === "number" && Number.isFinite(value)) return value;
+      const normalizedNumber = String(value).replace(/,/g, "").trim();
+      return /^[-+]?(?:\d+(?:\.\d+)?|\.\d+)$/.test(normalizedNumber)
+        ? Number(normalizedNumber)
+        : value;
+    }
+
+    function extractTableDataForExcel(tableElement) {
+      if (!tableElement) return [];
+      const headerRow = tableElement.querySelector("thead tr");
+      const headerCells = headerRow
+        ? Array.from(headerRow.querySelectorAll("th"))
+        : [];
+      const headers = headerCells.map((th) => getExcelCellText(th));
+      const columnTypes = headerCells.map((th, index) =>
+        getExcelColumnType(th, headers[index]),
+      );
+      const data = headers.length > 0 ? [headers] : [];
+
+      tableElement.querySelectorAll("tbody tr").forEach((tr) => {
+        const rowData = Array.from(tr.querySelectorAll("td")).map((td, index) =>
+          convertExcelCellValue(td, columnTypes[index] || "text"),
+        );
         data.push(rowData);
       });
       return data;
+    }
+
+    function extractPivotTableDataForExcel(tableElement) {
+      if (!tableElement) return { data: [], merges: [] };
+      const data = [];
+      const merges = [];
+      const occupiedCells = new Set();
+
+      Array.from(tableElement.rows).forEach((row, rowIndex) => {
+        const rowData = [];
+        let columnIndex = 0;
+        Array.from(row.cells).forEach((cell) => {
+          while (occupiedCells.has(`${rowIndex}:${columnIndex}`)) columnIndex++;
+          const exportType =
+            cell.tagName === "TH"
+              ? "text"
+              : cell.classList.contains("metric-work-count")
+                ? "number"
+                : cell.classList.contains("number-cell")
+                  ? "currency"
+                  : "text";
+          rowData[columnIndex] = convertExcelCellValue(cell, exportType);
+
+          const rowSpan = cell.rowSpan || 1;
+          const colSpan = cell.colSpan || 1;
+          if (rowSpan > 1 || colSpan > 1) {
+            merges.push({
+              s: { r: rowIndex, c: columnIndex },
+              e: { r: rowIndex + rowSpan - 1, c: columnIndex + colSpan - 1 },
+            });
+          }
+          for (let r = rowIndex; r < rowIndex + rowSpan; r++) {
+            for (let c = columnIndex; c < columnIndex + colSpan; c++) {
+              if (r !== rowIndex || c !== columnIndex)
+                occupiedCells.add(`${r}:${c}`);
+            }
+          }
+          columnIndex += colSpan;
+        });
+        data.push(rowData);
+      });
+      return { data, merges };
     }
     function extractChartDataForExcel(chartInstance) {
       if (
@@ -22372,15 +22482,6 @@
           if (pivotTable) {
             const pivotData = extractPivotTableDataForExcel(pivotTable);
             if (pivotData.data.length > 1) {
-              // 금액 표시는 원 단위 숫자로 일괄 변환
-              try {
-                pivotData.data = pivotData.data.map((row) =>
-                  row.map((cell) => {
-                    const parsed = parseFormattedCurrencyToNumber(cell);
-                    return !isNaN(parsed) ? parsed : cell;
-                  }),
-                );
-              } catch (_) { }
               const wsPivot = XLSX.utils.aoa_to_sheet(pivotData.data, {
                 skipHeader: true,
               });
@@ -22662,7 +22763,8 @@
         
         entry.parsedPoAmount = poAmount;
         
-        const monthValRaw = entry[monthHeaderName];
+        const monthValRaw = normalizeMonthClosingValue(entry[monthHeaderName]);
+        entry[monthHeaderName] = monthValRaw;
         let parsedMonthInt = 0;
         if (monthValRaw) {
           const monthStr = String(monthValRaw).trim();
@@ -23019,6 +23121,61 @@ function normalizeHeaderKey(value) {
     .trim()
     .toLowerCase()
     .replace(/\s+/g, "");
+}
+
+function normalizeMonthClosingValue(value) {
+  if (value === null || value === undefined || value === "") return "";
+
+  const formatMonthDay = (month, day) => {
+    const monthNumber = Number(month);
+    const dayNumber = Number(day);
+    if (
+      !Number.isInteger(monthNumber) ||
+      !Number.isInteger(dayNumber) ||
+      monthNumber < 1 ||
+      monthNumber > 12 ||
+      dayNumber < 1 ||
+      dayNumber > 31
+    ) {
+      return "";
+    }
+    return `${String(monthNumber).padStart(2, "0")}월${String(dayNumber).padStart(2, "0")}일`;
+  };
+
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime())
+      ? ""
+      : formatMonthDay(value.getMonth() + 1, value.getDate());
+  }
+
+  const text = String(value).trim();
+  if (!text) return "";
+
+  let match = text.match(/^(\d{1,2})월\s*(\d{1,2})일$/);
+  if (match) return formatMonthDay(match[1], match[2]) || text;
+
+  match = text.match(/^\d{4}[./-](\d{1,2})[./-](\d{1,2})(?:[T\s]|$)/);
+  if (match) return formatMonthDay(match[1], match[2]) || text;
+
+  match = text.match(
+    /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})\s+\d{4}\b/i,
+  );
+  if (match) {
+    const englishMonths = {
+      jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+      jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+    };
+    return formatMonthDay(englishMonths[match[1].toLowerCase()], match[2]) || text;
+  }
+
+  return text;
+}
+
+function isMonthClosingHeaderConfig(headerConfig) {
+  if (!headerConfig) return false;
+  const canonicalKey = normalizeHeaderKey("매입 마감 (월)");
+  return [headerConfig.name, ...(headerConfig.originalName || "").split(",")]
+    .some((name) => normalizeHeaderKey(name) === canonicalKey);
 }
 
 function resolveHeaderNameFromConfig(headerConfigs, originalConceptName) {
@@ -23499,8 +23656,11 @@ function appendMappedUploadEntry(rawEntry, csvValues, context, isExcel) {
     const headerName = dashboardHeader.name;
     const rawKey = context.headerKeyMap.get(headerName);
     const rawValue = getRawMappedValue(rawKey);
-    let value =
-      rawValue !== null && rawValue !== undefined ? String(rawValue).trim() : "";
+    const value = headerName === context.monthHeaderNameLocal
+      ? normalizeMonthClosingValue(rawValue)
+      : rawValue !== null && rawValue !== undefined
+        ? String(rawValue).trim()
+        : "";
 
     if (context.numberTypeHeaders.has(headerName)) {
       if (value) {
@@ -23514,11 +23674,8 @@ function appendMappedUploadEntry(rawEntry, csvValues, context, isExcel) {
     }
   }
 
-  const mappedMonthKey = context.headerKeyMap.get(context.monthHeaderNameLocal);
   const mappedYearKey = context.headerKeyMap.get(context.yearHeaderNameLocal);
-  const rawMonthVal = mappedMonthKey
-    ? getRawMappedValue(mappedMonthKey) || ""
-    : entry[context.monthHeaderNameLocal] || "";
+  const rawMonthVal = entry[context.monthHeaderNameLocal] || "";
   const rawYearVal = mappedYearKey
     ? getRawMappedValue(mappedYearKey) || ""
     : entry[context.yearHeaderNameLocal] || "";
@@ -23845,6 +24002,7 @@ function createUploadProcessingWorker() {
     parseCsvLine.toString(),
     cloneSerializableData.toString(),
     normalizeHeaderKey.toString(),
+    normalizeMonthClosingValue.toString(),
     resolveHeaderNameFromConfig.toString(),
     createRawEntriesAggregationState.toString(),
     accumulateRawEntryForSnapshot.toString(),
@@ -24535,50 +24693,28 @@ async function processUploadedData(data, isExcel = false) {
     // Handles units produced by formatCurrency / formatCurrencyShort_v2 (억원, 백만원, 천원, 만원 등) and plain numbers with commas.
     function parseFormattedCurrencyToNumber(text) {
       if (text === null || typeof text === "undefined") return NaN;
-      let s = String(text).trim();
-      if (s === "" || s === "-") return NaN;
+      const normalized = String(text)
+        .trim()
+        .replace(/<sup>([0-9]+)<\/sup>/g, ".$1")
+        .replace(/\s+/g, "");
+      if (normalized === "" || normalized === "-") return NaN;
 
-      // If a data-sort-value was provided, prefer that.
-      const numericFromData = parseFloat(
-        s.replace(/,/g, "").replace(/[^0-9.\-]/g, ""),
+      const amountMatch = normalized.match(
+        /^([-+]?(?:\d{1,3}(?:,\d{3})*|\d+)(?:\.\d+)?)(억원|천만원|백만원|십만원|만원|천원|원)?$/,
       );
-      if (
-        !isNaN(numericFromData) &&
-        /\d/.test(s) &&
-        !/억|만원|백만원|천원/.test(s)
-      ) {
-        return numericFromData;
-      }
-
-      // Check for units like '억원', '백만원', '천원', '만원', '십만원', '천만원'
-      // Examples: '1.60억원' or '1.60억원' with superscript decimals
-      try {
-        // Normalize superscript decimal like 1.<sup>23</sup> to 1.23
-        s = s.replace(/<sup>([0-9]+)<\/sup>/g, ".$1");
-        s = s.replace(/\s+/g, "");
-        if (/억원/.test(s)) {
-          const num = parseFloat(s.replace(/억원/g, "")) || 0;
-          return num * 100000000;
-        } else if (/백만원/.test(s)) {
-          const num = parseFloat(s.replace(/백만원/g, "")) || 0;
-          return num * 1000000;
-        } else if (/천만원/.test(s)) {
-          const num = parseFloat(s.replace(/천만원/g, "")) || 0;
-          return num * 10000000; // 천만원 -> 10,000,000
-        } else if (/만원/.test(s)) {
-          const num = parseFloat(s.replace(/만원/g, "")) || 0;
-          return num * 10000;
-        } else if (/천원/.test(s)) {
-          const num = parseFloat(s.replace(/천원/g, "")) || 0;
-          return num * 1000;
-        } else {
-          // fallback: remove non-numeric except dot and minus
-          const cleaned = s.replace(/[^0-9.\-]/g, "");
-          return parseFloat(cleaned) || NaN;
-        }
-      } catch (e) {
-        return NaN;
-      }
+      if (!amountMatch) return NaN;
+      const amount = Number(amountMatch[1].replace(/,/g, ""));
+      if (!Number.isFinite(amount)) return NaN;
+      const multipliers = {
+        억원: 100000000,
+        천만원: 10000000,
+        백만원: 1000000,
+        십만원: 100000,
+        만원: 10000,
+        천원: 1000,
+        원: 1,
+      };
+      return amount * (multipliers[amountMatch[2]] || 1);
     }
 
     // 효율적인 DOM 정렬 함수 (일반 테이블용)
@@ -32324,36 +32460,9 @@ async function processUploadedData(data, isExcel = false) {
       }
 
       const wb = XLSX.utils.book_new();
-      const ws_data = [];
-      const merges = [];
-
-      Array.from(table.rows).forEach((row, r) => {
-        const rowData = [];
-        let currentCellIndex = 0;
-        Array.from(row.cells).forEach((cell) => {
-          const cellText = (cell.innerText || cell.textContent)
-            .replace(/\s+/g, " ")
-            .trim();
-          // 금액 표시는 원 단위 숫자로 내보내기
-          const parsed = parseFormattedCurrencyToNumber(cellText);
-          rowData[currentCellIndex] = !isNaN(parsed) ? parsed : cellText;
-
-          if (cell.rowSpan > 1 || cell.colSpan > 1) {
-            merges.push({
-              s: { r: r, c: currentCellIndex },
-              e: {
-                r: r + (cell.rowSpan || 1) - 1,
-                c: currentCellIndex + (cell.colSpan || 1) - 1,
-              },
-            });
-          }
-          currentCellIndex += cell.colSpan || 1;
-        });
-        ws_data.push(rowData);
-      });
-
-      const ws = XLSX.utils.aoa_to_sheet(ws_data);
-      ws["!merges"] = merges;
+      const pivotData = extractPivotTableDataForExcel(table);
+      const ws = XLSX.utils.aoa_to_sheet(pivotData.data);
+      ws["!merges"] = pivotData.merges;
 
       XLSX.utils.book_append_sheet(wb, ws, "계층분석결과");
 
@@ -34751,6 +34860,10 @@ async function processUploadedData(data, isExcel = false) {
               const dongHeaderName = getHeaderName("건물동");
               const totalUnitsHeaderName = getHeaderName("전체 세대수");
               const baseAmountHeaderName = getHeaderName("동별 기본 금액");
+              const exportHeaders = masterCsvHeaders.map((header) => header.name);
+              if (new Set(exportHeaders).size !== exportHeaders.length) {
+                throw new Error("Excel 내보내기 헤더가 중복되었습니다.");
+              }
 
               const dataForExport = masterRawEntries.map((entry) => {
                 const dongName = entry[dongHeaderName]
@@ -34758,7 +34871,10 @@ async function processUploadedData(data, isExcel = false) {
                   : "";
                 const newEntry = {};
                 masterCsvHeaders.forEach((header) => {
-                  newEntry[header.name] = entry[header.name];
+                  newEntry[header.name] = convertConfiguredExcelValue(
+                    entry[header.name],
+                    header,
+                  );
                 });
                 newEntry[totalUnitsHeaderName] =
                   totalUnitsPerDongStatic[dongName] === null
@@ -34770,7 +34886,7 @@ async function processUploadedData(data, isExcel = false) {
               });
 
               const ws = XLSX.utils.json_to_sheet(dataForExport, {
-                header: masterCsvHeaders.map((h) => h.name),
+                header: exportHeaders,
               });
               XLSX.utils.book_append_sheet(wb, ws, "현재 데이터");
 
