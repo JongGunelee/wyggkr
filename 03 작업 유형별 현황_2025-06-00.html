@@ -4845,6 +4845,18 @@
     flex-direction: column;
     transition: opacity 0.2s, transform 0.2s;
     transform-origin: bottom right;
+    box-sizing: border-box;
+    will-change: left, top, width, height;
+  }
+
+  .droplet-menu.has-user-geometry {
+    max-width: none;
+    min-width: 0;
+    min-height: 0;
+  }
+
+  .droplet-menu.is-geometry-interacting {
+    transition: none;
   }
   
   .droplet-menu.hidden {
@@ -4864,6 +4876,20 @@
     justify-content: space-between;
     align-items: center;
     border-bottom: 1px solid #e0f2fe;
+    cursor: move;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .droplet-menu.is-panel-dragging .droplet-menu-header {
+    cursor: grabbing;
+  }
+
+  .droplet-menu-header:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: -3px;
   }
 
   .droplet-menu.is-manual-mode .droplet-menu-header {
@@ -4877,6 +4903,21 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .droplet-menu-title-wrap {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .droplet-menu-move-grip {
+    flex: 0 0 auto;
+    color: #7dd3fc;
+    font-size: 15px;
+    line-height: 1;
+    letter-spacing: -2px;
   }
 
   .droplet-menu-header-actions {
@@ -4898,6 +4939,7 @@
     font-size: 1rem;
     background: none;
     border: none;
+    touch-action: manipulation;
   }
 
   .droplet-header-btn {
@@ -4951,7 +4993,7 @@
   }
 
   .droplet-options-list {
-    padding: 8px;
+    padding: 8px 8px 30px;
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -4961,10 +5003,62 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+  }
+
+  .droplet-menu.has-user-geometry .droplet-options-list {
+    max-height: none;
+  }
+
+  .droplet-menu-resize-handle {
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    z-index: 3;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background:
+      linear-gradient(135deg, transparent 0 45%, rgba(3, 105, 161, 0.2) 46% 53%, transparent 54%),
+      linear-gradient(135deg, transparent 0 62%, rgba(3, 105, 161, 0.42) 63% 70%, transparent 71%);
+    color: #0369a1;
+    cursor: nwse-resize;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    opacity: 0.82;
+  }
+
+  .droplet-menu-resize-handle:hover,
+  .droplet-menu-resize-handle:focus-visible {
+    background-color: rgba(224, 242, 254, 0.9);
+    opacity: 1;
+  }
+
+  .droplet-menu-resize-handle:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: -2px;
+  }
+
+  .droplet-menu.is-panel-resizing .droplet-menu-resize-handle {
+    background-color: rgba(186, 230, 253, 0.95);
+    opacity: 1;
   }
 
   #dropletOrdererSelectorContainer {
     flex: 0 0 auto;
+  }
+
+  .droplet-menu.has-user-geometry #dropletOrdererSelectorContainer {
+    min-height: 0;
+    flex: 0 1 auto;
+    max-height: 45%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .droplet-menu .scenario-orderer-dropdown-list {
@@ -5236,6 +5330,18 @@
 
     .droplet-menu-header {
       min-height: 52px;
+    }
+
+    .droplet-menu-resize-handle {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      right: 1px;
+      bottom: 1px;
+    }
+
+    .droplet-options-list {
+      padding-bottom: 44px;
     }
 
     .droplet-manual-filter-toggle {
@@ -14834,6 +14940,547 @@
       });
     }
 
+    const DROPLET_MENU_GEOMETRY_STORAGE_KEY = "dropletMenuGeometryV1";
+    const DROPLET_MENU_GEOMETRY_STORAGE_VERSION = 1;
+    const dropletMenuGeometryMemoryProfiles = Object.create(null);
+
+    function getDropletMenuGeometryProfile() {
+      const isPortraitMobile = window.matchMedia(
+        "(max-width: 767px) and (orientation: portrait)",
+      ).matches;
+      if (isPortraitMobile) return "mobilePortrait";
+      const isLandscapeMobile = window.matchMedia(
+        "(max-height: 767px) and (orientation: landscape) and (pointer: coarse)",
+      ).matches;
+      return isLandscapeMobile ? "mobileLandscape" : "desktop";
+    }
+
+    function getDropletMenuViewport() {
+      const visualViewport = window.visualViewport;
+      const left = visualViewport ? visualViewport.offsetLeft : 0;
+      const top = visualViewport ? visualViewport.offsetTop : 0;
+      const width = Math.max(
+        1,
+        visualViewport ? visualViewport.width : window.innerWidth,
+      );
+      const height = Math.max(
+        1,
+        visualViewport ? visualViewport.height : window.innerHeight,
+      );
+      return { left, top, width, height, edge: 8 };
+    }
+
+    function getDropletMenuGeometryLimits(viewport = getDropletMenuViewport()) {
+      const maxWidth = Math.max(1, viewport.width - viewport.edge * 2);
+      const maxHeight = Math.max(1, viewport.height - viewport.edge * 2);
+      return {
+        minWidth: Math.min(260, maxWidth),
+        minHeight: Math.min(260, maxHeight),
+        maxWidth,
+        maxHeight,
+      };
+    }
+
+    function sanitizeDropletMenuGeometry(geometry) {
+      if (!geometry || typeof geometry !== "object") return null;
+      const values = ["left", "top", "width", "height"].map(
+        (key) => geometry[key],
+      );
+      if (values.some((value) => typeof value !== "number")) return null;
+      if (!values.every(Number.isFinite) || values[2] <= 0 || values[3] <= 0) {
+        return null;
+      }
+      return {
+        left: values[0],
+        top: values[1],
+        width: values[2],
+        height: values[3],
+      };
+    }
+
+    function readDropletMenuGeometryStore() {
+      const emptyStore = {
+        version: DROPLET_MENU_GEOMETRY_STORAGE_VERSION,
+        profiles: {},
+      };
+      try {
+        const raw = localStorage.getItem(DROPLET_MENU_GEOMETRY_STORAGE_KEY);
+        if (!raw) return emptyStore;
+        const parsed = JSON.parse(raw);
+        if (
+          !parsed ||
+          parsed.version !== DROPLET_MENU_GEOMETRY_STORAGE_VERSION ||
+          !parsed.profiles ||
+          typeof parsed.profiles !== "object" ||
+          Array.isArray(parsed.profiles)
+        ) {
+          localStorage.removeItem(DROPLET_MENU_GEOMETRY_STORAGE_KEY);
+          return emptyStore;
+        }
+        return parsed;
+      } catch (_) {
+        try {
+          localStorage.removeItem(DROPLET_MENU_GEOMETRY_STORAGE_KEY);
+        } catch (_) { }
+        return emptyStore;
+      }
+    }
+
+    function getStoredDropletMenuGeometry(profile) {
+      const store = readDropletMenuGeometryStore();
+      const geometry = sanitizeDropletMenuGeometry(store.profiles[profile]);
+      if (geometry) {
+        dropletMenuGeometryMemoryProfiles[profile] = geometry;
+        return geometry;
+      }
+      if (Object.prototype.hasOwnProperty.call(store.profiles, profile)) {
+        delete store.profiles[profile];
+        try {
+          localStorage.setItem(
+            DROPLET_MENU_GEOMETRY_STORAGE_KEY,
+            JSON.stringify(store),
+          );
+        } catch (_) { }
+      }
+      return sanitizeDropletMenuGeometry(
+        dropletMenuGeometryMemoryProfiles[profile],
+      );
+    }
+
+    function saveDropletMenuGeometry(profile, geometry) {
+      const validGeometry = sanitizeDropletMenuGeometry(geometry);
+      if (!validGeometry) return false;
+      dropletMenuGeometryMemoryProfiles[profile] = validGeometry;
+      const store = readDropletMenuGeometryStore();
+      store.profiles[profile] = validGeometry;
+      try {
+        localStorage.setItem(
+          DROPLET_MENU_GEOMETRY_STORAGE_KEY,
+          JSON.stringify(store),
+        );
+        return true;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function clearStoredDropletMenuGeometry(profile) {
+      const store = readDropletMenuGeometryStore();
+      delete dropletMenuGeometryMemoryProfiles[profile];
+      if (!Object.prototype.hasOwnProperty.call(store.profiles, profile)) return;
+      delete store.profiles[profile];
+      try {
+        localStorage.setItem(
+          DROPLET_MENU_GEOMETRY_STORAGE_KEY,
+          JSON.stringify(store),
+        );
+      } catch (_) { }
+    }
+
+    function clampDropletMenuGeometry(
+      geometry,
+      viewport = getDropletMenuViewport(),
+    ) {
+      const limits = getDropletMenuGeometryLimits(viewport);
+      const width = Math.max(
+        limits.minWidth,
+        Math.min(Number(geometry.width) || limits.minWidth, limits.maxWidth),
+      );
+      const height = Math.max(
+        limits.minHeight,
+        Math.min(Number(geometry.height) || limits.minHeight, limits.maxHeight),
+      );
+      const minLeft = viewport.left + viewport.edge;
+      const minTop = viewport.top + viewport.edge;
+      const maxLeft = Math.max(
+        minLeft,
+        viewport.left + viewport.width - width - viewport.edge,
+      );
+      const maxTop = Math.max(
+        minTop,
+        viewport.top + viewport.height - height - viewport.edge,
+      );
+      return {
+        left: Math.max(
+          minLeft,
+          Math.min(Number(geometry.left) || minLeft, maxLeft),
+        ),
+        top: Math.max(
+          minTop,
+          Math.min(Number(geometry.top) || minTop, maxTop),
+        ),
+        width,
+        height,
+      };
+    }
+
+    function applyDropletMenuUserGeometry(menu, geometry, options = {}) {
+      if (!menu) return null;
+      const profile = options.profile || getDropletMenuGeometryProfile();
+      const clamped = clampDropletMenuGeometry(geometry);
+      menu.classList.add("has-user-geometry");
+      menu.dataset.geometryProfile = profile;
+      menu.style.position = "fixed";
+      menu.style.left = clamped.left + "px";
+      menu.style.top = clamped.top + "px";
+      menu.style.width = clamped.width + "px";
+      menu.style.height = clamped.height + "px";
+      menu.style.maxHeight = clamped.height + "px";
+      menu.style.right = "auto";
+      menu.style.bottom = "auto";
+      menu.style.transformOrigin = "center";
+      const resizeHandle = document.getElementById("dropletMenuResizeHandle");
+      if (resizeHandle) {
+        resizeHandle.setAttribute(
+          "aria-label",
+          `시나리오 선택 패널 크기 조절, 현재 ${Math.round(clamped.width)} × ${Math.round(clamped.height)} 픽셀`,
+        );
+      }
+      if (options.persist) {
+        saveDropletMenuGeometry(profile, clamped);
+      }
+      return clamped;
+    }
+
+    function resetDropletMenuAutomaticGeometry(menu) {
+      if (!menu) return;
+      menu.classList.remove(
+        "has-user-geometry",
+        "is-geometry-interacting",
+        "is-panel-dragging",
+        "is-panel-resizing",
+      );
+      delete menu.dataset.geometryProfile;
+      menu.style.height = "";
+      menu.style.width = "";
+      menu.style.maxHeight = "";
+      menu.style.transformOrigin = "";
+      const resizeHandle = document.getElementById("dropletMenuResizeHandle");
+      if (resizeHandle) {
+        resizeHandle.setAttribute(
+          "aria-label",
+          "시나리오 선택 패널 크기 조절, 현재 자동 크기",
+        );
+      }
+    }
+
+    function restoreStoredDropletMenuGeometry(menu) {
+      const profile = getDropletMenuGeometryProfile();
+      const stored = getStoredDropletMenuGeometry(profile);
+      if (!stored) {
+        if (
+          menu.classList.contains("has-user-geometry") ||
+          menu.dataset.geometryProfile !== profile
+        ) {
+          resetDropletMenuAutomaticGeometry(menu);
+        }
+        return false;
+      }
+      applyDropletMenuUserGeometry(menu, stored, {
+        profile,
+        // visualViewport 축소(예: 모바일 키보드)는 일시적일 수 있으므로
+        // 수동 조작이 아닌 복원/클램프 단계에서는 원본 저장값을 덮지 않습니다.
+        persist: false,
+      });
+      return true;
+    }
+
+    function persistCurrentDropletMenuGeometry(menu) {
+      if (!menu || menu.classList.contains("hidden")) return null;
+      const rect = menu.getBoundingClientRect();
+      return applyDropletMenuUserGeometry(
+        menu,
+        {
+          left: rect.left,
+          top: rect.top,
+          width: rect.width,
+          height: rect.height,
+        },
+        { persist: true },
+      );
+    }
+
+    function setupDropletMenuGeometryInteractions() {
+      const menu = document.getElementById("dropletMenu");
+      const header = menu && menu.querySelector(".droplet-menu-header");
+      const resizeHandle = document.getElementById("dropletMenuResizeHandle");
+      if (!menu || !header || !resizeHandle) return;
+      if (menu.dataset.geometryInteractionsInitialized === "true") return;
+      menu.dataset.geometryInteractionsInitialized = "true";
+
+      let interaction = null;
+      const interactiveSelector =
+        "button, input, select, textarea, a, label, [role='button'], [contenteditable='true']";
+
+      const beginInteraction = (type, event, captureTarget) => {
+        if (interaction) return;
+        if (event.isPrimary === false) return;
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+        if (
+          type === "drag" &&
+          (event.target.closest(interactiveSelector) ||
+            event.target.closest(".droplet-menu-header-actions"))
+        ) {
+          return;
+        }
+        if (menu.classList.contains("hidden")) return;
+        const rect = menu.getBoundingClientRect();
+        interaction = {
+          type,
+          pointerId: event.pointerId,
+          captureTarget,
+          startX: event.clientX,
+          startY: event.clientY,
+          initial: {
+            left: rect.left,
+            top: rect.top,
+            width: rect.width,
+            height: rect.height,
+          },
+          started: false,
+        };
+        if (captureTarget.setPointerCapture) {
+          try {
+            captureTarget.setPointerCapture(event.pointerId);
+          } catch (_) { }
+        }
+        if (
+          type === "resize" &&
+          typeof captureTarget.focus === "function"
+        ) {
+          captureTarget.focus({ preventScroll: true });
+        } else if (
+          type === "drag" &&
+          typeof header.focus === "function"
+        ) {
+          header.focus({ preventScroll: true });
+        }
+        event.preventDefault();
+        event.stopPropagation();
+      };
+
+      const moveInteraction = (event) => {
+        if (!interaction || event.pointerId !== interaction.pointerId) return;
+        const dx = event.clientX - interaction.startX;
+        const dy = event.clientY - interaction.startY;
+        if (!interaction.started && Math.hypot(dx, dy) < 3) return;
+        if (!interaction.started) {
+          interaction.started = true;
+          menu.classList.add(
+            "is-geometry-interacting",
+            interaction.type === "drag"
+              ? "is-panel-dragging"
+              : "is-panel-resizing",
+          );
+          applyDropletMenuUserGeometry(menu, interaction.initial);
+        }
+
+        let nextGeometry;
+        if (interaction.type === "drag") {
+          nextGeometry = {
+            ...interaction.initial,
+            left: interaction.initial.left + dx,
+            top: interaction.initial.top + dy,
+          };
+        } else {
+          const viewport = getDropletMenuViewport();
+          const limits = getDropletMenuGeometryLimits(viewport);
+          const availableWidth = Math.max(
+            limits.minWidth,
+            viewport.left + viewport.width - viewport.edge - interaction.initial.left,
+          );
+          const availableHeight = Math.max(
+            limits.minHeight,
+            viewport.top + viewport.height - viewport.edge - interaction.initial.top,
+          );
+          nextGeometry = {
+            left: interaction.initial.left,
+            top: interaction.initial.top,
+            width: Math.max(
+              limits.minWidth,
+              Math.min(interaction.initial.width + dx, availableWidth),
+            ),
+            height: Math.max(
+              limits.minHeight,
+              Math.min(interaction.initial.height + dy, availableHeight),
+            ),
+          };
+        }
+        applyDropletMenuUserGeometry(menu, nextGeometry);
+        if (event.cancelable) event.preventDefault();
+      };
+
+      const finishInteraction = (event, cancelled = false) => {
+        if (!interaction || event.pointerId !== interaction.pointerId) return;
+        const finished = interaction;
+        interaction = null;
+        if (
+          finished.captureTarget.releasePointerCapture &&
+          finished.captureTarget.hasPointerCapture &&
+          finished.captureTarget.hasPointerCapture(event.pointerId)
+        ) {
+          try {
+            finished.captureTarget.releasePointerCapture(event.pointerId);
+          } catch (_) { }
+        }
+        menu.classList.remove(
+          "is-geometry-interacting",
+          "is-panel-dragging",
+          "is-panel-resizing",
+        );
+        if (finished.started) {
+          if (cancelled) {
+            adjustDropletMenuPosition();
+          } else {
+            persistCurrentDropletMenuGeometry(menu);
+          }
+        }
+      };
+
+      const bindPointerSurface = (element, type) => {
+        element.addEventListener("pointerdown", (event) => {
+          beginInteraction(type, event, element);
+        });
+        element.addEventListener("pointermove", moveInteraction);
+        element.addEventListener("pointerup", (event) => {
+          finishInteraction(event, false);
+        });
+        element.addEventListener("pointercancel", (event) => {
+          finishInteraction(event, true);
+        });
+        element.addEventListener("lostpointercapture", (event) => {
+          if (interaction && interaction.pointerId === event.pointerId) {
+            finishInteraction(event, false);
+          }
+        });
+      };
+
+      bindPointerSurface(header, "drag");
+      bindPointerSurface(resizeHandle, "resize");
+
+      header.addEventListener("keydown", (event) => {
+        if (event.target !== header) return;
+        const directionKeys = [
+          "ArrowLeft",
+          "ArrowRight",
+          "ArrowUp",
+          "ArrowDown",
+        ];
+        if (!directionKeys.includes(event.key)) return;
+        if (menu.classList.contains("hidden")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const step = event.shiftKey ? 32 : 16;
+        const rect = menu.getBoundingClientRect();
+        applyDropletMenuUserGeometry(
+          menu,
+          {
+            left:
+              rect.left +
+              (event.key === "ArrowRight"
+                ? step
+                : event.key === "ArrowLeft"
+                  ? -step
+                  : 0),
+            top:
+              rect.top +
+              (event.key === "ArrowDown"
+                ? step
+                : event.key === "ArrowUp"
+                  ? -step
+                  : 0),
+            width: rect.width,
+            height: rect.height,
+          },
+          { persist: true },
+        );
+      });
+
+      resizeHandle.addEventListener("keydown", (event) => {
+        if (event.key === "Home") {
+          event.preventDefault();
+          event.stopPropagation();
+          clearStoredDropletMenuGeometry(getDropletMenuGeometryProfile());
+          resetDropletMenuAutomaticGeometry(menu);
+          adjustDropletMenuPosition();
+          return;
+        }
+        const directionKeys = [
+          "ArrowLeft",
+          "ArrowRight",
+          "ArrowUp",
+          "ArrowDown",
+        ];
+        if (!directionKeys.includes(event.key)) return;
+        if (menu.classList.contains("hidden")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const step = event.shiftKey ? 32 : 16;
+        const rect = menu.getBoundingClientRect();
+        const viewport = getDropletMenuViewport();
+        const limits = getDropletMenuGeometryLimits(viewport);
+        const availableWidth = Math.max(
+          limits.minWidth,
+          viewport.left + viewport.width - viewport.edge - rect.left,
+        );
+        const availableHeight = Math.max(
+          limits.minHeight,
+          viewport.top + viewport.height - viewport.edge - rect.top,
+        );
+        applyDropletMenuUserGeometry(
+          menu,
+          {
+            left: rect.left,
+            top: rect.top,
+            width: Math.max(
+              limits.minWidth,
+              Math.min(
+                rect.width +
+                  (event.key === "ArrowRight"
+                    ? step
+                    : event.key === "ArrowLeft"
+                      ? -step
+                      : 0),
+                availableWidth,
+              ),
+            ),
+            height: Math.max(
+              limits.minHeight,
+              Math.min(
+                rect.height +
+                  (event.key === "ArrowDown"
+                    ? step
+                    : event.key === "ArrowUp"
+                      ? -step
+                      : 0),
+                availableHeight,
+              ),
+            ),
+          },
+          { persist: true },
+        );
+      });
+
+      resizeHandle.addEventListener("dblclick", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        clearStoredDropletMenuGeometry(getDropletMenuGeometryProfile());
+        resetDropletMenuAutomaticGeometry(menu);
+        adjustDropletMenuPosition();
+      });
+
+      window.addEventListener("blur", () => {
+        if (!interaction) return;
+        interaction = null;
+        menu.classList.remove(
+          "is-geometry-interacting",
+          "is-panel-dragging",
+          "is-panel-resizing",
+        );
+        adjustDropletMenuPosition();
+      });
+    }
+
     function setDropletMenuOpen(open, options = {}) {
       const menu = document.getElementById("dropletMenu");
       const handle = document.getElementById("dropletHandle");
@@ -15047,6 +15694,23 @@
       const menu = document.getElementById("dropletMenu");
       if (!droplet || !menu) return;
 
+      // 사용자 조작 중에는 현재 geometry만 안전영역 안으로 제한하고,
+      // 저장된 이전 값이나 물방울 기준 자동 배치로 되돌리지 않습니다.
+      if (menu.classList.contains("is-geometry-interacting")) {
+        const activeRect = menu.getBoundingClientRect();
+        applyDropletMenuUserGeometry(menu, {
+          left: activeRect.left,
+          top: activeRect.top,
+          width: activeRect.width,
+          height: activeRect.height,
+        });
+        return;
+      }
+
+      // 현재 뷰포트 프로필에 사용자가 저장한 패널 위치/크기가 있으면
+      // 자동 앵커보다 우선합니다. 복원 시 화면 축소분은 저장하지 않습니다.
+      if (restoreStoredDropletMenuGeometry(menu)) return;
+
       const rect = droplet.getBoundingClientRect();
       const visualViewport = window.visualViewport;
       const viewportLeft = visualViewport ? visualViewport.offsetLeft : 0;
@@ -15061,7 +15725,7 @@
       const menuWidth = Math.max(0, Math.min(320, viewportWidth - edge * 2));
       menu.style.position = "fixed";
       menu.style.width = menuWidth + "px";
-      menu.style.maxHeight = Math.max(160, viewportHeight - edge * 2) + "px";
+      menu.style.maxHeight = Math.max(1, viewportHeight - edge * 2) + "px";
 
       // 팝업 메뉴의 높이를 미리 계산하기 위해 visibility를 가리고 임시 표출
       const wasHidden = menu.classList.contains("hidden");
@@ -15411,6 +16075,7 @@
       populateDropletMenu();
       updateDropletState();
       setupDropletDragAndDrop();
+      setupDropletMenuGeometryInteractions();
       syncScenarioOrdererSelectors();
       ensureScenarioDropletVisible({ forceCoordinates: true, persist: true });
       scheduleScenarioDropletVisibilityCheck();
@@ -44732,6 +45397,7 @@ async function processUploadedData(data, isExcel = false) {
           } catch(e) {}
         }
         localStorage.removeItem("dropletPosition");
+        localStorage.removeItem("dropletMenuGeometryV1");
         location.reload();
       }
     }
@@ -44773,8 +45439,13 @@ async function processUploadedData(data, isExcel = false) {
     </div>
     <div id="dropletMenu" class="droplet-menu hidden" role="dialog" aria-modal="false"
       aria-labelledby="dropletMenuTitle" aria-hidden="true">
-      <div class="droplet-menu-header">
-        <span id="dropletMenuTitle" class="droplet-menu-title">🎯 시나리오 선택</span>
+      <div class="droplet-menu-header" role="group" tabindex="0"
+        aria-label="시나리오 선택 패널 이동 영역. 마우스나 손가락으로 끌거나 방향키로 이동"
+        title="드래그 또는 방향키로 패널 이동">
+        <span class="droplet-menu-title-wrap">
+          <span class="droplet-menu-move-grip" aria-hidden="true">⠿</span>
+          <span id="dropletMenuTitle" class="droplet-menu-title">🎯 시나리오 선택</span>
+        </span>
         <div class="droplet-menu-header-actions">
           <div class="droplet-quick-actions">
             <button type="button" id="dropletBtnLatest2Years" class="droplet-header-btn">최신 2년</button>
@@ -44787,6 +45458,9 @@ async function processUploadedData(data, isExcel = false) {
       <div id="dropletOptionsContainer" class="droplet-options-list">
         <!-- Dynamic Scenario Buttons -->
       </div>
+      <button type="button" id="dropletMenuResizeHandle" class="droplet-menu-resize-handle"
+        aria-label="시나리오 선택 패널 크기 조절, 현재 자동 크기"
+        title="드래그 또는 방향키로 크기 조절 · Home 키나 두 번 클릭으로 자동 크기 복원"></button>
     </div>
   </div>
 
