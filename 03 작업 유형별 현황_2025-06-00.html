@@ -10053,11 +10053,21 @@
       },
     ];
 
-    let initialTotalUnitsPerDongStatic = {
+    // GitHub XLSB의 `전체 세대수` 열이 전 행 공란이어도 HTML에 명시된
+    // 사택 기준값은 잃지 않는다. 원본에 양의 정수가 들어오면 아래 기준보다
+    // 우선하며, 출처에 값이 없는 동은 추정하지 않고 N/A로 남긴다.
+    const BUILT_IN_TOTAL_UNITS_REFERENCE = Object.freeze({
+      "2동": 32,
+      "5동": 30,
+      "7동": 40,
+      "8동": 44,
+      "9동": 30,
       "101동": 16,
       "102동": 24,
       "103동": 24,
-      "7동": 40,
+    });
+    let initialTotalUnitsPerDongStatic = {
+      ...BUILT_IN_TOTAL_UNITS_REFERENCE,
     };
     // [v4.94] 건물동별 외벽 세대수 초기값 기입 (7동: 10세대 기본값 지정)
     let initialOuterUnitsPerDongStatic = {
@@ -13992,8 +14002,8 @@
     // --- [v5.00] IndexedDB 기반 XLSB 완전 스냅샷 캐싱 (v2 아키텍처) ---
     const WYGGKR_DB_NAME = "WyggkrCacheDB";
     const WYGGKR_STORE_NAME = "xlsbDataStore";
-    // v3: PO 공란 행 보존 + 원천-매핑 대조 보고서가 없는 구버전 캐시는 폐기한다.
-    const WYGGKR_DB_VERSION = 3;
+    // v5: 원천-매핑·세대수와 금액/월 런타임 파생 필드 보고서가 없는 캐시는 폐기한다.
+    const WYGGKR_DB_VERSION = 5;
 
     function initWyggkrCacheDB() {
       return new Promise((resolve, reject) => {
@@ -14025,7 +14035,7 @@
     function captureFullSnapshot() {
       try {
         return {
-          _snapshotVersion: 3,
+          _snapshotVersion: 5,
           masterRawEntries: cloneSerializableData(masterRawEntries),
           masterCsvHeaders: cloneSerializableData(masterCsvHeaders),
           allYearsGlobal: [...allYearsGlobal],
@@ -14048,6 +14058,12 @@
           mappingIntegrityReport: cloneSerializableData(
             window.__lastMappingIntegrityReport || null,
           ),
+          totalUnitsIntegrityReport: cloneSerializableData(
+            window.__lastTotalUnitsIntegrityReport || null,
+          ),
+          runtimeHydrationReport: cloneSerializableData(
+            window.__lastRuntimeHydrationReport || null,
+          ),
         };
       } catch (e) {
         console.warn("[v5.00] 스냅샷 캡처 실패:", e);
@@ -14063,6 +14079,22 @@
       }
       masterRawEntries = snapshot.masterRawEntries;
       masterCsvHeaders = snapshot.masterCsvHeaders;
+      invalidateHeaderNameCache();
+      const cachedAccountingClosingHeader = masterCsvHeaders.find(
+        (headerConfig) => isAccountingClosingHeaderConfig(headerConfig),
+      )?.name || null;
+      const restoredRuntimeHydrationReport = hydrateRawEntriesRuntimeFields(
+        masterRawEntries,
+        {
+          poAmount: getHeaderName("PO금액"),
+          month: getHeaderName("매입 마감 (월)"),
+          accountingClosing: cachedAccountingClosingHeader,
+          year: getHeaderName("회계 연도"),
+        },
+      );
+      window.__lastRuntimeHydrationReport = cloneSerializableData(
+        restoredRuntimeHydrationReport,
+      );
       allYearsGlobal = snapshot.allYearsGlobal;
       allDongsGlobal = snapshot.allDongsGlobal;
       allWorkTypesGlobal = snapshot.allWorkTypesGlobal;
@@ -14082,8 +14114,16 @@
       summaryCache = snapshot.summaryCache || null;
       dashboardFilterCache = snapshot.dashboardFilterCache || null;
       lastDashboardRenderStateKey = snapshot.lastDashboardRenderStateKey || null;
+      if (restoredRuntimeHydrationReport.repairedEntryCount > 0) {
+        summaryCache = null;
+        dashboardFilterCache = null;
+        lastDashboardRenderStateKey = null;
+      }
       window.__lastMappingIntegrityReport = cloneSerializableData(
         snapshot.mappingIntegrityReport || null,
+      );
+      window.__lastTotalUnitsIntegrityReport = cloneSerializableData(
+        snapshot.totalUnitsIntegrityReport || null,
       );
 
       // 런타임 인덱스 및 필터 캐시 무효화
@@ -14258,10 +14298,17 @@
           // v2 스냅샷 형식인지 검증 및 다르면 비우기
           if (cached) {
             if (
-              cached._snapshotVersion === 3 &&
+              cached._snapshotVersion === 5 &&
               Array.isArray(cached.masterRawEntries) &&
               cached.mappingIntegrityReport?.status === "verified" &&
               cached.mappingIntegrityReport?.mismatchCount === 0 &&
+              cached.totalUnitsIntegrityReport?.status === "verified" &&
+              cached.runtimeHydrationReport?.entryCount ===
+                cached.masterRawEntries.length &&
+              cached.runtimeHydrationReport?.invalidParsedPoAmountCount === 0 &&
+              cached.runtimeHydrationReport?.invalidParsedMonthCount === 0 &&
+              cached.runtimeHydrationReport?.parsedPoAmountTotal ===
+                cached.mappingIntegrityReport?.poAmountMappedTotal &&
               cached.mappingIntegrityReport?.sourceEntryCount ===
                 cached.masterRawEntries.length
             ) {
@@ -19709,11 +19756,13 @@
           let value;
 
           if (isModal && colKey === "No.") {
-            const rawSourceNumber = item?._sourceRowNumber;
-            value = rawSourceNumber === null || rawSourceNumber === undefined || rawSourceNumber === ""
-              ? String(index + 1).padStart(2, "0")
-              : String(rawSourceNumber);
+            // 상세 화면의 No.는 원천 NO.가 아니라 현재 정렬 결과 안에서의
+            // 연속 행 번호다. 원천 번호/워크시트 행은 감사용 data-*로만 보존한다.
+            value = String(index + 1);
             cell.textContent = value;
+            cell.dataset.sourceRowNumber = String(
+              item?._sourceRowNumber ?? "",
+            );
             cell.dataset.sourceWorksheetRow = String(
               item?._sourceWorksheetRow || "",
             );
@@ -23959,6 +24008,38 @@
         : value;
     }
 
+    function buildDetailModalExcelData(data) {
+      const rows = Array.isArray(data) ? data : [];
+      const detailHeaders = getDetailModalHeaders(rows);
+      if (rows.length === 0 || detailHeaders.length === 0) return [];
+      const headerConfigByName = new Map(
+        masterCsvHeaders.map((headerConfig) => [
+          headerConfig.name,
+          headerConfig,
+        ]),
+      );
+      const excelRows = [["No.", ...detailHeaders]];
+
+      rows.forEach((item, index) => {
+        const row = [index + 1];
+        detailHeaders.forEach((headerName) => {
+          if (headerName === "전체 세대수" || headerName === "외벽 세대수") {
+            const derivedValue = getDetailDerivedColumnValue(item, headerName);
+            row.push(
+              parsePositiveWholeNumber(derivedValue) === null
+                ? "N/A"
+                : Number(derivedValue),
+            );
+            return;
+          }
+          const headerConfig = headerConfigByName.get(headerName) || null;
+          row.push(convertConfiguredExcelValue(item?.[headerName], headerConfig));
+        });
+        excelRows.push(row);
+      });
+      return excelRows;
+    }
+
     function extractTableDataForExcel(tableElement) {
       if (!tableElement) return [];
       const headerRow = tableElement.querySelector("thead tr");
@@ -24086,6 +24167,19 @@
           "원천-매핑 무결성 검증 상태가 유효하지 않아 내보내기를 중단했습니다.",
         );
       }
+      const runtimeReport = window.__lastRuntimeHydrationReport ||
+        report.runtimeFields || null;
+      if (
+        !runtimeReport ||
+        runtimeReport.entryCount !== masterRawEntries.length ||
+        runtimeReport.invalidParsedPoAmountCount !== 0 ||
+        runtimeReport.invalidParsedMonthCount !== 0 ||
+        runtimeReport.parsedPoAmountTotal !== report.poAmountMappedTotal
+      ) {
+        throw new Error(
+          "금액/월 런타임 파생 필드 검증 상태가 유효하지 않아 내보내기를 중단했습니다.",
+        );
+      }
     }
 
     function appendMappingIntegritySheet(workbook) {
@@ -24110,8 +24204,58 @@
         ["매핑 PO금액 합계", report.poAmountMappedTotal],
         ["검증 시각(UTC)", report.verifiedAt || ""],
       ];
+      auditRows.push([]);
+      auditRows.push([
+        "열별 원천 대조",
+        "원천 헤더",
+        "비교 셀",
+        "원천 공란",
+        "매핑 공란 동등값",
+        "불일치",
+      ]);
+      (report.columnAudits || []).forEach((columnAudit) => {
+        auditRows.push([
+          columnAudit.header,
+          columnAudit.sourceHeader,
+          columnAudit.comparedCellCount,
+          columnAudit.sourceBlankCount,
+          columnAudit.mappedBlankEquivalentCount,
+          columnAudit.mismatchCount,
+        ]);
+      });
+      const unitsReport = report.totalUnits ||
+        window.__lastTotalUnitsIntegrityReport || null;
+      if (unitsReport) {
+        auditRows.push([]);
+        auditRows.push(["전체 세대수 파이프라인", "검증값"]);
+        auditRows.push(["세대수 검증 상태", unitsReport.status]);
+        auditRows.push(["XLSB 제공 동", unitsReport.sourceProvidedDongCount]);
+        auditRows.push(["검증 기준값 적용 동", unitsReport.referenceFallbackDongCount]);
+        auditRows.push(["원천·기준값 모두 누락 동", unitsReport.missingDongCount]);
+        auditRows.push(["상충 동", unitsReport.conflictDongCount]);
+        auditRows.push(["잘못된 비공란 값", unitsReport.invalidValueCount]);
+      }
+      const runtimeReport = report.runtimeFields ||
+        window.__lastRuntimeHydrationReport || null;
+      if (runtimeReport) {
+        auditRows.push([]);
+        auditRows.push(["금액/월 런타임 파생 필드", "검증값"]);
+        auditRows.push(["런타임 행 수", runtimeReport.entryCount]);
+        auditRows.push(["parsedPoAmount 합계", runtimeReport.parsedPoAmountTotal]);
+        auditRows.push(["PO금액 보정 행", runtimeReport.poAmountCorrectionCount]);
+        auditRows.push(["월 보정 행", runtimeReport.monthCorrectionCount]);
+        auditRows.push(["잘못된 parsedPoAmount", runtimeReport.invalidParsedPoAmountCount]);
+        auditRows.push(["잘못된 parsedMonthInt", runtimeReport.invalidParsedMonthCount]);
+      }
       const auditSheet = XLSX.utils.aoa_to_sheet(auditRows);
-      auditSheet["!cols"] = [{ wch: 24 }, { wch: 72 }];
+      auditSheet["!cols"] = [
+        { wch: 26 },
+        { wch: 42 },
+        { wch: 14 },
+        { wch: 14 },
+        { wch: 18 },
+        { wch: 12 },
+      ];
       XLSX.utils.book_append_sheet(workbook, auditSheet, "원천 검증");
       return true;
     }
@@ -24221,10 +24365,10 @@
           detailModalEl.classList.contains("active") &&
           detailModalTableEl
         ) {
-          const detailTableBodyRows =
-            detailModalTableEl.querySelectorAll("tbody tr");
-          if (detailTableBodyRows.length > 0) {
-            const detailData = extractTableDataForExcel(detailModalTableEl);
+          if (detailModalCurrentData.length > 0) {
+            const detailData = buildDetailModalExcelData(
+              detailModalCurrentData,
+            );
             if (detailData.length > 1) {
               const modalTitleEl =
                 document.getElementById("detailModalTitle");
@@ -24356,7 +24500,7 @@
 
       try {
         assertExportDatasetIntegrity();
-        const detailData = extractTableDataForExcel(detailModalTableEl);
+        const detailData = buildDetailModalExcelData(detailModalCurrentData);
         if (detailData.length <= 1) {
           alert("테이블에 내보낼 데이터가 없습니다.");
           return;
@@ -24527,61 +24671,30 @@
       const yearDongAmountMap = new Map();
       const tempDongYearMap = new Map();
       const newUnitsFromCsv = {};
+      const totalUnitsIntegrityState = createRawEntriesAggregationState(
+        csvHeaderConfig,
+        createUploadProcessingContextOptions(),
+      );
       const yearsSet = new Set();
       const dongsSet = new Set(Object.keys(totalUnitsPerDongStatic));
       const workTypesSet = new Set();
       const dongEntriesMap = new Map();
       const workTypeEntriesMap = new Map();
       const yearEntriesMap = new Map();
-      const poAmountHeaderNameLocal = poAmountHeaderName;
       const regexCommaLocal = /,/g;
       let lastAggregationYieldAt = performance.now();
       let lastAggregationProgressAt = lastAggregationYieldAt;
 
       for (let i = 0; i < rawEntries.length; i++) {
         const entry = rawEntries[i];
-        
-        // [v5.01] XLSB 숫자 셀 타입 최적화 (불필요한 문자열 변환 및 정규식 제거)
-        const poAmountVal = entry[poAmountHeaderNameLocal];
-        const poAmount = typeof poAmountVal === "number"
-          ? poAmountVal
-          : (poAmountVal ? parseFloat(String(poAmountVal).replace(regexCommaLocal, "")) || 0 : 0);
-        
-        entry.parsedPoAmount = poAmount;
-        
-        const monthValRaw = normalizeMonthClosingValue(entry[monthHeaderName]);
-        entry[monthHeaderName] = monthValRaw;
-        if (accountingClosingHeaderName) {
-          entry[accountingClosingHeaderName] = normalizeAccountingClosingValue(
-            entry[accountingClosingHeaderName],
-          );
-        }
-        let parsedMonthInt = 0;
-        if (monthValRaw) {
-          const monthStr = String(monthValRaw).trim();
-          let m = monthStr.match(/(\d{1,2})월/);
-          if (m) {
-            parsedMonthInt = parseInt(m[1], 10);
-          } else {
-            m = monthStr.match(/-(\d{2})-/) || monthStr.match(/\/(\d{1,2})\//) || monthStr.match(/^(\d{4})[.\/-](\d{1,2})/);
-            if (m) {
-              parsedMonthInt = parseInt(m[1] || m[2], 10);
-            } else {
-              m = monthStr.match(/^(\d{4})(\d{2})(?:\d{2})?$/);
-              if (m) {
-                parsedMonthInt = parseInt(m[2], 10);
-              } else {
-                const d = new Date(monthStr);
-                if (!isNaN(d.getTime())) {
-                  parsedMonthInt = d.getMonth() + 1;
-                } else {
-                  parsedMonthInt = parseInt(monthStr, 10) || 0;
-                }
-              }
-            }
-          }
-        }
-        entry.parsedMonthInt = parsedMonthInt;
+        hydrateRawEntryRuntimeFields(entry, {
+          poAmount: poAmountHeaderName,
+          month: monthHeaderName,
+          accountingClosing: accountingClosingHeaderName,
+          year: yearHeaderName,
+        });
+        accumulateRawEntryForSnapshot(totalUnitsIntegrityState, entry);
+        const poAmount = entry.parsedPoAmount;
 
         // [v5.01] 문자열 replace 대신 startsWith 최적화
         const rawDong = entry[dongHeaderName];
@@ -24718,6 +24831,20 @@
           totalUnitsPerDongStatic[dongName] = null;
         }
       });
+      const totalUnitsAuditSnapshot = finalizeRawEntriesAggregationState(
+        totalUnitsIntegrityState,
+      );
+      totalUnitsPerDongStatic = cloneSerializableData(
+        totalUnitsAuditSnapshot.totalUnitsPerDongStatic,
+      );
+      window.__lastTotalUnitsIntegrityReport = cloneSerializableData(
+        totalUnitsAuditSnapshot.totalUnitsIntegrity,
+      );
+      if (window.__lastTotalUnitsIntegrityReport?.status === "failed") {
+        throw new Error(
+          `전체 세대수 원천 충돌: ${window.__lastTotalUnitsIntegrityReport.conflictDongCount || 0}개 동`,
+        );
+      }
 
       if (
         hasBaseAmountHeader &&
@@ -25106,6 +25233,9 @@ function applyProcessingSnapshot(snapshot) {
     cloneSerializableData(snapshot.dataDongFinanceAndCountRaw) || [];
   totalUnitsPerDongStatic =
     cloneSerializableData(snapshot.totalUnitsPerDongStatic) || {};
+  window.__lastTotalUnitsIntegrityReport = cloneSerializableData(
+    snapshot.totalUnitsIntegrity || null,
+  );
   outerUnitsPerDongStatic =
     cloneSerializableData(snapshot.outerUnitsPerDongStatic) || {};
   baseEstimateAmounts =
@@ -25118,6 +25248,148 @@ function applyProcessingSnapshot(snapshot) {
   );
 
   return true;
+}
+
+function normalizeBuildingDongName(value) {
+  if (value === null || value === undefined) return "";
+  return String(value).replace(/^사택\s+/, "").trim();
+}
+
+function parseRuntimePoAmount(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+  if (value === null || value === undefined || value === "") return 0;
+  const parsed = Number(String(value).replace(/,/g, "").trim());
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function parseRuntimeMonthNumber(value) {
+  const normalized = normalizeMonthClosingValue(value);
+  if (!normalized) return 0;
+  const text = String(normalized).trim();
+  let match = text.match(/(\d{1,2})월/);
+  if (match) return Math.min(12, Math.max(0, Number(match[1]) || 0));
+  match =
+    text.match(/-(\d{2})-/) ||
+    text.match(/\/(\d{1,2})\//) ||
+    text.match(/^\d{4}[.\/-](\d{1,2})/) ||
+    text.match(/^\d{4}(\d{2})(?:\d{2})?$/);
+  if (match) return Math.min(12, Math.max(0, Number(match[1]) || 0));
+  const parsedDate = new Date(text);
+  return Number.isNaN(parsedDate.getTime()) ? 0 : parsedDate.getMonth() + 1;
+}
+
+function hydrateRawEntryRuntimeFields(entry, headerNames = {}) {
+  if (!entry || typeof entry !== "object") {
+    return { poAmountCorrected: false, monthCorrected: false };
+  }
+  const poAmountHeaderName = headerNames.poAmount || "PO금액";
+  const monthHeaderName = headerNames.month || "매입 마감 (월)";
+  const accountingClosingHeaderName = headerNames.accountingClosing || null;
+  const yearHeaderName = headerNames.year || "회계 연도";
+  const expectedPoAmount = parseRuntimePoAmount(entry[poAmountHeaderName]);
+  const normalizedMonth = normalizeMonthClosingValue(entry[monthHeaderName]);
+  const expectedMonth = parseRuntimeMonthNumber(normalizedMonth);
+  const poAmountCorrected =
+    !Number.isFinite(entry.parsedPoAmount) ||
+    entry.parsedPoAmount !== expectedPoAmount;
+  const monthCorrected =
+    !Number.isInteger(entry.parsedMonthInt) ||
+    entry.parsedMonthInt !== expectedMonth ||
+    entry._monthNum !== expectedMonth;
+
+  entry[monthHeaderName] = normalizedMonth;
+  if (accountingClosingHeaderName) {
+    entry[accountingClosingHeaderName] = normalizeAccountingClosingValue(
+      entry[accountingClosingHeaderName],
+    );
+  }
+  entry.parsedPoAmount = expectedPoAmount;
+  entry.parsedMonthInt = expectedMonth;
+  entry._monthNum = expectedMonth;
+  entry._monthKey = expectedMonth ? `${expectedMonth}월` : "";
+  entry._yearRaw = entry[yearHeaderName] === null ||
+    entry[yearHeaderName] === undefined
+    ? ""
+    : String(entry[yearHeaderName]).trim();
+  return { poAmountCorrected, monthCorrected };
+}
+
+function hydrateRawEntriesRuntimeFields(entries, headerNames = {}) {
+  const rows = Array.isArray(entries) ? entries : [];
+  let poAmountCorrectionCount = 0;
+  let monthCorrectionCount = 0;
+  let repairedEntryCount = 0;
+  let parsedPoAmountTotal = 0;
+  let invalidParsedPoAmountCount = 0;
+  let invalidParsedMonthCount = 0;
+  rows.forEach((entry) => {
+    const result = hydrateRawEntryRuntimeFields(entry, headerNames);
+    if (result.poAmountCorrected) poAmountCorrectionCount++;
+    if (result.monthCorrected) monthCorrectionCount++;
+    if (result.poAmountCorrected || result.monthCorrected) {
+      repairedEntryCount++;
+    }
+    if (Number.isFinite(entry.parsedPoAmount)) {
+      parsedPoAmountTotal += entry.parsedPoAmount;
+    } else {
+      invalidParsedPoAmountCount++;
+    }
+    if (
+      !Number.isInteger(entry.parsedMonthInt) ||
+      entry.parsedMonthInt < 0 ||
+      entry.parsedMonthInt > 12
+    ) {
+      invalidParsedMonthCount++;
+    }
+  });
+  return {
+    entryCount: rows.length,
+    poAmountCorrectionCount,
+    monthCorrectionCount,
+    parsedPoAmountTotal,
+    invalidParsedPoAmountCount,
+    invalidParsedMonthCount,
+    repairedEntryCount,
+  };
+}
+
+function parsePositiveWholeNumber(value) {
+  if (value === null || value === undefined) return null;
+  const text = String(value).replace(/,/g, "").trim();
+  if (!text || /^(?:n\/?a|-|해당없음|0)$/i.test(text)) return null;
+  const parsed = Number(text);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function recordTotalUnitsEvidence(state, dongName, rawValue, sourceRow) {
+  if (!state || !dongName) return;
+  if (!state.totalUnitsEvidence[dongName]) {
+    state.totalUnitsEvidence[dongName] = {
+      positiveValueCounts: {},
+      blankCount: 0,
+      invalidNonBlankCount: 0,
+      sourceRows: [],
+    };
+  }
+  const evidence = state.totalUnitsEvidence[dongName];
+  const parsed = parsePositiveWholeNumber(rawValue);
+  const text = rawValue === null || rawValue === undefined
+    ? ""
+    : String(rawValue).trim();
+  if (parsed !== null) {
+    const key = String(parsed);
+    evidence.positiveValueCounts[key] =
+      (evidence.positiveValueCounts[key] || 0) + 1;
+    if (evidence.sourceRows.length < 10) {
+      evidence.sourceRows.push(Number(sourceRow || 0) || null);
+    }
+  } else if (!text || /^(?:n\/?a|-|해당없음|0)$/i.test(text)) {
+    evidence.blankCount++;
+  } else {
+    evidence.invalidNonBlankCount++;
+  }
 }
 
 function createRawEntriesAggregationState(csvHeaderConfig, options = {}) {
@@ -25154,7 +25426,7 @@ function createRawEntriesAggregationState(csvHeaderConfig, options = {}) {
     dongBaseAmountMap: new Map(),
     yearDongAmountMap: new Map(),
     tempDongYearMap: new Map(),
-    newUnitsFromCsv: {},
+    totalUnitsEvidence: {},
   };
 }
 
@@ -25165,9 +25437,7 @@ function accumulateRawEntryForSnapshot(state, entry) {
   const poAmount =
     parseFloat(String(entry[headers.poAmount]).replace(regexCommaLocal, "")) ||
     0;
-  const dongName = entry[headers.dong]
-    ? String(entry[headers.dong]).replace("사택 ", "").trim()
-    : "";
+  const dongName = normalizeBuildingDongName(entry[headers.dong]);
   const workType = entry[headers.workType];
   const year = entry[headers.year] ? String(entry[headers.year]).trim() : "";
 
@@ -25226,34 +25496,12 @@ function accumulateRawEntryForSnapshot(state, entry) {
   }
 
   if (state.hasTotalUnitsHeader && dongName) {
-    const unitsValue = entry[headers.totalUnits]
-      ? String(entry[headers.totalUnits]).trim()
-      : null;
-    if (
-      unitsValue === null ||
-      unitsValue.toLowerCase() === "n/a" ||
-      unitsValue === "-" ||
-      unitsValue.toLowerCase() === "해당없음" ||
-      unitsValue === "0"
-    ) {
-      if (
-        !Object.prototype.hasOwnProperty.call(
-          state.newUnitsFromCsv,
-          dongName,
-        )
-      ) {
-        state.newUnitsFromCsv[dongName] = null;
-      }
-    } else {
-      const totalUnitsVal = parseInt(unitsValue.replace(regexCommaLocal, ""), 10);
-      if (!isNaN(totalUnitsVal) && totalUnitsVal > 0) {
-        state.newUnitsFromCsv[dongName] = totalUnitsVal;
-      } else if (
-        !Object.prototype.hasOwnProperty.call(state.newUnitsFromCsv, dongName)
-      ) {
-        state.newUnitsFromCsv[dongName] = null;
-      }
-    }
+    recordTotalUnitsEvidence(
+      state,
+      dongName,
+      entry[headers.totalUnits],
+      entry._sourceWorksheetRow,
+    );
   }
 }
 
@@ -25261,6 +25509,16 @@ function finalizeRawEntriesAggregationState(state) {
   if (!state) return null;
   const totalUnitsPerDong = state.totalUnitsPerDongStatic || {};
   const baseEstimateAmountsSnapshot = {};
+  const totalUnitsIntegrity = {
+    status: "verified",
+    sourceProvidedDongCount: 0,
+    referenceFallbackDongCount: 0,
+    missingDongCount: 0,
+    conflictDongCount: 0,
+    invalidValueCount: 0,
+    dongs: {},
+    conflicts: [],
+  };
 
   if (state.hasBaseAmountHeader) {
     state.dongBaseAmountMap.forEach((amount, dong) => {
@@ -25269,15 +25527,44 @@ function finalizeRawEntriesAggregationState(state) {
   }
 
   if (state.hasTotalUnitsHeader) {
-    for (const dong in state.newUnitsFromCsv) {
-      if (
-        state.newUnitsFromCsv[dong] !== null ||
-        !Object.prototype.hasOwnProperty.call(totalUnitsPerDong, dong) ||
-        totalUnitsPerDong[dong] === null
-      ) {
-        totalUnitsPerDong[dong] = state.newUnitsFromCsv[dong];
+    Object.keys(state.totalUnitsEvidence).forEach((dong) => {
+      const evidence = state.totalUnitsEvidence[dong];
+      const positiveValues = Object.keys(evidence.positiveValueCounts)
+        .map(Number)
+        .filter(Number.isFinite)
+        .sort((a, b) => a - b);
+      const hasReference =
+        Object.prototype.hasOwnProperty.call(totalUnitsPerDong, dong) &&
+        parsePositiveWholeNumber(totalUnitsPerDong[dong]) !== null;
+      let resolvedValue = hasReference ? Number(totalUnitsPerDong[dong]) : null;
+      let provenance = hasReference ? "reference" : "missing";
+
+      if (positiveValues.length === 1) {
+        resolvedValue = positiveValues[0];
+        provenance = "source";
+        totalUnitsIntegrity.sourceProvidedDongCount++;
+      } else if (positiveValues.length > 1) {
+        provenance = hasReference ? "reference-conflict" : "conflict";
+        totalUnitsIntegrity.conflictDongCount++;
+        totalUnitsIntegrity.status = "failed";
+        totalUnitsIntegrity.conflicts.push({ dong, values: positiveValues });
+      } else if (hasReference) {
+        totalUnitsIntegrity.referenceFallbackDongCount++;
+      } else {
+        totalUnitsIntegrity.missingDongCount++;
       }
-    }
+
+      totalUnitsIntegrity.invalidValueCount += evidence.invalidNonBlankCount;
+      totalUnitsPerDong[dong] = resolvedValue;
+      totalUnitsIntegrity.dongs[dong] = {
+        value: resolvedValue,
+        provenance,
+        sourceValues: positiveValues,
+        blankCount: evidence.blankCount,
+        invalidNonBlankCount: evidence.invalidNonBlankCount,
+        sourceRows: evidence.sourceRows,
+      };
+    });
   }
 
   state.dongsSet.forEach((dongName) => {
@@ -25286,6 +25573,22 @@ function finalizeRawEntriesAggregationState(state) {
       !Object.prototype.hasOwnProperty.call(totalUnitsPerDong, dongName)
     ) {
       totalUnitsPerDong[dongName] = null;
+    }
+    if (!totalUnitsIntegrity.dongs[dongName]) {
+      const resolvedValue = parsePositiveWholeNumber(
+        totalUnitsPerDong[dongName],
+      );
+      const provenance = resolvedValue === null ? "missing" : "reference";
+      if (resolvedValue === null) totalUnitsIntegrity.missingDongCount++;
+      else totalUnitsIntegrity.referenceFallbackDongCount++;
+      totalUnitsIntegrity.dongs[dongName] = {
+        value: resolvedValue,
+        provenance,
+        sourceValues: [],
+        blankCount: 0,
+        invalidNonBlankCount: 0,
+        sourceRows: [],
+      };
     }
   });
 
@@ -25382,6 +25685,7 @@ function finalizeRawEntriesAggregationState(state) {
     dataAnnualSummaryRaw: dataAnnualSummarySnapshot,
     dataDongFinanceAndCountRaw: dataDongFinanceAndCountSnapshot,
     totalUnitsPerDongStatic: totalUnitsPerDong,
+    totalUnitsIntegrity: totalUnitsIntegrity,
     baseEstimateAmounts: baseEstimateAmountsSnapshot,
     yearDongBaseAmountsEntries: Array.from(state.yearDongAmountMap.entries()),
   };
@@ -25389,7 +25693,10 @@ function finalizeRawEntriesAggregationState(state) {
 
 function createUploadProcessingContextOptions() {
   return {
-    totalUnitsPerDongStatic: cloneSerializableData(totalUnitsPerDongStatic),
+    totalUnitsPerDongStatic: cloneSerializableData({
+      ...BUILT_IN_TOTAL_UNITS_REFERENCE,
+      ...(totalUnitsPerDongStatic || {}),
+    }),
     leaseWorkType: LEASE_WORK_TYPE,
     headerNames: {
       year: getHeaderName("회계 연도"),
@@ -25533,6 +25840,14 @@ function createUploadMappingContext(fileHeaders, sourceHeaders) {
       "매입 마감 (월)",
     ),
     yearHeaderNameLocal: resolveHeaderNameFromConfig(sourceHeaders, "회계 연도"),
+    poAmountHeaderNameLocal: resolveHeaderNameFromConfig(
+      sourceHeaders,
+      "PO금액",
+    ),
+    accountingClosingHeaderNameLocal:
+      sourceHeaders.find((headerConfig) =>
+        isAccountingClosingHeaderConfig(headerConfig),
+      )?.name || null,
   };
 }
 
@@ -25618,6 +25933,12 @@ function appendMappedUploadEntry(
   entry._monthNum = monthNum > 0 && monthNum <= 12 ? monthNum : 0;
   entry._monthKey = entry._monthNum ? `${entry._monthNum}월` : "";
   entry._yearRaw = rawYearVal ? String(rawYearVal).trim() : "";
+  hydrateRawEntryRuntimeFields(entry, {
+    poAmount: context.poAmountHeaderNameLocal,
+    month: context.monthHeaderNameLocal,
+    accountingClosing: context.accountingClosingHeaderNameLocal,
+    year: context.yearHeaderNameLocal,
+  });
 
   const sourceNumberRaw = context.sourceRowNumberKey
     ? getRawMappedValue(context.sourceRowNumberKey, "")
@@ -25696,6 +26017,19 @@ function verifyExcelUploadMappingIntegrity(
   const mismatchSamples = [];
   let mismatchCount = 0;
   let comparedCellCount = 0;
+  const columnAuditByName = {};
+  configs.forEach((headerConfig) => {
+    const rawKey = rawKeyByDashboardHeader.get(headerConfig.name);
+    if (!rawKey) return;
+    columnAuditByName[headerConfig.name] = {
+      header: headerConfig.name,
+      sourceHeader: rawKey,
+      comparedCellCount: 0,
+      sourceBlankCount: 0,
+      mappedBlankEquivalentCount: 0,
+      mismatchCount: 0,
+    };
+  });
 
   const normalizeForAudit = (value, headerConfig) => {
     if (isMonthClosingHeaderConfig(headerConfig)) {
@@ -25731,16 +26065,32 @@ function verifyExcelUploadMappingIntegrity(
       const rawKey = rawKeyByDashboardHeader.get(headerConfig.name);
       if (!rawKey) return;
       comparedCellCount++;
+      const columnAudit = columnAuditByName[headerConfig.name];
+      if (columnAudit) {
+        columnAudit.comparedCellCount++;
+        if (!hasMeaningfulSourceValue(row?.[rawKey])) {
+          columnAudit.sourceBlankCount++;
+        }
+      }
       const expectedValue = normalizeForAudit(row?.[rawKey], headerConfig);
       const actualValue = normalizeForAudit(
         mappedRow?.[headerConfig.name],
         headerConfig,
       );
+      if (columnAudit) {
+        const mappedIsBlankEquivalent = headerConfig.type === "number"
+          ? Number(actualValue) === 0
+          : !hasMeaningfulSourceValue(actualValue);
+        if (mappedIsBlankEquivalent) {
+          columnAudit.mappedBlankEquivalentCount++;
+        }
+      }
       const matches = headerConfig.type === "number"
         ? Number(expectedValue) === Number(actualValue)
         : String(expectedValue) === String(actualValue);
       if (!matches) {
         mismatchCount++;
+        if (columnAudit) columnAudit.mismatchCount++;
         if (mismatchSamples.length < 10) {
           mismatchSamples.push({
             worksheetRow,
@@ -25813,6 +26163,7 @@ function verifyExcelUploadMappingIntegrity(
     blankPrMappedCount: countBlankValues(prConfig, mappedRows, false),
     poAmountSourceTotal: sumValues(amountConfig, expectedRows.map((item) => item.row), true),
     poAmountMappedTotal: sumValues(amountConfig, mappedRows, false),
+    columnAudits: Object.values(columnAuditByName),
     mismatchSamples,
     verifiedAt: new Date().toISOString(),
   };
@@ -25929,11 +26280,20 @@ function processUploadedDataCore(payload) {
     }
   }
 
+  const aggregationState = createRawEntriesAggregationState(
+    mappingContext.sourceHeaders,
+    payload.processingOptions || {},
+  );
+  localRawEntries.forEach((entry) => {
+    accumulateRawEntryForSnapshot(aggregationState, entry);
+  });
+
   return {
     fileHeaders: fileHeaders,
     newHeadersFound: mappingContext.newHeadersFound,
     missingRequiredHeaders: [],
     localRawEntries: localRawEntries,
+    processingSnapshot: finalizeRawEntriesAggregationState(aggregationState),
   };
 }
 
@@ -26136,6 +26496,12 @@ function createUploadProcessingWorker() {
     normalizeAccountingClosingValue.toString(),
     isAccountingClosingHeaderConfig.toString(),
     resolveHeaderNameFromConfig.toString(),
+    normalizeBuildingDongName.toString(),
+    parseRuntimePoAmount.toString(),
+    parseRuntimeMonthNumber.toString(),
+    hydrateRawEntryRuntimeFields.toString(),
+    parsePositiveWholeNumber.toString(),
+    recordTotalUnitsEvidence.toString(),
     createRawEntriesAggregationState.toString(),
     accumulateRawEntryForSnapshot.toString(),
     finalizeRawEntriesAggregationState.toString(),
@@ -26414,6 +26780,37 @@ async function processUploadedDataTransaction(data, isExcel = false) {
     masterCsvHeaders = nextMasterCsvHeaders;
     invalidateHeaderNameCache();
     masterRawEntries = localRawEntries;
+    const runtimeAccountingClosingHeader = masterCsvHeaders.find(
+      (headerConfig) => isAccountingClosingHeaderConfig(headerConfig),
+    )?.name || null;
+    const runtimeHydrationReport = hydrateRawEntriesRuntimeFields(
+      masterRawEntries,
+      {
+        poAmount: getHeaderName("PO금액"),
+        month: getHeaderName("매입 마감 (월)"),
+        accountingClosing: runtimeAccountingClosingHeader,
+        year: getHeaderName("회계 연도"),
+      },
+    );
+    window.__lastRuntimeHydrationReport = cloneSerializableData(
+      runtimeHydrationReport,
+    );
+    if (window.__lastMappingIntegrityReport) {
+      window.__lastMappingIntegrityReport.runtimeFields =
+        cloneSerializableData(runtimeHydrationReport);
+      if (
+        runtimeHydrationReport.entryCount !==
+          window.__lastMappingIntegrityReport.mappedEntryCount ||
+        runtimeHydrationReport.invalidParsedPoAmountCount !== 0 ||
+        runtimeHydrationReport.invalidParsedMonthCount !== 0 ||
+        runtimeHydrationReport.parsedPoAmountTotal !==
+          window.__lastMappingIntegrityReport.poAmountMappedTotal
+      ) {
+        throw new Error(
+          "원천-런타임 금액/월 파생 필드 무결성 검증 실패",
+        );
+      }
+    }
     rawEntryRuntimeIndexes = preparedResult.runtimeIndexes || null;
     if (rawEntryRuntimeIndexes) {
       rawEntryRuntimeIndexes.sourceEntries = masterRawEntries;
@@ -26475,6 +26872,19 @@ async function processUploadedDataTransaction(data, isExcel = false) {
     await processRawEntries(masterRawEntries, masterCsvHeaders);
   } else {
     await updateProgressAndYield(80, "업로드 요약 스냅샷 적용 완료.");
+  }
+
+  const totalUnitsIntegrityReport =
+    window.__lastTotalUnitsIntegrityReport || null;
+  if (totalUnitsIntegrityReport?.status === "failed") {
+    throw new Error(
+      `전체 세대수 원천 충돌: ${totalUnitsIntegrityReport.conflictDongCount || 0}개 동`,
+    );
+  }
+  if (window.__lastMappingIntegrityReport) {
+    window.__lastMappingIntegrityReport.totalUnits = cloneSerializableData(
+      totalUnitsIntegrityReport,
+    );
   }
 
   try {
@@ -36095,6 +36505,21 @@ async function processUploadedData(data, isExcel = false) {
           resetRawEntryRuntimeIndexes();
           masterCsvHeaders = fastDeepClone(savedSettings.masterCsvHeaders);
           invalidateHeaderNameCache();
+          const savedAccountingClosingHeader = masterCsvHeaders.find(
+            (headerConfig) => isAccountingClosingHeaderConfig(headerConfig),
+          )?.name || null;
+          const savedRuntimeHydrationReport = hydrateRawEntriesRuntimeFields(
+            masterRawEntries,
+            {
+              poAmount: getHeaderName("PO금액"),
+              month: getHeaderName("매입 마감 (월)"),
+              accountingClosing: savedAccountingClosingHeader,
+              year: getHeaderName("회계 연도"),
+            },
+          );
+          window.__lastRuntimeHydrationReport = fastDeepClone(
+            savedRuntimeHydrationReport,
+          );
 
           totalUnitsPerDongStatic = fastDeepClone(savedSettings.totalUnitsPerDongStatic);
           outerUnitsPerDongStatic = fastDeepClone(savedSettings.outerUnitsPerDongStatic || {});
@@ -36187,15 +36612,21 @@ async function processUploadedData(data, isExcel = false) {
           ) {
             await processRawEntries(masterRawEntries, masterCsvHeaders);
           }
-          if (savedSettings.summaryCache) {
+          if (
+            savedSettings.summaryCache &&
+            savedRuntimeHydrationReport.repairedEntryCount === 0
+          ) {
             summaryCache = fastDeepClone(savedSettings.summaryCache);
           } else {
             summaryCache = null;
           }
           lastDashboardRenderStateKey =
-            savedSettings.dashboardRenderStateKey || null;
+            savedRuntimeHydrationReport.repairedEntryCount === 0
+              ? savedSettings.dashboardRenderStateKey || null
+              : null;
           window.__savedDashboardHydratedFromSnapshot__ =
-            !!lastDashboardRenderStateKey;
+            !!lastDashboardRenderStateKey &&
+            savedRuntimeHydrationReport.repairedEntryCount === 0;
           try {
             if (
               isCompleteManualModeActive &&
