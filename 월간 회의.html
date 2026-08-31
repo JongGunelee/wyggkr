@@ -327,6 +327,77 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
+        .navigator-status-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            margin: 2px 4px;
+        }
+
+        .navigator-status-item>.month-link {
+            margin: 0;
+        }
+
+        .navigator-status-toggle {
+            position: relative;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            min-width: 26px;
+            padding: 0;
+            border: 2px solid currentColor;
+            border-radius: 999px;
+            box-sizing: border-box;
+            box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22);
+            font-size: 13px;
+            font-weight: 900;
+            line-height: 1;
+            cursor: pointer !important;
+            opacity: 1;
+            touch-action: manipulation;
+        }
+
+        .navigator-status-toggle[data-status="written"] {
+            border-color: #15803d;
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .navigator-status-toggle[data-status="missing"] {
+            border-color: #64748b;
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .navigator-status-toggle:hover,
+        .navigator-status-toggle:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.35), 0 3px 8px rgba(15, 23, 42, 0.25);
+        }
+
+        .navigator-status-toggle:disabled {
+            cursor: wait !important;
+            opacity: 0.82;
+        }
+
+        @media (max-width: 600px) and (orientation: portrait) {
+            .navigator-status-item>.month-link {
+                min-height: 36px;
+                display: inline-flex;
+                align-items: center;
+            }
+
+            .navigator-status-toggle {
+                width: 34px;
+                height: 34px;
+                min-width: 34px;
+                font-size: 15px;
+            }
+        }
+
         #compareControlsContainer {
             display: none;
             align-items: center;
@@ -1201,12 +1272,34 @@
                 bottom: 0 !important;
                 top: auto !important;
                 width: 100vw !important;
+                min-width: 0 !important;
                 max-width: 100vw !important;
                 height: 75vh !important;
+                min-height: 0 !important;
                 max-height: 85vh !important;
+                box-sizing: border-box !important;
                 border-radius: 20px 20px 0 0 !important;
                 box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.28) !important;
                 resize: none !important;
+            }
+            #menuPanel .floating-panel-close-btn {
+                width: 44px !important;
+                height: 44px !important;
+                min-width: 44px !important;
+                min-height: 44px !important;
+            }
+            #menuPanel .tab-btn {
+                flex: 1 1 0 !important;
+                min-width: 0 !important;
+                min-height: 44px !important;
+                padding: 6px 2px !important;
+                font-size: clamp(10px, 3.2vw, 12.5px) !important;
+                touch-action: manipulation;
+            }
+            #openFocusedEditorBtn.visible {
+                min-height: 44px !important;
+                padding-block: 10px !important;
+                touch-action: manipulation !important;
             }
         }
 
@@ -4571,6 +4664,7 @@
             .box-toggle-btn,
             #compareModeToggleBtn,
             #compareControlsContainer,
+            .navigator-status-toggle,
             #comparisonViewOverlay,
             .resizable-image-wrapper .resize-handle-img,
             #openFocusedEditorBtn,
@@ -6306,11 +6400,14 @@
             let monthlyGithubStatusRows = new Map();
             const monthlyGithubStatusCacheKey = 'meeting-navigator-status-cache-monthly-v1';
             let monthlyGithubNetworkListenersAttached = false;
+            const localNavigatorStatusBridgeSource = /(?:^|\/)offline-package(?:\/|$)/i.test(location.pathname.replace(/\\/g, '/'))
+                ? './offline-runtime/meeting-navigator-status-bridge.js'
+                : null;
             const navigatorStatusBridgeSources = [
-                './offline-runtime/meeting-navigator-status-bridge.js',
+                localNavigatorStatusBridgeSource,
                 'https://jonggunelee.github.io/wyggkr04/RawData/%EC%9B%94%EA%B0%84%20%EB%B0%8F%20%EC%A3%BC%EA%B0%84/runtime/meeting-navigator-status-bridge.js?v=20260830',
                 'https://cdn.jsdelivr.net/gh/JongGunelee/wyggkr04@main/RawData/%EC%9B%94%EA%B0%84%20%EB%B0%8F%20%EC%A3%BC%EA%B0%84/runtime/meeting-navigator-status-bridge.js'
-            ];
+            ].filter(Boolean);
 
             let panelState = { x: null, y: null, width: 360, height: 520 };
 
@@ -6838,9 +6935,7 @@
         }
 
         function deselectAllImageWrappers() {
-            document.querySelectorAll('.resizable-image-wrapper.selected, .resizable-image-wrapper.active').forEach(w => {
-                w.classList.remove('selected', 'active');
-            });
+            clearMultiZoomSelectionVisuals();
         }
 
         function startGlobalImageResize(e, handle) {
@@ -7571,6 +7666,7 @@ let currentZoomingImageElement = null;
                 overlay.scrollTop = 0;
                 overlay.scrollLeft = 0;
                 document.body.classList.add('image-zoom-active');
+                updateMultiZoomTriggerVisibility();
                 syncMultiImageEditorNumberBadge(targetImg);
                 
                 const zoomEditorToolbar = ensureSingleZoomEditorToolbar();
@@ -7658,6 +7754,7 @@ let currentZoomingImageElement = null;
         function closeImageZoom(options = {}) {
             window.closeImageZoom = closeImageZoom;
             const shouldResumeMultiWorkspace = options?.resumeMultiWorkspace !== false;
+            const hasMultiWorkspaceReturnState = !!multiImageItemEditorReturnState;
             const multiWorkspaceSource = currentZoomingImageElement || multiImageItemEditorReturnState?.sourceImage || null;
             hideMultiImageEditorNumberBadge();
             const overlay = document.getElementById('imageZoomOverlay');
@@ -7761,8 +7858,13 @@ let currentZoomingImageElement = null;
             }
             if (img) img.removeAttribute('src');
             currentZoomingImageElement = null;
-            if (multiImageItemEditorReturnState && shouldResumeMultiWorkspace) {
-                resumeMultiImageWorkspaceFromEditor(multiWorkspaceSource);
+            let resumedMultiWorkspace = false;
+            if (hasMultiWorkspaceReturnState && shouldResumeMultiWorkspace) {
+                resumedMultiWorkspace = resumeMultiImageWorkspaceFromEditor(multiWorkspaceSource);
+            }
+            const isInternalMultiWorkspaceTransition = hasMultiWorkspaceReturnState && !shouldResumeMultiWorkspace;
+            if (!resumedMultiWorkspace && !isInternalMultiWorkspaceTransition) {
+                clearMultiZoomSelectionVisuals();
             }
         }
 
@@ -8185,7 +8287,12 @@ function clampImagesToContainers(scope = contentArea) {
                     button.addEventListener('click', () => {
                         const targetTabId = button.dataset.tab;
 
-                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        tabButtons.forEach(btn => {
+                            const isActive = btn === button;
+                            btn.classList.toggle('active', isActive);
+                            btn.setAttribute('aria-selected', String(isActive));
+                            btn.tabIndex = isActive ? 0 : -1;
+                        });
                         button.classList.add('active');
 
                         tabPanes.forEach(pane => {
@@ -9031,6 +9138,8 @@ function clampImagesToContainers(scope = contentArea) {
                 monthLinksContainer.id = 'monthLinksContainer';
 
                 for (let i = 1; i <= 12; i++) {
+                    const statusItem = document.createElement('span');
+                    statusItem.className = 'navigator-status-item';
                     const monthLink = document.createElement('a');
                     monthLink.className = 'month-link';
                     monthLink.textContent = `${i}월`;
@@ -9119,7 +9228,14 @@ function clampImagesToContainers(scope = contentArea) {
                         monthLink.classList.add('compare-selected');
                     }
 
-                    monthLinksContainer.appendChild(monthLink);
+                    const statusToggle = createMonthlyNavigatorStatusToggle(
+                        monthKey,
+                        githubStatusRow?.status || (url !== '#' && !isSkipped ? '작성' : '미작성'),
+                        `${displayedYearInNav}년 ${i}월`,
+                        githubStatusRow
+                    );
+                    statusItem.append(monthLink, statusToggle);
+                    monthLinksContainer.appendChild(statusItem);
                 }
                 navContent.appendChild(monthLinksContainer);
 
@@ -9219,6 +9335,38 @@ function clampImagesToContainers(scope = contentArea) {
                 return false;
             }
 
+            function createMonthlyNavigatorStatusToggle(monthKey, currentStatus, label, statusRow) {
+                const status = currentStatus === '미작성' ? '미작성' : '작성';
+                const nextStatus = status === '작성' ? '미작성' : '작성';
+                const isManual = /(?:수동|원클릭|직접|사용자|카드)/.test(String(statusRow?.source || ''));
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'navigator-status-toggle';
+                button.dataset.statusKey = monthKey;
+                button.dataset.status = status === '작성' ? 'written' : 'missing';
+                button.dataset.statusOrigin = isManual ? 'manual' : 'automatic';
+                button.textContent = status === '작성' ? '✓' : '—';
+                button.setAttribute('aria-pressed', String(status === '작성'));
+                button.title = `${label}: 현재 '${status}' (${isManual ? '수동 지정' : '자동/XLSB 판정'}). 클릭하면 '${nextStatus}'으로 수동 변경합니다.`;
+                button.setAttribute('aria-label', button.title);
+                button.addEventListener('click', async event => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (button.disabled) return;
+                    button.disabled = true;
+                    button.textContent = '↻';
+                    button.setAttribute('aria-busy', 'true');
+                    try {
+                        await toggleSkippedMonth(Number(monthKey.split('-')[0]), Number(monthKey.split('-')[1]));
+                    } catch (error) {
+                        console.error('월간 내비게이션 수동 상태 변경 실패:', error);
+                        showMessage(`상태를 변경하지 못했습니다: ${error.message}`, 'error');
+                        renderMonthlyNavigator();
+                    }
+                });
+                return button;
+            }
+
             function attachMonthlyGithubNetworkListeners() {
                 if (monthlyGithubNetworkListenersAttached || typeof window === 'undefined') return;
                 window.addEventListener('offline', () => {
@@ -9254,7 +9402,7 @@ function clampImagesToContainers(scope = contentArea) {
                     const bridge = await loadNavigatorStatusBridge();
                     monthlyGithubStatusClient = await bridge.create({
                         type: '월간',
-                        source: '월간 회의 내비게이션 상태 관리'
+                        source: '월간 회의 내비게이션 수동 상태 관리'
                     });
                     monthlyGithubStatusClient.subscribe(applyMonthlyGithubStatus);
                     return monthlyGithubStatusClient.refresh();
@@ -9298,6 +9446,7 @@ function clampImagesToContainers(scope = contentArea) {
                     button.className = `skipped-month-btn ${isSkipped ? 'is-skipped' : 'is-written'}`;
                     button.textContent = `${month}월 · ${isSkipped ? '미작성' : '작성'}`;
                     button.title = `${month}월 상태 변경: ${isSkipped ? '작성으로' : '미작성으로'}${githubRow ? ' (GitHub 관리)' : ' (미지정)'}`;
+                    button.setAttribute('aria-label', button.title);
                     button.dataset.month = month;
 
                     button.addEventListener('click', async () => {
@@ -9312,14 +9461,17 @@ function clampImagesToContainers(scope = contentArea) {
             async function toggleSkippedMonth(year, month) {
                 const monthKey = `${year}-${month}`;
                 const willSkip = !isMonthlyMonthSkipped(monthKey);
+                const existingRow = monthlyGithubStatusRows.get(monthKey) || {};
 
                 monthlyGithubStatusRows.set(monthKey, {
+                    ...existingRow,
                     key: monthKey,
                     type: '월간',
                     year: Number(year),
                     month: Number(month),
                     week: null,
-                    status: willSkip ? '미작성' : '작성'
+                    status: willSkip ? '미작성' : '작성',
+                    source: '월간 회의 내비게이션 수동 상태 관리'
                 });
                 persistMonthlyGithubStatusCache(Array.from(monthlyGithubStatusRows.values()));
 
@@ -10550,6 +10702,7 @@ function clampImagesToContainers(scope = contentArea) {
                 resetSelectionZoomPresentation();
                 document.body.classList.remove('selection-zoom-active');
                 document.body.style.overflow = '';
+                clearMultiZoomSelectionVisuals();
                 fullscreenChangeHandler();
             }
 
@@ -10954,14 +11107,27 @@ function clampImagesToContainers(scope = contentArea) {
 
             function updateMultiZoomTriggerVisibility() {
                 if (multiZoomTriggerBtn) {
-                    const isSelectionZoomActive = document.body.classList.contains('selection-zoom-active');
+                    const isZoomActive = document.body.classList.contains('selection-zoom-active') ||
+                        document.body.classList.contains('image-zoom-active');
                     elementsForMultiZoom = getLiveMultiZoomTargets();
-                    const shouldBeVisible = elementsForMultiZoom.length >= 1 && !isSelectionZoomActive;
+                    const shouldBeVisible = elementsForMultiZoom.length >= 1 && !isZoomActive;
                     multiZoomTriggerBtn.style.display = shouldBeVisible ? 'block' : 'none';
+                    multiZoomTriggerBtn.hidden = !shouldBeVisible;
+                    multiZoomTriggerBtn.disabled = !shouldBeVisible;
+                    multiZoomTriggerBtn.setAttribute('aria-hidden', String(!shouldBeVisible));
                 }
             }
             function clearMultiZoomSelectionVisuals() {
-                elementsForMultiZoom.forEach(e => e.classList.remove('multi-zoom-selected'));
+                const trackedElements = new Set([
+                    ...elementsForMultiZoom,
+                    ...rememberedMultiZoomImages,
+                    ...document.querySelectorAll('.resizable-image-wrapper.selected, .resizable-image-wrapper.active, .resizable-image-wrapper.multi-zoom-selected')
+                ]);
+                trackedElements.forEach(element => {
+                    if (!element?.classList) return;
+                    element.classList.remove('selected', 'active', 'multi-zoom-selected');
+                });
+                elementsForMultiZoom = [];
                 rememberedMultiZoomImages.clear();
                 updateMultiZoomTriggerVisibility();
             }
@@ -11246,7 +11412,7 @@ function clampImagesToContainers(scope = contentArea) {
                 if (!clickedItem) {
                     activateControls(null);
                     if (elementsForMultiZoom.length > 0 && !target.closest('#multiZoomTriggerBtn')) {
-                        clearMultiZoomSelectionVisuals(); elementsForMultiZoom = [];
+                        clearMultiZoomSelectionVisuals();
                     } return;
                 }
 
@@ -11279,7 +11445,7 @@ function clampImagesToContainers(scope = contentArea) {
 
                 } else {
                     if (elementsForMultiZoom.length > 0 && !elementsForMultiZoom.includes(clickedItem)) {
-                        clearMultiZoomSelectionVisuals(); elementsForMultiZoom = [];
+                        clearMultiZoomSelectionVisuals();
                     }
                     if (elementsForMultiZoom.length === 1 && elementsForMultiZoom[0] === clickedItem && clickedItem.dataset.editableType === 'page-title') {
                         toggleMultiZoomSelection(clickedItem);
@@ -11310,7 +11476,7 @@ function clampImagesToContainers(scope = contentArea) {
 
                 if (!isClickInsideAppOrGlobalControls) {
                     if (currentlyActiveItemControlsElement) activateControls(null);
-                    if (elementsForMultiZoom.length > 0) { clearMultiZoomSelectionVisuals(); elementsForMultiZoom = []; }
+                    if (elementsForMultiZoom.length > 0) clearMultiZoomSelectionVisuals();
                     const activeImage = document.querySelector('.resizable-image-wrapper.active');
                     if (activeImage) activeImage.classList.remove('active');
                 }
@@ -11915,6 +12081,12 @@ function clampImagesToContainers(scope = contentArea) {
                 const clonedDoc = document.cloneNode(true);
                 AppLayers.persistence.resetRuntimeArtifacts(clonedDoc);
 
+                // 런타임에서 주입된 의존성은 원본 로더가 다시 관리한다. 저장본에 남기면 N차 저장마다 누적된다.
+                clonedDoc.querySelectorAll('script[src]').forEach(script => {
+                    const src = script.getAttribute('src') || '';
+                    if (/(?:meeting-navigator-status-bridge|meeting-data-store|meeting-github-credential|meeting-data-bootstrap|xlsx\.full\.min)\.js/i.test(src)) script.remove();
+                });
+
                 // ── N차 저장 사이클 무결성 보장: 클론 문서 완전 정리 ──
                 // (1) body/appContainer 임시 상태 클래스 완전 제거
                 const clonedBodyEl = clonedDoc.body;
@@ -11968,7 +12140,18 @@ function clampImagesToContainers(scope = contentArea) {
 
                 // (7) 메뉴 패널 닫힌 상태로 저장
                 const clonedMenuPanelSave = clonedDoc.getElementById('menuPanel');
-                if (clonedMenuPanelSave) clonedMenuPanelSave.style.display = 'none';
+                if (clonedMenuPanelSave) {
+                    clonedMenuPanelSave.style.display = 'none';
+                    const clonedTabs = Array.from(clonedMenuPanelSave.querySelectorAll('.tab-btn'));
+                    const clonedPanes = Array.from(clonedMenuPanelSave.querySelectorAll('.tab-pane'));
+                    clonedTabs.forEach((tab, index) => {
+                        const isDefault = index === 0;
+                        tab.classList.toggle('active', isDefault);
+                        tab.setAttribute('aria-selected', String(isDefault));
+                        tab.tabIndex = isDefault ? 0 : -1;
+                    });
+                    clonedPanes.forEach((pane, index) => pane.classList.toggle('active', index === 0));
+                }
 
                 // (8) 어노테이션 설정 패널 닫힌 상태로 저장
                 const clonedAnnoPanelSave = clonedDoc.getElementById('annotationSettingsPanel');
@@ -12063,6 +12246,11 @@ function clampImagesToContainers(scope = contentArea) {
                     el.removeAttribute('data-listener-attached');
                 });
 
+                // 파싱/재저장 때 body 끝 개행 텍스트가 세대별로 증가하지 않도록 정규화한다.
+                while (clonedDoc.body?.lastChild?.nodeType === Node.TEXT_NODE && !clonedDoc.body.lastChild.textContent.trim()) {
+                    clonedDoc.body.lastChild.remove();
+                }
+
                 const originalAreas = Array.from(document.querySelectorAll('.insert-area, .box'));
                 const clonedAreas = Array.from(clonedDoc.querySelectorAll('.insert-area, .box'));
 
@@ -12098,7 +12286,7 @@ function clampImagesToContainers(scope = contentArea) {
 
             function printPDF() {
                 if (currentlyActiveItemControlsElement) activateControls(null);
-                clearMultiZoomSelectionVisuals(); elementsForMultiZoom = [];
+                clearMultiZoomSelectionVisuals();
                 document.querySelectorAll('.resizable-image-wrapper.active').forEach(el => el.classList.remove('active'));
 
                 const elementsToHide = [
@@ -13423,6 +13611,7 @@ function clampImagesToContainers(scope = contentArea) {
                 const emojiPalette = document.getElementById('emojiPalette');
                 if (emojiPalette) {
                     const emojis = ['😀', '😂', '😊', '😍', '🤔', '👍', '👎', '⭐', '❤️', '✔', '❌', '✨', '🎉', '👀', '👉', '💡', '❓', '❗', '➡️', '⬅️'];
+                    emojiPalette.replaceChildren();
                     emojis.forEach(emoji => {
                         const btn = document.createElement('button');
                         btn.type = 'button';
@@ -16648,8 +16837,7 @@ document.addEventListener('focusin', e => {
             initializeImageResizeFeature();
             initializeCropTool();
 
-            elementsForMultiZoom = [];
-            updateMultiZoomTriggerVisibility();
+            clearMultiZoomSelectionVisuals();
             adjustContainerPadding();
 
             if (pageTitle) {
