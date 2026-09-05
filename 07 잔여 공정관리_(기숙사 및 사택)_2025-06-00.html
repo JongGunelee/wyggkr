@@ -90179,23 +90179,12 @@ function showPendingSettlementModal(periodType, projects) {
                             if (cols[ci]) res.push(cols[ci]);
                             var thd = table.querySelector('thead');
                             if (thd) {
-                                var hrs = thd.querySelectorAll('tr');
-                                var g = [];
-                                for (var r = 0; r < hrs.length; r++) {
-                                    g[r] = g[r] || [];
-                                    var cs2 = hrs[r].children, lc = 0;
-                                    for (var c = 0; c < cs2.length; c++) {
-                                        while (g[r][lc]) lc++;
-                                        var el = cs2[c];
-                                        var cs = parseInt(el.getAttribute('colspan'))||1;
-                                        var rs = parseInt(el.getAttribute('rowspan'))||1;
-                                        for (var dr = 0; dr < rs; dr++) {
-                                            g[r+dr] = g[r+dr]||[];
-                                            for (var dc = 0; dc < cs; dc++) g[r+dr][lc+dc] = el;
-                                        }
-                                        if (lc <= ci && ci < lc+cs && res.indexOf(el)===-1) res.push(el);
-                                        lc += cs;
-                                    }
+                                var headers = thd.querySelectorAll('th');
+                                for (var h = 0; h < headers.length; h++) {
+                                    var el = headers[h];
+                                    var start = parseInt(el.dataset.colStart, 10);
+                                    var end = parseInt(el.dataset.colEnd, 10);
+                                    if (!isNaN(start) && !isNaN(end) && start <= ci && ci <= end) res.push(el);
                                 }
                             }
                             var tb = table.querySelector('tbody');
@@ -90510,11 +90499,12 @@ function showPendingSettlementModal(periodType, projects) {
                                 var start = parseInt(merged.dataset.colStart, 10);
                                 var end = parseInt(merged.dataset.colEnd, 10);
                                 if (isNaN(start) || isNaN(end)) continue;
-                                var allHidden = true;
+                                var visibleChildren = 0;
                                 for (var ci = start; ci <= end; ci++) {
-                                    if (!CTRL.hiddenCols.has(ci)) { allHidden = false; break; }
+                                    if (!CTRL.hiddenCols.has(ci)) visibleChildren++;
                                 }
-                                if (allHidden) merged.classList.add('stl-col-hidden');
+                                merged.colSpan = Math.max(1, visibleChildren);
+                                if (visibleChildren === 0) merged.classList.add('stl-col-hidden');
                             }
                             updateChipBar();
                             applyFreeze();
