@@ -4855,7 +4855,8 @@
     min-height: 0;
   }
 
-  .droplet-menu.is-search-expanding {
+  .droplet-menu.is-search-expanding,
+  .droplet-menu.is-manual-mode {
     height: auto !important;
     max-height: calc(100vh - 24px) !important;
   }
@@ -5015,9 +5016,16 @@
     max-height: none;
   }
 
-  .droplet-menu.is-search-expanding .droplet-options-list {
-    max-height: calc(100vh - 120px) !important;
+  .droplet-menu.is-search-expanding .droplet-options-list,
+  .droplet-menu.is-manual-mode .droplet-options-list {
+    max-height: calc(100vh - 140px) !important;
     overflow-y: auto !important;
+  }
+
+  .droplet-menu.is-manual-mode #dropletOrdererSelectorContainer {
+    flex: 0 0 auto !important;
+    max-height: none !important;
+    overflow: visible !important;
   }
 
   .droplet-menu-resize-handle {
@@ -5092,6 +5100,8 @@
   }
 
   .droplet-manual-filter-item {
+    flex: 0 0 auto;
+    min-height: 40px;
     border: 1px solid #dbe5ee;
     border-radius: 9px;
     background: #f8fafc;
@@ -10718,12 +10728,12 @@
           <button type="button" class="scenario-manual-mode-btn"
             data-manual-mode-surface="scenario"
             aria-pressed="false"
-            title="시나리오·빠른 연도·자동 예외·피벗 및 차트 보조 필터를 해제하고 전체 원본 범위에서 직접 조합합니다.">
-            <span>🧭 완전 수동모드</span>
-            <small>모든 자동 기준·예외를 해제하고 직접 조합</small>
+            title="현재 자동모드입니다. 클릭 시 모든 자동 기준·예외를 해제하고 완전 수동모드로 전환합니다.">
+            <span>🧭 수동모드로 전환</span>
+            <small>현재 자동모드 ➔ 클릭 시 직접 조합 진입</small>
           </button>
           <p class="scenario-manual-mode-guide" role="note">
-            권장: ① 연도·발주처(범위) → ② 작업유형·건물(대상) → ③ 부서·마감월(연관) → ④ 카드·표 교차 확인
+            권장: ① 발주처·연도(범위) → ② 작업유형·건물동(대상) → ③ 부서·마감월(연관) → ④ 카드·표 교차 확인
           </p>
           <button class="scenario-orderer-btn flex justify-between items-center w-full px-2.5 py-1.5 border rounded-lg bg-white hover:bg-slate-50 text-[11px] font-bold text-slate-700 transition-colors shadow-sm" style="border-color: rgba(148, 163, 184, 0.25);">
             <div style="display: flex; align-items: center; gap: 4px;">
@@ -10761,22 +10771,22 @@
         const description = manualModeBtn.querySelector("small");
         if (label) {
           label.textContent = isCompleteManual
-            ? "✓ 완전 수동모드 적용됨"
-            : "🧭 완전 수동모드";
+            ? "✓ 수동모드 적용됨"
+            : "🧭 수동모드로 전환";
         }
         if (description) {
           description.textContent = isCompleteManual
-            ? "클릭하여 이전 자동모드로 복원"
-            : "모든 자동 기준·예외를 해제하고 직접 조합";
+            ? "현재 수동모드 ➔ 클릭 시 자동모드 복귀"
+            : "현재 자동모드 ➔ 클릭 시 직접 조합 진입";
         }
         manualModeBtn.title = isCompleteManual
-          ? "완전 수동모드를 종료하고 진입 직전의 자동 필터 상태로 복원"
-          : "모든 자동 기준·예외를 해제하고 직접 조합";
+          ? "현재 수동모드입니다. 클릭 시 이전의 자동 시나리오 모드로 복원합니다."
+          : "현재 자동모드입니다. 클릭 시 모든 자동 기준·예외를 해제하고 수동모드로 전환합니다.";
         manualModeBtn.setAttribute(
           "aria-label",
           isCompleteManual
-            ? "완전 수동모드 적용됨. 클릭하면 이전 자동모드로 복원"
-            : "완전 수동모드 적용",
+            ? "현재 수동모드 적용됨. 클릭 시 자동모드로 복귀"
+            : "현재 자동모드. 수동모드로 전환",
         );
         manualModeBtn.addEventListener("click", async (e) => {
           e.preventDefault();
@@ -11607,22 +11617,22 @@
         const description = button.querySelector("small");
         if (label) {
           label.textContent = isActive
-            ? "✓ 완전 수동모드 적용됨"
-            : "🧭 완전 수동모드";
+            ? "✓ 수동모드 적용됨"
+            : "🧭 수동모드로 전환";
         }
         if (description) {
           description.textContent = isActive
-            ? "클릭하여 이전 자동모드로 복원"
-            : "모든 자동 기준·예외를 해제하고 직접 조합";
+            ? "현재 수동모드 ➔ 클릭 시 자동모드 복귀"
+            : "현재 자동모드 ➔ 클릭 시 직접 조합 진입";
         }
         button.title = isActive
-          ? "완전 수동모드를 종료하고 진입 직전의 자동 필터 상태로 복원"
-          : "모든 자동 기준·예외를 해제하고 직접 조합";
+          ? "현재 수동모드입니다. 클릭 시 이전의 자동 시나리오 모드로 복원합니다."
+          : "현재 자동모드입니다. 클릭 시 모든 자동 기준·예외를 해제하고 수동모드로 전환합니다.";
         button.setAttribute(
           "aria-label",
           isActive
-            ? "완전 수동모드 적용됨. 클릭하면 이전 자동모드로 복원"
-            : "완전 수동모드 적용",
+            ? "현재 수동모드 적용됨. 클릭 시 자동모드로 복귀"
+            : "현재 자동모드. 수동모드로 전환",
         );
       });
 
@@ -15165,9 +15175,7 @@
         const setExpanded = (expanded) => {
           toggle.setAttribute("aria-expanded", String(expanded));
           panel.classList.toggle("hidden", !expanded);
-          if (expanded) {
-            requestAnimationFrame(() => adjustDropletMenuPosition());
-          }
+          requestAnimationFrame(() => adjustDropletMenuPosition());
         };
         toggle.addEventListener("click", (event) => {
           event.preventDefault();
@@ -15446,9 +15454,12 @@
       menu.style.left = clamped.left + "px";
       menu.style.top = clamped.top + "px";
       menu.style.width = clamped.width + "px";
-      if (!menu.classList.contains("is-search-expanding")) {
+      if (!menu.classList.contains("is-manual-mode") && !menu.classList.contains("is-search-expanding")) {
         menu.style.height = clamped.height + "px";
         menu.style.maxHeight = clamped.height + "px";
+      } else {
+        menu.style.height = "auto";
+        menu.style.maxHeight = "calc(100vh - 24px)";
       }
       menu.style.right = "auto";
       menu.style.bottom = "auto";
@@ -16034,8 +16045,8 @@
         return;
       }
 
-      // [v5.51] 검색 확장 상태일 때: 모달 전체 높이를 검색 결과 항목 수에 맞춰 자동 확장하고 화면 내 안전하게 클램핑
-      if (menu.classList.contains("is-search-expanding")) {
+      // [v5.52] 완전 수동모드 또는 검색 확장 상태일 때: 모달 전체 높이를 모든 필터 항목 및 전개된 내용에 맞춰 실시간 자동 확장(Auto-Fit)하고 화면 내 안전하게 클램핑
+      if (menu.classList.contains("is-manual-mode") || menu.classList.contains("is-search-expanding")) {
         const viewport = getDropletMenuViewport();
         const limits = getDropletMenuGeometryLimits(viewport);
         const stored = getStoredDropletMenuGeometry(getDropletMenuGeometryProfile());
