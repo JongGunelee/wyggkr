@@ -4855,6 +4855,11 @@
     min-height: 0;
   }
 
+  .droplet-menu.is-search-expanding {
+    height: auto !important;
+    max-height: calc(100vh - 24px) !important;
+  }
+
   .droplet-menu.is-geometry-interacting {
     transition: none;
   }
@@ -5008,6 +5013,11 @@
 
   .droplet-menu.has-user-geometry .droplet-options-list {
     max-height: none;
+  }
+
+  .droplet-menu.is-search-expanding .droplet-options-list {
+    max-height: calc(100vh - 120px) !important;
+    overflow-y: auto !important;
   }
 
   .droplet-menu-resize-handle {
@@ -5283,7 +5293,7 @@
   }
 
   .droplet-manual-filter-choices.is-searching {
-    max-height: 320px;
+    max-height: 340px;
     overflow-y: auto;
   }
 
@@ -15187,19 +15197,31 @@
               if (isMatched) matchedCount++;
             });
           
-          // [무결성 보증] 검색 결과 개수 배지 실시간 업데이트 및 자동 스크롤바 확장
+          // [무결성 보증] 검색 시 모달 전체 높이 및 목록 표시 영역 실시간 동적 자동 확장 (Auto-Fit)
+          const menuEl = document.getElementById("dropletMenu");
           if (query.length > 0) {
             searchCountBadge.textContent = matchedCount > 0 ? `${matchedCount}개 일치` : "0개";
             searchCountBadge.classList.toggle("is-zero", matchedCount === 0);
             searchCountBadge.classList.remove("hidden");
             choices.classList.add("is-searching");
-            choices.style.maxHeight = matchedCount <= 8 ? "none" : "320px";
+            choices.style.maxHeight = matchedCount <= 8 ? "none" : "340px";
             choices.style.overflowY = "auto";
+            if (menuEl) {
+              menuEl.classList.add("is-search-expanding");
+              menuEl.style.height = "auto";
+              menuEl.style.maxHeight = "calc(100vh - 24px)";
+            }
           } else {
             searchCountBadge.classList.add("hidden");
             choices.classList.remove("is-searching");
             choices.style.maxHeight = "";
             choices.style.overflowY = "auto";
+            if (menuEl) {
+              menuEl.classList.remove("is-search-expanding");
+              menuEl.style.height = "";
+              menuEl.style.maxHeight = "";
+              restoreStoredDropletMenuGeometry(menuEl);
+            }
           }
 
           if (searchEmptyHint) {
@@ -15424,8 +15446,10 @@
       menu.style.left = clamped.left + "px";
       menu.style.top = clamped.top + "px";
       menu.style.width = clamped.width + "px";
-      menu.style.height = clamped.height + "px";
-      menu.style.maxHeight = clamped.height + "px";
+      if (!menu.classList.contains("is-search-expanding")) {
+        menu.style.height = clamped.height + "px";
+        menu.style.maxHeight = clamped.height + "px";
+      }
       menu.style.right = "auto";
       menu.style.bottom = "auto";
       menu.style.transformOrigin = "center";
@@ -15792,6 +15816,9 @@
         requestAnimationFrame(() => adjustDropletMenuPosition());
       } else {
         menu.classList.add("hidden");
+        menu.classList.remove("is-search-expanding");
+        menu.style.height = "";
+        menu.style.maxHeight = "";
       }
       menu.setAttribute("aria-hidden", String(!shouldOpen));
       handle.setAttribute("aria-expanded", String(shouldOpen));
@@ -16004,6 +16031,40 @@
           width: activeRect.width,
           height: activeRect.height,
         });
+        return;
+      }
+
+      // [v5.51] 검색 확장 상태일 때: 모달 전체 높이를 검색 결과 항목 수에 맞춰 자동 확장하고 화면 내 안전하게 클램핑
+      if (menu.classList.contains("is-search-expanding")) {
+        const viewport = getDropletMenuViewport();
+        const limits = getDropletMenuGeometryLimits(viewport);
+        const stored = getStoredDropletMenuGeometry(getDropletMenuGeometryProfile());
+        
+        let width = stored ? stored.width : Math.max(0, Math.min(320, viewport.width - viewport.edge * 2));
+        width = Math.max(limits.minWidth, Math.min(width, limits.maxWidth));
+        menu.style.position = "fixed";
+        menu.style.width = width + "px";
+        menu.style.height = "auto";
+        menu.style.maxHeight = Math.max(1, viewport.height - viewport.edge * 2) + "px";
+        
+        let left = stored ? stored.left : (droplet.getBoundingClientRect().right - width);
+        left = Math.max(viewport.left + viewport.edge, Math.min(left, viewport.left + viewport.width - width - viewport.edge));
+        
+        const menuHeight = menu.offsetHeight || 300;
+        let top = stored ? stored.top : (droplet.getBoundingClientRect().top - menuHeight - viewport.edge);
+        
+        // 뷰포트 상/하단 벗어남 방지 실시간 클램핑
+        if (top + menuHeight > viewport.top + viewport.height - viewport.edge) {
+          top = Math.max(viewport.top + viewport.edge, viewport.top + viewport.height - menuHeight - viewport.edge);
+        }
+        if (top < viewport.top + viewport.edge) {
+          top = viewport.top + viewport.edge;
+        }
+
+        menu.style.left = left + "px";
+        menu.style.top = top + "px";
+        menu.style.bottom = "auto";
+        menu.style.right = "auto";
         return;
       }
 
