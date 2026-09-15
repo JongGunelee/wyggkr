@@ -91189,13 +91189,14 @@ function showPendingSettlementModal(periodType, projects) {
 
                         const createSiCenterSheets = (centerName, centerProjects) => {
                             const safeCenter = String(centerName || '미지정').replace(/[\/:*?"<>|\[\]]/g, '_').substring(0, 20).trim() || '미지정';
-                            const stats = { customer: new Map(), costAccount: new Map(), taskType: new Map(), contractor: new Map() };
+                            const stats = { customer: new Map(), costAccount: new Map(), taskType: new Map(), contractor: new Map(), siCenter: new Map() };
                             let totalPR = 0, totalPO = 0;
                             centerProjects.forEach(p => {
                                 totalPR += p.pr; totalPO += p.po;
                                 [
                                     { m: stats.customer, v: p.cust }, { m: stats.costAccount, v: p.cost },
-                                    { m: stats.taskType, v: p.type }, { m: stats.contractor, v: p.ctr }
+                                    { m: stats.taskType, v: p.type }, { m: stats.contractor, v: p.ctr },
+                                    { m: stats.siCenter, v: p.siCenter || '미지정' }
                                 ].forEach(item => {
                                     const entry = item.m.get(item.v) || { count: 0, pr: 0, po: 0 };
                                     entry.count += 1; entry.pr += p.pr; entry.po += p.po;
@@ -91214,6 +91215,7 @@ function showPendingSettlementModal(periodType, projects) {
                             addSection(analysisSheet, '비용계정별 집계', stats.costAccount, 'FFE2EFDA');
                             addSection(analysisSheet, '작업유형별 집계', stats.taskType, 'FFFFF2CC');
                             addSection(analysisSheet, '시공사별 집계', stats.contractor, 'FFFCE4D6');
+                            addSection(analysisSheet, '🏢 S&I 센터별 집계', stats.siCenter, 'FFD9EAF7');
                             analysisSheet.views = [{ state: 'frozen', ySplit: 1 }];
 
                             const detailSheet = workbook.addWorksheet(`센터상세-${safeCenter}`.substring(0, 31));
