@@ -91127,14 +91127,14 @@ function showPendingSettlementModal(periodType, projects) {
                         };
 
                         const createCustomerSheets = (custName, custProjects) => {
-                            const custStats = { costAccount: new Map(), costAllocation: new Map(), taskType: new Map(), contractor: new Map(), customer: new Map() };
+                            const custStats = { costAccount: new Map(), costAllocation: new Map(), taskType: new Map(), contractor: new Map(), customer: new Map(), siCenter: new Map() };
                             let custTotalPR = 0, custTotalPO = 0;
                             custProjects.forEach(p => {
                                 custTotalPR += p.pr; custTotalPO += p.po;
                                 [
                                     { m: custStats.costAccount, v: p.cost }, { m: custStats.costAllocation, v: p.costalloc }, 
                                     { m: custStats.taskType, v: p.type }, { m: custStats.contractor, v: p.ctr },
-                                    { m: custStats.customer, v: p.cust }
+                                    { m: custStats.customer, v: p.cust }, { m: custStats.siCenter, v: p.siCenter || '미지정' }
                                 ].forEach(item => {
                                     const e = item.m.get(item.v) || { count: 0, pr: 0, po: 0 };
                                     e.count++; e.pr += p.pr; e.po += p.po;
@@ -91162,6 +91162,7 @@ function showPendingSettlementModal(periodType, projects) {
                             if (custStats.costAllocation.size > 0 && !(custStats.costAllocation.size === 1 && custStats.costAllocation.has(custName))) addSection(dashSheet, '📦 비용배분별 집계', custStats.costAllocation, 'FFD9EAD3');
                             if (custStats.taskType.size > 0 && !(custStats.taskType.size === 1 && custStats.taskType.has(custName))) addSection(dashSheet, '🏗️ 작업유형별 집계', custStats.taskType, 'FFFFF2CC');
                             if (custStats.contractor.size > 0 && !(custStats.contractor.size === 1 && custStats.contractor.has(custName))) addSection(dashSheet, '👷 시공사별 집계', custStats.contractor, 'FFFCE4D6');
+                            addSection(dashSheet, '🏢 S&I 센터별 집계', custStats.siCenter, 'FFD9EAF7');
 
                             const detSheet = workbook.addWorksheet(`상세-${custName}`.replace(/[\/:*?"<>|\[\]]/g, "_").substring(0, 31).trim());
                             detSheet.columns = [
