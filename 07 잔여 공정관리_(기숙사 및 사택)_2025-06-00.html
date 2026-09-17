@@ -26825,7 +26825,7 @@
         <main id="dashboardContent" class="flex flex-col flex-grow min-h-0 space-y-4 overflow-y-auto" style="overflow-y: auto !important;">
 
             <!-- Accordion 1: 총괄 -->
-            <div class="accordion-item bg-white rounded-lg shadow-sm flex-shrink-0">
+            <div id="overviewView" class="accordion-item bg-white rounded-lg shadow-sm flex-shrink-0">
                 <div class="accordion-header p-4 flex justify-between items-center border-b">
                     <h2 class="accordion-title-btn text-2xl font-bold flex items-baseline" role="button" tabindex="0"
                         aria-expanded="false" aria-controls="accordion-panel-overview" data-accordion-id="overview">
@@ -26838,6 +26838,21 @@
                         <span class="accordion-state-pill" data-accordion-state="overview" data-state="closed"
                             aria-live="polite">접힘</span>
                     </h2>
+                    <div id="overview-header-summaries"
+                        class="ml-auto text-right text-xl font-semibold text-gray-600"></div>
+                    <script id="codex-overview-header-preview-early-20260611">
+                        (function () {
+                            try {
+                                var el = document.getElementById('overview-header-summaries');
+                                if (!el || String(el.textContent || '').trim()) return;
+                                var html = localStorage.getItem('codex.settlementHeader.previewHtml.v1') || '';
+                                if (!html || html.length > 20000 || html.indexOf('\uac74') < 0) return;
+                                el.innerHTML = html;
+                                el.setAttribute('data-fast-header-preview', 'early-cache');
+                                if (window.performance && performance.mark) performance.mark('codex:overview-header-preview-early-written');
+                            } catch (e) { }
+                        })();
+                    </script>
                     <svg class="accordion-icon w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
                         xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -26990,19 +27005,6 @@
                     </h2>
                     <div id="settlement-header-summaries"
                         class="ml-auto text-right text-xl font-semibold text-gray-600"></div>
-                    <script id="codex-settlement-header-preview-early-20260611">
-                        (function () {
-                            try {
-                                var el = document.getElementById('settlement-header-summaries');
-                                if (!el || String(el.textContent || '').trim()) return;
-                                var html = localStorage.getItem('codex.settlementHeader.previewHtml.v1') || '';
-                                if (!html || html.length > 20000 || html.indexOf('\uac74') < 0) return;
-                                el.innerHTML = html;
-                                el.setAttribute('data-fast-header-preview', 'early-cache');
-                                if (window.performance && performance.mark) performance.mark('codex:settlement-header-preview-early-written');
-                            } catch (e) { }
-                        })();
-                    </script>
                     <svg class="accordion-icon w-6 h-6 flex-shrink-0 ml-4" fill="none" stroke="currentColor"
                         viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -27318,6 +27320,7 @@
                                 <option value="costAllocation">비용배분</option>
                                 <option value="settlementMonth">정산 월</option>
                                 <option value="building">건물동</option>
+                                <option value="siCenter">S&amp;I 센터</option>
                             </select>
                             <button type="button" class="overview-sankey-axis-values-btn" data-sankey-axis-filter="0">하위 옵션: 전체</button>
                         </div>
@@ -27332,6 +27335,7 @@
                                 <option value="costAllocation">비용배분</option>
                                 <option value="settlementMonth">정산 월</option>
                                 <option value="building">건물동</option>
+                                <option value="siCenter">S&amp;I 센터</option>
                             </select>
                             <button type="button" class="overview-sankey-axis-values-btn" data-sankey-axis-filter="1">하위 옵션: 전체</button>
                         </div>
@@ -27346,6 +27350,7 @@
                                 <option value="costAllocation">비용배분</option>
                                 <option value="settlementMonth">정산 월</option>
                                 <option value="building" selected>건물동</option>
+                                <option value="siCenter">S&amp;I 센터</option>
                             </select>
                             <button type="button" class="overview-sankey-axis-values-btn" data-sankey-axis-filter="2">하위 옵션: 없음</button>
                         </div>
@@ -39082,6 +39087,21 @@
             }
         }
 
+        // Preserve the existing custom-field identity used by field-level Web Save deltas.
+        function resolveSiCenterText(project) {
+            if (!project) return '';
+            const fields = project.customFields || {};
+            const value = fields['S_I_센터'] ?? fields['S&I 센터'] ?? project['S_I_센터'] ?? project['S&I 센터'];
+            return value == null ? '' : String(value).trim();
+        }
+        window.resolveSiCenterText = resolveSiCenterText;
+        function setSiCenterText(project, value) {
+            project.customFields = project.customFields || {};
+            project.customFields['S_I_센터'] = value == null ? '' : String(value).trim();
+            customFieldDisplayNames['S_I_센터'] = 'S&I 센터';
+        }
+        window.setSiCenterText = setSiCenterText;
+
         function getAnalysisHeaderKey(label) {
             return sanitizeKey(label || '');
         }
@@ -46040,6 +46060,12 @@
 
         function closeDetailModal() {
             cleanupDataDetailTransientUI('data-detail-close:before-hide');
+            delete dataDetailModal.dataset.modalType;
+            const modalInner = dataDetailModal.querySelector(':scope > div');
+            if (modalInner) {
+                modalInner.style.minWidth = '';
+                modalInner.style.flexShrink = '';
+            }
             dataDetailModal.classList.add('hidden');
             // \ubaa8\ub2ec \uc2a4\ud0c0\uc77c \ucd08\uae30\ud654
             dataDetailModal.style.display = '';
@@ -56854,12 +56880,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                                 if (typeof window.render === 'function') {
                                     let fastHeaderRendered = false;
                                     try {
-                                        const headerContainer = document.getElementById('settlement-header-summaries');
+                                        const headerContainer = document.getElementById('overview-header-summaries');
                                         if (headerContainer && typeof renderSettlementHeaderSummariesFast === 'function') {
                                             fastHeaderRendered = renderSettlementHeaderSummariesFast(projectData || window.projectData || [], headerContainer);
                                         }
                                     } catch (fastHeaderError) {
-                                        console.warn('[finishProcessing] fast settlement header failed:', fastHeaderError);
+                                        console.warn('[finishProcessing] fast overview customer header failed:', fastHeaderError);
                                     }
                                     let activeAutoUploadPerf = window.__activeAutoUploadPerfSession;
                                     const launchMainRender = () => {
@@ -62632,7 +62658,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                 taskGroupHeader.innerHTML = `
                     <div class="flex items-center gap-2 flex-wrap">
-                        <h3 class="text-lg font-semibold">\u25a0 \uc791\uc5c5\uc720\ud615\ubcc4 \uc815\uc0b0</h3>
+                        <h3 class="settlement-analysis-title text-lg font-semibold cursor-pointer select-none" role="button" tabindex="0" aria-pressed="false" title="\uc791\uc5c5\uc720\ud615\ubcc4 \uc815\uc0b0 \ubd84\uc11d \ubcf4\uae30">\u25a0 \uc791\uc5c5\uc720\ud615\ubcc4 \uc815\uc0b0</h3>
                         ${(typeof buildAccordionHintHTML === 'function') ? buildAccordionHintHTML(mainAccordionKey) : ''}
                         ${(typeof buildAccordionStatePillHTML === 'function') ? buildAccordionStatePillHTML(mainAccordionKey, `#${mainAccordionTargetId}`, isSettlementOpen) : ''}
                     </div>
@@ -62653,6 +62679,14 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                 taskGroupHeader.__taskTypeClickHandler = (e) => {
                     e.stopPropagation();
+                    const analysisTitle = e.target.closest('.settlement-analysis-title');
+                    if (analysisTitle) {
+                        e.preventDefault();
+                        if (typeof window.activateSettlementAnalysisTitle === 'function') {
+                            window.activateSettlementAnalysisTitle(e, '\uc791\uc5c5\uc720\ud615\ubcc4 \uc815\uc0b0', summaryData, analysisTitle);
+                        }
+                        return;
+                    }
                     const isCollapsed = taskGroupWrapper.classList.contains('collapsed');
                     if (isCollapsed) {
                         taskGroupWrapper.classList.remove('collapsed');
@@ -62683,6 +62717,13 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 };
                 
                 taskGroupHeader.__taskTypeKeydownHandler = (event) => {
+                    const analysisTitle = event.target.closest('.settlement-analysis-title');
+                    if (analysisTitle && (event.key === 'Enter' || event.key === ' ')) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        analysisTitle.click();
+                        return;
+                    }
                     if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         taskGroupHeader.click();
@@ -62876,6 +62917,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         }
 
         const SETTLEMENT_HEADER_PREVIEW_CACHE_KEY = 'codex.settlementHeader.previewHtml.v1';
+        const OVERVIEW_HEADER_PREVIEW_CACHE_KEY = 'codex.overviewHeader.siCenter.previewHtml.v1';
 
         function applyCachedSettlementHeaderPreview(container, reason) {
             try {
@@ -62899,6 +62941,61 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 if (!text || text.length > 20000 || !text.includes('\uac74')) return;
                 localStorage.setItem(SETTLEMENT_HEADER_PREVIEW_CACHE_KEY, text);
             } catch (e) { }
+        }
+
+        function applyCachedOverviewHeaderPreview(container, reason) {
+            try {
+                if (!container || String(container.textContent || '').trim()) return false;
+                const cached = localStorage.getItem(OVERVIEW_HEADER_PREVIEW_CACHE_KEY);
+                if (!cached || cached.length > 20000) return false;
+                container.innerHTML = cached;
+                container.setAttribute('data-fast-header-preview', String(reason || 'cache'));
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function rememberOverviewHeaderPreview(html) {
+            try {
+                const text = String(html || '').trim();
+                if (!text || text.length > 20000 || !text.includes('\uac74')) return;
+                localStorage.setItem(OVERVIEW_HEADER_PREVIEW_CACHE_KEY, text);
+            } catch (e) { }
+        }
+
+        function renderOverviewHeaderSummariesFast(fullData, container) {
+            try {
+                if (!container || !Array.isArray(fullData) || fullData.length === 0) return false;
+                const grouped = Object.create(null);
+                fullData.forEach(project => {
+                    const resolved = (typeof window.resolveSiCenterText === 'function')
+                        ? window.resolveSiCenterText(project)
+                        : (project?.customFields?.S_I_\uc13c\ud130 ?? project?.customFields?.['S&I \uc13c\ud130'] ?? '');
+                    const groupValue = String(resolved || '\ubbf8\uc9c0\uc815').trim() || '\ubbf8\uc9c0\uc815';
+                    if (!grouped[groupValue]) grouped[groupValue] = { poAmount: 0, count: 0 };
+                    grouped[groupValue].poAmount += Number(project && project.poAmount || 0) || 0;
+                    grouped[groupValue].count += 1;
+                });
+                const centerOrder = { '운영센터': 0, '공사센터': 1 };
+                const html = Object.keys(grouped).sort((a, b) => {
+                    const rankA = Object.prototype.hasOwnProperty.call(centerOrder, a) ? centerOrder[a] : Number.MAX_SAFE_INTEGER;
+                    const rankB = Object.prototype.hasOwnProperty.call(centerOrder, b) ? centerOrder[b] : Number.MAX_SAFE_INTEGER;
+                    return rankA !== rankB ? rankA - rankB : a.localeCompare(b, 'ko', { numeric: true, sensitivity: 'base' });
+                }).map(groupValue => {
+                    const group = grouped[groupValue];
+                    const formattedUnit = (typeof formatAmountWithUnit === 'function') ? formatAmountWithUnit(group.poAmount) : '';
+                    const amountText = (typeof formatCurrency === 'function') ? formatCurrency(group.poAmount) : String(group.poAmount);
+                    return `<span class="inline-block whitespace-nowrap"><span class="font-semibold">${groupValue}:</span> \ucd1d ${amountText} (${formattedUnit}) / ${group.count}\uac74</span>`;
+                }).join(' <span class="text-slate-400 font-light mx-2 inline-block">|</span> ');
+                container.innerHTML = html;
+                container.removeAttribute('data-fast-header-preview');
+                rememberOverviewHeaderPreview(html);
+                return true;
+            } catch (e) {
+                console.warn('[overview-header-fast] failed:', e);
+                return false;
+            }
         }
 
         function renderSettlementHeaderSummariesFast(fullData, container) {
@@ -62956,12 +63053,16 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const run = () => {
                 __settlementHeaderFastPending = false;
                 const container = document.getElementById('settlement-header-summaries');
-                applyCachedSettlementHeaderPreview(container, reason || 'scheduled');
+                const overviewHeaderContainer = document.getElementById('overview-header-summaries');
+                applyCachedOverviewHeaderPreview(container, reason || 'scheduled');
+                applyCachedSettlementHeaderPreview(overviewHeaderContainer, reason || 'scheduled');
                 let data = [];
                 try {
                     data = getStableProjectDatasetForSummary();
                 } catch (e) { }
-                if (container && data.length && renderSettlementHeaderSummariesFast(data, container)) {
+                const settlementRendered = !!(container && data.length && renderOverviewHeaderSummariesFast(data, container));
+                const overviewRendered = !!(overviewHeaderContainer && data.length && renderSettlementHeaderSummariesFast(data, overviewHeaderContainer));
+                if (settlementRendered && overviewRendered) {
                     __settlementHeaderFastAttempts = 0;
                     try { container.setAttribute('data-fast-header-reason', String(reason || 'scheduled')); } catch (e2) { }
                     return;
@@ -63014,9 +63115,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
             // These are always on the main page
             const overviewContainer = document.getElementById('overview-group-summaries');
+            const overviewHeaderContainer = document.getElementById('overview-header-summaries');
             const settlementHeaderContainer = document.getElementById('settlement-header-summaries');
             const settlementGroupContainer = document.getElementById('settlement-group-summaries');
-            if (!overviewContainer || !settlementHeaderContainer || !settlementGroupContainer) return;
+            if (!overviewContainer || !overviewHeaderContainer || !settlementHeaderContainer || !settlementGroupContainer) return;
 
             const workingData = Array.isArray(fullData) ? fullData : getFilterAwareDataset();
             if (!Array.isArray(workingData)) return;
@@ -63070,9 +63172,11 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             cleanupEventListeners();
 
             overviewContainer.innerHTML = '';
+            overviewHeaderContainer.innerHTML = '';
             settlementHeaderContainer.innerHTML = '';
             settlementGroupContainer.innerHTML = ''; // Clear previous content
-            renderSettlementHeaderSummariesFast(workingData, settlementHeaderContainer);
+            renderSettlementHeaderSummariesFast(workingData, overviewHeaderContainer);
+            renderOverviewHeaderSummariesFast(workingData, settlementHeaderContainer);
 
             // [v4.81-FIX] \ub370\uc774\ud130 \ubd80\uc7ac \ub300\uc751: \ud558\uc704 \ud56d\ubaa9\uc774 \uc5c6\ub294 '\uae61\ud1b5' \uc139\uc158\uc758 \uacbd\uc6b0 \uba54\uc2dc\uc9c0 \ud45c\uc2dc\ud558\uc5ec \ubb34\uacb0\uc131 \ud655\ubcf4
             if (workingData.length === 0) {
@@ -63125,7 +63229,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const customFieldKeyArray = Array.from(customFieldKeys);
             const groupingFields = customFieldKeyArray.filter(key => {
                 const displayName = customFieldDisplayNames[key] || key;
-                return matchesGroupingKeyword(key) || matchesGroupingKeyword(displayName) || key === '__contractor_direct__';
+                return matchesGroupingKeyword(key) || matchesGroupingKeyword(displayName) || key === '__contractor_direct__' || key === 'S_I_센터';
             }).sort();
 
             // [DEBUG] \uc815\uc0b0 \uc6d4 \ub370\uc774\ud130 \ud750\ub984 \ub514\ubc84\uae45 - \ubb38\uc81c \uc9c4\ub2e8\uc6a9
@@ -63330,7 +63434,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     }).join(' <span class="text-slate-400 font-light mx-2 inline-block">|</span> ');
                 }
             });
-            settlementHeaderContainer.innerHTML = finalSettlementHeaderHTML;
+            overviewHeaderContainer.innerHTML = finalSettlementHeaderHTML;
 
             // [PERF-OPTIMIZATION] Synchronous rendering to prevent initial layout shift and 1-2s delay
             const activeRenderedNames = new Set();
@@ -63400,7 +63504,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 overviewHeader.setAttribute('aria-expanded', isOverviewOpen ? 'true' : 'false');
                 overviewHeader.innerHTML = `
                     <div class="flex items-center gap-2 flex-wrap">
-                        <h3 class="text-lg font-semibold">\u25a0 ${displayFieldName}\ubcc4 \ucd1d\uad04</h3>
+                        <h3 class="overview-analysis-title text-lg font-semibold cursor-pointer select-none">\u25a0 ${displayFieldName}\ubcc4 \ucd1d\uad04</h3>
                         ${buildAccordionHintHTML(overviewKey)}
                         ${buildAccordionStatePillHTML(overviewKey, '#' + overviewSectionId, isOverviewOpen)}
                     </div>
@@ -63408,6 +63512,13 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                     </svg>
                 `;
+                const overviewAnalysisTitle = overviewHeader.querySelector('.overview-analysis-title');
+                if (overviewAnalysisTitle) {
+                    overviewAnalysisTitle.setAttribute('role', 'button');
+                    overviewAnalysisTitle.setAttribute('tabindex', '0');
+                    overviewAnalysisTitle.setAttribute('aria-pressed', 'false');
+                    overviewAnalysisTitle.setAttribute('title', `${displayFieldName}\ubcc4 \ucd1d\uad04 \ubd84\uc11d \ubcf4\uae30`);
+                }
 
                 const overviewContent = document.createElement('div');
                 overviewContent.className = 'overview-accordion-content';
@@ -63490,6 +63601,23 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 overviewHeader.__clickHandler = (event) => {
                     event.preventDefault();
                     event.stopPropagation();
+                    const analysisTitle = event.target.closest('.overview-analysis-title');
+                    if (analysisTitle) {
+                        if (typeof window.showStlGroupTooltip === 'function') {
+                            window.showStlGroupTooltip(event, `${displayFieldName}\ubcc4 \ucd1d\uad04`, groupedData);
+                        }
+                        if (window.__activeTT && window.__activeTT.isConnected) {
+                            const previousTitle = window.__activeOverviewAnalysisTitle;
+                            if (previousTitle && previousTitle !== analysisTitle && previousTitle.classList) {
+                                previousTitle.classList.remove('animate-pulse', 'text-indigo-600');
+                                previousTitle.setAttribute('aria-pressed', 'false');
+                            }
+                            analysisTitle.classList.add('animate-pulse', 'text-indigo-600');
+                            analysisTitle.setAttribute('aria-pressed', 'true');
+                            window.__activeOverviewAnalysisTitle = analysisTitle;
+                        }
+                        return;
+                    }
                     const currentlyOpen = overviewSection.classList.contains('expanded');
                     if (currentlyOpen) {
                         overviewSection.classList.remove('expanded');
@@ -63506,7 +63634,16 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     dismissAccordionHint(overviewKey);
                 };
 
-                overviewHeader.__keydownHandler = handleAccordionHeaderKeydown;
+                overviewHeader.__keydownHandler = (event) => {
+                    const analysisTitle = event.target.closest('.overview-analysis-title');
+                    if (analysisTitle && (event.key === 'Enter' || event.key === ' ')) {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        analysisTitle.click();
+                        return;
+                    }
+                    handleAccordionHeaderKeydown(event);
+                };
 
                 overviewHeader.addEventListener('click', overviewHeader.__clickHandler);
                 overviewHeader.addEventListener('keydown', overviewHeader.__keydownHandler);
@@ -63565,7 +63702,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                     customerHeader.innerHTML = `
                         <div class="flex items-center gap-2 flex-wrap">
-                            <h3 class="text-lg font-semibold">\u25a0 ${uniqueSettlementKey}\ubcc4 \uc815\uc0b0</h3>
+                            <h3 class="settlement-analysis-title text-lg font-semibold cursor-pointer select-none" role="button" tabindex="0" aria-pressed="false" title="${uniqueSettlementKey}\ubcc4 \uc815\uc0b0 \ubd84\uc11d \ubcf4\uae30">\u25a0 ${uniqueSettlementKey}\ubcc4 \uc815\uc0b0</h3>
                             ${buildAccordionHintHTML(customerAccordionKey)}
                             ${buildAccordionStatePillHTML(customerAccordionKey, '#' + customerAccordionId, isCustomerOpen)}
                         </div>
@@ -63687,9 +63824,26 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                     customerHeader.__clickHandler = (e) => {
                         e.stopPropagation();
+                        const analysisTitle = e.target.closest('.settlement-analysis-title');
+                        if (analysisTitle) {
+                            e.preventDefault();
+                            if (typeof window.activateSettlementAnalysisTitle === 'function') {
+                                window.activateSettlementAnalysisTitle(e, `${uniqueSettlementKey}\ubcc4 \uc815\uc0b0`, groupedData, analysisTitle);
+                            }
+                            return;
+                        }
                         toggleCustomerAccordion();
                     };
-                    customerHeader.__keydownHandler = handleAccordionHeaderKeydown;
+                    customerHeader.__keydownHandler = (event) => {
+                        const analysisTitle = event.target.closest('.settlement-analysis-title');
+                        if (analysisTitle && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            analysisTitle.click();
+                            return;
+                        }
+                        handleAccordionHeaderKeydown(event);
+                    };
 
                     customerHeader.addEventListener('click', customerHeader.__clickHandler);
                     customerHeader.addEventListener('keydown', customerHeader.__keydownHandler);
@@ -63745,7 +63899,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                     mainSettlementHeader.innerHTML = `
                         <div class="flex items-center gap-2 flex-wrap">
-                            <h3 class="text-lg font-semibold">\u25a0 ${uniqueSettlementKey}\ubcc4 \uc815\uc0b0</h3>
+                            <h3 class="settlement-analysis-title text-lg font-semibold cursor-pointer select-none" role="button" tabindex="0" aria-pressed="false" title="${uniqueSettlementKey}\ubcc4 \uc815\uc0b0 \ubd84\uc11d \ubcf4\uae30">\u25a0 ${uniqueSettlementKey}\ubcc4 \uc815\uc0b0</h3>
                             ${buildAccordionHintHTML(mainAccordionKey)}
                             ${buildAccordionStatePillHTML(mainAccordionKey, `#${mainAccordionTargetId}`, isSettlementOpen)}
                         </div>
@@ -63771,6 +63925,14 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     mainSettlementHeader.__clickHandler = (e) => {
                         // [v4.96 FIX] Ensure the main settlement accordion toggles correctly even if children are clicked
                         e.stopPropagation();
+                        const analysisTitle = e.target.closest('.settlement-analysis-title');
+                        if (analysisTitle) {
+                            e.preventDefault();
+                            if (typeof window.activateSettlementAnalysisTitle === 'function') {
+                                window.activateSettlementAnalysisTitle(e, `${uniqueSettlementKey}\ubcc4 \uc815\uc0b0`, groupedData, analysisTitle);
+                            }
+                            return;
+                        }
                         const isCollapsed = mainSettlementAccordion.classList.contains('collapsed');
                         if (isCollapsed) {
                             mainSettlementAccordion.classList.remove('collapsed');
@@ -63807,6 +63969,13 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     };
 
                     mainSettlementHeader.__keydownHandler = (event) => {
+                        const analysisTitle = event.target.closest('.settlement-analysis-title');
+                        if (analysisTitle && (event.key === 'Enter' || event.key === ' ')) {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            analysisTitle.click();
+                            return;
+                        }
                         if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
                             mainSettlementHeader.click();
@@ -63890,7 +64059,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 }
             } catch (e) { console.warn('Overview Reorder Error:', e); }
 
-            // settlementHeaderContainer.innerHTML = finalSettlementHeaderHTML; // Done synchronously first
+            // overviewHeaderContainer.innerHTML = finalSettlementHeaderHTML; // Done synchronously first
 
             // Add event listeners after rendering
             setupSettlementAccordions();
@@ -85863,6 +86032,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const rows = Array.isArray(data) ? data : [];
                 const assigned = { count: 0, amount: 0, keys: [] };
                 const pending = { count: 0, amount: 0, keys: [] };
+                const centerStats = new Map();
                 const assignedKeySet = new Set();
                 const pendingKeySet = new Set();
                 const readProjectMonth = (project) => {
@@ -85874,9 +86044,13 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     if (!project) return;
                     const amount = getSettlementProjectPoAmount20260626(project);
                     const monthKey = project.manualSettlementDate ? parseSettlementMonth(project.manualSettlementDate) : '';
+                    const centerName = (typeof window.resolveSiCenterText === 'function' ? window.resolveSiCenterText(project) : '') || '미지정';
+                    const centerEntry = centerStats.get(centerName) || { assigned: { count: 0, amount: 0 }, pending: { count: 0, amount: 0 } };
                     if (monthKey) {
                         assigned.count += 1;
                         assigned.amount += amount;
+                        centerEntry.assigned.count += 1;
+                        centerEntry.assigned.amount += amount;
                         if (!assignedKeySet.has(monthKey)) {
                             assignedKeySet.add(monthKey);
                             assigned.keys.push(monthKey);
@@ -85884,12 +86058,15 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     } else {
                         pending.count += 1;
                         pending.amount += amount;
+                        centerEntry.pending.count += 1;
+                        centerEntry.pending.amount += amount;
                         const pendingKey = readProjectMonth(project);
                         if (pendingKey && !pendingKeySet.has(pendingKey)) {
                             pendingKeySet.add(pendingKey);
                             pending.keys.push(pendingKey);
                         }
                     }
+                    centerStats.set(centerName, centerEntry);
                 });
 
                 const normalizeSummaryKeys = (keys) => {
@@ -85947,12 +86124,20 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const pendingRange = formatRange(pending.keys);
                 const assignedRange = formatRange(assigned.keys);
                 const formatWon = (value) => `${Math.round(Number(value || 0)).toLocaleString('ko-KR')}원`;
+                const centerOrder = (name) => name === '운영센터' ? 0 : (name === '공사센터' ? 1 : 2);
+                const centerSummary = Array.from(centerStats.entries())
+                    .sort((a, b) => centerOrder(a[0]) - centerOrder(b[0]) || a[0].localeCompare(b[0], 'ko'))
+                    .map(([name, stats]) => `${escapeHtml(name)} 미정산 ${formatWon(stats.pending.amount)} (${stats.pending.count}건) · 완료 ${formatWon(stats.assigned.amount)} (${stats.assigned.count}건)`)
+                    .join(' | ');
                 return `
                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold whitespace-nowrap" title="정산 월이 비어 있는 프로젝트 기준입니다.">
                         미정산 ${pendingRange}: ${formatWon(pending.amount)} (${pending.count}건)
                     </span>
                     <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold whitespace-nowrap" title="정산 월이 배정된 프로젝트 기준입니다.">
                         완료 ${assignedRange}: ${formatWon(assigned.amount)} (${assigned.count}건)
+                    </span>
+                    <span data-settlement-si-center-summary class="inline-flex items-center px-2 py-1 rounded-full bg-sky-50 text-sky-800 border border-sky-200 text-xs font-normal whitespace-normal" aria-label="S&I 센터별 미정산 및 완료 현황" title="S&I 센터별 정산 월 배정 여부 기준입니다.">
+                        S&amp;I 센터별&nbsp; ${centerSummary}
                     </span>
                 `;
             }
@@ -86207,6 +86392,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         entry.rowsData.push({
                             index: idx,
                             maintenanceCode: core.maintenanceCode,
+                            siCenter: window.resolveSiCenterText(projectRef) || '미지정',
                             customer: core.customerText,
                             costAccount: core.costAccountText,
                             costAllocation: core.costAllocationText,
@@ -86228,6 +86414,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         </td>
                         <td class="border border-gray-300 px-1 py-1 text-center whitespace-nowrap ">${idx + 1}</td>
                         <td class="border border-gray-300 px-1 py-1 text-center whitespace-nowrap font-mono text-sm " title="${core.maintEsc}">${core.maintEsc}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center whitespace-nowrap">${escapeHtmlLocal(window.resolveSiCenterText(projectRef) || '미지정')}</td>
                         <td class="border border-gray-300 px-1 py-1 text-center whitespace-nowrap " title="${core.customerEsc}">${core.customerEsc}</td>
                         <td class="border border-gray-300 px-1 py-1 text-center whitespace-nowrap " title="${core.costEsc}">${core.costEsc}</td>
                         <td class="border border-gray-300 px-1 py-1 text-center whitespace-nowrap " title="${core.costAllocEsc}">${core.costAllocEsc}</td>
@@ -87039,11 +87226,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                 const colGroup = document.createElement('colgroup');
                 colGroup.innerHTML = `
-                    <col style="width: 8.3333%;">  <!-- \uc21c\ubc88 -->
-                    <col style="width: 19.4444%;"> <!-- \uc720\uc9c0\uad00\ub9ac\ubc88\ud638 -->
-                    <col style="width: 34.7222%;"> <!-- \ud504\ub85c\uc81d\ud2b8\uba85 -->
-                    <col style="width: 20.8333%;"> <!-- \uae08\uc561 -->
-                    <col style="width: 16.6667%;"> <!-- \uc9c4\ud589\uc0c1\ud669 -->
+                    <col style="width: 7%;">  <!-- \uc21c\ubc88 -->
+                    <col style="width: 17%;"> <!-- \uc720\uc9c0\uad00\ub9ac\ubc88\ud638 -->
+                    <col style="width: 12%;"> <!-- S&I \uc13c\ud130 -->
+                    <col style="width: 31%;"> <!-- \ud504\ub85c\uc81d\ud2b8\uba85 -->
+                    <col style="width: 18%;"> <!-- \uae08\uc561 -->
+                    <col style="width: 15%;"> <!-- \uc9c4\ud589\uc0c1\ud669 -->
                 `;
                 table.appendChild(colGroup);
 
@@ -87059,7 +87247,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     const projectName = canonical?.name || canonical?.title || '-';
                     const poAmount = parseFloat(canonical?.poAmount ?? canonical?.cost ?? 0) || 0;
                     const progress = canonical?.progress != null ? Number(canonical.progress) : 0;
-                    return { originalIndex: idx + 1, maintenanceCode, projectName, poAmount, progress };
+                    const siCenter = window.resolveSiCenterText(canonical || p) || '\ubbf8\uc9c0\uc815';
+                    return { originalIndex: idx + 1, maintenanceCode, siCenter, projectName, poAmount, progress };
                 }).filter(Boolean);
 
                 const thead = document.createElement('thead');
@@ -87070,6 +87259,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     const headers = [
                         { key: 'originalIndex', label: '\uc21c\ubc88' },
                         { key: 'maintenanceCode', label: '\uc720\uc9c0\uad00\ub9ac\ubc88\ud638' },
+                        { key: 'siCenter', label: 'S&I \uc13c\ud130' },
                         { key: 'projectName', label: '\ud504\ub85c\uc81d\ud2b8\uba85' },
                         { key: 'poAmount', label: '\uae08\uc561 (PO)' },
                         { key: 'progress', label: '\uc9c4\ud589\uc0c1\ud669' }
@@ -87163,6 +87353,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         tr.innerHTML = `
                             <td class="border border-gray-200 px-3 py-2 text-center bg-white text-gray-800">${item.originalIndex}</td>
                             <td class="border border-gray-200 px-3 py-2 text-center font-mono text-sm bg-white text-gray-800">${escapeHtml(item.maintenanceCode)}</td>
+                            <td class="border border-gray-200 px-3 py-2 text-center whitespace-nowrap bg-white text-gray-800">${escapeHtml(item.siCenter)}</td>
                             <td class="border border-gray-200 px-3 py-2 text-left nowrap-project-name bg-white text-gray-800" title="${escapeHtml(item.projectName)}">${escapeHtml(item.projectName)}</td>
                             <td class="border border-gray-200 px-3 py-2 text-right tabular-nums bg-white text-gray-800">${formatNumber(item.poAmount)}\uc6d0</td>
                             <td class="border border-gray-200 px-3 py-2 text-center bg-white ${progressColor}">${item.progress}%</td>
@@ -87174,7 +87365,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     const totalRow = document.createElement('tr');
                     totalRow.className = 'bg-gray-100 font-bold';
                     totalRow.innerHTML = `
-                        <td colspan="3" class="border border-gray-300 px-3 py-3 text-right">\ud569\uacc4 (${sortedData.length}\uac74)</td>
+                        <td colspan="4" class="border border-gray-300 px-3 py-3 text-right">\ud569\uacc4 (${sortedData.length}\uac74)</td>
                         <td class="border border-gray-300 px-3 py-3 text-right tabular-nums text-indigo-600">${formatNumber(totalAmount)}\uc6d0</td>
                         <td class="border border-gray-300 px-3 py-3 text-center">-</td>
                     `;
@@ -87210,7 +87401,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                         table.__stlCtrl = CTRL;
 
-                        var CN = ['\uc21c\ubc88','\uc720\uc9c0\uad00\ub9ac\ubc88\ud638','\ud504\ub85c\uc81d\ud2b8\uba85','\uae08\uc561(PO)','\uc9c4\ud589\uc0c1\ud669'];
+                        var CN = ['\uc21c\ubc88','\uc720\uc9c0\uad00\ub9ac\ubc88\ud638','S&I \uc13c\ud130','\ud504\ub85c\uc81d\ud2b8\uba85','\uae08\uc561(PO)','\uc9c4\ud589\uc0c1\ud669'];
 
                         function cn(i){return CN[i]||'Col'+i;}
 
@@ -88136,24 +88327,45 @@ function showPendingSettlementModal(periodType, projects) {
                             return;
                         }
                         const aoa = [
-                            ['\uc21c\ubc88', '\uc720\uc9c0\uad00\ub9ac\ubc88\ud638', '\ud504\ub85c\uc81d\ud2b8\uba85', '\uae08\uc561(PO)', '\uc9c4\ud589\uc0c1\ud669(%)']
+                            ['\uc21c\ubc88', '\uc720\uc9c0\uad00\ub9ac\ubc88\ud638', 'S&I \uc13c\ud130', '\ud504\ub85c\uc81d\ud2b8\uba85', '\uae08\uc561(PO)', '\uc9c4\ud589\uc0c1\ud669(%)']
                         ];
+                        const centerRows = new Map();
                         projectList.forEach((p, idx) => {
                             const canonical = settlementLookup.resolveProject(p);
                             const maintenanceCode = settlementLookup.resolveMaintenanceCode(canonical);
                             const poAmount = Number(canonical?.poAmount ?? canonical?.cost ?? 0) || 0;
                             const progress = canonical?.progress != null ? Number(canonical.progress) : 0;
-                            aoa.push([
+                            const centerName = String(window.resolveSiCenterText(canonical || p) || '\ubbf8\uc9c0\uc815');
+                            const row = [
                                 idx + 1,
                                 String(maintenanceCode || ''),
+                                centerName,
                                 String(canonical?.name || canonical?.title || ''),
                                 poAmount,
                                 progress
-                            ]);
+                            ];
+                            aoa.push(row);
+                            const rows = centerRows.get(centerName) || [];
+                            rows.push(row);
+                            centerRows.set(centerName, rows);
                         });
                         const ws = XLSX.utils.aoa_to_sheet(aoa);
                         const wb = XLSX.utils.book_new();
                         XLSX.utils.book_append_sheet(wb, ws, '\uc791\uc5c5\uc911');
+                        const orderedCenters = Array.from(centerRows.entries()).sort((a, b) => {
+                            const rank = name => name === '\uc6b4\uc601\uc13c\ud130' ? 0 : (name === '\uacf5\uc0ac\uc13c\ud130' ? 1 : 2);
+                            return rank(a[0]) - rank(b[0]) || a[0].localeCompare(b[0], 'ko');
+                        });
+                        const centerSummary = [['S&I \uc13c\ud130', '\uac74\uc218', 'PO\ud569\uacc4']];
+                        orderedCenters.forEach(([centerName, rows]) => {
+                            centerSummary.push([centerName, rows.length, rows.reduce((sum, row) => sum + (Number(row[4]) || 0), 0)]);
+                        });
+                        XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(centerSummary), 'S&I \uc13c\ud130\ubcc4 \uc694\uc57d');
+                        orderedCenters.forEach(([centerName, rows]) => {
+                            const safeName = String(centerName || '\ubbf8\uc9c0\uc815').replace(/[\\\/:*?"<>|\[\]]/g, '_').substring(0, 20).trim() || '\ubbf8\uc9c0\uc815';
+                            const centerSheet = XLSX.utils.aoa_to_sheet([aoa[0]].concat(rows));
+                            XLSX.utils.book_append_sheet(wb, centerSheet, (`\uc791\uc5c5\uc911-${safeName}`).substring(0, 31));
+                        });
                         const now = new Date();
                         const ts = [
                             String(now.getFullYear()).slice(-2),
@@ -89119,6 +89331,7 @@ function showPendingSettlementModal(periodType, projects) {
                 filtered.sort((a, b) => {
                     const cA = safeResolve(a); const cB = safeResolve(b);
                     const getVal = (p, o, k) => {
+                        if (k === 'siCenter') return window.resolveSiCenterText(p);
                         if (k === 'no') return o._originalIdx;
                         if (k === 'pr') return parseFloat(p?.prAmount ?? p?.budget ?? 0) || 0;
                         if (k === 'po') return parseFloat(p?.poAmount ?? p?.cost ?? 0) || (typeof getPo === 'function' ? getPo(p) : 0);
@@ -89322,6 +89535,15 @@ function showPendingSettlementModal(periodType, projects) {
 
                 renderDashboard: function (stats, projects, settlementLookup, wrapper) {
                     this.ensureStyles();
+                    const centerStats = new Map();
+                    projects.forEach(p => {
+                        const target = settlementLookup.resolveProject(p) || p;
+                        const key = window.resolveSiCenterText(target) || '미지정';
+                        const item = centerStats.get(key) || { count: 0, amount: 0 };
+                        item.count += 1;
+                        item.amount += Number(target.poAmount ?? p.poAmount ?? 0) || 0;
+                        centerStats.set(key, item);
+                    });
 
                     const dashboard = document.createElement('div');
                     dashboard.className = 'settlement-summary-dashboard sticky top-0 z-40 bg-white';
@@ -89358,6 +89580,7 @@ function showPendingSettlementModal(periodType, projects) {
                     `;
 
                     dashboard.addEventListener('click', (e) => this.handleInteraction(e, projects, settlementLookup));
+                    dashboard.querySelector('[data-dashboard-body] > div').insertAdjacentHTML('afterbegin', this.renderCard('S&I 센터별', centerStats, 'siCenter'));
                     return dashboard;
                 },
 
@@ -89644,6 +89867,7 @@ function showPendingSettlementModal(periodType, projects) {
                     const safeLabel = (s) => s ? String(s).trim() || '\ubbf8\uc9c0\uc815' : '\ubbf8\uc9c0\uc815';
                     const getVal = (p, k) => {
                         const target = settlementLookup.resolveProject(p) || p;
+                        if (k === 'siCenter') return window.resolveSiCenterText(target) || '미지정';
                         const cText = (typeof resolveCustomerText === 'function' ? resolveCustomerText(target) || resolveCustomerText(p) : '') || '-';
                         const safeCust = cText === '-' ? '\ubbf8\uc9c0\uc815' : cText;
                         if (k === 'customer') return safeCust;
@@ -89886,6 +90110,7 @@ function showPendingSettlementModal(periodType, projects) {
                         return {
                             index: index,
                             maintenanceCode: settlementLookup.resolveMaintenanceCode(canonical),
+                            siCenter: window.resolveSiCenterText(canonical || project) || '미지정',
                             customer: customerText,
                             costAccount: costAccountText,
                             costAllocation: costAllocationText,
@@ -89972,6 +90197,7 @@ function showPendingSettlementModal(periodType, projects) {
                     <col style="width: 30px;">   <!-- [FIX-S14] Checkbox -->
                     <col style="width: 40px;">   <!-- NO -->
                     <col style="width: 100px;">  <!-- Maint -->
+                    <col style="width: 120px; min-width: 108px;"> <!-- S&I center -->
                     <col style="width: 100px;">  <!-- Customer -->
                     <col style="width: 90px;">   <!-- Cost -->
                     <col style="width: 80px;">   <!-- Cost Alloc -->
@@ -90002,6 +90228,7 @@ function showPendingSettlementModal(periodType, projects) {
                     <th rowspan="2" class="border border-gray-300 px-1 py-2 font-semibold text-center whitespace-nowrap" title="\uc120\ud0dd">\uc120\ud0dd</th>
                     <th rowspan="2" data-sort-key="no" class="border border-gray-300 px-1 py-2 font-semibold cursor-pointer select-none hover:bg-gray-200 whitespace-nowrap">NO.<span data-sort-indicator class="ml-0.5 text-slate-400">\u21c5</span></th>
                     <th rowspan="2" data-sort-key="maintenance" class="border border-gray-300 px-1 py-2 font-semibold cursor-pointer select-none whitespace-nowrap hover:bg-gray-200">\uc720\uc9c0\uad00\ub9ac \ubc88\ud638<span data-sort-indicator class="ml-0.5 text-slate-400">\u21c5</span></th>
+                    <th rowspan="2" data-sort-key="siCenter" class="border border-gray-300 px-2 py-2 font-semibold cursor-pointer select-none whitespace-nowrap hover:bg-gray-200">S&amp;I 센터<span data-sort-indicator class="ml-0.5 text-slate-400">\u21c5</span></th>
                     <th rowspan="2" data-sort-key="customer" class="border border-gray-300 px-1 py-1 font-semibold cursor-pointer select-none whitespace-nowrap hover:bg-gray-200">\uace0\uac1d\uc0ac<span data-sort-indicator class="ml-0.5 text-slate-400">\u21c5</span></th>
                     <th rowspan="2" data-sort-key="costAccount" class="border border-gray-300 px-1 py-1 font-semibold cursor-pointer select-none whitespace-nowrap hover:bg-gray-200">\ube44\uc6a9\uacc4\uc815<span data-sort-indicator class="ml-0.5 text-slate-400">\u21c5</span></th>
                     <th rowspan="2" data-sort-key="costAllocation" class="border border-gray-300 px-1 py-1 font-semibold cursor-pointer select-none whitespace-nowrap hover:bg-gray-200">\ube44\uc6a9\ubc30\ubd84<span data-sort-indicator class="ml-0.5 text-slate-400">\u21c5</span></th>
@@ -90069,6 +90296,7 @@ function showPendingSettlementModal(periodType, projects) {
                         </td>
                         <td class="border border-gray-300 px-1 py-1 text-center whitespace-nowrap ">${i + 1}</td>
                         <td class="border border-gray-300 px-1 py-1 text-center whitespace-nowrap font-mono text-sm " title="${esc(maint)}">${esc(maint)}</td>
+                        <td class="border border-gray-300 px-2 py-1 text-center whitespace-nowrap" title="${esc(window.resolveSiCenterText(can || p) || '미지정')}">${esc(window.resolveSiCenterText(can || p) || '미지정')}</td>
                         <td class="border border-gray-300 px-1 py-1 text-center whitespace-nowrap " title="${esc(resolveCustomerText(p) || resolveCustomerText(can) || '-')}">${esc(resolveCustomerText(p) || resolveCustomerText(can) || '-')}</td>
                         <td class="border border-gray-300 px-1 py-1 text-center whitespace-nowrap " title="${esc(cAcc)}">${esc(cAcc)}</td>
                         <td class="border border-gray-300 px-1 py-1 text-center whitespace-nowrap " title="${esc(cAlloc)}">${esc(cAlloc)}</td>
@@ -90143,7 +90371,7 @@ function showPendingSettlementModal(periodType, projects) {
                         };
                         wrapper.__stlCtrl = CTRL;
 
-                        var CNAMES = ['\uc120\ud0dd','NO.','\uc720\uc9c0\uad00\ub9ac\ubc88\ud638','\uace0\uac1d\uc0ac','\ube44\uc6a9\uacc4\uc815','\ube44\uc6a9\ubc30\ubd84','\uc791\uc5c5\uc720\ud615','\uac74\ubb3c\ub3d9','\uc81c\ubaa9','\uc791\uc5c5\uc644\ub8cc\uc77c','PR\uae08\uc561','PO\uae08\uc561','\uc2dc\uacf5\uc0ac','B-A(\ucc28\uc561)','A/B(\ud6a8\uc728)','\uc99d\ube59\ub9c1\ud06c','\ud2b9\uc774\uc0ac\ud56d'];
+                        var CNAMES = ['\uc120\ud0dd','NO.','\uc720\uc9c0\uad00\ub9ac\ubc88\ud638','S&I 센터','\uace0\uac1d\uc0ac','\ube44\uc6a9\uacc4\uc815','\ube44\uc6a9\ubc30\ubd84','\uc791\uc5c5\uc720\ud615','\uac74\ubb3c\ub3d9','\uc81c\ubaa9','\uc791\uc5c5\uc644\ub8cc\uc77c','PR\uae08\uc561','PO\uae08\uc561','\uc2dc\uacf5\uc0ac','B-A(\ucc28\uc561)','A/B(\ud6a8\uc728)','\ud2b9\uc774\uc0ac\ud56d'];
                         function cn(i) { return CNAMES[i] || 'Col'+i; }
 
                         function ensureHeaderColumnCoordinates() {
@@ -90857,8 +91085,9 @@ function showPendingSettlementModal(periodType, projects) {
                             const costalloc = resolveText(p, ['\ube44\uc6a9\ubc30\ubd84', 'costallocation']) || resolveText(c, ['\ube44\uc6a9\ubc30\ubd84', 'costallocation']) || '\uacf5\uc6a9';
                             const type = p.taskType || c?.taskType || '\ubbf8\uc9c0\uc815';
                             const ctr = resolveText(p, ['\uc2dc\uacf5\uc0ac', 'contractor', 'constructor']) || resolveText(c, ['\uc2dc\uacf5\uc0ac', 'contractor', 'constructor']) || '\ubbf8\uc9c0\uc815';
+                            const siCenter = (typeof window.resolveSiCenterText === 'function' ? (window.resolveSiCenterText(c || p) || window.resolveSiCenterText(p)) : '') || '미지정';
                             const note = c?.remarks || c?.note || c?.settlementNote || p?.remarks || p?.note || p?.settlementNote || '';
-                            return { ...p, pr, po, diff: po - pr, eff: po > 0 ? (pr / po) : 0, cust, cost, costalloc, type, ctr, note, c };
+                            return { ...p, pr, po, diff: po - pr, eff: po > 0 ? (pr / po) : 0, cust, cost, costalloc, type, ctr, siCenter, note, c };
                         });
 
                         const customerGroups = new Map();
@@ -90898,14 +91127,14 @@ function showPendingSettlementModal(periodType, projects) {
                         };
 
                         const createCustomerSheets = (custName, custProjects) => {
-                            const custStats = { costAccount: new Map(), costAllocation: new Map(), taskType: new Map(), contractor: new Map(), customer: new Map() };
+                            const custStats = { costAccount: new Map(), costAllocation: new Map(), taskType: new Map(), contractor: new Map(), customer: new Map(), siCenter: new Map() };
                             let custTotalPR = 0, custTotalPO = 0;
                             custProjects.forEach(p => {
                                 custTotalPR += p.pr; custTotalPO += p.po;
                                 [
                                     { m: custStats.costAccount, v: p.cost }, { m: custStats.costAllocation, v: p.costalloc }, 
                                     { m: custStats.taskType, v: p.type }, { m: custStats.contractor, v: p.ctr },
-                                    { m: custStats.customer, v: p.cust }
+                                    { m: custStats.customer, v: p.cust }, { m: custStats.siCenter, v: p.siCenter || '미지정' }
                                 ].forEach(item => {
                                     const e = item.m.get(item.v) || { count: 0, pr: 0, po: 0 };
                                     e.count++; e.pr += p.pr; e.po += p.po;
@@ -90933,6 +91162,7 @@ function showPendingSettlementModal(periodType, projects) {
                             if (custStats.costAllocation.size > 0 && !(custStats.costAllocation.size === 1 && custStats.costAllocation.has(custName))) addSection(dashSheet, '📦 비용배분별 집계', custStats.costAllocation, 'FFD9EAD3');
                             if (custStats.taskType.size > 0 && !(custStats.taskType.size === 1 && custStats.taskType.has(custName))) addSection(dashSheet, '🏗️ 작업유형별 집계', custStats.taskType, 'FFFFF2CC');
                             if (custStats.contractor.size > 0 && !(custStats.contractor.size === 1 && custStats.contractor.has(custName))) addSection(dashSheet, '👷 시공사별 집계', custStats.contractor, 'FFFCE4D6');
+                            addSection(dashSheet, '🏢 S&I 센터별 집계', custStats.siCenter, 'FFD9EAF7');
 
                             const detSheet = workbook.addWorksheet(`상세-${custName}`.replace(/[\/:*?"<>|\[\]]/g, "_").substring(0, 31).trim());
                             detSheet.columns = [
@@ -90955,6 +91185,60 @@ function showPendingSettlementModal(periodType, projects) {
                             detSheet.views = [{ state: 'frozen', ySplit: 1 }];
                             detSheet.getRow(1).font = { bold: true };
                             detSheet.getRow(1).alignment = { horizontal: 'center' };
+                        };
+
+                        const createSiCenterSheets = (centerName, centerProjects) => {
+                            const safeCenter = String(centerName || '미지정').replace(/[\/:*?"<>|\[\]]/g, '_').substring(0, 20).trim() || '미지정';
+                            const stats = { customer: new Map(), costAccount: new Map(), taskType: new Map(), contractor: new Map(), siCenter: new Map() };
+                            let totalPR = 0, totalPO = 0;
+                            centerProjects.forEach(p => {
+                                totalPR += p.pr; totalPO += p.po;
+                                [
+                                    { m: stats.customer, v: p.cust }, { m: stats.costAccount, v: p.cost },
+                                    { m: stats.taskType, v: p.type }, { m: stats.contractor, v: p.ctr },
+                                    { m: stats.siCenter, v: p.siCenter || '미지정' }
+                                ].forEach(item => {
+                                    const entry = item.m.get(item.v) || { count: 0, pr: 0, po: 0 };
+                                    entry.count += 1; entry.pr += p.pr; entry.po += p.po;
+                                    item.m.set(item.v, entry);
+                                });
+                            });
+                            const analysisSheet = workbook.addWorksheet(`센터분석-${safeCenter}`.substring(0, 31));
+                            analysisSheet.columns = [
+                                { header: '분류', key: 'cat', width: 25 }, { header: '항목', key: 'item', width: 30 }, { header: '건수', key: 'cnt', width: 10 },
+                                { header: 'PR금액 (A)', key: 'pr', width: 18 }, { header: 'PO금액 (B)', key: 'po', width: 18 }, { header: '차액 (B-A)', key: 'diff', width: 18 }, { header: '효율 (A/B)', key: 'eff', width: 12 }
+                            ];
+                            const summaryRow = analysisSheet.addRow({ cat: 'S&I 센터별 분석', item: `${centerName} (${monthKey})`, cnt: centerProjects.length, pr: totalPR, po: totalPO, diff: totalPO - totalPR, eff: (totalPO > 0 ? Math.round((totalPR / totalPO) * 100) : 0) + '%' });
+                            summaryRow.font = { bold: true, color: { argb: 'FF075985' } };
+                            applyAccountingStyle(summaryRow); analysisSheet.addRow([]);
+                            addSection(analysisSheet, '고객사별 집계', stats.customer, 'FFDDEBF7');
+                            addSection(analysisSheet, '비용계정별 집계', stats.costAccount, 'FFE2EFDA');
+                            addSection(analysisSheet, '작업유형별 집계', stats.taskType, 'FFFFF2CC');
+                            addSection(analysisSheet, '시공사별 집계', stats.contractor, 'FFFCE4D6');
+                            addSection(analysisSheet, '🏢 S&I 센터별 집계', stats.siCenter, 'FFD9EAF7');
+                            analysisSheet.views = [{ state: 'frozen', ySplit: 1 }];
+
+                            const detailSheet = workbook.addWorksheet(`센터상세-${safeCenter}`.substring(0, 31));
+                            detailSheet.columns = [
+                                { header: 'NO', key: 'no', width: 5 }, { header: '유지관리번호', key: 'mc', width: 15 }, { header: 'S&I 센터', key: 'siCenter', width: 14 },
+                                { header: '고객사', key: 'cust', width: 15 }, { header: '비용계정', key: 'cost', width: 15 }, { header: '비용배분', key: 'costalloc', width: 12 },
+                                { header: '작업유형', key: 'type', width: 16 }, { header: '프로젝트명', key: 'title', width: 40 }, { header: '완료일', key: 'date', width: 12 },
+                                { header: 'PR금액 (A)', key: 'pr', width: 18 }, { header: 'PO금액 (B)', key: 'po', width: 18 }, { header: '시공사', key: 'ctr', width: 15 },
+                                { header: '차액 (B-A)', key: 'diff', width: 18 }, { header: '효율', key: 'eff', width: 10 }, { header: '특이사항', key: 'note', width: 30 }
+                            ];
+                            centerProjects.forEach((p, index) => {
+                                const row = detailSheet.addRow({
+                                    no: index + 1, mc: settlementLookup.resolveMaintenanceCode(p.c) || '', siCenter: p.siCenter, cust: p.cust, cost: p.cost,
+                                    costalloc: p.costalloc, type: p.type, title: p.c?.name || p.name || '',
+                                    date: (typeof formatDateYMDLocal === 'function' ? formatDateYMDLocal(p.c?.endDate || p.c?.completedDate || p.endDate) : ''),
+                                    pr: p.pr, po: p.po, ctr: p.ctr, diff: p.diff, eff: Math.round(p.eff * 100) + '%', note: p.note || ''
+                                });
+                                applyAccountingStyle(row);
+                                row.getCell('note').alignment = { vertical: 'top', wrapText: true };
+                            });
+                            detailSheet.views = [{ state: 'frozen', ySplit: 1 }];
+                            detailSheet.getRow(1).font = { bold: true };
+                            detailSheet.getRow(1).alignment = { horizontal: 'center' };
                         };
 
 
@@ -91050,7 +91334,17 @@ function showPendingSettlementModal(periodType, projects) {
                                 createCustomerSheets(custName, entry.projects);
                             }
                         }
-                                                showProgress('\ub2e4\uc6b4\ub85c\ub4dc \uc911', '\ud30c\uc77c \uc0dd\uc131\uc744 \ub9c8\ucce4\uc2b5\ub2c8\ub2e4. \uc7a0\uc2dc\ub9cc \uae30\ub2e4\ub824 \uc8fc\uc138\uc694...');
+                        const centerGroups = new Map();
+                        processed.forEach(p => {
+                            const entry = centerGroups.get(p.siCenter) || { count: 0, pr: 0, po: 0, projects: [] };
+                            entry.count += 1; entry.pr += p.pr; entry.po += p.po; entry.projects.push(p);
+                            centerGroups.set(p.siCenter, entry);
+                        });
+                        addTotalSection(tSheet, 'S&I 센터별 요약', centerGroups, 'FFD9EAF7');
+                        Array.from(centerGroups.entries())
+                            .sort((a, b) => (a[0] === '운영센터' ? 0 : (a[0] === '공사센터' ? 1 : 2)) - (b[0] === '운영센터' ? 0 : (b[0] === '공사센터' ? 1 : 2)) || a[0].localeCompare(b[0], 'ko'))
+                            .forEach(([centerName, entry]) => createSiCenterSheets(centerName, entry.projects));
+                        showProgress('\ub2e4\uc6b4\ub85c\ub4dc \uc911', '\ud30c\uc77c \uc0dd\uc131\uc744 \ub9c8\ucce4\uc2b5\ub2c8\ub2e4. \uc7a0\uc2dc\ub9cc \uae30\ub2e4\ub824 \uc8fc\uc138\uc694...');
                         const buffer = await workbook.xlsx.writeBuffer();
                         const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                         const url = window.URL.createObjectURL(blob);
@@ -99952,7 +100246,20 @@ function showPendingSettlementModal(periodType, projects) {
                 setTimeout(() => { if (t && t.parentNode) t.remove(); }, 200);
             }
             window.__activeTT = null;
+            const activeOverviewTitle = window.__activeOverviewAnalysisTitle;
+            if (activeOverviewTitle && activeOverviewTitle.classList) {
+                activeOverviewTitle.classList.remove('animate-pulse', 'text-indigo-600');
+                activeOverviewTitle.setAttribute('aria-pressed', 'false');
+            }
+            window.__activeOverviewAnalysisTitle = null;
+            const activeSettlementTitle = window.__activeSettlementAnalysisTitle;
+            if (activeSettlementTitle && activeSettlementTitle.classList) {
+                activeSettlementTitle.classList.remove('animate-pulse', 'text-indigo-600');
+                activeSettlementTitle.setAttribute('aria-pressed', 'false');
+            }
+            window.__activeSettlementAnalysisTitle = null;
         }
+        window.__closeStlGroupTooltip = closeTT;
         document.addEventListener('click', (ev) => {
             if (window.__activeTT && !window.__activeTT.contains(ev.target)) closeTT();
         }, true);
@@ -99981,11 +100288,27 @@ function showPendingSettlementModal(periodType, projects) {
             targetH.parentNode.insertBefore(btn, targetH.nextSibling);
 
             header.style.cursor = 'pointer';
-            header.addEventListener('click', (ev) => {
-                if (ev.target.closest('.excel-dl-btn')) return;
-                ev.preventDefault(); ev.stopPropagation();
-                window.showStlGroupTooltip(ev, title, dataOrGrouped);
-            }, false);
+            if (!header.matches('.overview-accordion-header, .main-settlement-header')) {
+                header.addEventListener('click', (ev) => {
+                    if (ev.target.closest('.excel-dl-btn')) return;
+                    ev.preventDefault(); ev.stopPropagation();
+                    window.showStlGroupTooltip(ev, title, dataOrGrouped);
+                }, false);
+            }
+        };
+
+        window.activateSettlementAnalysisTitle = function(event, title, dataOrGrouped, analysisTitle) {
+            if (!analysisTitle || typeof window.showStlGroupTooltip !== 'function') return;
+            window.showStlGroupTooltip(event, title, dataOrGrouped);
+            if (!window.__activeTT || !window.__activeTT.isConnected) return;
+            const previousTitle = window.__activeSettlementAnalysisTitle;
+            if (previousTitle && previousTitle !== analysisTitle && previousTitle.classList) {
+                previousTitle.classList.remove('animate-pulse', 'text-indigo-600');
+                previousTitle.setAttribute('aria-pressed', 'false');
+            }
+            analysisTitle.classList.add('animate-pulse', 'text-indigo-600');
+            analysisTitle.setAttribute('aria-pressed', 'true');
+            window.__activeSettlementAnalysisTitle = analysisTitle;
         };
 
         window.showStlGroupTooltip = function(e, title, dataOrGrouped) {
@@ -100044,7 +100367,7 @@ function showPendingSettlementModal(periodType, projects) {
                     trendHTML = `<div class="st-tt-trend-chart"><svg viewBox="0 0 320 128" role="img" aria-label="${escTT(evidencePayload.trendAriaLabel || title)}"><polyline class="st-tt-trend-line" points="${linePoints}"></polyline>${pointNodes}</svg><div class="st-tt-trend-detail" data-st-tt-trend-detail aria-live="polite">${escTT(plotted[0].detail)}</div></div>`;
                 }
                 const evidenceUnitLabel = trendSeries.length ? '\uac1c \uc5f0\ub3c4' : '\uac1c \ub3d9';
-                tt.innerHTML = `<div class="st-tt-close-bar"><button class="st-tt-close-btn" onclick="this.closest('.stl-group-tooltip').remove()">\u2715</button><div class="st-tt-drag-handle" style="flex-grow:1; cursor:grab; height:34px; margin:0 10px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:12px; font-weight:bold; border:1px dashed #cbd5e1; border-radius:8px; user-select:none;">\u21cf 드래그 이동 \u21c1</div><button class="st-tt-close-btn" onclick="this.closest('.stl-group-tooltip').remove()">\u2715</button></div><div class="st-tt-scroll-area" style="flex-grow:1; overflow-y:auto; overflow-x:hidden; padding-right:4px;"><div class="st-tt-title">\ud83d\udcca ${escTT(title)}</div>${statsHTML}${formulaHTML}${trendHTML}<div style="font-weight:800;color:#334155;border-bottom:1px solid #e2e8f0;padding-bottom:5px;">\uc0c1\uc138 \uc99d\ube59 \ubaa9\ub85d \u00b7 ${totalCount}${evidenceUnitLabel}</div><div class="st-tt-evidence-list">${itemsHTML}</div></div><div class="st-tt-resize-handle" style="position:absolute; bottom:0; right:0; width:24px; height:24px; cursor:nwse-resize; display:flex; align-items:flex-end; justify-content:flex-end; padding:4px; color:#cbd5e1; font-size:18px; line-height:0.8; user-select:none;">\u21f2</div>`;
+                tt.innerHTML = `<div class="st-tt-close-bar"><button class="st-tt-close-btn" onclick="window.__closeStlGroupTooltip()">\u2715</button><div class="st-tt-drag-handle" style="flex-grow:1; cursor:grab; height:34px; margin:0 10px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:12px; font-weight:bold; border:1px dashed #cbd5e1; border-radius:8px; user-select:none;">\u21cf 드래그 이동 \u21c1</div><button class="st-tt-close-btn" onclick="window.__closeStlGroupTooltip()">\u2715</button></div><div class="st-tt-scroll-area" style="flex-grow:1; overflow-y:auto; overflow-x:hidden; padding-right:4px;"><div class="st-tt-title">\ud83d\udcca ${escTT(title)}</div>${statsHTML}${formulaHTML}${trendHTML}<div style="font-weight:800;color:#334155;border-bottom:1px solid #e2e8f0;padding-bottom:5px;">\uc0c1\uc138 \uc99d\ube59 \ubaa9\ub85d \u00b7 ${totalCount}${evidenceUnitLabel}</div><div class="st-tt-evidence-list">${itemsHTML}</div></div><div class="st-tt-resize-handle" style="position:absolute; bottom:0; right:0; width:24px; height:24px; cursor:nwse-resize; display:flex; align-items:flex-end; justify-content:flex-end; padding:4px; color:#cbd5e1; font-size:18px; line-height:0.8; user-select:none;">\u21f2</div>`;
                 tt.style.maxHeight = '82vh';
             } else {
                 sorted.forEach(([name, data], idx) => {
@@ -100052,7 +100375,7 @@ function showPendingSettlementModal(periodType, projects) {
                     const colors = ['#6366f1','#3b82f6','#ec4899','#f43f5e','#f59e0b','#10b981','#8b5cf6','#06b6d4'];
                     itemsHTML += `<div class="st-tt-row"><div class="st-tt-hdr"><span class="st-tt-name">${idx+1}. ${name}</span><span class="st-tt-val">(${fmtS(data.amt)}\uc6d0, ${data.cnt}\uac74)</span><span class="st-tt-pct">${pct}%</span></div><div class="st-tt-bar-bg"><div class="st-tt-bar-fill" style="width: 0%; background: ${colors[idx % colors.length]}"></div></div></div>`;
                 });
-                tt.innerHTML = `<div class="st-tt-close-bar"><button class="st-tt-close-btn" onclick="this.closest('.stl-group-tooltip').remove()">\u2715</button><div class="st-tt-drag-handle" style="flex-grow:1; cursor:grab; height:34px; margin:0 10px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:12px; font-weight:bold; border:1px dashed #cbd5e1; border-radius:8px; user-select:none;">\u21cf 드래그 이동 \u21c1</div><button class="st-tt-close-btn" onclick="this.closest('.stl-group-tooltip').remove()">\u2715</button></div><div class="st-tt-scroll-area" style="flex-grow:1; overflow-y:auto; overflow-x:hidden; padding-right:4px;"><div class="st-tt-title">\ud83d\udcca ${title} \ubd84\uc11d</div><div class="st-tt-stat"><span>\ucd1d \uac74\uc218</span><span>${totalCount}\uac74</span></div><div class="st-tt-stat"><span>\uc815\uc0b0 \ud569\uacc4</span><span>${fmt(totalAmt)}</span></div><div style="height:1px; background:#f1f5f9; margin:10px 0;"></div>${itemsHTML}</div><div class="st-tt-resize-handle" style="position:absolute; bottom:0; right:0; width:24px; height:24px; cursor:nwse-resize; display:flex; align-items:flex-end; justify-content:flex-end; padding:4px; color:#cbd5e1; font-size:18px; line-height:0.8; user-select:none;">\u21f2</div>`;
+                tt.innerHTML = `<div class="st-tt-close-bar"><button class="st-tt-close-btn" onclick="window.__closeStlGroupTooltip()">\u2715</button><div class="st-tt-drag-handle" style="flex-grow:1; cursor:grab; height:34px; margin:0 10px; display:flex; align-items:center; justify-content:center; color:#94a3b8; font-size:12px; font-weight:bold; border:1px dashed #cbd5e1; border-radius:8px; user-select:none;">\u21cf 드래그 이동 \u21c1</div><button class="st-tt-close-btn" onclick="window.__closeStlGroupTooltip()">\u2715</button></div><div class="st-tt-scroll-area" style="flex-grow:1; overflow-y:auto; overflow-x:hidden; padding-right:4px;"><div class="st-tt-title">\ud83d\udcca ${title} \ubd84\uc11d</div><div class="st-tt-stat"><span>\ucd1d \uac74\uc218</span><span>${totalCount}\uac74</span></div><div class="st-tt-stat"><span>\uc815\uc0b0 \ud569\uacc4</span><span>${fmt(totalAmt)}</span></div><div style="height:1px; background:#f1f5f9; margin:10px 0;"></div>${itemsHTML}</div><div class="st-tt-resize-handle" style="position:absolute; bottom:0; right:0; width:24px; height:24px; cursor:nwse-resize; display:flex; align-items:flex-end; justify-content:flex-end; padding:4px; color:#cbd5e1; font-size:18px; line-height:0.8; user-select:none;">\u21f2</div>`;
             }
             document.body.appendChild(tt); window.__activeTT = tt;
             const trendDetail = tt.querySelector('[data-st-tt-trend-detail]');
@@ -101182,21 +101505,24 @@ function showPendingSettlementModal(periodType, projects) {
       }
 
       /* '정산' 아코디언 헤더 레이아웃 오버라이드 */
-      #settlementView .accordion-header {
+      #settlementView .accordion-header,
+      #overviewView .accordion-header {
         display: flex !important;
         flex-wrap: nowrap !important;
         align-items: center !important;
         width: 100% !important;
         gap: 8px 16px !important;
       }
-      #settlementView .accordion-title-btn {
+      #settlementView .accordion-title-btn,
+      #overviewView .accordion-title-btn {
         display: inline-flex !important;
         align-items: center !important;
         white-space: nowrap !important;
         flex-shrink: 0 !important;
         flex-wrap: nowrap !important;
       }
-      #settlementView #settlement-header-summaries {
+      #settlementView #settlement-header-summaries,
+      #overviewView #overview-header-summaries {
         margin-left: auto !important;
         display: inline-flex !important;
         flex-wrap: wrap !important;
@@ -101205,16 +101531,24 @@ function showPendingSettlementModal(periodType, projects) {
         white-space: nowrap !important;
         width: auto !important;
       }
-      #settlementView #settlement-header-summaries span.inline-block {
+      #settlementView #settlement-header-summaries span.inline-block,
+      #overviewView #overview-header-summaries span.inline-block {
         display: inline-block !important;
         white-space: nowrap !important;
         flex-shrink: 0 !important;
       }
+      @media (min-width: 769px) {
+        #overviewView .accordion-header {
+          padding-top: 2.5rem !important;
+        }
+      }
       @media (max-width: 768px) {
-        #settlementView .accordion-header {
+        #settlementView .accordion-header,
+        #overviewView .accordion-header {
           flex-wrap: wrap !important;
         }
-        #settlementView #settlement-header-summaries {
+        #settlementView #settlement-header-summaries,
+        #overviewView #overview-header-summaries {
           display: inline-flex !important;
           flex-wrap: wrap !important;
           justify-content: flex-start !important;
@@ -101222,7 +101556,8 @@ function showPendingSettlementModal(periodType, projects) {
           margin-top: 4px !important;
           margin-left: 0 !important;
         }
-        #settlementView #settlement-header-summaries span.inline-block {
+        #settlementView #settlement-header-summaries span.inline-block,
+        #overviewView #overview-header-summaries span.inline-block {
           display: inline-block !important;
           white-space: nowrap !important;
           flex-shrink: 0 !important;
@@ -105784,6 +106119,7 @@ function showPendingSettlementModal(periodType, projects) {
         count: { key: 'count', label: '작업건수', totalLabel: '총 작업건수', emptyMessage: '집계할 작업건수가 없어 Sankey 흐름을 만들 수 없습니다.' }
     };
     const AXIS_DEFS = {
+        siCenter: { key: 'siCenter', label: 'S&I 센터', get: (p) => window.resolveSiCenterText(p) || '미지정' },
         customer: { key: 'customer', label: '고객사', get: (p, h) => h.customer(p) },
         taskType: { key: 'taskType', label: '작업유형', get: (p, h) => h.taskType(p) },
         contractor: { key: 'contractor', label: '시공사', get: (p, h) => h.contractor(p) },
@@ -117938,6 +118274,7 @@ function showPendingSettlementModal(periodType, projects) {
             var BTN_ID = 'codexProjectManagerBtn';
             var MODAL_ID = 'codexProjectManagerModal';
             var FIELD_DEFS = [
+                { key: 'S_I_센터', label: 'S&I 센터', type: 'select' },
                 { key: 'maintenanceCode', label: '유지관리번호', type: 'text', required: true },
                 { key: 'taskType', label: '작업유형', type: 'select' },
                 { key: 'contractor', label: '시공사', type: 'select' },
@@ -117962,6 +118299,7 @@ function showPendingSettlementModal(periodType, projects) {
             var PROJECT_COLUMN_DEFS = [
                 { key: '__select', width: 52, min: 44, max: 90 },
                 { key: '__action', width: 72, min: 62, max: 130 },
+                { key: 'S_I_센터', width: 122, min: 108, max: 300 },
                 { key: 'maintenanceCode', width: 132, min: 104, max: 260 },
                 { key: 'taskType', width: 108, min: 88, max: 240 },
                 { key: 'contractor', width: 122, min: 96, max: 300 },
@@ -117981,12 +118319,13 @@ function showPendingSettlementModal(periodType, projects) {
                 { key: 'docUrl', width: 260, min: 180, max: 560 },
                 { key: 'note', width: 320, min: 220, max: 680 }
             ];
-            var SELECT_FIELDS = { taskType: 1, contractor: 1, client: 1, building: 1, status: 1, orderType: 1, manualSettlementDate: 1 };
+            var SELECT_FIELDS = { S_I_센터: 1, taskType: 1, contractor: 1, client: 1, building: 1, status: 1, orderType: 1, manualSettlementDate: 1 };
             var FIXED_SELECT_VALUES = {
                 status: ['수선비', '어린이집', '투자'],
                 orderType: ['단독', '공용']
             };
             var FILTER_FIELDS = [
+                { key: 'S_I_센터', label: 'S&I 센터' },
                 { key: '__rowState', label: '상태' },
                 { key: 'taskType', label: '작업유형' },
                 { key: 'contractor', label: '시공사' },
@@ -118311,6 +118650,7 @@ function showPendingSettlementModal(periodType, projects) {
             }
             function getProjectField(project, key) {
                 if (!project) return '';
+                if (key === 'S_I_센터') return window.resolveSiCenterText(project);
                 if (key === 'maintenanceCode') return normalizeText(project.maintenanceCode || project.maintenanceNo || project.code || project['유지관리번호'] || project.id || '');
                 if (key === 'name') return getProjectName(project);
                 if (key === 'client') return getProjectClient(project);
@@ -118914,6 +119254,7 @@ function showPendingSettlementModal(periodType, projects) {
             }
             function syncProject(target, row) {
                 if (!target || !row) return;
+                if (Object.prototype.hasOwnProperty.call(row, 'S_I_센터')) window.setSiCenterText(target, row['S_I_센터']);
                 var id = normalizeText(row.id || row.__sourceId || row.maintenanceCode);
                 if (id && !target.id) target.id = id;
                 target.maintenanceCode = normalizeText(row.maintenanceCode);
@@ -119347,7 +119688,7 @@ function showPendingSettlementModal(periodType, projects) {
                         shaChangedRows.push({
                             project: makeProject(row),
                             created: wasNew,
-                            changedFields: Object.keys(row.__changedFields || {}).filter(function(key) { return !!row.__changedFields[key]; })
+                            changedFields: Object.keys(row.__changedFields || {}).filter(function(key) { return !!row.__changedFields[key]; }).map(function(key) { return key === 'S_I_센터' ? 'custom:S_I_센터' : key; })
                         });
                     }
                     if (wasNew) {
@@ -120502,6 +120843,7 @@ var sortKey = sortHeader.getAttribute('data-proj-sort') || '';
             var MODAL_ID = 'codexAddNewProjectModal';
             
             var FIELD_DEFS = [
+                { key: 'S_I_센터', label: 'S&I 센터', type: 'select' },
                 { key: 'maintenanceCode', label: '유지관리번호', type: 'text', required: true },
                 { key: 'taskType', label: '작업유형', type: 'select' },
                 { key: 'contractor', label: '시공사', type: 'select' },
@@ -120526,7 +120868,9 @@ var sortKey = sortHeader.getAttribute('data-proj-sort') || '';
                 var set = new Set();
                 projects.forEach(function(p) {
                     var val = '';
-                    if (key === 'maintenanceCode') {
+                    if (key === 'S_I_센터') {
+                        val = window.resolveSiCenterText(p);
+                    } else if (key === 'maintenanceCode') {
                         val = p.maintenanceCode || p.id || '';
                     } else if (key === 'client') {
                         val = (typeof window.resolveCustomerText === 'function') ? window.resolveCustomerText(p) : ((p.customFields && p.customFields['고객사']) || p.client || p.Client || p.Customer || p['고객사'] || p['발주처'] || '');
@@ -120578,6 +120922,7 @@ window.openAddNewProjectModal = function(editProject) {
                              var val = '';
                              if (isEdit) {
                                  val = editProject[def.key] || '';
+                                 if (def.key === 'S_I_센터') val = window.resolveSiCenterText(editProject);
                                  if (!val && def.key === 'maintenanceCode') val = editProject.id || editProject.maintenanceCode || '';
                                  if (!val && def.key === 'client') val = (editProject.customFields && editProject.customFields['고객사']) || editProject.client || editProject.Client || editProject.Customer || editProject['고객사'] || editProject['발주처'] || '';
                                  if (!val && def.key === 'building') val = editProject.building || editProject['건물동'] || '';
@@ -120949,6 +121294,7 @@ window.openAddNewProjectModal = function(editProject) {
                     }
 
                     var projObj = isEdit ? projects[existIdx] : {};
+                    window.setSiCenterText(projObj, data['S_I_센터']);
                     
                     if (!isEdit || !String(projObj.id || '').trim() || String(projObj.id || '').trim() === data.maintenanceCode) {
                         projObj.id = nextInternalProjectIdForAdd();
@@ -121044,7 +121390,7 @@ window.openAddNewProjectModal = function(editProject) {
                             window.WebSavePlugin.recordModifiedProject(projObj, isEdit ? 'project-add:edited' : 'project-add:created', {
                                 source: 'project-add-modal',
                                 created: !isEdit,
-                                changedFields: ['maintenanceCode', 'taskType', 'contractor', 'client', 'building', 'name', 'progress', 'startDate', 'endDate', 'status', 'orderType', 'poAmount', 'prAmount', 'manualSettlementDate', 'webLink', 'docUrl', 'note']
+                                changedFields: ['custom:S_I_센터', 'maintenanceCode', 'taskType', 'contractor', 'client', 'building', 'name', 'progress', 'startDate', 'endDate', 'status', 'orderType', 'poAmount', 'prAmount', 'manualSettlementDate', 'webLink', 'docUrl', 'note']
                             });
                         }
                     } catch (shaProjectAddRecordError) { }
@@ -123298,6 +123644,7 @@ window.openAddNewProjectModal = function(editProject) {
                 var normalized = normalizeHeaderTokenForWebSave(headerText);
                 if (!normalized) return '';
                 var keys = Array.isArray(header) ? header : [];
+                if ((normalized === 's&i센터' || normalized === 'si센터') && keys.indexOf('S_I_센터') !== -1) return 'S_I_센터';
                 if ((normalized === 'settlementmonth' || normalized === '\uc815\uc0b0\uc6d4' || normalized === '\uc815\uc0b0') && keys.indexOf('Settlement Month') !== -1) {
                     return 'Settlement Month';
                 }
@@ -123682,7 +124029,8 @@ window.openAddNewProjectModal = function(editProject) {
                 project['메모'] = project.note;
                 Object.keys(row).forEach(function (key) {
                     if (!key || projectDataFixedHeadersForWebSave().indexOf(key) !== -1) return;
-                    project.customFields[key] = row[key] == null ? '' : row[key];
+                    var customKey = key === 'S&I 센터' ? 'S_I_센터' : key;
+                    project.customFields[customKey] = row[key] == null ? '' : row[key];
                 });
                 project.customFields['유지관리번호'] = maintenanceCode;
                 project.customFields['고객사'] = project.client;
@@ -133688,7 +134036,7 @@ window.openAddNewProjectModal = function(editProject) {
                     '<td><div class="codex-review-doc-name" title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</div></td>' +
                     '<td>' + settlementActionHtml + '</td>' +
                     '<td><div class="codex-review-doc-url" title="' + escapeHtml(url || '미등록') + '">' + escapeHtml(url || '미등록') + '</div></td>' +
-                    '<td style="white-space:nowrap;display:flex;gap:5px;align-items:center;">' + actionHtml + '</td>' +
+                    '<td><div class="codex-review-doc-actions" style="white-space:nowrap;display:flex;gap:5px;align-items:center;">' + actionHtml + '</div></td>' +
                     '</tr>';
             }
 
