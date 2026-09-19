@@ -138960,14 +138960,12 @@ window.openAddNewProjectModal = function(editProject) {
                     if (event.target === modal) {
                         event.preventDefault();
                         event.stopPropagation();
-                        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
                     }
                 }, true);
                 modal.addEventListener('click', function(event) {
                     if (event.target === modal) {
                         event.preventDefault();
                         event.stopPropagation();
-                        if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
                     }
                     var close = event.target && event.target.closest ? event.target.closest('.work-content-popup-close') : null;
                     if (close) {
@@ -140685,67 +140683,18 @@ window.openAddNewProjectModal = function(editProject) {
                         updateHouseholdFullscreenResults();
                     }
                 }, true);
-                // [WORK-CONTENT-MODAL-PERSISTENT-PIN-20260919]
-                // '작업 분석' 내의 모든 모달(메인 및 하위 팝업) 활성화 시 빈 바탕 클릭 자동 닫힘 방지 및 바탕 화면 클릭 차단 가드
-                function isAnyWorkContentModalActive() {
-                    var overlays = document.querySelectorAll('.work-content-popup-modal');
-                    for (var i = overlays.length - 1; i >= 0; i--) {
-                        var overlay = overlays[i];
-                        if (overlay && overlay.isConnected && !overlay.classList.contains('hidden') && overlay.style.display !== 'none') {
-                            return { active: true, type: 'overlay', modal: overlay, panel: overlay.querySelector('.work-content-popup-panel') };
-                        }
-                    }
-                    var main = $('workContentSearchModal');
-                    if (main && main.isConnected && !main.classList.contains('hidden') && main.style.display !== 'none') {
-                        return { active: true, type: 'main', modal: main, panel: $('workContentSearchPanel') };
-                    }
-                    return { active: false, type: 'none', modal: null, panel: null };
-                }
-
-                function isClickInsideActiveWorkContentModal(target, activeInfo) {
-                    if (!target || !activeInfo || !activeInfo.active) return false;
-                    if (activeInfo.panel && activeInfo.panel.contains(target)) return true;
-                    if (target.closest && (target.closest('.mini-calendar-popover') || target.closest('[data-schedule-calendar-popover]') || target.closest('.work-content-cell-tooltip') || target.closest('.work-period-multi-menu'))) {
-                        return true;
-                    }
-                    return false;
-                }
-
-                function interceptBackgroundClicksWhenWorkContentModalOpen(ev) {
-                    var activeInfo = isAnyWorkContentModalActive();
-                    if (!activeInfo.active) return;
-
-                    // 클릭 타겟이 현재 활성 모달 패널 내부가 아니면 (즉, 빈 바탕 화면, 배경 어두운 백드롭, 모달 바깥, 뒤쪽 페이지 요소 클릭 시)
-                    if (!isClickInsideActiveWorkContentModal(ev.target, activeInfo)) {
-                        // 1. 바탕 화면 요소가 클릭되거나 배경 제어기가 동작하지 않도록 원천 차단
-                        ev.preventDefault();
-                        ev.stopPropagation();
-                        if (typeof ev.stopImmediatePropagation === 'function') {
-                            ev.stopImmediatePropagation();
-                        }
-                        // 2. 모달의 'X' 닫기 기호를 클릭하기 전까지는 모달이 자동으로 닫히지 않도록 고정 유지 (close 미호출)
-                        return false;
-                    }
-                }
-
-                document.addEventListener('click', interceptBackgroundClicksWhenWorkContentModalOpen, true);
-                document.addEventListener('pointerdown', interceptBackgroundClicksWhenWorkContentModalOpen, true);
-                document.addEventListener('mousedown', interceptBackgroundClicksWhenWorkContentModalOpen, true);
-
                 var modal = $('workContentSearchModal');
                 if (modal) {
                     modal.addEventListener('pointerdown', function(event) {
                         if (event.target === modal) {
                             event.preventDefault();
                             event.stopPropagation();
-                            if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
                         }
                     }, true);
                     modal.addEventListener('click', function(event) {
                         if (event.target === modal) {
                             event.preventDefault();
                             event.stopPropagation();
-                            if (typeof event.stopImmediatePropagation === 'function') event.stopImmediatePropagation();
                         }
                     }, true);
                 }
