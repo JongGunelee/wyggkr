@@ -130046,7 +130046,7 @@ window.openAddNewProjectModal = function(editProject) {
                 try {
                     var plugin = window.WebSavePlugin;
                     if (plugin && typeof plugin.ensureToken === 'function') {
-                        return await plugin.ensureToken({ allowPrompt: true });
+                        return await plugin.ensureToken({ allowPrompt: false });
                     }
                     var config = plugin && plugin.config ? plugin.config : {};
                     var key = config.patKey || 'github_pat';
