@@ -149061,6 +149061,109 @@ window.openAddNewProjectModal = function(editProject) {
     })();
     </script>
 
+
+    <style id="codex-mobile-schedule-boot-collapsed-20260920-style">
+        @media (max-width: 768px) and (orientation: portrait) {
+            #projectView.codex-mobile-schedule-boot-collapsed > #accordion-panel-schedule,
+            #projectView.codex-mobile-schedule-boot-collapsed #ganttViewContent,
+            #projectView.codex-mobile-schedule-boot-collapsed #legendSection,
+            #projectView.codex-mobile-schedule-boot-collapsed #ganttChartWrapper {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                max-height: 0 !important;
+                height: 0 !important;
+                min-height: 0 !important;
+                overflow: hidden !important;
+                pointer-events: none !important;
+                transition: none !important;
+            }
+        }
+    </style>
+    <script id="codex-mobile-schedule-boot-collapsed-20260920">
+    (function codexMobileScheduleBootCollapsed20260920() {
+        'use strict';
+        var query = '(max-width: 768px) and (orientation: portrait)';
+        var userInteracted = false;
+        function isMobilePortrait() {
+            try { return !!window.matchMedia && window.matchMedia(query).matches; }
+            catch (e) { return (window.innerWidth || 0) <= 768 && (window.innerHeight || 0) >= (window.innerWidth || 0); }
+        }
+        function elements() {
+            var item = document.getElementById('projectView');
+            var panel = document.getElementById('accordion-panel-schedule');
+            var title = item && item.querySelector('.accordion-title-btn');
+            var pill = item && item.querySelector('.accordion-state-pill');
+            var toggle = document.getElementById('scheduleHeaderToggle');
+            return { item: item, panel: panel, title: title, pill: pill, toggle: toggle };
+        }
+        function collapseForBoot() {
+            if (!isMobilePortrait() || userInteracted) return;
+            var el = elements();
+            if (!el.item || !el.panel || !el.title) return;
+            el.item.classList.remove('open', 'is-focused', 'schedule-header-collapsed', 'codex-schedule-closing-instant');
+            el.item.classList.add('codex-mobile-schedule-boot-collapsed');
+            el.panel.style.display = 'none';
+            el.panel.style.visibility = 'hidden';
+            el.panel.style.opacity = '0';
+            el.panel.style.maxHeight = '0px';
+            el.panel.style.height = '0px';
+            el.panel.style.minHeight = '0px';
+            el.panel.style.overflow = 'hidden';
+            el.panel.style.pointerEvents = 'none';
+            el.title.setAttribute('aria-expanded', 'false');
+            if (el.pill) { el.pill.setAttribute('data-state', 'closed'); el.pill.textContent = '접힘'; }
+            if (el.toggle) { el.toggle.setAttribute('aria-expanded', 'false'); el.toggle.title = '펼치기'; }
+        }
+        function releaseForUser(e) {
+            if (!isMobilePortrait()) return;
+            var target = e && e.target;
+            if (!target || !target.closest || !target.closest('#scheduleHeaderToggle, #projectView .accordion-title-btn')) return;
+            userInteracted = true;
+            var el = elements();
+            if (!el.item || !el.panel) return;
+            el.item.classList.remove('codex-mobile-schedule-boot-collapsed');
+            ['display','visibility','opacity','maxHeight','height','minHeight','overflow','pointerEvents'].forEach(function (key) { el.panel.style[key] = ''; });
+        }
+        function scheduleBootCollapse() {
+            [0, 40, 160, 420, 900, 1600].forEach(function (delay) { window.setTimeout(collapseForBoot, delay); });
+        }
+        function bind() {
+            document.addEventListener('pointerdown', releaseForUser, true);
+            document.addEventListener('click', releaseForUser, true);
+            scheduleBootCollapse();
+            window.addEventListener('orientationchange', function () { userInteracted = false; scheduleBootCollapse(); }, { passive: true });
+            window.addEventListener('resize', function () { if (isMobilePortrait() && !userInteracted) collapseForBoot(); }, { passive: true });
+            window.__codexMobileScheduleBootCollapse20260920 = { apply: collapseForBoot, release: releaseForUser };
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once: true });
+        else bind();
+    }());
+    </script>
+
+    <script id="codex-mobile-schedule-toggle-sync-20260920">
+    (function codexMobileScheduleToggleSync20260920() {
+        'use strict';
+        var query = '(max-width: 768px) and (orientation: portrait)';
+        function mobilePortrait() { try { return !!window.matchMedia && window.matchMedia(query).matches; } catch (e) { return false; } }
+        function sync() {
+            if (!mobilePortrait()) return;
+            var item = document.getElementById('projectView');
+            var toggle = document.getElementById('scheduleHeaderToggle');
+            if (!item || !toggle) return;
+            var open = item.classList.contains('open') && !item.classList.contains('schedule-header-collapsed');
+            toggle.setAttribute('aria-expanded', String(open));
+            toggle.title = open ? '접기' : '펼치기';
+        }
+        document.addEventListener('click', function (e) {
+            if (e.target && e.target.closest && e.target.closest('#projectView .accordion-header')) {
+                window.setTimeout(sync, 0);
+                window.requestAnimationFrame(sync);
+            }
+        }, true);
+        window.__codexMobileScheduleToggleSync20260920 = sync;
+    }());
+    </script>
 </html>
 
 <!-- [SETTLEMENT-MODAL-PATCH-v6.18.7] Increased maximize button size (1.5em -> 1.95em) in settlement modals & Integrity Audit. -->
