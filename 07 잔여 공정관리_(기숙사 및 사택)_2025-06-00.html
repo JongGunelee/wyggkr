@@ -130097,7 +130097,10 @@ window.openAddNewProjectModal = function(editProject) {
                     try {
                         return await plugin.fetchRemoteFileInfo(token || '', targetPath());
                     } catch (pluginError) {
-                        if (!token) throw pluginError;
+                        if (!token) {
+                            try { console.warn('[webdown] public metadata unavailable; falling back to raw Pages download', pluginError); } catch (e0) { }
+                            return { name: targetPath().split('/').pop(), size: 0, sha: '', download_url: rawPagesUrl(targetPath()) };
+                        }
                         try { console.warn('[webdown] authenticated metadata check failed; retrying public metadata', pluginError); } catch (e0) { }
                     }
                 }
