@@ -7125,6 +7125,14 @@
 
                 window.addEventListener('error', (evt) => {
                     try {
+                        // ResizeObserver delivery timing is a browser diagnostic, not a script failure.
+                        // Layout writes in observer callbacks are deferred above; count any recurrence for audit.
+                        if (evt && /^(?:ResizeObserver loop completed with undelivered notifications|ResizeObserver loop limit exceeded)\.?$/.test(String(evt.message || ''))) {
+                            window.__codexResizeObserverLoopCount = (window.__codexResizeObserverLoopCount || 0) + 1;
+                            evt.preventDefault();
+                            evt.stopImmediatePropagation();
+                            return;
+                        }
                         const isResourceLoadError = evt && !evt.error && !evt.message && evt.target && evt.target !== window;
                         if (isResourceLoadError) {
                             try {
@@ -76262,12 +76270,19 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 // \ub9c8\ucee4 \ub808\uc774\uc5b4 \ud06c\uae30\ub97c ganttBody \ubcc0\ud654\uc5d0 \ub9de\ucd94\uae30 \uc704\ud55c ResizeObserver
                 if (typeof ResizeObserver !== 'undefined' && !window._workDateResizeObserver) {
                     try {
+                        let workDateResizeFrame = 0;
                         window._workDateResizeObserver = new ResizeObserver(() => {
-                            const ml = ganttBody.querySelector('#workdate-markers');
-                            if (ml) {
-                                ml.style.width = `${ganttBody.scrollWidth}px`;
-                                ml.style.height = `${ganttBody.scrollHeight}px`;
-                            }
+                            if (workDateResizeFrame) return;
+                            workDateResizeFrame = requestAnimationFrame(() => {
+                                workDateResizeFrame = 0;
+                                const ml = ganttBody.querySelector('#workdate-markers');
+                                if (ml) {
+                                    const width = `${ganttBody.scrollWidth}px`;
+                                    const height = `${ganttBody.scrollHeight}px`;
+                                    if (ml.style.width !== width) ml.style.width = width;
+                                    if (ml.style.height !== height) ml.style.height = height;
+                                }
+                            });
                         });
                         window._workDateResizeObserver.observe(ganttBody);
                     } catch (e) {
@@ -108937,9 +108952,14 @@ function showPendingSettlementModal(periodType, projects) {
     function observe() {
         const vp = el('overviewSankeyViewport');
         if (!vp || state.observer || typeof window.ResizeObserver !== 'function') return;
+        let fitFrame = 0;
         state.observer = new ResizeObserver(() => {
             const modal = el('overviewSankeyModal');
-            if (modal && !modal.classList.contains('hidden')) fit();
+            if (!modal || modal.classList.contains('hidden') || fitFrame) return;
+            fitFrame = requestAnimationFrame(() => {
+                fitFrame = 0;
+                if (!modal.classList.contains('hidden')) fit();
+            });
         });
         state.observer.observe(vp);
     }
@@ -128073,7 +128093,7 @@ window.openAddNewProjectModal = function(editProject) {
                     var title = isRemoteVault ? '원격 PAT 보관함 열기' : 'PAT 보관함 열기';
                     var guide = isRemoteVault ? 'GitHub에 올라간 encrypted-pat.json을 열 간편키를 입력하세요.' : '처음 등록한 4~12자리 간편키를 입력하세요.';
                     var resetButton = isRemoteVault ? '' : '<button type="button" id="webSavePatReset" style="padding:7px 12px;border:1px solid #fca5a5;border-radius:7px;background:#fff;color:#b91c1c;font-weight:700;">재등록</button>';
-                    panel.innerHTML = '<div style="font-weight:900;font-size:17px;color:#0f172a;margin-bottom:8px;">' + title + '</div><div style="font-size:13px;color:#475569;margin-bottom:12px;">' + guide + '</div><div style="display:flex;gap:6px;align-items:center;"><input id="webSavePinInput" type="password" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="간편키" style="flex:1;min-width:0;height:40px;border:1px solid #cbd5e1;border-radius:7px;padding:0 10px;font-size:16px;color:#0f172a;background:#f8fafc;"><button type="button" id="webSavePinToggle" aria-label="간편키 보기" style="height:40px;padding:0 10px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;font-size:12px;font-weight:800;">보기</button></div><label style="display:flex;align-items:center;gap:7px;margin-top:9px;font-size:12px;color:#475569;font-weight:700;"><input id="webSavePinRemember" type="checkbox" style="width:15px;height:15px;"> 이 기기에 간편키 저장</label><div id="webSavePatHelp" style="display:none;margin-top:8px;font-size:12px;color:#dc2626;font-weight:700;"></div><div style="display:flex;justify-content:space-between;gap:8px;margin-top:14px;">' + resetButton + '<span style="flex:1"></span><button type="button" id="webSavePatCancel" style="padding:7px 12px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;font-weight:700;">취소</button><button type="button" id="webSavePatOk" style="padding:7px 12px;border:1px solid #0d9488;border-radius:7px;background:#0d9488;color:#fff;font-weight:800;">열기</button></div>';
+                    panel.innerHTML = '<div style="font-weight:900;font-size:17px;color:#0f172a;margin-bottom:8px;">' + title + '</div><div style="font-size:13px;color:#475569;margin-bottom:12px;">' + guide + '</div><div style="display:flex;gap:6px;align-items:center;"><input id="webSavePinInput" type="password" inputmode="text" autocomplete="off" spellcheck="false" placeholder="간편키" style="flex:1;min-width:0;height:40px;border:1px solid #cbd5e1;border-radius:7px;padding:0 10px;font-size:16px;color:#0f172a;background:#f8fafc;"><button type="button" id="webSavePinToggle" aria-label="간편키 보기" style="height:40px;padding:0 10px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;font-size:12px;font-weight:800;">보기</button></div><label style="display:flex;align-items:center;gap:7px;margin-top:9px;font-size:12px;color:#475569;font-weight:700;"><input id="webSavePinRemember" type="checkbox" style="width:15px;height:15px;"> 이 기기에 간편키 저장</label><div id="webSavePatHelp" style="display:none;margin-top:8px;font-size:12px;color:#dc2626;font-weight:700;"></div><div style="display:flex;justify-content:space-between;gap:8px;margin-top:14px;">' + resetButton + '<span style="flex:1"></span><button type="button" id="webSavePatCancel" style="padding:7px 12px;border:1px solid #cbd5e1;border-radius:7px;background:#fff;color:#334155;font-weight:700;">취소</button><button type="button" id="webSavePatOk" style="padding:7px 12px;border:1px solid #0d9488;border-radius:7px;background:#0d9488;color:#fff;font-weight:800;">열기</button></div>';
                     overlay.appendChild(panel);
                     document.body.appendChild(overlay);
                     isolateCredentialPromptPanel(panel);
@@ -128085,9 +128105,9 @@ window.openAddNewProjectModal = function(editProject) {
                     hardenVaultPinInput(input, isRemoteVault ? 'remote_pin' : 'local_pin');
                     bindPinVisibilityToggle(panel, input);
                     var rememberedPin = getRememberedVaultPin();
+                    if (rememberInput) rememberInput.checked = true;
                     if (rememberedPin) {
                         input.value = rememberedPin;
-                        if (rememberInput) rememberInput.checked = true;
                     } else {
                         guardVaultPinAutofill(input, rememberedPin);
                     }
@@ -129910,12 +129930,15 @@ window.openAddNewProjectModal = function(editProject) {
                     btn.className = 'px-3 py-1 text-sm rounded flex-shrink-0 codex-webdown-btn';
                     btn.innerHTML = '<span class="codex-websave-progress-fill" aria-hidden="true"></span><span class="codex-websave-icon" aria-hidden="true">⇩</span><span class="codex-websave-label">웹 다운</span><span class="codex-websave-state"></span>';
                     btn.setAttribute('aria-label', '웹 다운');
+                    group.appendChild(btn);
+                }
+                if (btn.dataset.codexWebDownGuideBound !== '1') {
+                    btn.dataset.codexWebDownGuideBound = '1';
                     btn.addEventListener('click', function (event) {
                         event.preventDefault();
                         event.stopPropagation();
                         requestWebDownloadWithGuide();
                     });
-                    group.appendChild(btn);
                 }
                 updateDownloadButton();
                 return btn;
@@ -129967,6 +129990,11 @@ window.openAddNewProjectModal = function(editProject) {
             function resolveWebDownGuide(ok) {
                 var modal = document.getElementById('codexWebDownGuideModal');
                 if (modal) {
+                    if (modal.contains(document.activeElement)) {
+                        var downloadButton = document.getElementById('webDownloadServerExcelBtn');
+                        if (downloadButton) downloadButton.focus({ preventScroll: true });
+                        else document.activeElement.blur();
+                    }
                     modal.classList.add('hidden');
                     modal.setAttribute('aria-hidden', 'true');
                 }
@@ -149291,29 +149319,6 @@ window.openAddNewProjectModal = function(editProject) {
 }());
 </script>
 
-<script id="codex-webdownload-static-binding-20260920">
-(function () {
-  'use strict';
-  if (window.__codexWebDownloadStaticBinding20260920) return;
-  window.__codexWebDownloadStaticBinding20260920 = true;
-  function bind() {
-    var btn = document.getElementById('webDownloadServerExcelBtn');
-    var plugin = window.CodexWebDownloadPlugin;
-    if (!btn || !plugin || typeof plugin.execute !== 'function' || btn.dataset.codexWebDownloadBound === '1') return;
-    btn.dataset.codexWebDownloadBound = '1';
-    btn.addEventListener('click', function (event) {
-      event.preventDefault();
-      event.stopPropagation();
-      try { plugin.execute(); } catch (error) {
-        try { console.error('[webdown] static button execution failed', error); } catch (_) { }
-      }
-    }, true);
-  }
-  [0, 100, 300, 800, 1600, 3000, 5000].forEach(function (delay) { window.setTimeout(bind, delay); });
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once: true });
-  else bind();
-}());
-</script>
 </html>
 
 <!-- [SETTLEMENT-MODAL-PATCH-v6.18.7] Increased maximize button size (1.5em -> 1.95em) in settlement modals & Integrity Audit. -->
