@@ -27033,8 +27033,8 @@
             <!-- Accordion 3: 일정 -->
             <div id="projectView" class="accordion-item bg-white rounded-lg shadow-sm flex flex-col flex-grow min-h-0">
                 <div class="accordion-header p-4 flex justify-between items-center border-b">
-                    <button id="scheduleHeaderToggle" class="schedule-header-toggle" aria-expanded="true"
-                        title="접기"></button>
+                    <button id="scheduleHeaderToggle" class="schedule-header-toggle" aria-expanded="false"
+                        title="펼치기"></button>
                     <div class="flex items-center flex-grow">
                         <h2 class="accordion-title-btn text-2xl font-bold transition-colors" role="button" tabindex="0"
                             aria-expanded="false" aria-controls="accordion-panel-schedule" data-accordion-id="schedule"
@@ -66210,48 +66210,46 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     });
                 }
 
-                // [SANKEY-PLAN-FIX] All legend filters must land on the intended timeline date.
-                // Non-date filters such as 전체/착공전/지연/완료 use today, and retries cover post-render timing.
-                const legendScrollDate = targetDate ? new Date(targetDate) : new Date();
+                // The filter date defines membership; every legend action focuses today's marker.
+                const legendScrollDate = new Date();
                 legendScrollDate.setHours(0, 0, 0, 0);
+                const legendScrollToken = (window.__legendTodayScrollToken || 0) + 1;
+                window.__legendTodayScrollToken = legendScrollToken;
                 const runLegendScroll = () => {
+                    if (legendScrollToken !== window.__legendTodayScrollToken) return;
                     try {
                         const container = fullscreenModal.classList.contains('hidden') ? document.getElementById('ganttViewContent') : fullscreenModalBody;
-                        const timeline = container && container.querySelector ? container.querySelector('.gantt-timeline-body-wrapper') : null;
-                        const todayMarker = container && container.querySelector ? container.querySelector('.gantt-today-marker-final') : null;
-                        let scrollTarget = null;
-                        if (!targetDate && timeline && todayMarker) {
-                            scrollTarget = Math.max(0, todayMarker.offsetLeft - (timeline.clientWidth / 2));
-                            timeline.scrollTo({ left: scrollTarget, behavior: 'auto' });
-                        } else if (typeof scrollToDate === 'function') {
-                            const beforeScroll = timeline ? timeline.scrollLeft : null;
-                            scrollToDate(legendScrollDate);
-                            scrollTarget = beforeScroll === null ? null : timeline.scrollLeft;
-                        } else if (typeof window.scrollToToday === 'function') {
-                            window.scrollToToday();
-                            scrollTarget = timeline ? timeline.scrollLeft : null;
-                        }
+                        const timeline = container?.querySelector('.gantt-timeline-body-wrapper');
+                        const header = container?.querySelector('.gantt-timeline-header-wrapper');
+                        if (!timeline || timeline.clientWidth <= 0) return;
+                        window.ganttTodayMarker?.renderSync?.();
+                        const todayMarker = container.querySelector('.gantt-today-marker-final');
+                        const todayLine = container.querySelector('.gantt-today-line-final');
+                        if (!todayMarker || !todayLine) return;
+                        const markerRect = todayMarker.getBoundingClientRect();
+                        const timelineRect = timeline.getBoundingClientRect();
+                        const scrollTarget = Math.max(0, Math.min(timeline.scrollWidth - timeline.clientWidth,
+                            timeline.scrollLeft + markerRect.left + markerRect.width / 2 - timelineRect.left - timeline.clientWidth / 2));
+                        timeline.scrollLeft = scrollTarget;
+                        if (header && header !== timeline) header.scrollLeft = scrollTarget;
                         const legendScrollMeta = {
                             status,
                             date: legendScrollDate.toISOString(),
-                            scrollLeft: timeline ? timeline.scrollLeft : null,
+                            scrollLeft: timeline.scrollLeft,
                             scrollTarget,
-                            markerLeft: todayMarker ? todayMarker.offsetLeft : null,
-                            clientWidth: timeline ? timeline.clientWidth : null,
+                            markerLeft: todayMarker.getBoundingClientRect().left,
+                            clientWidth: timeline.clientWidth,
                             measuredAt: new Date().toISOString()
                         };
                         window.__lastLegendTimelineScroll = legendScrollMeta;
-                        try {
-                            localStorage.setItem('codex:legend-scroll:last', JSON.stringify(legendScrollMeta));
-                        } catch (storageError) { }
+                        try { localStorage.setItem('codex:legend-scroll:last', JSON.stringify(legendScrollMeta)); }
+                        catch (storageError) { }
                     } catch (e) {
                         console.warn('[LegendClick] timeline scroll failed:', e);
                     }
                 };
-                [0, 120, 320, 700].forEach((delay) => {
-                    setTimeout(() => {
-                        requestAnimationFrame(() => requestAnimationFrame(runLegendScroll));
-                    }, delay);
+                [0, 120, 320, 700, 1200, 2000].forEach((delay) => {
+                    setTimeout(() => requestAnimationFrame(() => requestAnimationFrame(runLegendScroll)), delay);
                 });
             });
         }
@@ -101722,38 +101720,15 @@ function showPendingSettlementModal(periodType, projects) {
       }
     </style>
 
-    <!-- [INTEGRITY-FIX-2026-09-20] Keep project actions usable when the schedule accordion is closed.
-         The closed accordion previously kept a zero-height, clipped panel while its action row was
-         still painted outside the panel. Chromium therefore hit-tested the parent accordion instead
-         of Proj. 추가/Proj. 관리, blocking real pointer clicks on desktop and mobile. Preserve the
-         collapsed visual state by exposing only the action row and giving the panel a real layout box. -->
+    <!-- [INTEGRITY-FIX-2026-09-20] The closed schedule must not paint its panel on any boot frame.
+         Keep the header and its controls in normal layout; the existing toggle reopens the panel. -->
     <style id="codex-collapsed-schedule-actions-integrity-fix">
+      #projectView:not(.open) {
+        flex-grow: 0 !important;
+        min-height: 0 !important;
+      }
       #projectView:not(.open) > #accordion-panel-schedule {
-        max-height: none !important;
-        height: auto !important;
-        overflow: visible !important;
-      }
-      #projectView:not(.open) #ganttViewContent {
-        height: auto !important;
-        min-height: 0 !important;
-      }
-      #projectView:not(.open) #legendSection {
-        min-height: 0 !important;
-        height: auto !important;
-        max-height: none !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: 0 !important;
-        background: transparent !important;
-        overflow: visible !important;
-      }
-      #projectView:not(.open) #legendSection > *:not(.codex-legend-bottom-actions) {
         display: none !important;
-      }
-      #projectView:not(.open) .codex-legend-bottom-actions {
-        display: flex !important;
-        position: relative !important;
-        z-index: 999999 !important;
       }
     </style>
 
@@ -110470,7 +110445,7 @@ function showPendingSettlementModal(periodType, projects) {
             setControlPosition(chartWrapper, clampedStored);
             return;
         }
-        var defaultPosition = clampControlPosition(chartWrapper, Math.round(leftWidth), 6, wrapperWidth);
+        var defaultPosition = clampControlPosition(chartWrapper, Math.round(leftWidth), isMobilePortrait() ? 45 : 6, wrapperWidth);
         chartWrapper.dataset.codexPaneControlDefaultLeft = String(defaultPosition.left);
         chartWrapper.dataset.codexPaneControlDefaultTop = String(defaultPosition.top);
         setControlPosition(chartWrapper, defaultPosition);
