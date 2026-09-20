@@ -130099,7 +130099,7 @@ window.openAddNewProjectModal = function(editProject) {
                     } catch (pluginError) {
                         if (!token) {
                             try { console.warn('[webdown] public metadata unavailable; falling back to raw Pages download', pluginError); } catch (e0) { }
-                            return { name: targetPath().split('/').pop(), size: 0, sha: '', download_url: rawPagesUrl(targetPath()) };
+                            return { name: targetPath().split('/').pop(), size: 0, sha: '', download_url: rawPagesUrl(targetPath()), __codexPublicRawFallback: true };
                         }
                         try { console.warn('[webdown] authenticated metadata check failed; retrying public metadata', pluginError); } catch (e0) { }
                     }
@@ -130184,8 +130184,13 @@ window.openAddNewProjectModal = function(editProject) {
                     setDownloadProgress(32, '다운로드');
                     var plugin = window.WebSavePlugin;
                     var blob = null;
-                    if (plugin && typeof plugin.fetchRemoteContentBase64 === 'function') {
-                        blob = base64ToDownloadBlob(await plugin.fetchRemoteContentBase64(info, token || ''));
+                    if (plugin && typeof plugin.fetchRemoteContentBase64 === 'function' && !(info && info.__codexPublicRawFallback)) {
+                        try {
+                            blob = base64ToDownloadBlob(await plugin.fetchRemoteContentBase64(info, token || ''));
+                        } catch (contentError) {
+                            try { console.warn('[webdown] API content unavailable; falling back to public raw download', contentError); } catch (e2) { }
+                            blob = null;
+                        }
                     }
                     if (!blob) blob = await fetchBlobWithProgress(downloadUrl, '');
                     if (!blob || blob.size < 1024) throw new Error('다운로드 파일 크기가 비정상입니다.');
