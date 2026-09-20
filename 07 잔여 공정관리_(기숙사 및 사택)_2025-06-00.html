@@ -128131,6 +128131,7 @@ window.openAddNewProjectModal = function(editProject) {
                 if (options.token) return options.token;
                 var token = getTokenFromStorage();
                 if (token) return token;
+                if (options.allowPrompt === false) return '';
                 var entered = '';
                 if (hasTokenVault()) {
                     entered = await requestTokenUnlock('local');
