@@ -4061,7 +4061,7 @@
                     if (document.hidden) {
                         try {
                             let sweepCount = 0;
-                                                        document.querySelectorAll('.tooltip, .custom-toast, [role="alert"]').forEach(el => {
+                            document.querySelectorAll('.tooltip[data-startup-ephemeral="1"], .custom-toast, [role="alert"]').forEach(el => {
                                 if (!el.isConnected) return;
                                 if (el.style.opacity === '0' || el.classList.contains('hidden')) { el.remove(); return; }
                                 const isVisibleVerify = (e) => (e && e.offsetParent !== null);
@@ -23042,7 +23042,6 @@
             visibility: visible;
             opacity: 1;
         }
-
         #ganttFloatingTooltip {
             position: fixed;
             background-color: #1f2937;
@@ -39208,7 +39207,7 @@
             if (!floatingTooltip || !tooltipSource || !bar) return;
             ensureFloatingLayerNode(floatingTooltip, 100005, 2000005);
             activeTooltipBar = bar;
-            floatingTooltip.innerHTML = tooltipSource.innerHTML;
+            floatingTooltip.innerHTML = typeof tooltipSource === 'string' ? tooltipSource : tooltipSource.innerHTML;
             floatingTooltip.classList.add('visible');
             requestAnimationFrame(() => {
                 positionFloatingTooltip(bar.getBoundingClientRect(), options);
@@ -48855,12 +48854,12 @@
                 return fallback || 0;
             }
 
-            function scrollGanttBarIntoViewFromTitle(container, projectId, sourceTitleItem) {
-                if (!projectId) return false;
-                const liveContainer = getActiveContainer(sourceTitleItem || container) || container;
+            function scrollGanttBarIntoViewFromTitle(container, projectId, sourceTitleItem, directBar) {
+                if (!projectId && !directBar) return false;
+                const liveContainer = getActiveContainer(sourceTitleItem || directBar || container) || container;
                 if (!liveContainer || !liveContainer.querySelector) return false;
                 buildCache(liveContainer);
-                const pair = resolvePair(liveContainer, projectId);
+                const pair = directBar ? { titleItem: sourceTitleItem, barRow: directBar.closest('.gantt-bar-row') } : resolvePair(liveContainer, projectId);
                 const titleItem = sourceTitleItem && sourceTitleItem.isConnected ? sourceTitleItem : pair.titleItem;
                 const barRow = pair.barRow;
                 if (!titleItem || !barRow) return false;
@@ -48876,31 +48875,16 @@
                 const titlesBody = ganttEl.querySelector('.gantt-titles-body-wrapper');
                 const timelineWrapper = ganttEl.querySelector('.gantt-timeline-wrapper');
                 const chartWrapper = ganttEl.closest ? ganttEl.closest('#ganttChartWrapper') : null;
-                const bar = barRow.querySelector('.gantt-bar') || barRow.querySelector('.gantt-bar-progress');
+                const bar = directBar || barRow.querySelector('.gantt-bar') || barRow.querySelector('.gantt-bar-progress');
                 if (!bar) return false;
 
                 const barLeft = getBarMetricPx(bar, 'left', 0);
                 const barWidth = Math.max(1, getBarMetricPx(bar, 'width', bar.getBoundingClientRect ? bar.getBoundingClientRect().width : 1));
-                const barRight = barLeft + barWidth;
                 const margin = Math.min(48, Math.max(20, Math.round((timelineBody.clientWidth || 320) * 0.08)));
-                const currentLeft = timelineBody.scrollLeft || 0;
-                const viewportWidth = Math.max(1, timelineBody.clientWidth || 1);
-                const visibleLeft = currentLeft + margin;
-                const visibleRight = currentLeft + viewportWidth - margin;
-                let targetLeft = currentLeft;
-
-                if (!(barLeft >= visibleLeft && barRight <= visibleRight)) {
-                    if (barWidth >= Math.max(1, viewportWidth - (margin * 2))) {
-                        targetLeft = barLeft - margin;
-                    } else {
-                        targetLeft = barLeft - Math.max(margin, (viewportWidth - barWidth) / 2);
-                    }
-                }
-
                 const maxLeft = Math.max(0, timelineBody.scrollWidth - timelineBody.clientWidth);
-                targetLeft = clampNumber(Math.round(targetLeft), 0, maxLeft);
+                let targetLeft = clampNumber(Math.round(barLeft - margin), 0, maxLeft);
                 const targetTop = titlesBody ? (titlesBody.scrollTop || 0) : (timelineBody.scrollTop || 0);
-                const behavior = 'smooth';
+                const behavior = 'auto';
 
                 try {
                     if (typeof timelineBody.scrollTo === 'function') {
@@ -48948,6 +48932,11 @@
                 } catch (e) { }
                 return true;
             }
+
+            state.scrollGanttBarStart = function (container, bar, sourceTitleItem, navigationKey) {
+                if (!bar || !bar.isConnected) return false;
+                return scrollGanttBarIntoViewFromTitle(container, navigationKey || bar.dataset.name || 'group', sourceTitleItem, bar);
+            };
 
             function beginTitleNameTap(e, container) {
                 if (!e || (typeof e.button === 'number' && e.button !== 0)) return;
@@ -66064,9 +66053,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                             progressFill.style.width = `${barWidth * (newProgress / 100)}px`;
                         }
                     }
-                    const tooltip = barRow.querySelector('.tooltip');
-                    if (tooltip) {
-                        tooltip.innerHTML = tooltip.innerHTML.replace(/<strong>\uc9c4\ud589:<\/strong> \d+%/, `<strong>\uc9c4\ud589:</strong> ${newProgress}%`);
+                    const bar = barRow.querySelector('.gantt-bar');
+                    if (bar && bar.dataset.tooltipHtml) {
+                        bar.dataset.tooltipHtml = bar.dataset.tooltipHtml.replace(/<strong>\uc9c4\ud589:<\/strong> \d+%/, `<strong>\uc9c4\ud589:</strong> ${newProgress}%`);
+                    } else {
+                        const tooltip = barRow.querySelector('.tooltip');
+                        if (tooltip) tooltip.innerHTML = tooltip.innerHTML.replace(/<strong>\uc9c4\ud589:<\/strong> \d+%/, `<strong>\uc9c4\ud589:</strong> ${newProgress}%`);
                     }
                 });
             });
@@ -66864,6 +66856,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
             // [TRAP-FIX] \uae30\uc874 header-collapsed \uc0c1\ud0dc \ubcf4\uc874 (render \uc2dc \uc0c1\ud0dc \uc720\uc9c0)
             const existingGanttEl = currentGanttContainer.querySelector('.gantt-chart-container');
+            // [STABILITY] Disconnect the previous chart observer before replacing its DOM.
+            if (currentGanttContainer.__floatingScrollbarResizeObserver) {
+                currentGanttContainer.__floatingScrollbarResizeObserver.disconnect();
+                currentGanttContainer.__floatingScrollbarResizeObserver = null;
+            }
+            if (activeTooltipBar && existingGanttEl && existingGanttEl.contains(activeTooltipBar)) hideFloatingTooltip();
             const wasHeaderCollapsed = existingGanttEl && existingGanttEl.classList.contains('header-collapsed');
             const existingToggleBtn = existingGanttEl && existingGanttEl.querySelector('.header-toggle-btn');
             const wasToggleBtnActive = existingToggleBtn && existingToggleBtn.classList.contains('active');
@@ -68018,9 +68016,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     bar.style.opacity = '0.7';
                 }
 
-                const tooltip = document.createElement('div');
-                tooltip.className = 'tooltip';
-
                 let customFieldsHTML = '';
                 if (project.customFields) {
                     for (const key in project.customFields) {
@@ -68030,14 +68025,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     }
                 }
 
-                tooltip.innerHTML = `<strong>${projectNameValue}</strong><br>
+                bar.dataset.tooltipHtml = `<strong>${projectNameValue}</strong><br>
                                    <strong>\uc9c4\ud589:</strong> ${progressClamped}%<br>
                                    <strong>\uae30\uac04:</strong> ${startDate.toLocaleDateString()} ~ ${endDate.toLocaleDateString()} (${duration}\uc77c)<br>
                                    <strong>\uc0c1\ud0dc:</strong> ${project.status}<br>
                                    <strong>\ube44\uc6a9:</strong> ${poText}<br>
                                    ${customFieldsHTML}`;
-                bar.appendChild(tooltip);
-
                 const barLabel = document.createElement('div');
                 barLabel.className = 'gantt-bar-label';
                 barLabel.textContent = `${projectNameValue} [${project.status}]`;
@@ -68423,6 +68416,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     groupBar.style.borderRadius = '2px';
                     groupBar.style.opacity = '1';
                     groupBar.dataset.name = `${taskType} (\uc694\uc57d)`;
+                    groupBar.dataset.groupSummary = 'true';
 
                     const groupStatuses = new Set(projects.map(p => p.status));
                     let groupStatus = '\ucc29\uacf5\uc804';
@@ -68437,10 +68431,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     }
                     groupBar.dataset.status = groupStatus;
 
-                    const groupTooltip = document.createElement('div');
-                    groupTooltip.className = 'tooltip';
-                    groupTooltip.innerHTML = `<strong>${taskType} (\uc694\uc57d)</strong><br><strong>\uae30\uac04:</strong> ${groupMinDate.toLocaleDateString()} ~ ${groupMaxDate.toLocaleDateString()} (${groupDuration}\uc77c)<br><strong>\ucd1d ${projects.length}\uac1c \ud504\ub85c\uc81d\ud2b8</strong><br><strong>\ucd1d \ube44\uc6a9:</strong> ${formatCurrency(groupPoSum)}`;
-                    groupBar.appendChild(groupTooltip);
+
+                    groupBar.dataset.tooltipHtml = `<strong>${taskType} (\uc694\uc57d)</strong><br><strong>\uae30\uac04:</strong> ${groupMinDate.toLocaleDateString()} ~ ${groupMaxDate.toLocaleDateString()} (${groupDuration}\uc77c)<br><strong>\ucd1d ${projects.length}\uac1c \ud504\ub85c\uc81d\ud2b8</strong><br><strong>\ucd1d \ube44\uc6a9:</strong> ${formatCurrency(groupPoSum)}`;
                     groupBarRow.appendChild(groupBar);
 
                     const groupBarLabel = document.createElement('div');
@@ -68527,6 +68519,13 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         if (progressFill) {
                             progressFill.classList.toggle('hidden', !isNowCollapsed);
                         }
+
+                        try {
+                            const navigationApi = window.__postRenderEnhancementsV1;
+                            if (navigationApi && typeof navigationApi.scrollGanttBarStart === 'function') {
+                                navigationApi.scrollGanttBarStart(container, groupBar, groupHeader, taskType);
+                            }
+                        } catch (navigationError) { }
 
                         if (isNowCollapsed) {
                             groupHeader.querySelector('.group-toggle').classList.remove('expanded'); groupHeader.querySelector('.group-toggle').textContent = '';
@@ -68875,6 +68874,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         floatingScrollbarResizeObserver.observe(finalTimelineBodyWrapper);
                         const ganttBodyNode = finalTimelineBodyWrapper.querySelector('.gantt-body');
                         if (ganttBodyNode) floatingScrollbarResizeObserver.observe(ganttBodyNode);
+                        currentGanttContainer.__floatingScrollbarResizeObserver = floatingScrollbarResizeObserver;
                     }
                 };
                 initGanttFloatingHorizontalScrollbar();
@@ -69650,8 +69650,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     return;
                 }
 
-                const tooltip = bar.querySelector('.tooltip');
-                if (!tooltip) {
+                const tooltipSource = bar.dataset.tooltipHtml || bar.querySelector('.tooltip');
+                if (!tooltipSource) {
                     hideFloatingTooltip();
                     return;
                 }
@@ -69662,51 +69662,30 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 }
 
                 hideFloatingTooltip();
-                showFloatingTooltip(bar, tooltip, {
+                showFloatingTooltip(bar, tooltipSource, {
                     pointerX: e.clientX,
                     pointerY: e.clientY,
                 });
             });
 
             const handleBarHoverTooltip = (event) => {
-                // [OPTIMIZATION] \ud0c0\uc784\ub77c\uc778 \uce21 \ud234\ud301 \ud45c\uc2dc \ube44\ud65c\uc131\ud654 - \ub9c9\ub300 \uadf8\ub798\ud504 \uc704\uce58\uc758 \ud234\ud301\ub9cc \ud45c\uc2dc
-                hideHoverTooltip();
-                return;
-
-                const bar = event.target.closest('.gantt-bar');
-                if (!bar) {
-                    hideHoverTooltip();
+                // Group summaries show the existing detailed tooltip on hover; project bars keep click behavior.
+                if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+                const summaryBar = event.target.closest('.gantt-bar[data-group-summary="true"]');
+                if (!summaryBar || event.buttons) {
+                    if (activeTooltipBar && activeTooltipBar.dataset.groupSummary === 'true') hideFloatingTooltip();
                     return;
                 }
-
-                const tooltip = bar.querySelector('.tooltip');
-                if (!tooltip || !hoverTooltip) {
-                    hideHoverTooltip();
-                    return;
+                const summarySource = summaryBar.dataset.tooltipHtml || summaryBar.querySelector('.tooltip');
+                if (summarySource && activeTooltipBar !== summaryBar) {
+                    showFloatingTooltip(summaryBar, summarySource, { pointerX: event.clientX, pointerY: event.clientY });
                 }
-
-                const simpleText = bar.dataset.name || bar.getAttribute('aria-label') || tooltip.textContent || '';
-                if (!simpleText.trim()) {
-                    hideHoverTooltip();
-                    return;
-                }
-
-                hoverTooltip.textContent = simpleText.trim();
-                const container = getActiveTimelineContainer();
-                const containerRect = container ? container.getBoundingClientRect() : { top: 0 };
-                const top = Math.max(4, containerRect.top + 4);
-                const tooltipRect = hoverTooltip.getBoundingClientRect();
-                let left = event.clientX - tooltipRect.width / 2;
-                const margin = 8;
-                const maxLeft = window.innerWidth - tooltipRect.width - margin;
-                left = Math.max(margin, Math.min(left, maxLeft));
-                hoverTooltip.style.top = `${top}px`;
-                hoverTooltip.style.left = `${left}px`;
-                hoverTooltip.classList.add('visible');
             };
 
             ganttEl.addEventListener('mousemove', handleBarHoverTooltip);
             ganttEl.addEventListener('mouseleave', () => {
+                const hasFineHover = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+                if (hasFineHover && activeTooltipBar && activeTooltipBar.dataset.groupSummary === 'true') hideFloatingTooltip();
                 hideHoverTooltip();
             });
 
@@ -69941,26 +69920,20 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
                 // \uc758\uc874\uc131 \uc720\ud615 \uc635\uc158 \ud074\ub9ad \uc774\ubca4\ud2b8 \ub9ac\uc2a4\ub108 \ucd94\uac00 (onclick \ub300\uc2e0)
                 document.querySelectorAll('.dependency-type-option').forEach(opt => {
-                    opt.removeEventListener('click', handleDependencyTypeClick);
+                    if (opt.__dependencyTypeClickHandler) opt.removeEventListener('click', opt.__dependencyTypeClickHandler);
+                    opt.__dependencyTypeClickHandler = handleDependencyTypeClick;
                     opt.addEventListener('click', handleDependencyTypeClick);
 
                     // \ub77c\ub514\uc624 \ubc84\ud2bc \ud074\ub9ad \uc774\ubca4\ud2b8\ub3c4 \ucd94\uac00
                     const radio = opt.querySelector('.dependency-type-radio');
                     if (radio) {
-                        radio.removeEventListener('click', function (e) {
+                        if (radio.__dependencyRadioClickHandler) radio.removeEventListener('click', radio.__dependencyRadioClickHandler);
+                        radio.__dependencyRadioClickHandler = function (e) {
                             e.stopPropagation();
                             const type = opt.getAttribute('data-type');
-                            if (type) {
-                                selectDependencyType(type);
-                            }
-                        });
-                        radio.addEventListener('click', function (e) {
-                            e.stopPropagation();
-                            const type = opt.getAttribute('data-type');
-                            if (type) {
-                                selectDependencyType(type);
-                            }
-                        });
+                            if (type) selectDependencyType(type);
+                        };
+                        radio.addEventListener('click', radio.__dependencyRadioClickHandler);
                     }
                 });
 
@@ -69969,27 +69942,31 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const saveBtn = modal.querySelector('.dependency-modal-btn-primary');
                 const clearBtn = modal.querySelector('.dependency-modal-btn-danger');
                 if (cancelBtn) {
-                    cancelBtn.removeEventListener('click', closeDependencyModal);
-                    cancelBtn.addEventListener('click', closeDependencyModal);
+                    if (cancelBtn.__dependencyCancelClickHandler) cancelBtn.removeEventListener('click', cancelBtn.__dependencyCancelClickHandler);
+                    cancelBtn.__dependencyCancelClickHandler = closeDependencyModal;
+                    cancelBtn.addEventListener('click', cancelBtn.__dependencyCancelClickHandler);
                 }
                 if (saveBtn) {
-                    saveBtn.removeEventListener('click', saveDependency);
-                    saveBtn.addEventListener('click', saveDependency);
+                    if (saveBtn.__dependencySaveClickHandler) saveBtn.removeEventListener('click', saveBtn.__dependencySaveClickHandler);
+                    saveBtn.__dependencySaveClickHandler = saveDependency;
+                    saveBtn.addEventListener('click', saveBtn.__dependencySaveClickHandler);
                 }
                 if (clearBtn) {
-                    clearBtn.removeEventListener('click', clearDependency);
-                    clearBtn.addEventListener('click', clearDependency);
+                    if (clearBtn.__dependencyClearClickHandler) clearBtn.removeEventListener('click', clearBtn.__dependencyClearClickHandler);
+                    clearBtn.__dependencyClearClickHandler = clearDependency;
+                    clearBtn.addEventListener('click', clearBtn.__dependencyClearClickHandler);
                 }
 
                 // X \ubc84\ud2bc \uc774\ubca4\ud2b8 \ub9ac\uc2a4\ub108 \ucd94\uac00
                 const closeBtn = modal.querySelector('.dependency-modal-close');
                 if (closeBtn) {
-                    closeBtn.removeEventListener('click', closeDependencyModal);
-                    closeBtn.addEventListener('click', function (e) {
+                    if (closeBtn.__dependencyCloseClickHandler) closeBtn.removeEventListener('click', closeBtn.__dependencyCloseClickHandler);
+                    closeBtn.__dependencyCloseClickHandler = function (e) {
                         e.preventDefault();
                         e.stopPropagation();
                         closeDependencyModal();
-                    });
+                    };
+                    closeBtn.addEventListener('click', closeBtn.__dependencyCloseClickHandler);
                 }
 
                 console.log('\uD83D\uDD17 \ubaa8\ub2ec \ud45c\uc2dc \uc2dc\ub3c4, hidden \ud074\ub798\uc2a4 \uc81c\uac70 \uc804:', modal.classList.contains('hidden'));
@@ -70088,14 +70065,16 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             window.closeDependencyModal = closeDependencyModal;
 
             // ESC \ud0a4\ub85c \uc758\uc874\uc131 \ubaa8\ub2ec \ub2eb\uae30
-            document.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
+            if (!window.__dependencyModalEscapeBound) {
+                window.__dependencyModalEscapeBound = true;
+                document.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Escape') return;
                     const dependencyModal = document.getElementById('dependencyModal');
                     if (dependencyModal && !dependencyModal.classList.contains('hidden')) {
-                        closeDependencyModal();
+                        window.closeDependencyModal?.();
                     }
-                }
-            });
+                });
+            }
 
             function selectDependencyType(type) {
                 selectedDependencyType = type;
@@ -70138,34 +70117,31 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 if (!searchToggle || !searchContainer || !searchInput || !selectEl) return;
 
                 // \uac80\uc0c9 \ud1a0\uae00 \ubc84\ud2bc \ud074\ub9ad \uc774\ubca4\ud2b8
-                searchToggle.addEventListener('click', function (e) {
+                if (searchToggle.__dependencySearchClickHandler) searchToggle.removeEventListener('click', searchToggle.__dependencySearchClickHandler);
+                searchToggle.__dependencySearchClickHandler = function (e) {
                     e.preventDefault();
                     e.stopPropagation();
                     const isVisible = searchContainer.style.display !== 'none';
                     searchContainer.style.display = isVisible ? 'none' : 'block';
-                    if (!isVisible) {
-                        searchInput.focus();
-                    }
-                });
+                    if (!isVisible) searchInput.focus();
+                };
+                searchToggle.addEventListener('click', searchToggle.__dependencySearchClickHandler);
 
                 // \uac80\uc0c9 \uc785\ub825 \uc774\ubca4\ud2b8
-                let searchTimeout;
-                searchInput.addEventListener('input', function (e) {
-                    clearTimeout(searchTimeout);
+                if (searchInput.__dependencySearchInputHandler) searchInput.removeEventListener('input', searchInput.__dependencySearchInputHandler);
+                if (searchInput.__dependencySearchTimeout) clearTimeout(searchInput.__dependencySearchTimeout);
+                searchInput.__dependencySearchInputHandler = function (e) {
+                    clearTimeout(searchInput.__dependencySearchTimeout);
                     const searchTerm = e.target.value.toLowerCase().trim();
-
-                    searchTimeout = setTimeout(() => {
-                        const options = selectEl.querySelectorAll('option');
-                        options.forEach(option => {
-                            const text = option.textContent.toLowerCase();
-                            if (searchTerm === '' || text.includes(searchTerm)) {
-                                option.style.display = '';
-                            } else {
-                                option.style.display = 'none';
-                            }
+                    searchInput.__dependencySearchTimeout = setTimeout(() => {
+                        searchInput.__dependencySearchTimeout = null;
+                        selectEl.querySelectorAll('option').forEach(option => {
+                            const optionText = option.textContent.toLowerCase();
+                            option.style.display = searchTerm === '' || optionText.includes(searchTerm) ? '' : 'none';
                         });
                     }, 100);
-                });
+                };
+                searchInput.addEventListener('input', searchInput.__dependencySearchInputHandler);
 
                 // \uac80\uc0c9 \ucd08\uae30\ud654 (\ubaa8\ub2ec \uc5f4 \ub54c)
                 searchInput.value = '';
@@ -70184,12 +70160,14 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 if (!helpToggle || !helpContainer) return;
 
                 // \ub3c4\uc6c0\ub9d0 \ud1a0\uae00 \ubc84\ud2bc \ud074\ub9ad \uc774\ubca4\ud2b8
-                helpToggle.addEventListener('click', function (e) {
+                if (helpToggle.__dependencyHelpClickHandler) helpToggle.removeEventListener('click', helpToggle.__dependencyHelpClickHandler);
+                helpToggle.__dependencyHelpClickHandler = function (e) {
                     e.preventDefault();
                     e.stopPropagation();
                     const isVisible = helpContainer.style.display !== 'none';
                     helpContainer.style.display = isVisible ? 'none' : 'block';
-                });
+                };
+                helpToggle.addEventListener('click', helpToggle.__dependencyHelpClickHandler);
 
                 // \ub3c4\uc6c0\ub9d0 \ucd08\uae30\ud654 (\ubaa8\ub2ec \uc5f4 \ub54c)
                 helpContainer.style.display = 'none';
@@ -76266,23 +76244,31 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 } catch (e) { console.warn('[workdate] debug failed', e); }
 
                 // \ub9c8\ucee4 \ub808\uc774\uc5b4 \ud06c\uae30\ub97c ganttBody \ubcc0\ud654\uc5d0 \ub9de\ucd94\uae30 \uc704\ud55c ResizeObserver
-                if (typeof ResizeObserver !== 'undefined' && !window._workDateResizeObserver) {
+                if (typeof ResizeObserver !== 'undefined') {
                     try {
-                        let workDateResizeFrame = 0;
-                        window._workDateResizeObserver = new ResizeObserver(() => {
-                            if (workDateResizeFrame) return;
-                            workDateResizeFrame = requestAnimationFrame(() => {
-                                workDateResizeFrame = 0;
-                                const ml = ganttBody.querySelector('#workdate-markers');
-                                if (ml) {
-                                    const width = `${ganttBody.scrollWidth}px`;
-                                    const height = `${ganttBody.scrollHeight}px`;
-                                    if (ml.style.width !== width) ml.style.width = width;
-                                    if (ml.style.height !== height) ml.style.height = height;
-                                }
+                        if (!window._workDateResizeObserver) {
+                            let workDateResizeFrame = 0;
+                            window._workDateResizeObserver = new ResizeObserver(() => {
+                                if (workDateResizeFrame) return;
+                                workDateResizeFrame = requestAnimationFrame(() => {
+                                    workDateResizeFrame = 0;
+                                    const liveBody = window._workDateObservedBody;
+                                    if (!liveBody || !liveBody.isConnected) return;
+                                    const ml = liveBody.querySelector('#workdate-markers');
+                                    if (ml) {
+                                        const width = `${liveBody.scrollWidth}px`;
+                                        const height = `${liveBody.scrollHeight}px`;
+                                        if (ml.style.width !== width) ml.style.width = width;
+                                        if (ml.style.height !== height) ml.style.height = height;
+                                    }
+                                });
                             });
-                        });
-                        window._workDateResizeObserver.observe(ganttBody);
+                        }
+                        if (window._workDateObservedBody !== ganttBody) {
+                            window._workDateResizeObserver.disconnect();
+                            window._workDateObservedBody = ganttBody;
+                            window._workDateResizeObserver.observe(ganttBody);
+                        }
                     } catch (e) {
                         console.warn('[workdate] ResizeObserver setup failed', e);
                     }
@@ -109980,7 +109966,7 @@ function showPendingSettlementModal(periodType, projects) {
             function cleanupTransientWork(reason) {
                 var removed = 0;
                 try {
-                    var transient = document.querySelectorAll('#toast-container .toast, .toast[data-startup-ephemeral="1"], div[data-startup-ephemeral="1"], .custom-toast, .tooltip');
+                    var transient = document.querySelectorAll('#toast-container .toast, .toast[data-startup-ephemeral="1"], div[data-startup-ephemeral="1"], .custom-toast, .tooltip[data-startup-ephemeral="1"]');
                     transient.forEach(function (el) {
                         if (!el || !el.parentNode) return;
                         try { el.parentNode.removeChild(el); removed += 1; } catch (e) { /* ignore */ }
