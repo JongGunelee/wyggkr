@@ -23042,6 +23042,14 @@
             visibility: visible;
             opacity: 1;
         }
+
+        /* Group summaries use the single floating detail tooltip. Prevent the legacy name label from surfacing on sticky mobile :hover. */
+        .gantt-bar[data-group-summary="true"] > .gantt-bar-label {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+        }
+
         #ganttFloatingTooltip {
             position: fixed;
             background-color: #1f2937;
@@ -68435,10 +68443,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     groupBar.dataset.tooltipHtml = `<strong>${taskType} (\uc694\uc57d)</strong><br><strong>\uae30\uac04:</strong> ${groupMinDate.toLocaleDateString()} ~ ${groupMaxDate.toLocaleDateString()} (${groupDuration}\uc77c)<br><strong>\ucd1d ${projects.length}\uac1c \ud504\ub85c\uc81d\ud2b8</strong><br><strong>\ucd1d \ube44\uc6a9:</strong> ${formatCurrency(groupPoSum)}`;
                     groupBarRow.appendChild(groupBar);
 
-                    const groupBarLabel = document.createElement('div');
-                    groupBarLabel.className = 'gantt-bar-label';
-                    groupBarLabel.textContent = `${taskType} (\uc694\uc57d) [${groupStatus}]`;
-                    groupBar.appendChild(groupBarLabel);
+                    groupBar.setAttribute('aria-label', `${taskType} (\uc694\uc57d) [${groupStatus}]`);
 
                     if (groupProgress > 0) {
                         const groupProgressFill = document.createElement('div');
