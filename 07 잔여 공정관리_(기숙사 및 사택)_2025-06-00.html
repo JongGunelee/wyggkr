@@ -24412,6 +24412,38 @@
             font-weight: 600;
         }
 
+        /* [DATE-SETTING-ACTIVE-20260924] Match the existing 1.5s active-menu alert cadence. */
+        @keyframes date-setting-menu-pulse {
+            0%, 100% {
+                outline-color: #ef4444;
+                outline-width: 2px;
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.42);
+            }
+            50% {
+                outline-color: #dc2626;
+                outline-width: 3px;
+                box-shadow: 0 0 0 6px rgba(239, 68, 68, 0);
+            }
+        }
+
+        .date-setting-pulse-active {
+            outline: 2px solid #ef4444;
+            outline-offset: -2px;
+            animation: date-setting-menu-pulse 1.5s ease-in-out infinite;
+        }
+
+        .date-setting-pulse-active:hover {
+            outline-width: 3px;
+            animation: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .date-setting-pulse-active {
+                animation: none;
+                box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.28);
+            }
+        }
+
         /* [PRD-2025-WD-OPT-01] Revision History Filter Toggle Styles */
         .filter-toggle {
             transition: all 0.2s ease;
@@ -44191,7 +44223,7 @@
         function updateZoomButtonState() {
             // \uac1c\uc120 \uc0ac\ud56d: \ubaa8\ub4e0 zoomBtn \uc778\uc2a4\ud134\uc2a4\ub97c \ucc3e\uc544\uc11c \uc5c5\ub370\uc774\ud2b8 (\ucee8\ud2b8\ub864 \ud328\ub110\uacfc \ubc14\ub85c\uac00\uae30 \uba54\ub274 \ubaa8\ub450)
             // \uc6d0\ubcf8 \ubc84\ud2bc
-            let allZoomBtns = Array.from(document.querySelectorAll('#zoomBtn'));
+            let allZoomBtns = Array.from(document.querySelectorAll('#zoomBtn, #legendZoomBtn'));
             // \ubc14\ub85c\uac00\uae30 \uba54\ub274\uc758 \ubcf5\uc81c\ub41c \ubc84\ud2bc\ub3c4 \ud3ec\ud568
             const shortcutZoomBtns = Array.from(document.querySelectorAll('[data-shortcut-clone-id="zoomBtn"], #shortcut-zoomBtn, .js-zoom-btn'));
             shortcutZoomBtns.forEach(btn => {
@@ -44211,11 +44243,16 @@
 
             allZoomBtns.forEach(btn => {
                 btn.classList.toggle('filter-toggle-active', isCustomZoomActive);
+                btn.classList.toggle('date-setting-pulse-active', isCustomZoomActive);
+                btn.setAttribute('aria-pressed', isCustomZoomActive ? 'true' : 'false');
 
                 // \uac1c\uc120 \uc0ac\ud56d: \uc120\ud0dd\ub41c \uc635\uc158\uc774 \uc788\uc73c\uba74 \ubc84\ud2bc \ud14d\uc2a4\ud2b8\uc5d0 \ud45c\uc2dc
-                if (isCustomZoomActive && currentZoomOptionName) {
+                if (isCustomZoomActive && currentZoomOptionName && btn.id !== 'legendZoomBtn') {
                     btn.textContent = currentZoomOptionName;
                     btn.title = currentZoomOptionName; // \ud234\ud301\uc73c\ub85c \uc804\uccb4 \ud14d\uc2a4\ud2b8 \ud45c\uc2dc
+                } else if (isCustomZoomActive && currentZoomOptionName) {
+                    btn.textContent = '\ub0a0\uc9dc \uc124\uc815';
+                    btn.title = `\ub0a0\uc9dc \uc124\uc815: ${currentZoomOptionName}`;
                 } else {
                     btn.textContent = '\ub0a0\uc9dc \uc124\uc815';
                     btn.title = '\ub0a0\uc9dc \uc124\uc815';
