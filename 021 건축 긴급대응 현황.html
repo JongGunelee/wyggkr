@@ -1913,7 +1913,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
     </div>
     <div class="card">
       <div class="card-title"><span class="icon">🕷️</span> 보수 유형 레이더</div>
-      <div class="chart-wrap" style="height:300px"><canvas id="c-repairRadar"></canvas></div>
+      <div class="chart-wrap" id="c-repairRadar-wrap" style="height:380px"><canvas id="c-repairRadar"></canvas></div>
     </div>
   </div>
   <div class="card full">
@@ -4335,6 +4335,8 @@ buildChart('c-repairBar',{
 
   // Call the function
   renderPTViz();
+  /* 레이더 커스텀 범례 재생성 (renderAllCharts 재호출 시) */
+  if (typeof window._rebuildRadarLegend === 'function') { setTimeout(window._rebuildRadarLegend, 50); }
 
 
   buildChart('c-repairRadar',{
@@ -4353,8 +4355,77 @@ buildChart('c-repairBar',{
       };
     })
   },
-  options:{...BASE,scales:{r:{grid:{color:alpha('#2e3350',1)},pointLabels:{font:{size:9},color:'#ffffff'},ticks:{display:false}}}}
+  options:{...BASE,
+    layout:{padding:10},
+    plugins:{
+      ...BASE.plugins,
+      legend:{display:false}       /* 기본 범례 숨김 → 커스텀 HTML 범례로 대체 */
+    },
+    scales:{r:{
+      grid:{color:alpha('#2e3350',1)},
+      pointLabels:{font:{size:10},color:'#ffffff'},
+      ticks:{display:false},
+      angleLines:{color:alpha('#2e3350',1)}
+    }}
+  }
 });
+/* ─── 레이더 커스텀 HTML 범례 (카드 우상단 오버레이) ─────────────────── */
+(function() {
+  function buildRadarLegend() {
+    const wrap = document.getElementById('c-repairRadar-wrap');
+    if (!wrap) return;
+    // 중복 생성 방지
+    const existing = document.getElementById('radar-custom-legend');
+    if (existing) existing.remove();
+
+    const yrs   = window.YR_KEYS_REV  || ['26년', '25년', '24년'];
+    const colors = ['#4ecb71', '#f5a623', '#6c8ef5', '#e05c7b'];
+
+    const legend = document.createElement('div');
+    legend.id = 'radar-custom-legend';
+    legend.style.cssText = [
+      'position:absolute',
+      'top:8px',
+      'right:8px',
+      'display:flex',
+      'flex-direction:column',
+      'gap:5px',
+      'background:rgba(15,17,26,0.80)',
+      'border:1px solid rgba(255,255,255,0.13)',
+      'border-radius:8px',
+      'padding:7px 11px',
+      'pointer-events:none',
+      'z-index:10',
+      'backdrop-filter:blur(4px)'
+    ].join(';');
+
+    yrs.forEach((yr, i) => {
+      const label = yr.startsWith('20') ? yr : '20' + yr;
+      const color = colors[i % colors.length];
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:6px';
+      row.innerHTML =
+        '<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:' + color + ';border:1px solid ' + color + ';flex-shrink:0;"></span>' +
+        '<span style="font-size:11px;font-weight:600;color:#ffffff;white-space:nowrap">' + label + '</span>';
+      legend.appendChild(row);
+    });
+
+    /* chart-wrap은 position:relative 이미 적용되어 있으므로 바로 appendChild */
+    wrap.style.position = 'relative';
+    wrap.appendChild(legend);
+  }
+
+  /* renderAllCharts 완료 직후, 또는 DOMContentLoaded 이후 실행 보장 */
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', buildRadarLegend);
+  } else {
+    /* renderAllCharts 내부 호출이므로 동기 실행 가능 */
+    setTimeout(buildRadarLegend, 0);
+  }
+
+  /* renderAllCharts 재실행(데이터 갱신) 시 범례도 재생성하도록 전역 노출 */
+  window._rebuildRadarLegend = buildRadarLegend;
+})();
 
 buildChart('c-repairLine',{
   type:'line',
