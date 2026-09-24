@@ -1908,7 +1908,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   <div class="grid2">
     <div class="card">
       <div class="card-title"><span class="icon">🔧</span> 보수 유형별 연도 비교</div>
-      <div class="chart-wrap" style="height:300px"><canvas id="c-repairBar"></canvas></div>
+      <div class="chart-wrap" style="height:380px"><canvas id="c-repairBar"></canvas></div>
       <div class="chart-click-hint">💡 클릭 시 해당 유형 증빙 조회</div>
     </div>
     <div class="card">
@@ -4356,7 +4356,7 @@ buildChart('c-repairBar',{
     })
   },
   options:{...BASE,
-    layout:{padding:10},
+    layout:{padding:6},
     plugins:{
       ...BASE.plugins,
       legend:{display:false}       /* 기본 범례 숨김 → 커스텀 HTML 범례로 대체 */
@@ -4369,12 +4369,11 @@ buildChart('c-repairBar',{
     }}
   }
 });
-/* ─── 레이더 커스텀 HTML 범례 (카드 우상단 오버레이) ─────────────────── */
+/* ─── 레이더 커스텀 HTML 범례 (카드 우상단 빈 공간 최적화 재배치 + 데이터셋 토글) ─── */
 (function() {
   function buildRadarLegend() {
     const wrap = document.getElementById('c-repairRadar-wrap');
     if (!wrap) return;
-    // 중복 생성 방지
     const existing = document.getElementById('radar-custom-legend');
     if (existing) existing.remove();
 
@@ -4389,41 +4388,72 @@ buildChart('c-repairBar',{
       'right:8px',
       'display:flex',
       'flex-direction:column',
-      'gap:5px',
-      'background:rgba(15,17,26,0.80)',
-      'border:1px solid rgba(255,255,255,0.13)',
+      'gap:6px',
+      'background:rgba(15,17,26,0.85)',
+      'border:1px solid rgba(255,255,255,0.18)',
+      'box-shadow:0 4px 12px rgba(0,0,0,0.3)',
       'border-radius:8px',
-      'padding:7px 11px',
-      'pointer-events:none',
-      'z-index:10',
-      'backdrop-filter:blur(4px)'
+      'padding:8px 12px',
+      'pointer-events:auto',
+      'z-index:20',
+      'backdrop-filter:blur(6px)',
+      'user-select:none'
     ].join(';');
+
+    // 클릭 시 바탕화면 확대 방지
+    legend.addEventListener('click', function(e) {
+      e.stopPropagation();
+    });
 
     yrs.forEach((yr, i) => {
       const label = yr.startsWith('20') ? yr : '20' + yr;
       const color = colors[i % colors.length];
       const row = document.createElement('div');
-      row.style.cssText = 'display:flex;align-items:center;gap:6px';
+      row.style.cssText = 'display:flex;align-items:center;gap:7px;cursor:pointer;transition:all 0.15s ease;padding:2px 4px;border-radius:4px;';
+      row.title = label + ' 데이터 표시/숨김 토글';
       row.innerHTML =
         '<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:' + color + ';border:1px solid ' + color + ';flex-shrink:0;"></span>' +
-        '<span style="font-size:11px;font-weight:600;color:#ffffff;white-space:nowrap">' + label + '</span>';
+        '<span class="legend-text" style="font-size:11px;font-weight:600;color:#ffffff;white-space:nowrap;">' + label + '</span>';
+
+      row.addEventListener('mouseenter', function() {
+        row.style.background = 'rgba(255,255,255,0.08)';
+      });
+      row.addEventListener('mouseleave', function() {
+        row.style.background = 'transparent';
+      });
+
+      row.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const chart = window.dashboardCharts && window.dashboardCharts['c-repairRadar'];
+        if (!chart) return;
+        const visible = chart.isDatasetVisible(i);
+        chart.setDatasetVisibility(i, !visible);
+        chart.update();
+
+        const textSpan = row.querySelector('.legend-text');
+        if (visible) {
+          row.style.opacity = '0.4';
+          if (textSpan) textSpan.style.textDecoration = 'line-through';
+        } else {
+          row.style.opacity = '1';
+          if (textSpan) textSpan.style.textDecoration = 'none';
+        }
+      });
+
       legend.appendChild(row);
     });
 
-    /* chart-wrap은 position:relative 이미 적용되어 있으므로 바로 appendChild */
     wrap.style.position = 'relative';
     wrap.appendChild(legend);
   }
 
-  /* renderAllCharts 완료 직후, 또는 DOMContentLoaded 이후 실행 보장 */
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', buildRadarLegend);
   } else {
-    /* renderAllCharts 내부 호출이므로 동기 실행 가능 */
     setTimeout(buildRadarLegend, 0);
   }
 
-  /* renderAllCharts 재실행(데이터 갱신) 시 범례도 재생성하도록 전역 노출 */
   window._rebuildRadarLegend = buildRadarLegend;
 })();
 
