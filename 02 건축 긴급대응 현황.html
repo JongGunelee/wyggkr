@@ -3130,8 +3130,46 @@ buildingData = ALL_BLDG_NAMES.map(name => {
 }).sort((a, b) => {
   const totA = a.cnt[0] + a.cnt[1] + a.cnt[2];
   const totB = b.cnt[0] + b.cnt[1] + b.cnt[2];
-  return totB - totA; // 총 안분 작업 건수 기준 내림차순 정렬
 });
+
+// ─── 리스크 분석 및 작업 다발 호실 공통 집계 헬퍼 (전역 공유 및 엑셀 내보내기 무결성 보증) ───
+function buildRiskRows(data, years) {
+  const yk = years || window.YR_KEYS || ['24년', '25년', '26년'];
+  const firstIdx = 0;
+  const lastIdx = Math.max(0, yk.length - 1);
+  const bData = data || window.buildingData || [];
+  const maxLatest = Math.max(1, ...bData.map(b => (b.cnt && b.cnt[lastIdx] !== undefined) ? b.cnt[lastIdx] : 0));
+  const maxTotal = Math.max(1, ...bData.map(b => (b.cnt || []).reduce((sum, value) => sum + value, 0)));
+  return bData.map(b => {
+    const first = (b.cnt && b.cnt[firstIdx] !== undefined) ? b.cnt[firstIdx] : 0;
+    const latest = (b.cnt && b.cnt[lastIdx] !== undefined) ? b.cnt[lastIdx] : 0;
+    const total = (b.cnt || []).reduce((sum, value) => sum + value, 0);
+    const trendScore = Math.max(0, Math.min(30, first > 0 ? (latest / first - 1) * 15 : latest > 0 ? 15 : 0));
+    const score = Math.max(0, Math.min(100, Math.round((latest / maxLatest) * 50 + (total / maxTotal) * 20 + trendScore)));
+    const label = score >= 70 ? '위험' : score >= 45 ? '주의' : '안정';
+    const cls = score >= 70 ? 'risk-high' : score >= 45 ? 'risk-mid' : 'risk-low';
+    const trend = latest > first ? '증가' : latest < first ? '감소' : '유지';
+    return { name: b.name, score, label, cls, desc: `${latest}건←${first}건, 누적 ${total.toFixed(1)}건 · ${trend}` };
+  }).sort((a, b) => b.score - a.score);
+}
+window.buildRiskRows = buildRiskRows;
+
+function buildRoomHotspots(records, year) {
+  const counts = new Map();
+  const recs = records || window.RAW || [];
+  (recs || []).filter(r => !year || r.yr === year).forEach(r => {
+    const bldgs = getRecordBuildings(r);
+    const rooms = String(r.room || '').split(/[\r\n,\/]+/).map(v => v.trim()).filter(Boolean);
+    if (!bldgs.length || !rooms.length) return;
+    bldgs.forEach((bldg, idx) => {
+      const room = rooms[idx] || rooms[0];
+      const key = `${bldg} ${room.replace(/호$/,'')}호`;
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+  });
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+}
+window.buildRoomHotspots = buildRoomHotspots;
 
 // RAW 데이터 기반 15개 전체 공종 색상 매핑
 const REPAIR_TYPE_COLORS = {
@@ -4964,38 +5002,7 @@ buildChart('c-baseboard',{
 });
 
 // ─── RISK Charts ──────────────────────────────────────────────────────────────
-function buildRiskRows(data, years) {
-  const firstIdx = 0;
-  const lastIdx = Math.max(0, years.length - 1);
-  const maxLatest = Math.max(1, ...data.map(b => b.cnt[lastIdx] || 0));
-  const maxTotal = Math.max(1, ...data.map(b => b.cnt.reduce((sum, value) => sum + value, 0)));
-  return data.map(b => {
-    const first = b.cnt[firstIdx] || 0;
-    const latest = b.cnt[lastIdx] || 0;
-    const total = b.cnt.reduce((sum, value) => sum + value, 0);
-    const trendScore = Math.max(0, Math.min(30, first > 0 ? (latest / first - 1) * 15 : latest > 0 ? 15 : 0));
-    const score = Math.max(0, Math.min(100, Math.round((latest / maxLatest) * 50 + (total / maxTotal) * 20 + trendScore)));
-    const label = score >= 70 ? '위험' : score >= 45 ? '주의' : '안정';
-    const cls = score >= 70 ? 'risk-high' : score >= 45 ? 'risk-mid' : 'risk-low';
-    const trend = latest > first ? '증가' : latest < first ? '감소' : '유지';
-    return { name: b.name, score, label, cls, desc: `${latest}건←${first}건, 누적 ${total.toFixed(1)}건 · ${trend}` };
-  }).sort((a, b) => b.score - a.score);
-}
-
-function buildRoomHotspots(records, year) {
-  const counts = new Map();
-  (records || []).filter(r => r.yr === year).forEach(r => {
-    const bldgs = getRecordBuildings(r);
-    const rooms = String(r.room || '').split(/[\r\n,\/]+/).map(v => v.trim()).filter(Boolean);
-    if (!bldgs.length || !rooms.length) return;
-    bldgs.forEach((bldg, idx) => {
-      const room = rooms[idx] || rooms[0];
-      const key = `${bldg} ${room.replace(/호$/,'')}호`;
-      counts.set(key, (counts.get(key) || 0) + 1);
-    });
-  });
-  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
-}
+// (buildRiskRows 및 buildRoomHotspots는 상단 전역 헬퍼 영역에서 window 객체로 공유됨)
 
 const riskBubbleData=buildingData.map(b=>({x:b.cnt[0] || 0,y:b.cnt[latestIdx] || 0,r:Math.max(5,Math.sqrt(b.cnt.reduce((sum, value) => sum + value, 0))*2)}));
 buildChart('c-riskBubble',{
@@ -5875,7 +5882,7 @@ const dashboardExcelExporter = {
           '<c:yVal><c:numRef><c:f>' + bYRange + '</c:f><c:numCache><c:formatCode>#,##0</c:formatCode><c:ptCount val="' + bCount + '"/>' + bYPoints + '</c:numCache></c:numRef></c:yVal>' +
           '<c:bubbleSize><c:numRef><c:f>' + bSizeRange + '</c:f><c:numCache><c:formatCode>#,##0</c:formatCode><c:ptCount val="' + bCount + '"/>' + bSizePoints + '</c:numCache></c:numRef></c:bubbleSize>' +
         '</c:ser>' +
-        '<c:bubbleScale val="45"/>' +
+        '<c:bubbleScale val="55"/><c:sizeRepresents val="w"/>' +
         '<c:axId val="' + catAxisId + '"/><c:axId val="' + valAxisId + '"/>' +
       '</c:bubbleChart>';
     } else if (isLine) {
@@ -5888,24 +5895,24 @@ const dashboardExcelExporter = {
 
     let axesXml = "";
     if (isBubble) {
-      axesXml = '<c:valAx><c:axId val="' + catAxisId + '"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/><c:max val="20"/></c:scaling><c:delete val="0"/><c:axPos val="b"/>' +
+      axesXml = '<c:valAx><c:axId val="' + catAxisId + '"/><c:scaling><c:orientation val="minMax"/><c:min val="-1.5"/><c:max val="21.5"/></c:scaling><c:delete val="0"/><c:axPos val="b"/>' +
         '<c:majorGridlines><c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>' +
         '<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="1"/></a:pPr><a:r><a:rPr lang="ko-KR" sz="900" b="1"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr><a:t>2024년 건수</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val="0"/></c:title>' +
         '<c:numFmt formatCode="#,##0" sourceLinked="0"/>' +
-        '<c:tickLblPos val="nextTo"/>' +
+        '<c:tickLblPos val="low"/>' +
         '<c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr>' +
         '<c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="A0AEC0"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>' +
         '<c:crossAx val="' + valAxisId + '"/><c:crosses val="autoZero"/><c:majorUnit val="2"/></c:valAx>' +
-        '<c:valAx><c:axId val="' + valAxisId + '"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/><c:max val="16"/></c:scaling><c:delete val="0"/><c:axPos val="l"/>' +
+        '<c:valAx><c:axId val="' + valAxisId + '"/><c:scaling><c:orientation val="minMax"/><c:min val="-1.5"/><c:max val="16.5"/></c:scaling><c:delete val="0"/><c:axPos val="l"/>' +
         '<c:majorGridlines><c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>' +
         '<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="1"/></a:pPr><a:r><a:rPr lang="ko-KR" sz="900" b="1"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr><a:t>2026년 건수</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val="0"/></c:title>' +
         '<c:numFmt formatCode="#,##0" sourceLinked="0"/>' +
-        '<c:tickLblPos val="nextTo"/>' +
+        '<c:tickLblPos val="low"/>' +
         '<c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr>' +
         '<c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="A0AEC0"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>' +
         '<c:crossAx val="' + catAxisId + '"/><c:crosses val="autoZero"/><c:majorUnit val="2"/></c:valAx>';
     } else if (!isDoughnut) {
-      axesXml = '<c:catAx><c:axId val="' + catAxisId + '"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="' + (isHorizontal ? "l" : "b") + '"/>' +
+      axesXml = '<c:catAx><c:axId val="' + catAxisId + '"/><c:scaling><c:orientation val="' + (isHorizontal ? "maxMin" : "minMax") + '"/></c:scaling><c:delete val="0"/><c:axPos val="' + (isHorizontal ? "l" : "b") + '"/>' +
         '<c:tickLblPos val="' + (isRadar ? "nextTo" : tickPos) + '"/>' +
         '<c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr>' +
         '<c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="A0AEC0"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>' +
@@ -5916,7 +5923,7 @@ const dashboardExcelExporter = {
         '<c:tickLblPos val="' + (isRadar ? "none" : "nextTo") + '"/>' +
         '<c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr>' +
         '<c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="A0AEC0"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>' +
-        '<c:crossAx val="' + catAxisId + '"/><c:crosses val="autoZero"/></c:valAx>';
+        '<c:crossAx val="' + catAxisId + '"/><c:crosses val="' + (isHorizontal ? "max" : "autoZero") + '"/></c:valAx>';
     }
 
     let legendXml = "";
@@ -6473,6 +6480,8 @@ const dashboardExcelExporter = {
           hideLegend = true;
         }
 
+        const isBubbleChart = (chartType === "bubble" || canvasId === 'c-riskBubble');
+        const isHorizChart = (chartType === "horizontalBar");
         const chartSpec = {
           title: chartDisplayTitle,
           type: chartType,
@@ -6487,6 +6496,10 @@ const dashboardExcelExporter = {
           hideLegend: hideLegend,
           invertIfNegative: 0,
           tickLblPos: "low",
+          fromCol: 0,
+          toCol: isBubbleChart ? 14 : (isHorizChart ? 14 : 12),
+          fromRow: 3,
+          toRow: isBubbleChart ? 21 : (isHorizChart ? Math.max(22, 4 + Math.round(labels.length * 1.5)) : 22),
           ...(bubbleMeta || {})
         };
 
@@ -6840,10 +6853,12 @@ const dashboardExcelExporter = {
             c.alignment = { horizontal: "center", vertical: "middle" };
           });
 
-          const exportRiskRows = buildRiskRows(window.buildingData || [], window.YR_KEYS || ['24년', '25년', '26년']);
+          const exportRiskRows = (typeof window !== "undefined" && window.buildRiskRows)
+            ? window.buildRiskRows(window.buildingData || [], window.YR_KEYS || ['24년', '25년', '26년'])
+            : (typeof buildRiskRows === "function" ? buildRiskRows(buildingData, YR_KEYS) : []);
           const defaultRiskRows = exportRiskRows.map((r, idx) => [
             idx + 1, r.name, r.score, r.score >= 70 ? "🚨 고위험" : r.score >= 45 ? "⚠️ 주의" : "안정",
-            r.desc, Math.round((window.buildingData.find(b => b.name === r.name)?.cnt || []).reduce((sum, value) => sum + value, 0) * 10) / 10
+            r.desc, Math.round(((window.buildingData || []).find(b => b.name === r.name)?.cnt || []).reduce((sum, value) => sum + value, 0) * 10) / 10
           ]);
 
           defaultRiskRows.forEach((r, idx) => {
@@ -6962,10 +6977,10 @@ const dashboardExcelExporter = {
             hideLegend: true,
             invertIfNegative: 0,
             tickLblPos: "low",
-            fromRow: 15,
+            fromRow: 4 + defaultRiskRows.length + 3,
             fromCol: 0,
-            toRow: 33,
-            toCol: 10
+            toRow: 4 + defaultRiskRows.length + 23,
+            toCol: 14
           };
 
           const list = typeof RAW !== 'undefined' ? RAW : [];
@@ -7853,11 +7868,17 @@ const dashboardExcelExporter = {
             headerRow: 4,
             dataStartRow: 5,
             dataEndRow: 8,
-            series: [
-              { name: "2026년 실적", col: 2, color: "4ECB71", values: [83, 27.8, 15.3, 47.0] },
-              { name: "2025년 실적", col: 3, color: "F5A623", values: [86, 23.1, 14.7, 42.7] },
-              { name: "2024년 실적", col: 4, color: "6C8EF5", values: [107, 31.0, 18.3, 48.7] }
-            ]
+            series: kpiYears.slice().reverse().map((yr, idx) => ({
+              name: `${formatYearLabel(yr)} 실적`,
+              col: idx + 2,
+              color: idx === 0 ? "4ECB71" : idx === 1 ? "F5A623" : "6C8EF5",
+              values: [
+                Number(window.annualMetrics?.[yr]?.cnt || 0),
+                Math.round((Number(window.annualMetrics?.[yr]?.hours || 0) / 10) * 10) / 10,
+                Math.round((Number(window.annualMetrics?.[yr]?.adminWorkers || 0) / 10) * 10) / 10,
+                Math.round(Number(window.annualMetrics?.[yr]?.adminCost || 0) / 1000000)
+              ]
+            }))
           };
 
           const list = typeof RAW !== 'undefined' ? RAW : [];
