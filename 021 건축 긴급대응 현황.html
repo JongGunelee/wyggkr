@@ -558,17 +558,54 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   aspect-ratio: 1 / 1 !important;
   margin: 0 auto !important;
 }
-/* 레이더 차트 4배 확대 시 컨테이너 극대화 (팝업 가용 높이 100% 꽉 채우기) */
+/* [레이더 차트 4배 확대 전용] 컨테이너 가득 채우기 (컨테이너 황금비율 + 캔버스 100% 꽉 채우기) */
+#c-repairRadar-wrap.zoomed-4x,
+.chart-wrap.zoomed-4x:has(#c-repairRadar),
+.card.zoomed-4x:has(#c-repairRadar) {
+  width: min(94vw, calc(94vh - 20px), 730px) !important;
+  height: min(94vh, 740px) !important;
+  max-width: 730px !important;
+  max-height: 740px !important;
+  padding: 12px 16px 14px 16px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+/* 4배 확대 모드에서 원본 중복 타이틀 바 숨김 */
+.card.zoomed-4x > .card-title {
+  display: none !important;
+}
+#c-repairRadar-wrap.zoomed-4x .chart-zoom-header,
+.chart-wrap.zoomed-4x:has(#c-repairRadar) .chart-zoom-header,
+.card.zoomed-4x:has(#c-repairRadar) .chart-zoom-header {
+  width: 100% !important;
+  margin-bottom: 6px !important;
+  flex: 0 0 auto !important;
+}
+#c-repairRadar-wrap.zoomed-4x canvas#c-repairRadar,
 .chart-wrap.zoomed-4x canvas#c-repairRadar,
 .card.zoomed-4x canvas#c-repairRadar {
-  width: min(calc(90vh - 120px), 860px) !important;
-  height: min(calc(90vh - 120px), 860px) !important;
-  max-width: min(calc(90vh - 120px), 860px) !important;
-  max-height: min(calc(90vh - 120px), 860px) !important;
+  width: min(calc(94vh - 75px), calc(94vw - 32px), 660px) !important;
+  height: min(calc(94vh - 75px), calc(94vw - 32px), 660px) !important;
+  max-width: 660px !important;
+  max-height: 660px !important;
   aspect-ratio: 1 / 1 !important;
-  margin: 0 auto !important;
+  margin: auto !important;
   display: block !important;
   flex: 0 0 auto !important;
+}
+/* 4배 확대 상태에서 커스텀 범례 크기 및 위치 가독성 최적화 */
+#c-repairRadar-wrap.zoomed-4x #radar-custom-legend,
+.chart-wrap.zoomed-4x #radar-custom-legend,
+.card.zoomed-4x #radar-custom-legend {
+  top: 52px !important;
+  right: 16px !important;
+  padding: 8px 12px !important;
+  font-size: 12px !important;
+  z-index: 10 !important;
 }
 
 /* 4배 확대된 카드 내부의 2열 그리드 및 복합 차트 레이아웃 최적화 */
@@ -3629,11 +3666,12 @@ function toggleZoom(target){
             ch.options.maintainAspectRatio = true;
             ch.options.aspectRatio = 1;
             if(cv.id === 'c-repairRadar'){
-              // 4배 확대 시 라벨 폰트 확대 및 패딩 보정으로 꽉 채우기
+              // 4배 확대 시 컨테이너 가득 채우기 (포인트 라벨 및 여백 최적화)
               if(ch.options.scales && ch.options.scales.r && ch.options.scales.r.pointLabels){
-                ch.options.scales.r.pointLabels.font = { size: 14, weight: '700' };
+                ch.options.scales.r.pointLabels.font = { size: 11, weight: '700' };
+                ch.options.scales.r.pointLabels.padding = 2;
               }
-              if(ch.options.layout) ch.options.layout.padding = 8;
+              if(ch.options.layout) ch.options.layout.padding = 2;
               ch.update();
             }
           }
@@ -5542,7 +5580,7 @@ const dashboardExcelExporter = {
     if (isDoughnut) {
       plotXml = '<c:doughnutChart><c:varyColors val="1"/>' + seriesXml + '<c:firstSliceAng val="0"/><c:holeSize val="50"/></c:doughnutChart>';
     } else if (isRadar) {
-      plotXml = '<c:radarChart><c:radarStyle val="standard"/><c:varyColors val="0"/>' + seriesXml + '<c:axId val="' + catAxisId + '"/><c:axId val="' + valAxisId + '"/></c:radarChart>';
+      plotXml = '<c:radarChart><c:radarStyle val="filled"/><c:varyColors val="0"/>' + seriesXml + '<c:axId val="' + catAxisId + '"/><c:axId val="' + valAxisId + '"/></c:radarChart>';
     } else if (isBubble) {
       const bColX = this.excelCol(spec.xCol || 2);
       const bColY = this.excelCol(spec.yCol || 3);
@@ -5609,10 +5647,10 @@ const dashboardExcelExporter = {
         '<c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr>' +
         '<c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="A0AEC0"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>' +
         '<c:crossAx val="' + valAxisId + '"/><c:crosses val="autoZero"/></c:catAx>' +
-        '<c:valAx><c:axId val="' + valAxisId + '"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="' + (isHorizontal ? "b" : "l") + '"/>' +
+        '<c:valAx><c:axId val="' + valAxisId + '"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="' + (isRadar ? "1" : "0") + '"/><c:axPos val="' + (isHorizontal ? "b" : "l") + '"/>' +
         '<c:majorGridlines><c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>' +
         '<c:numFmt formatCode="' + this.escapeXml(valFmt) + '" sourceLinked="0"/>' +
-        '<c:tickLblPos val="nextTo"/>' +
+        '<c:tickLblPos val="' + (isRadar ? "none" : "nextTo") + '"/>' +
         '<c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr>' +
         '<c:txPr><a:bodyPr/><a:p><a:pPr><a:defRPr sz="900"><a:solidFill><a:srgbClr val="A0AEC0"/></a:solidFill></a:defRPr></a:pPr></a:p></c:txPr>' +
         '<c:crossAx val="' + catAxisId + '"/><c:crosses val="autoZero"/></c:valAx>';
@@ -5632,7 +5670,7 @@ const dashboardExcelExporter = {
         '<c:spPr><a:solidFill><a:srgbClr val="141824"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr>' +
         '<c:chart>' +
           '<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1200" b="1"/></a:pPr><a:r><a:rPr lang="ko-KR" sz="1200" b="1"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr><a:t>' + cleanTitle + '</a:t></a:r></a:p></c:rich></c:tx><c:layout/></c:title>' +
-          '<c:autoTitleDeleted val="0"/>' +
+          '<c:autoTitleDeleted val="1"/>' +
           '<c:plotArea><c:layout/><c:spPr><a:solidFill><a:srgbClr val="1A2035"/></a:solidFill><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr>' + plotXml + axesXml + '</c:plotArea>' +
           legendXml +
           '<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/>' +
@@ -6160,6 +6198,9 @@ const dashboardExcelExporter = {
         } else if (canvasId === 'c-forecast-cost') {
           valFmt = '#,##0"만원"';
           hideLegend = false;
+        } else if (canvasId === 'c-repairRadar') {
+          valFmt = '#,##0"건"';
+          hideLegend = false; // 엑셀 레이더 차트에는 3개년(2026/2025/2024) 범례 필수 표시!
         } else if (canvasId === 'c-baseboard' || canvasId === 'c-roomTop' || canvasId === 'c-bldgBar' || canvasId === 'c-repairBar' || canvasId === 'c-yearCount') {
           valFmt = '#,##0"건"';
           hideLegend = true;
@@ -6887,90 +6928,213 @@ const dashboardExcelExporter = {
           this.buildReadmeSheet(wb, title, list.length);
 
         // =========================================================================
-        // [건물동 상세 현황표 전용]
+        // [건물동 상세 현황표 전용 - 대시보드 화면과 100% 동일한 상세 테이블 및 조건부 서식]
         // =========================================================================
         } else if (type === "bldg-table") {
-          title = customTitle || "건물동별 3개년 상세 현황 및 차트";
+          title = customTitle || "건물동 상세 현황표";
           filename = `[021_건축긴급대응]_${this.sanitizeFilename(title)}_${timestamp}.xlsx`;
 
-          const chartSheet = wb.addWorksheet("차트");
-          chartSheet.getCell("A1").value = "📊 " + title;
-          chartSheet.getCell("A1").font = { bold: true, size: 14, color: { argb: "FF1E293B" } };
-          chartSheet.getCell("A2").value = "💡 안내: '차트 연계 데이터' 시트의 노란색 수치를 변경하면 이 차트의 막대 모양이 실시간으로 자동 갱신됩니다.";
-          chartSheet.getCell("A2").font = { italic: true, size: 10, color: { argb: "FF64748B" } };
-          chartSheet.columns = Array.from({ length: 16 }, () => ({ width: 11 }));
+          const tableSheet = wb.addWorksheet("건물동 상세 현황표");
+          tableSheet.views = [{ showGridLines: true }];
 
-          const dataSheet = wb.addWorksheet("차트 연계 데이터");
-          dataSheet.mergeCells("A1:E1");
-          dataSheet.getCell("A1").value = "💡 안내: 노란색 입력 셀을 수정하면 '차트' 시트의 네이티브 엑셀 차트가 자동 갱신됩니다.";
-          dataSheet.getCell("A1").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F2FF" } };
+          // 1. 타이틀 영역
+          tableSheet.mergeCells("A1:J1");
+          const titleCell = tableSheet.getCell("A1");
+          titleCell.value = "🏆 " + title;
+          titleCell.font = { bold: true, size: 15, color: { argb: "FF1E293B" } };
+          titleCell.alignment = { vertical: "middle" };
+          tableSheet.getRow(1).height = 30;
 
-          const bDataSrc = (typeof buildingData !== 'undefined' && Array.isArray(buildingData) && buildingData.length > 0)
-            ? buildingData
-            : (typeof window !== 'undefined' && window.buildingData ? window.buildingData : []);
+          // 서브 안내문
+          tableSheet.mergeCells("A2:J2");
+          const subCell = tableSheet.getCell("A2");
+          subCell.value = "💡 건축 소액·소모품·긴급성 대응 3개년(2024~2026년) 건물동별 작업 실적(건수·시간), 증감 추이 및 위험도 분석 현황입니다.";
+          subCell.font = { italic: true, size: 10, color: { argb: "FF64748B" } };
+          tableSheet.getRow(2).height = 20;
 
-          const bRows = bDataSrc.length > 0
-            ? bDataSrc.map(b => ({
-                name: b.name,
-                c26: b.cnt[2],
-                c25: b.cnt[1],
-                c24: b.cnt[0],
-                total: Math.round((b.cnt[0] + b.cnt[1] + b.cnt[2]) * 10) / 10,
-                w26: b.workers[2]
-              }))
-            : [
-                { name: "2동", c26: 14.3, c25: 12.6, c24: 15.6, total: 42.5, w26: 24.8 },
-                { name: "8동", c26: 13.0, c25: 10.3, c24: 14.2, total: 37.5, w26: 22.5 },
-                { name: "9동", c26: 2.8, c25: 14.2, c24: 18.0, total: 35.0, w26: 6.2 },
-                { name: "5동", c26: 8.5, c25: 12.0, c24: 13.0, total: 33.5, w26: 15.8 },
-                { name: "7동", c26: 9.3, c25: 10.5, c24: 12.0, total: 31.8, w26: 17.5 },
-                { name: "A동", c26: 7.2, c25: 8.5, c24: 9.0, total: 24.7, w26: 14.0 },
-                { name: "103동", c26: 8.0, c25: 6.2, c24: 7.0, total: 21.2, w26: 16.5 },
-                { name: "102동", c26: 6.0, c25: 5.5, c24: 7.0, total: 18.5, w26: 11.2 }
-              ];
+          // 2. 테이블 헤더 정의 (화면과 100% 동일: 10개 컬럼)
+          const headers = ["건물동", "26년 건수", "26년 시간", "25년 건수", "25년 시간", "24년 건수", "24년 시간", "3년 합계", "증감 추이", "위험도"];
+          const headerRow = tableSheet.getRow(4);
+          headerRow.height = 26;
 
-          const headers = ["건물동", "26년 건수", "25년 건수", "24년 건수", "3년 누적 건수", "26년 투입공수(명)"];
           headers.forEach((h, i) => {
-            const c = dataSheet.getCell(4, i + 1);
+            const c = headerRow.getCell(i + 1);
             c.value = h;
-            c.font = { bold: true, color: { argb: "FFFFFFFF" } };
-            c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF24476B" } };
+            c.font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+            c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E293B" } };
             c.alignment = { horizontal: "center", vertical: "middle" };
+            c.border = {
+              top: { style: "medium", color: { argb: "FF0F172A" } },
+              bottom: { style: "medium", color: { argb: "FF0F172A" } },
+              left: { style: "thin", color: { argb: "FF334155" } },
+              right: { style: "thin", color: { argb: "FF334155" } }
+            };
           });
 
-          bRows.forEach((r, rIdx) => {
-            const rowNum = 5 + rIdx;
-            const c1 = dataSheet.getCell(rowNum, 1);
-            c1.value = r.name;
-            c1.alignment = { horizontal: "center" };
-            c1.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
+          // 3. 데이터 소스 집계
+          const bDataSrc = (typeof buildingData !== 'undefined' && Array.isArray(buildingData) && buildingData.length > 0)
+            ? [...buildingData]
+            : ((typeof window !== 'undefined' && window.buildingData) ? [...window.buildingData] : []);
 
-            [r.c26, r.c25, r.c24, r.total, r.w26].forEach((val, cIdx) => {
-              const cell = dataSheet.getCell(rowNum, cIdx + 2);
-              cell.value = Number(val) || 0;
-              cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
-              cell.numFmt = '#,##0';
-              cell.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
+          // 화면 기본 정렬: 3년 총건수 내림차순
+          bDataSrc.sort((a, b) => {
+            const totA = (a.cnt || []).reduce((s, v) => s + v, 0);
+            const totB = (b.cnt || []).reduce((s, v) => s + v, 0);
+            return totB - totA;
+          });
+
+          let startRow = 5;
+          let sumC26 = 0, sumH26 = 0, sumC25 = 0, sumH25 = 0, sumC24 = 0, sumH24 = 0, sumTotC = 0, sumTotH = 0;
+
+          bDataSrc.forEach((b, rIdx) => {
+            const rowNum = startRow + rIdx;
+            const row = tableSheet.getRow(rowNum);
+            row.height = 22;
+
+            const c26 = Number((b.cnt && b.cnt[2]) || 0);
+            const h26 = Number((b.hours && b.hours[2]) || 0);
+            const c25 = Number((b.cnt && b.cnt[1]) || 0);
+            const h25 = Number((b.hours && b.hours[1]) || 0);
+            const c24 = Number((b.cnt && b.cnt[0]) || 0);
+            const h24 = Number((b.hours && b.hours[0]) || 0);
+
+            const totC = c26 + c25 + c24;
+            const totH = h26 + h25 + h24;
+
+            sumC26 += c26; sumH26 += h26;
+            sumC25 += c25; sumH25 += h25;
+            sumC24 += c24; sumH24 += h24;
+            sumTotC += totC; sumTotH += totH;
+
+            // 증감 추이 판정 (2026년 vs 2024년 건수 편차)
+            const trendDiff = Math.round((c26 - c24) * 10) / 10;
+            let trendSymbol = "→ 유지";
+            let trendFontColor = "FF64748B";
+            let trendBgColor = "FFF1F5F9";
+            if (trendDiff > 0) {
+              trendSymbol = `↑${trendDiff.toFixed(1)}건`;
+              trendFontColor = "FFE11D48"; // 붉은색
+              trendBgColor = "FFFFF1F2";
+            } else if (trendDiff < 0) {
+              trendSymbol = `↓${Math.abs(trendDiff).toFixed(1)}건`;
+              trendFontColor = "FF059669"; // 녹색
+              trendBgColor = "FFECFDF5";
+            }
+
+            // 위험도 판정 (화면 getRiskScore와 100% 동일)
+            const ratio = c26 / Math.max(c24 || 1, 1);
+            const isHigh = ratio > 2 && c26 > 10;
+            const isMid = ratio > 1.5;
+            let riskText = isHigh ? "위험" : (isMid ? "주의" : "안정");
+            let riskFontColor = isHigh ? "FFE11D48" : (isMid ? "FFD97706" : "FF059669");
+            let riskBgColor = isHigh ? "FFFFF1F2" : (isMid ? "FFFFFBEB" : "FFECFDF5");
+
+            // A열: 건물동
+            const cName = row.getCell(1);
+            cName.value = b.name;
+            cName.alignment = { horizontal: "center", vertical: "middle" };
+            cName.font = { size: 10, bold: true, color: { argb: "FF1E293B" } };
+
+            // B~G열: 연도별 건수 / 시간
+            const c_c26 = row.getCell(2); c_c26.value = c26; c_c26.numFmt = '#,##0.0"건"'; c_c26.alignment = { horizontal: "right", vertical: "middle" };
+            const c_h26 = row.getCell(3); c_h26.value = h26; c_h26.numFmt = '#,##0.0"h"';   c_h26.alignment = { horizontal: "right", vertical: "middle" };
+            const c_c25 = row.getCell(4); c_c25.value = c25; c_c25.numFmt = '#,##0.0"건"'; c_c25.alignment = { horizontal: "right", vertical: "middle" };
+            const c_h25 = row.getCell(5); c_h25.value = h25; c_h25.numFmt = '#,##0.0"h"';   c_h25.alignment = { horizontal: "right", vertical: "middle" };
+            const c_c24 = row.getCell(6); c_c24.value = c24; c_c24.numFmt = '#,##0.0"건"'; c_c24.alignment = { horizontal: "right", vertical: "middle" };
+            const c_h24 = row.getCell(7); c_h24.value = h24; c_h24.numFmt = '#,##0.0"h"';   c_h24.alignment = { horizontal: "right", vertical: "middle" };
+
+            // H열: 3년 합계 (건수 / 시간 복합 텍스트 및 볼드)
+            const c_tot = row.getCell(8);
+            c_tot.value = `${totC.toFixed(1)}건 / ${totH.toFixed(1)}h`;
+            c_tot.font = { bold: true, color: { argb: "FF0F172A" } };
+            c_tot.alignment = { horizontal: "right", vertical: "middle" };
+            c_tot.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF8FAFC" } };
+
+            // I열: 증감 추이
+            const c_trend = row.getCell(9);
+            c_trend.value = trendSymbol;
+            c_trend.font = { bold: true, size: 10, color: { argb: trendFontColor } };
+            c_trend.fill = { type: "pattern", pattern: "solid", fgColor: { argb: trendBgColor } };
+            c_trend.alignment = { horizontal: "center", vertical: "middle" };
+
+            // J열: 위험도
+            const c_risk = row.getCell(10);
+            c_risk.value = riskText;
+            c_risk.font = { bold: true, size: 10, color: { argb: riskFontColor } };
+            c_risk.fill = { type: "pattern", pattern: "solid", fgColor: { argb: riskBgColor } };
+            c_risk.alignment = { horizontal: "center", vertical: "middle" };
+
+            for (let c = 1; c <= 10; c++) {
+              row.getCell(c).border = {
+                top: { style: "thin", color: { argb: "FFE2E8F0" } },
+                bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
+                left: { style: "thin", color: { argb: "FFE2E8F0" } },
+                right: { style: "thin", color: { argb: "FFE2E8F0" } }
+              };
+            }
+          });
+
+          // 4. 최하단 합계 행 추가
+          const endRow = startRow + bDataSrc.length;
+          const totalRow = tableSheet.getRow(endRow);
+          totalRow.height = 25;
+
+          totalRow.getCell(1).value = "합 계";
+          totalRow.getCell(1).alignment = { horizontal: "center", vertical: "middle" };
+          totalRow.getCell(1).font = { bold: true, color: { argb: "FF0F172A" } };
+
+          totalRow.getCell(2).value = sumC26; totalRow.getCell(2).numFmt = '#,##0.0"건"'; totalRow.getCell(2).alignment = { horizontal: "right", vertical: "middle" }; totalRow.getCell(2).font = { bold: true, color: { argb: "FF0F172A" } };
+          totalRow.getCell(3).value = sumH26; totalRow.getCell(3).numFmt = '#,##0.0"h"';   totalRow.getCell(3).alignment = { horizontal: "right", vertical: "middle" }; totalRow.getCell(3).font = { bold: true, color: { argb: "FF0F172A" } };
+          totalRow.getCell(4).value = sumC25; totalRow.getCell(4).numFmt = '#,##0.0"건"'; totalRow.getCell(4).alignment = { horizontal: "right", vertical: "middle" }; totalRow.getCell(4).font = { bold: true, color: { argb: "FF0F172A" } };
+          totalRow.getCell(5).value = sumH25; totalRow.getCell(5).numFmt = '#,##0.0"h"';   totalRow.getCell(5).alignment = { horizontal: "right", vertical: "middle" }; totalRow.getCell(5).font = { bold: true, color: { argb: "FF0F172A" } };
+          totalRow.getCell(6).value = sumC24; totalRow.getCell(6).numFmt = '#,##0.0"건"'; totalRow.getCell(6).alignment = { horizontal: "right", vertical: "middle" }; totalRow.getCell(6).font = { bold: true, color: { argb: "FF0F172A" } };
+          totalRow.getCell(7).value = sumH24; totalRow.getCell(7).numFmt = '#,##0.0"h"';   totalRow.getCell(7).alignment = { horizontal: "right", vertical: "middle" }; totalRow.getCell(7).font = { bold: true, color: { argb: "FF0F172A" } };
+          totalRow.getCell(8).value = `${sumTotC.toFixed(1)}건 / ${sumTotH.toFixed(1)}h`;
+          totalRow.getCell(8).alignment = { horizontal: "right", vertical: "middle" };
+          totalRow.getCell(8).font = { bold: true, color: { argb: "FF0F172A" } };
+
+          totalRow.getCell(9).value = "-";
+          totalRow.getCell(9).alignment = { horizontal: "center", vertical: "middle" };
+          totalRow.getCell(9).font = { bold: true, color: { argb: "FF64748B" } };
+
+          totalRow.getCell(10).value = "-";
+          totalRow.getCell(10).alignment = { horizontal: "center", vertical: "middle" };
+          totalRow.getCell(10).font = { bold: true, color: { argb: "FF64748B" } };
+
+          for (let c = 1; c <= 10; c++) {
+            const cell = totalRow.getCell(c);
+            cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF1F5F9" } };
+            cell.border = {
+              top: { style: "medium", color: { argb: "FF94A3B8" } },
+              bottom: { style: "double", color: { argb: "FF0F172A" } },
+              left: { style: "thin", color: { argb: "FFE2E8F0" } },
+              right: { style: "thin", color: { argb: "FFE2E8F0" } }
+            };
+          }
+
+          // 5. 건수 컬럼 조건부 서식 (데이터막대)
+          try {
+            tableSheet.addConditionalFormatting({
+              ref: `B${startRow}:B${endRow - 1}`,
+              rules: [{ type: "dataBar", color: { argb: "FF4ECB71" }, cfvo: [{ type: "min" }, { type: "max" }] }]
             });
-          });
+          } catch(cfErr) {}
 
-          dataSheet.columns = [{ width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 16 }, { width: 18 }];
+          // 열 너비 지정
+          tableSheet.columns = [
+            { width: 14 }, // 건물동
+            { width: 13 }, // 26년 건수
+            { width: 13 }, // 26년 시간
+            { width: 13 }, // 25년 건수
+            { width: 13 }, // 25년 시간
+            { width: 13 }, // 24년 건수
+            { width: 13 }, // 24년 시간
+            { width: 22 }, // 3년 합계
+            { width: 14 }, // 증감 추이
+            { width: 12 }  // 위험도
+          ];
 
-          chartSpec = {
-            title: "건물동별 3개년 긴급보수 건수 비교 차트",
-            type: "bar",
-            sheetName: "차트 연계 데이터",
-            categoryCol: 1,
-            categoryValues: bRows.map(r => r.name),
-            headerRow: 4,
-            dataStartRow: 5,
-            dataEndRow: 4 + bRows.length,
-            series: [
-              { name: "2026년 건수", col: 2, color: "4ECB71", values: bRows.map(r => r.c26) },
-              { name: "2025년 건수", col: 3, color: "F5A623", values: bRows.map(r => r.c25) },
-              { name: "2024년 건수", col: 4, color: "6C8EF5", values: bRows.map(r => r.c24) }
-            ]
-          };
+          chartSpec = null; // 차트 시트 불필요
 
           const list = typeof RAW !== 'undefined' ? RAW : [];
           this.addRawRecordsSheet(wb, "연계 상세 증빙 레코드", list);
