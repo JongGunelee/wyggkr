@@ -1666,6 +1666,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       · <strong>괴리 관리:</strong> 대시보드의 '괴리 86건 전수 조회' 버튼을 활용하면 시공사 미기재 건 및 반일 청구 건을 즉시 필터링하여 시공사 감리·정산 시 근거 자료로 활용할 수 있습니다.
     </div>
   </div>
+</div><!-- /card full (근로자 산정 기준 심층 분석 보고서 카드 닫기) -->
 
   <div class="grid2">
     <div class="card">
@@ -2880,7 +2881,20 @@ function showPage(id,btn){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   const pageEl = document.getElementById('page-'+id);
-  if(pageEl) pageEl.classList.add('active');
+  if(pageEl) {
+    pageEl.classList.add('active');
+    // 활성화된 탭 내부의 전수 차트 리사이즈 및 레이아웃 재계산 보증
+    requestAnimationFrame(() => {
+      if (window.dashboardCharts) {
+        pageEl.querySelectorAll('canvas').forEach(canvas => {
+          const chart = window.dashboardCharts[canvas.id];
+          if (chart && typeof chart.resize === 'function') {
+            chart.resize();
+          }
+        });
+      }
+    });
+  }
   if(btn) {
     btn.classList.add('active');
   } else {
