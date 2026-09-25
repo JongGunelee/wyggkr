@@ -17,11 +17,24 @@
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
-.header{background:linear-gradient(135deg,#1a1d27 0%,#0f1117 100%);border-bottom:1px solid var(--border);padding:20px 32px;display:flex;align-items:center;justify-content:space-between;}
+/* === 대시보드 메인 상단 틀고정 (Sticky Header Freeze Pane) === */
+.dashboard-sticky-header {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  background: #0f1117;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.65);
+  border-bottom: 1px solid rgba(46, 51, 80, 0.8);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.header{background:linear-gradient(135deg,#1a1d27 0%,#0f1117 100%);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;}
 .header-title{font-size:22px;font-weight:700;}
 .header-title span{color:var(--accent1);}
 .header-meta{font-size:12px;color:var(--text2);text-align:right;}
-.nav{display:flex;gap:4px;padding:16px 32px 0;border-bottom:1px solid var(--border);overflow-x:auto;}
+.nav{display:flex;gap:4px;padding:12px 32px 0;background:#0f1117;border-bottom:1px solid var(--border);overflow-x:auto;}
 .nav-btn{padding:10px 20px;border:none;border-radius:8px 8px 0 0;background:transparent;color:var(--text2);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;white-space:nowrap;}
 .nav-btn.active,.nav-btn:hover{background:var(--card);color:var(--text);border-top:2px solid var(--accent1);}
 .main{padding:28px 32px;}
@@ -1288,41 +1301,44 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   </div>
 </div>
 
-<div class="header">
-  <div>
-    <div class="header-title">🏢 건축 소액·소모품·긴급성 대응 <span>대시보드</span></div>
-    <div style="font-size:12px;color:var(--text2);margin-top:4px;">건축(실비정산) · <span id="header-years-range">2024~2026년</span> · 분석기준: 2026.09.22 · 차트 클릭 시 상세 증빙 표시</div>
-  </div>
-  <div class="header-meta" style="display:flex;align-items:center;gap:12px;">
+<!-- === 대시보드 상단 틀고정 헤더 래퍼 (Freeze Pane Container) === -->
+<div class="dashboard-sticky-header" id="dashboard-sticky-header">
+  <div class="header">
+    <div>
+      <div class="header-title">🏢 건축 소액·소모품·긴급성 대응 <span>대시보드</span></div>
+      <div style="font-size:12px;color:var(--text2);margin-top:4px;">건축(실비정산) · <span id="header-years-range">2024~2026년</span> · 분석기준: 2026.09.22 · 차트 클릭 시 상세 증빙 표시</div>
+    </div>
+    <div class="header-meta" style="display:flex;align-items:center;gap:12px;">
 
-    <button type="button" class="master-xls-btn" id="btn-force-refresh-github" onclick="window.forceRefreshGitHubData()" style="background:linear-gradient(135deg,#059669,#10b981);border:1px solid #34d399;" title="GitHub 원본 XLSB 파일의 수정/추가/삭제를 브라우저 캐시 없이 즉시 새로고침하여 대시보드 전체를 재빌드합니다.">
-      <span>🔄</span>
-      <span>깃허브 원본 실시간 동기화</span>
-    </button>
-    <button type="button" class="master-xls-btn" id="btn-download-raw-xlsx" onclick="window.downloadRawXlsx()" title="GitHub 원본 관리대장(XLSB)을 완전한 XLSX 포맷으로 변환하여 로컬 컴퓨터에 다운로드">
-      <span>📥</span>
-      <span>관리대장 다운로드 (XLSX)</span>
-    </button>
-    <button type="button" class="master-xls-btn"  onclick="window.dashboardExcelExporter.exportMaster()" title="대시보드 전체 9대 요약 시트 및 원천 전수 증빙이 포함된 통합 엑셀 워크북(.xlsx) 다운로드">
-      <span>📊</span>
-      <span>전체 통합 엑셀 (XLSX)</span>
-    </button>
-    <div style="text-align:right;">
-      총 분석 레코드 <strong style="color:var(--text);font-size:16px;" id="header-total-records-count">-건</strong><br>
-      <span id="header-total-records-years">연도별 데이터 집계 중...</span><br>
-      <span id="raw-integrity-status" style="font-size:10.5px;color:#fbbf24;">원천 XLSB 검증 대기</span>
+      <button type="button" class="master-xls-btn" id="btn-force-refresh-github" onclick="window.forceRefreshGitHubData()" style="background:linear-gradient(135deg,#059669,#10b981);border:1px solid #34d399;" title="GitHub 원본 XLSB 파일의 수정/추가/삭제를 브라우저 캐시 없이 즉시 새로고침하여 대시보드 전체를 재빌드합니다.">
+        <span>🔄</span>
+        <span>깃허브 원본 실시간 동기화</span>
+      </button>
+      <button type="button" class="master-xls-btn" id="btn-download-raw-xlsx" onclick="window.downloadRawXlsx()" title="GitHub 원본 관리대장(XLSB)을 완전한 XLSX 포맷으로 변환하여 로컬 컴퓨터에 다운로드">
+        <span>📥</span>
+        <span>관리대장 다운로드 (XLSX)</span>
+      </button>
+      <button type="button" class="master-xls-btn"  onclick="window.dashboardExcelExporter.exportMaster()" title="대시보드 전체 9대 요약 시트 및 원천 전수 증빙이 포함된 통합 엑셀 워크북(.xlsx) 다운로드">
+        <span>📊</span>
+        <span>전체 통합 엑셀 (XLSX)</span>
+      </button>
+      <div style="text-align:right;">
+        총 분석 레코드 <strong style="color:var(--text);font-size:16px;" id="header-total-records-count">-건</strong><br>
+        <span id="header-total-records-years">연도별 데이터 집계 중...</span><br>
+        <span id="raw-integrity-status" style="font-size:10.5px;color:#fbbf24;">원천 XLSB 검증 대기</span>
+      </div>
     </div>
   </div>
-</div>
 
-<div class="nav">
-  <button class="nav-btn active" onclick="showPage('overview',this)">📊 종합 현황</button>
-  <button class="nav-btn" onclick="showPage('repair',this)">🔧 보수 유형</button>
-  <button class="nav-btn" onclick="showPage('building',this)">🏢 건물동 분석</button>
-  <button class="nav-btn" onclick="showPage('monthly',this)">📅 월별 분포</button>
-  <button class="nav-btn" onclick="showPage('material',this)">📦 자재 분석</button>
-  <button class="nav-btn" onclick="showPage('risk',this)">⚠️ 리스크 분석</button>
-  <button class="nav-btn" onclick="showPage('insights',this)">💡 인사이트</button>
+  <div class="nav">
+    <button class="nav-btn active" onclick="showPage('overview',this)">📊 종합 현황</button>
+    <button class="nav-btn" onclick="showPage('repair',this)">🔧 보수 유형</button>
+    <button class="nav-btn" onclick="showPage('building',this)">🏢 건물동 분석</button>
+    <button class="nav-btn" onclick="showPage('monthly',this)">📅 월별 분포</button>
+    <button class="nav-btn" onclick="showPage('material',this)">📦 자재 분석</button>
+    <button class="nav-btn" onclick="showPage('risk',this)">⚠️ 리스크 분석</button>
+    <button class="nav-btn" onclick="showPage('insights',this)">💡 인사이트</button>
+  </div>
 </div>
 
 <div class="main">
