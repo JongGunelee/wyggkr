@@ -2306,72 +2306,166 @@ window.downloadRawXlsx = async function() {
         if (!wsT || !wsL) return;
 
         const range = XLSX.utils.decode_range(wsL['!ref'] || 'A1:Z100');
+
+        // 1. 유효 데이터 행과 합계 행 정밀 탐색 (합계행 삭제/누락 완벽 방어)
         let liveSumRow = -1;
+        let lastDataRow = cfg.dataStart - 1;
+
         for (let r = cfg.dataStart; r <= range.e.r + 1; r++) {
           const cellB = wsL['B' + r];
           const cellD = wsL['D' + r];
+          const cellE = wsL['E' + r];
+          const cellM = wsL['M' + r];
+          const cellN = wsL['N' + r];
           const textB = String(cellB?.v || '').replace(/\s+/g, '');
           const fD = String(cellD?.f || '');
-          if (textB.includes('합계') || fD.includes('SUM')) {
+
+          if (textB.includes('합계') || textB.includes('총계') || fD.includes('SUM')) {
             liveSumRow = r;
             break;
           }
+
+          if ((cellE && cellE.v) || (cellN && cellN.v) || (cellM && cellM.v) || (cellD && cellD.v !== undefined)) {
+            lastDataRow = r;
+          }
         }
-        if (liveSumRow === -1) liveSumRow = range.e.r + 1;
 
-        const liveDataCount = liveSumRow - cfg.dataStart;
+        // 합계 행이 누락/삭제되었을 경우, 마지막 데이터 행 바로 다음 행으로 자동 지정
+        if (liveSumRow === -1) {
+          liveSumRow = lastDataRow + 1;
+        }
 
-        // 데이터 행 동기화 및 수식/서식 완벽 보증
-        for (let i = 0; i < liveDataCount; i++) {
-          const rT = cfg.dataStart + i;
-          const rL = cfg.dataStart + i;
-          const rowT = wsT.getRow(rT);
+        const liveDataEnd = liveSumRow - 1;
+        const liveDataCount = Math.max(0, liveDataEnd - cfg.dataStart + 1);
 
-          // I열(단위시간: =H-F) 및 J열(총시간: =I*D) 고유 수식 및 서식 보장
+        // 2. 템플릿의 원래 합계행 및 스타일 프로토타입 백업
+        let origTemplateSumRow = -1;
+        for (let r = cfg.dataStart; r <= Math.max(wsT.rowCount, 150); r++) {
+          const cellB = wsT.getRow(r).getCell(2);
+          const textB = String(cellB.value || '').replace(/\s+/g, '');
+          if (textB.includes('합계') || textB.includes('총계')) {
+            origTemplateSumRow = r;
+            break;
+          }
+        }
+        if (origTemplateSumRow === -1) origTemplateSumRow = wsT.rowCount;
+
+        const sampleDataRow = wsT.getRow(cfg.dataStart);
+        const colStyles = [];
+        for (let c = 1; c <= Math.max(range.e.c + 1, 40); c++) {
+          const sampleCell = sampleDataRow.getCell(c);
+          colStyles[c] = {
+            font: sampleCell.font ? { ...sampleCell.font } : undefined,
+            alignment: sampleCell.alignment ? { ...sampleCell.alignment } : undefined,
+            border: sampleCell.border ? JSON.parse(JSON.stringify(sampleCell.border)) : undefined,
+            fill: sampleCell.fill ? JSON.parse(JSON.stringify(sampleCell.fill)) : undefined,
+            numFmt: sampleCell.numFmt || undefined
+          };
+        }
+
+        const origSumRowObj = wsT.getRow(origTemplateSumRow);
+        const sumRowStyles = [];
+        for (let c = 1; c <= Math.max(range.e.c + 1, 40); c++) {
+          const sCell = origSumRowObj.getCell(c);
+          sumRowStyles[c] = {
+            font: sCell.font ? { ...sCell.font } : undefined,
+            alignment: sCell.alignment ? { ...sCell.alignment } : undefined,
+            border: sCell.border ? JSON.parse(JSON.stringify(sCell.border)) : undefined,
+            fill: sCell.fill ? JSON.parse(JSON.stringify(sCell.fill)) : undefined,
+            numFmt: sCell.numFmt || undefined
+          };
+        }
+
+        // 3. 데이터 행 채우기 (동적 추가/확장 시에도 서식 및 수식 완벽 상속)
+        for (let r = cfg.dataStart; r <= liveDataEnd; r++) {
+          const rowT = wsT.getRow(r);
+          for (let c = 1; c <= Math.max(range.e.c + 1, 40); c++) {
+            const cell = rowT.getCell(c);
+            const proto = colStyles[c];
+            if (proto) {
+              if (proto.font) cell.font = { ...proto.font };
+              if (proto.alignment) cell.alignment = { ...proto.alignment };
+              if (proto.border) cell.border = JSON.parse(JSON.stringify(proto.border));
+              if (proto.fill) cell.fill = JSON.parse(JSON.stringify(proto.fill));
+              if (proto.numFmt) cell.numFmt = proto.numFmt;
+            }
+          }
+
+          // I열(단위시간: =H-F) 및 J열(총시간: =I*D) 고유 수식 및 서식 자동 보장
           const cellI = rowT.getCell(9);
-          cellI.value = { formula: `H${rT}-F${rT}` };
+          cellI.value = { formula: `H${r}-F${r}` };
           cellI.numFmt = 'h:mm';
           cellI.alignment = { horizontal: 'center', vertical: 'middle' };
 
           const cellJ = rowT.getCell(10);
-          cellJ.value = { formula: `I${rT}*D${rT}` };
+          cellJ.value = { formula: `I${r}*D${r}` };
           cellJ.numFmt = '[hh] "시간" mm "분"';
           cellJ.alignment = { horizontal: 'center', vertical: 'middle' };
 
-          // 그 외 데이터 열 업데이트 (변동성 반영)
           for (let c = 1; c <= range.e.c + 1; c++) {
-            if (c === 9 || c === 10) continue; // I, J열 수식 보존
+            if (c === 9 || c === 10) continue;
             const cLetter = getColLetter(c);
-            const liveCell = wsL[cLetter + rL];
-            if (!liveCell) continue;
-
+            const liveCell = wsL[cLetter + r];
             const cellT = rowT.getCell(c);
+
+            if (!liveCell) {
+              cellT.value = null;
+              continue;
+            }
+
             if (liveCell.f) {
               cellT.value = { formula: cleanFormula(liveCell.f), result: liveCell.v };
             } else if (liveCell.v !== undefined && liveCell.v !== null) {
               if (c === 5 || c === 7) {
-                // 시작일/종료일 서식 보존
-                cellT.value = liveCell.v instanceof Date ? liveCell.v : liveCell.v;
+                cellT.value = liveCell.v;
                 cellT.numFmt = 'mm"월" dd"일"';
               } else if (c === 6 || c === 8) {
-                // 시작시간/종료시간 서식 보존
-                cellT.value = liveCell.v instanceof Date ? liveCell.v : liveCell.v;
+                cellT.value = liveCell.v;
                 cellT.numFmt = 'h:mm';
               } else {
                 cellT.value = liveCell.v;
               }
+            } else {
+              cellT.value = null;
             }
           }
         }
 
-        // 합계 행 수식 완벽 보정 (1048580 버그 원천 차단 및 정합성 보증)
+        // 4. 새로운 합계 행 작성 (합계 서식 완벽 복제 및 동적 SUM 수식 재계산)
         const sumRowT = wsT.getRow(liveSumRow);
-        sumRowT.getCell(2).value = '합 계';
-        sumRowT.getCell(4).value = { formula: `SUM(D${cfg.dataStart}:D${liveSumRow - 1})` };
+        for (let c = 1; c <= Math.max(range.e.c + 1, 40); c++) {
+          const cell = sumRowT.getCell(c);
+          cell.value = null;
+          const proto = sumRowStyles[c];
+          if (proto) {
+            if (proto.font) cell.font = { ...proto.font };
+            if (proto.alignment) cell.alignment = { ...proto.alignment };
+            if (proto.border) cell.border = JSON.parse(JSON.stringify(proto.border));
+            if (proto.fill) cell.fill = JSON.parse(JSON.stringify(proto.fill));
+            if (proto.numFmt) cell.numFmt = proto.numFmt;
+          }
+        }
 
-        for (let c = cfg.sumColStart; c <= cfg.sumColEnd; c++) {
-          const cLetter = getColLetter(c);
-          sumRowT.getCell(c).value = { formula: `SUM(${cLetter}${cfg.dataStart}:${cLetter}${liveSumRow - 1})` };
+        sumRowT.getCell(2).value = '합 계';
+        if (liveDataCount > 0) {
+          sumRowT.getCell(4).value = { formula: `SUM(D${cfg.dataStart}:D${liveDataEnd})` };
+          for (let c = cfg.sumColStart; c <= cfg.sumColEnd; c++) {
+            const cLetter = getColLetter(c);
+            sumRowT.getCell(c).value = { formula: `SUM(${cLetter}${cfg.dataStart}:${cLetter}${liveDataEnd})` };
+          }
+        }
+
+        // 5. 이전 템플릿의 잔여 고스트 행(Ghost rows) 완전 소거 (데이터 삭제 시 찌꺼기 제거)
+        const maxCleanupRow = Math.max(origTemplateSumRow, wsT.rowCount, liveSumRow + 20);
+        for (let r = liveSumRow + 1; r <= maxCleanupRow; r++) {
+          const rowGhost = wsT.getRow(r);
+          for (let c = 1; c <= 40; c++) {
+            const cell = rowGhost.getCell(c);
+            cell.value = null;
+            cell.fill = { type: 'pattern', pattern: 'none' };
+            cell.border = {};
+            cell.numFmt = undefined;
+          }
         }
       });
     }
