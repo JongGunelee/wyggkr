@@ -1342,7 +1342,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       <div class="kpi-sub" id="kpi-overview-sub-cnt">-</div>
       <span class="kpi-badge badge-down" id="kpi-overview-badge-cnt">↓ 22.4% (26년←24년)</span>
     </div>
-    <div class="kpi" style="--kpi-color:#f5a623" onclick="openWorkerAuditModal('all')" id="kpi-overview-workers-card" title="💡 [근로자 산정 기준 심층 분석]: 원천 엑셀의 '근로자(직접 서명) 관리소 목록'을 100% 기준으로 산정함.">
+    <div class="kpi" style="--kpi-color:#f5a623" onclick="openWorkerAuditModal('all')" id="kpi-overview-workers-card" title="💡 [총 근로자 투입 '명·회' 단위 정의 및 산정 목적]:&#10;1. '명·회(Person-Times)'의 의미: 순수 고유 인원이 아니라 출동 건별 직접 서명한 누적 '연인원'입니다.&#10;2. 사용 이유: 고유 인원 착시 방지 및 시공사 청구 품수(품)와의 1:1 교차검증을 통한 투명성 확보.&#10;💡 클릭 시 근로자 산정기준 심층 교차검증 모달 오픈">
       <div class="kpi-label">총 근로자 투입 <span style="font-size:10px;color:#a5b4fc;font-weight:700;">(관리소 서명 기준)</span></div>
       <div class="kpi-val" id="kpi-overview-total-workers">-</div>
       <div class="kpi-sub" id="kpi-overview-sub-workers">-</div>
@@ -2807,6 +2807,20 @@ window.RAW = RAW;
 // 전역 차트 관리 객체 초기화 보증
 window.dashboardCharts = window.dashboardCharts || {};
 
+// ─── 비용 산출 기준 파라미터 (단가 변경 시 자동 재계산 연동 — 전역 호이스팅 완료) ────────────────
+const COST_UNIT = {
+  hourlyRate: 35000, // 기능직 평균 시급 (대한건설협회 시중노임단가 및 긴급출동 프리미엄 준용)
+  visitFee: 5000,    // 건당 출장/부대경비
+  matCost: {
+    screen: 8000,
+    silicone: 5000,
+    tile: 15000,
+    baseboard: 12000,
+    hardware: 18000,
+    etc: 5000
+  }
+};
+
 function getDynamicYearKeys(records) {
   const set = new Set();
   (records || RAW).forEach(r => {
@@ -3116,13 +3130,18 @@ function updateAllKPIsAndTexts() {
 
   const workersCard = document.getElementById('kpi-overview-workers-card');
   if (workersCard) {
-    workersCard.title = `💡 [총 근로자 투입 인원 산출 산식 및 대조 기준 — 100% 원천 동적 연동]
+    workersCard.title = `💡 [총 근로자 투입 '명·회' 단위 정의 및 산정 목적 — 100% 원천 연동]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-• 관리소 직접 서명 총인원: ${totalAdminWorkers.toFixed(1)}명·회 (원천 엑셀 D열 서명부 전수 합계)
-• 시공사 특별인부 청구품수: ${totalContractorLabor.toFixed(1)}품 (원천 엑셀 O열 청구서 전수 합계)
+1. '명·회(인회, Person-Times)'의 의미:
+   • 순수 고유 인원수(Unique Headcount)가 아니라, 작업 건별로 현장에 직접 출동하여 관리소 대장에 서명한 인원을 누적 합산한 '연인원(Man-Times)' 단위입니다.
+   • 예: 동일한 1명이 3회 출동하거나 3명이 1회 동시 출동한 경우 모두 누적 출동 실적인 '3명·회'로 산정됩니다.
+2. '명·회' 단위를 사용하는 이유 및 행정적 목적:
+   • 고유 인원(명)과의 왜곡 방지: 단순히 '명'으로 표기 시 3개년 동안 단 몇 명의 사람만 일했다는 오해를 방지함.
+   • 시공사 청구 품수(품, Man-Day)와의 1:1 정밀 교차대조: 시공사 청구 품수(${totalContractorLabor.toFixed(1)}품)와 관리소 현장 실투입 연인원(${totalAdminWorkers.toFixed(1)}명·회)을 1:1 비교하여 미청구·축소청구 등 ${totalVoluntaryLaborSavings.toFixed(1)}품의 자발적 절감(-${totalSavingsRate.toFixed(1)}%) 및 불일치를 투명하게 규명하기 위함.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+• 원천 대장 D열 관리소 직접 서명 연도별 합계: ${ykRev.map(k => `${k} ${Number(metrics[k]?.adminWorkers || 0).toFixed(1)}명·회`).join(' · ')} (총 ${totalAdminWorkers.toFixed(1)}명·회)
+• 원천 대장 O열 시공사 특별인부 청구 연도별 합계: ${ykRev.map(k => `${k} ${Number(metrics[k]?.contractorLabor || 0).toFixed(1)}품`).join(' · ')} (총 ${totalContractorLabor.toFixed(1)}품)
 • 인원 편차(자발적 절감): ${totalVoluntaryLaborSavings >= 0 ? '+' : ''}${totalVoluntaryLaborSavings.toFixed(1)}품 (-${totalSavingsRate.toFixed(1)}% 절감)
-• 연도별 서명 인원: ${ykRev.map(k => `${k} ${Number(metrics[k]?.adminWorkers || 0).toFixed(1)}명`).join(' · ')}
-• 연도별 청구 품수: ${ykRev.map(k => `${k} ${Number(metrics[k]?.contractorLabor || 0).toFixed(1)}품`).join(' · ')}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 💡 클릭 시 근로자 산정기준 심층 교차검증 모달 오픈`;
   }
@@ -3191,6 +3210,16 @@ function updateAllKPIsAndTexts() {
   const costDiff = contractorWan - adminWan;
   const costGrowth = (previousYr && previousAdminWan > 0) ? ((adminWan / previousAdminWan) - 1) * 100 : null;
 
+    const latestHours = Number(latestMetric.hours || 0);
+  const latestContrHours = Number(latestMetric.contractorHours ?? latestHours);
+  const latestAdminRaw = Number(latestMetric.adminCost || 0);
+  const latestContrRaw = Number(latestMetric.contractorCost || 0);
+  const latestMatCost = Number(latestMetric.materialCost || 0);
+  const latestOverhead = cLatest * COST_UNIT.matCost.etc;
+  const latestVisit = cLatest * COST_UNIT.visitFee;
+  const laborAdminRaw = latestHours * COST_UNIT.hourlyRate;
+  const laborContrRaw = latestContrHours * COST_UNIT.hourlyRate;
+
   const costLatestLabel = document.getElementById('kpi-cost-latest-yr-label');
   if (costLatestLabel) costLatestLabel.textContent = latestYr;
 
@@ -3233,15 +3262,6 @@ function updateAllKPIsAndTexts() {
 
   const costCardContainer = document.getElementById('kpi-overview-cost-card');
   if (costCardContainer) {
-    const latestHours = Number(latestMetric.hours || 0);
-    const latestContrHours = Number(latestMetric.contractorHours ?? latestHours);
-    const latestAdminRaw = Number(latestMetric.adminCost || 0);
-    const latestContrRaw = Number(latestMetric.contractorCost || 0);
-    const latestMatCost = Number(latestMetric.materialCost || 0);
-    const latestOverhead = cLatest * COST_UNIT.matCost.etc;
-    const latestVisit = cLatest * COST_UNIT.visitFee;
-    const laborAdminRaw = latestHours * COST_UNIT.hourlyRate;
-    const laborContrRaw = latestContrHours * COST_UNIT.hourlyRate;
 
     let tooltip = `💡 [시스템적 집행 비용 상세 산출 산식 및 산술적 수식 흐름 — 투명성 100% 보증]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -4776,19 +4796,7 @@ function buildChart(id, config, clickHandler){
   return chart;
 }
 
-// ─── 비용 산출 기준 파라미터 (단가 변경 시 자동 재계산 연동) ────────────────
-const COST_UNIT = {
-  hourlyRate: 35000, // 기능직 평균 시급 (대한건설협회 시중노임단가 및 긴급출동 프리미엄 준용)
-  visitFee: 5000,    // 건당 출장/부대경비
-  matCost: {
-    screen: 8000,
-    silicone: 5000,
-    tile: 15000,
-    baseboard: 12000,
-    hardware: 18000,
-    etc: 5000
-  }
-};
+// (COST_UNIT 파라미터는 스크립트 상단 Reactive State Engine 직후로 위치 이동됨)
 
 // ─── 4배 확대 호버 라이트박스 통합 엔진 ─────────────────────────────────────────
 function toggleZoom(target){
