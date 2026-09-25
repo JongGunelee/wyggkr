@@ -1742,6 +1742,30 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       </div>
     </div>
   </div>
+
+
+  <div class="card full" style="margin-top:20px">
+    <div class="card-title">
+      <span class="icon">🗓️</span> 2027년 작업 예측 <span style="font-size:12px;opacity:0.8;font-weight:400;color:#ffffff;opacity:0.95;font-weight:600;margin-left:4px;">(건)</span>
+    </div>
+    <div class="chart-wrap" style="height:240px"><canvas id="c-forecast"></canvas></div>
+    <div class="chart-click-hint" style="color:#ffffff;opacity:0.95;">💡 각 월별 포인트를 클릭하면 예측 건수의 산출 공식, 과거 3개년 동월 증빙 및 상세 논리적 산출 근거 모달이 열립니다</div>
+    <div style="margin-top:12px;font-size:12px;color:#ffffff;line-height:1.8;padding:0 8px" id="forecast-count-notes">
+      ※ 2026년 실적 기준 하반기 전망 추정 중...<br>
+      ※ 2027년 예측: 원천 데이터 기반 추세 모형 연동 중
+    </div>
+  </div>
+  <div class="card full" style="margin-top:20px">
+    <div class="card-title">
+      <span class="icon">🗓️</span> 2027년 작업 예측 <span style="font-size:12px;font-weight:600;color:#ffffff;margin-left:4px;">(비용)</span>
+    </div>
+    <div class="chart-wrap" style="height:240px"><canvas id="c-forecast-cost"></canvas></div>
+    <div class="chart-click-hint" style="color:#ffffff;opacity:0.95;">💡 각 월별 포인트를 클릭하면 예측 비용의 산출 공식(인건비+자재비+부대비), 과거 3개년 동월 실제 집행액 및 상세 내역 모달이 열립니다</div>
+    <div style="margin-top:12px;font-size:12px;color:#ffffff;line-height:1.8;padding:0 8px;font-weight:500;">
+      <span id="forecast-cost-note-26">※ 2026년 실적 기준 연간 비용 전망 추정 중...</span><br>
+      <span id="forecast-cost-note-27">※ 2027년 비용 예측: 원천 데이터 기반 단가 및 물가상승률(4.5%) 반영 추정 중</span>
+    </div>
+  </div>
 </div>
 
 <!-- ====== BUILDING ====== -->
@@ -1970,28 +1994,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       <div class="i-text">GitHub XLSB 원천 대장의 3개년 추세 및 공종별 특성을 분석하여 실시간 렌더링합니다.</div>
     </div>
   </div>
-  <div class="card full">
-    <div class="card-title">
-      <span class="icon">🗓️</span> 2027년 작업 예측 <span style="font-size:12px;opacity:0.8;font-weight:400;color:#ffffff;opacity:0.95;font-weight:600;margin-left:4px;">(건)</span>
-    </div>
-    <div class="chart-wrap" style="height:240px"><canvas id="c-forecast"></canvas></div>
-    <div class="chart-click-hint" style="color:#ffffff;opacity:0.95;">💡 각 월별 포인트를 클릭하면 예측 건수의 산출 공식, 과거 3개년 동월 증빙 및 상세 논리적 산출 근거 모달이 열립니다</div>
-    <div style="margin-top:12px;font-size:12px;color:#ffffff;line-height:1.8;padding:0 8px" id="forecast-count-notes">
-      ※ 2026년 실적 기준 하반기 전망 추정 중...<br>
-      ※ 2027년 예측: 원천 데이터 기반 추세 모형 연동 중
-    </div>
-  </div>
-  <div class="card full" style="margin-top:20px">
-    <div class="card-title">
-      <span class="icon">🗓️</span> 2027년 작업 예측 <span style="font-size:12px;font-weight:600;color:#ffffff;margin-left:4px;">(비용)</span>
-    </div>
-    <div class="chart-wrap" style="height:240px"><canvas id="c-forecast-cost"></canvas></div>
-    <div class="chart-click-hint" style="color:#ffffff;opacity:0.95;">💡 각 월별 포인트를 클릭하면 예측 비용의 산출 공식(인건비+자재비+부대비), 과거 3개년 동월 실제 집행액 및 상세 내역 모달이 열립니다</div>
-    <div style="margin-top:12px;font-size:12px;color:#ffffff;line-height:1.8;padding:0 8px;font-weight:500;">
-      <span id="forecast-cost-note-26">※ 2026년 실적 기준 연간 비용 전망 추정 중...</span><br>
-      <span id="forecast-cost-note-27">※ 2027년 비용 예측: 원천 데이터 기반 단가 및 물가상승률(4.5%) 반영 추정 중</span>
-    </div>
-  </div>
+
   <div class="card full" style="margin-top:20px">
     <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;width:100%;">
       <div style="display:flex;align-items:center;gap:8px;">
