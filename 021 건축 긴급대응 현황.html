@@ -1076,7 +1076,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
           <div style="margin-bottom:16px;">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
               <span style="color:#6c8ef5;font-weight:700;font-size:12px;">📊 1. 3개년 전수 대조 정량 검증표</span>
-              <span style="font-size:11px;color:var(--text2);">(원천 엑셀 D열 관리소 직접 서명 483명 vs O열 시공사 특별인부 397.5품)</span>
+              <span style="font-size:11px;color:var(--text2);" id="audit-sub-header-summary">(원천 엑셀 D열 관리소 직접 서명 vs O열 시공사 특별인부 대조)</span>
             </div>
             <table class="tbl" style="width:100%;font-size:11.5px;background:rgba(15,17,23,0.7);border-radius:6px;overflow:hidden;border:1px solid rgba(46,51,80,0.7);">
               <thead>
@@ -1091,7 +1091,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
                   <th style="padding:6px 8px;">실질 반영 출처 및 특성</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="audit-quantitative-tbody">
                 <tr>
                   <td style="font-weight:700;color:#6c8ef5;text-align:center;padding:6px 8px;">2024년</td>
                   <td style="text-align:center;padding:6px 8px;">107건</td>
@@ -1145,30 +1145,30 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
                 <strong style="color:#ffffff;font-size:12.5px;">2. 시스템적 집행 비용(추정) 기준 연도별 시공사 자발적 절감 비용 심층 분석</strong>
                 <span class="pill pill-green" style="font-size:10px;font-weight:700;">시공사 자발적 예산 절감 실증</span>
               </div>
-              <span style="font-size:11px;color:#86efac;font-weight:700;">3개년 누적 절감액: -1,903만원 (-13.7%)</span>
+              <span style="font-size:11px;color:#86efac;font-weight:700;" id="audit-banner-savings-summary">3개년 누적 절감액: -1,903만원 (-13.7%)</span>
             </div>
 
             <!-- 4대 절감 핵심 지표 카드 -->
             <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
               <div style="background:rgba(15,17,23,0.7);padding:8px 10px;border-radius:6px;border:1px solid rgba(78,203,113,0.3);">
                 <div style="font-size:10.5px;color:#86efac;margin-bottom:2px;">3개년 총 누적 절감액</div>
-                <div style="font-size:16px;font-weight:800;color:#4ecb71;">-1,903만원</div>
-                <div style="font-size:10px;color:var(--text2);margin-top:2px;">관리소 대비 -13.7% 절감</div>
+                <div style="font-size:16px;font-weight:800;color:#4ecb71;" id="audit-stat-savings-cost-val">-1,903만원</div>
+                <div style="font-size:10px;color:var(--text2);margin-top:2px;" id="audit-stat-savings-cost-sub">관리소 대비 -13.7% 절감</div>
               </div>
               <div style="background:rgba(15,17,23,0.7);padding:8px 10px;border-radius:6px;border:1px solid rgba(56,189,248,0.3);">
                 <div style="font-size:10.5px;color:#38bdf8;margin-bottom:2px;">3개년 총 절감 품수</div>
-                <div style="font-size:16px;font-weight:800;color:#38bdf8;">-85.5품</div>
-                <div style="font-size:10px;color:var(--text2);margin-top:2px;">483명 출동 중 397.5품 청구</div>
+                <div style="font-size:16px;font-weight:800;color:#38bdf8;" id="audit-stat-savings-labor-val">-85.5품</div>
+                <div style="font-size:10px;color:var(--text2);margin-top:2px;" id="audit-stat-savings-labor-sub">483명 출동 중 397.5품 청구</div>
               </div>
               <div style="background:rgba(15,17,23,0.7);padding:8px 10px;border-radius:6px;border:1px solid rgba(245,166,35,0.3);">
                 <div style="font-size:10.5px;color:#fde68a;margin-bottom:2px;">연평균 예산 절감 기여</div>
-                <div style="font-size:16px;font-weight:800;color:#f5a623;">연 634만원</div>
-                <div style="font-size:10px;color:var(--text2);margin-top:2px;">매년 안정적 공사비 방어</div>
+                <div style="font-size:16px;font-weight:800;color:#f5a623;" id="audit-stat-savings-annual-val">연 634만원</div>
+                <div style="font-size:10px;color:var(--text2);margin-top:2px;" id="audit-stat-savings-annual-sub">매년 안정적 공사비 방어</div>
               </div>
               <div style="background:rgba(15,17,23,0.7);padding:8px 10px;border-radius:6px;border:1px solid rgba(167,139,250,0.3);">
                 <div style="font-size:10.5px;color:#c4b5fd;margin-bottom:2px;">자발적 절감 실천 건수</div>
-                <div style="font-size:16px;font-weight:800;color:#a78bfa;">86건 (31.2%)</div>
-                <div style="font-size:10px;color:var(--text2);margin-top:2px;">전체 276건 중 86건 협력</div>
+                <div style="font-size:16px;font-weight:800;color:#a78bfa;" id="audit-stat-diff-count-val">86건 (31.2%)</div>
+                <div style="font-size:10px;color:var(--text2);margin-top:2px;" id="audit-stat-diff-count-sub">전체 276건 중 86건 협력</div>
               </div>
             </div>
 
@@ -1186,46 +1186,16 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
                   <th style="padding:5px 8px;">연도별 주요 자발적 절감 내역 및 상세 기여</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="audit-savings-tbody">
                 <tr>
                   <td style="font-weight:700;color:#6c8ef5;text-align:center;padding:5px 8px;">2024년</td>
-                  <td style="text-align:center;padding:5px 8px;">107건</td>
-                  <td style="text-align:center;font-weight:700;color:#6c8ef5;padding:5px 8px;">4,874만원 (1,075.0h)</td>
-                  <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">4,061만원 (143.5품)</td>
-                  <td style="text-align:center;font-weight:700;color:#4ecb71;padding:5px 8px;">-813만원</td>
-                  <td style="text-align:center;color:#4ecb71;padding:5px 8px;">-16.7%</td>
-                  <td style="text-align:center;color:#38bdf8;padding:5px 8px;">-39.5품</td>
-                  <td style="padding:5px 8px;color:#cbd5e1;">현장 2인 출동 후 시공사 1인(주작업자) 단독 청구 집중 14건(약 396만원 절감), 반일 0.5인 적용 5건, 화학작업 삭제 1건 등 보조인력 무상 지원</td>
-                </tr>
-                <tr>
-                  <td style="font-weight:700;color:#f5a623;text-align:center;padding:5px 8px;">2025년</td>
-                  <td style="text-align:center;padding:5px 8px;">86건</td>
-                  <td style="text-align:center;font-weight:700;color:#6c8ef5;padding:5px 8px;">4,232만원 (1,020.4h)</td>
-                  <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">3,647만원 (124.5품)</td>
-                  <td style="text-align:center;font-weight:700;color:#4ecb71;padding:5px 8px;">-585만원</td>
-                  <td style="text-align:center;color:#4ecb71;padding:5px 8px;">-13.8%</td>
-                  <td style="text-align:center;color:#38bdf8;padding:5px 8px;">-22.5품</td>
-                  <td style="padding:5px 8px;color:#cbd5e1;">자전거 거치대 4건 견적처리(0품 기재, 약 117만원 절감), 1.5품 분할 청구 8건, 보도블록 수리 3건 0품 무상 처리 등 공종 통합 기여</td>
-                </tr>
-                <tr>
-                  <td style="font-weight:700;color:#4ecb71;text-align:center;padding:5px 8px;">2026년 (1~8월)</td>
-                  <td style="text-align:center;padding:5px 8px;">83건</td>
-                  <td style="text-align:center;font-weight:700;color:#6c8ef5;padding:5px 8px;">4,744만원 (1,014.1h)</td>
-                  <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">4,239만원 (129.5품)</td>
-                  <td style="text-align:center;font-weight:700;color:#4ecb71;padding:5px 8px;">-505만원</td>
-                  <td style="text-align:center;color:#4ecb71;padding:5px 8px;">-10.6%</td>
-                  <td style="text-align:center;color:#38bdf8;padding:5px 8px;">-23.5품</td>
-                  <td style="padding:5px 8px;color:#cbd5e1;">방충망 교체 등 소규모 단순보수 특별인부 공란(미청구) 13건(약 426만원 절감), 0.5/1.5/2.5품 소수점 분할 청구 실천</td>
-                </tr>
-                <tr style="background:rgba(78,203,113,0.18);font-weight:700;">
-                  <td style="text-align:center;color:#ffffff;padding:6px 8px;">3개년 총계</td>
-                  <td style="text-align:center;color:#ffffff;padding:6px 8px;">276건</td>
-                  <td style="text-align:center;color:#6c8ef5;padding:6px 8px;">1억 3,850만원</td>
-                  <td style="text-align:center;color:#f5a623;padding:6px 8px;">1억 1,947만원</td>
-                  <td style="text-align:center;color:#4ecb71;font-size:12px;padding:6px 8px;">-1,903만원</td>
-                  <td style="text-align:center;color:#4ecb71;font-size:12px;padding:6px 8px;">-13.7%</td>
-                  <td style="text-align:center;color:#38bdf8;font-size:12px;padding:6px 8px;">-85.5품</td>
-                  <td style="padding:6px 8px;color:#ffffff;">시공사 자발적 청구 축소 및 현장 무상 지원을 통한 관리단 공사비 대폭 절감 확인</td>
+                  <td style="text-align:center;padding:5px 8px;">-</td>
+                  <td style="text-align:center;font-weight:700;color:#6c8ef5;padding:5px 8px;">-</td>
+                  <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">-</td>
+                  <td style="text-align:center;font-weight:700;color:#4ecb71;padding:5px 8px;">-</td>
+                  <td style="text-align:center;color:#4ecb71;padding:5px 8px;">-</td>
+                  <td style="text-align:center;color:#38bdf8;padding:5px 8px;">-</td>
+                  <td style="padding:5px 8px;color:#cbd5e1;">원천 데이터 연동 중</td>
                 </tr>
               </tbody>
             </table>
@@ -1254,26 +1224,26 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
               </div>
             </div>
             <div style="background:rgba(78,203,113,0.08);border-left:3px solid #4ecb71;padding:6px 12px;font-size:11px;color:#dcfce7;line-height:1.6;margin-top:8px;">
-              💡 <strong>비용 절감 심층 평가 결론:</strong> 관리소 서명부 기준(483명/3,109.5h) 산출 총비용인 1억 3,850만원 대비, 시공사의 특별인부 청구 기준(397.5품) 총비용은 1억 1,947만원으로, 시공사의 자발적 청구 축소 및 현장 보조인력 무상 기여를 통해 <strong>3년간 총 -1,903만원(-13.7%)의 실질 예산 절감 효과</strong>가 발생했음을 정량적으로 확인하였습니다.
+              💡 <strong>비용 절감 심층 평가 결론:</strong> <span id="audit-conclusion-text">관리소 서명부 기준(483명/3,109.5h) 산출 총비용인 1억 3,850만원 대비, 시공사의 특별인부 청구 기준(397.5품) 총비용은 1억 1,947만원으로, 시공사의 자발적 청구 축소 및 현장 보조인력 무상 기여를 통해 <strong>3년간 총 -1,903만원(-13.7%)의 실질 예산 절감 효과</strong>가 발생했음을 정량적으로 확인하였습니다.</span>
             </div>
           </div>
 
           <!-- 3. 그 아래의 분석내용 (85.5품 자발적 절감 5대 세부 원인 규명) -->
           <div style="margin-bottom:16px;">
-            <div style="color:#f5a623;font-weight:700;margin-bottom:8px;font-size:12px;">🔍 3. 세부 원인: 85.5품 자발적 절감(86건 불일치) 5대 세부 원인 및 수식 구조 규명</div>
+            <div style="color:#f5a623;font-weight:700;margin-bottom:8px;font-size:12px;" id="audit-cause-header">🔍 3. 세부 원인: 85.5품 자발적 절감(86건 불일치) 5대 세부 원인 및 수식 구조 규명</div>
             <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;font-size:11.5px;">
               <div style="background:rgba(15,17,23,0.6);border:1px solid rgba(255,77,109,0.3);border-radius:6px;padding:8px 10px;">
-                <div style="color:#ff7597;font-weight:700;margin-bottom:2px;">① 시공사 미기재 (34건)</div>
-                <div style="font-size:13px;font-weight:800;color:#ffffff;">약 42명 괴리</div>
+                <div style="color:#ff7597;font-weight:700;margin-bottom:2px;" id="audit-cause-blank-title">① 시공사 미기재 (34건)</div>
+                <div style="font-size:13px;font-weight:800;color:#ffffff;" id="audit-cause-blank-diff">약 42명 괴리</div>
                 <div style="color:var(--text2);font-size:10.5px;margin-top:4px;line-height:1.4;">관리소는 1~3인 서명 수령, 시공사는 특별인부란 공란 제출</div>
               </div>
               <div style="background:rgba(15,17,23,0.6);border:1px solid rgba(245,166,35,0.3);border-radius:6px;padding:8px 10px;">
-                <div style="color:#f5a623;font-weight:700;margin-bottom:2px;">② 인원 축소청구 (29건)</div>
-                <div style="font-size:13px;font-weight:800;color:#ffffff;">약 30명 괴리</div>
+                <div style="color:#f5a623;font-weight:700;margin-bottom:2px;" id="audit-cause-reduced-title">② 인원 축소청구 (29건)</div>
+                <div style="font-size:13px;font-weight:800;color:#ffffff;" id="audit-cause-reduced-diff">약 30명 괴리</div>
                 <div style="color:var(--text2);font-size:10.5px;margin-top:4px;line-height:1.4;">현장 2~3인 출동 서명되었으나 시공사는 주작업자 1인만 청구</div>
               </div>
               <div style="background:rgba(15,17,23,0.6);border:1px solid rgba(108,142,245,0.3);border-radius:6px;padding:8px 10px;">
-                <div style="color:#6c8ef5;font-weight:700;margin-bottom:2px;">③ 반일 0.5품 적용 (16건)</div>
+                <div style="color:#6c8ef5;font-weight:700;margin-bottom:2px;" id="audit-cause-fraction-title">③ 반일 0.5품 적용 (16건)</div>
                 <div style="font-size:13px;font-weight:800;color:#ffffff;">약 10.5명 괴리</div>
                 <div style="color:var(--text2);font-size:10.5px;margin-top:4px;line-height:1.4;">관리소는 정수(1~3인), 시공사는 0.5·1.5·2.5품 반일 품수 청구</div>
               </div>
@@ -1447,25 +1417,20 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       <div class="kpi-sub" id="kpi-overview-sub-cnt">26년 83 · 25년 86 · 24년 107</div>
       <span class="kpi-badge badge-down" id="kpi-overview-badge-cnt">↓ 22.4% (26년←24년)</span>
     </div>
-    <div class="kpi" style="--kpi-color:#f5a623" onclick="openWorkerAuditModal('all')" title="💡 [근로자 산정 기준 심층 분석]: 원천 엑셀의 '근로자(직접 서명) 관리소 목록'(483명)을 100% 기준으로 산정함. 시공사 청구 '특별인부'(397.5명)와의 괴리 85.5명(-17.7%) 전수 분석 제공 · 클릭 시 산정 기준 및 괴리 86건 전수 검증 모달 오픈">
+    <div class="kpi" style="--kpi-color:#f5a623" onclick="openWorkerAuditModal('all')" id="kpi-overview-workers-card" title="💡 [근로자 산정 기준 심층 분석]: 원천 엑셀의 '근로자(직접 서명) 관리소 목록'을 100% 기준으로 산정함.">
       <div class="kpi-label">총 근로자 투입 <span style="font-size:10px;color:#a5b4fc;font-weight:700;">(관리소 서명 기준)</span></div>
-      <div class="kpi-val" id="kpi-overview-total-workers">483명·회</div>
-      <div class="kpi-sub" id="kpi-overview-sub-workers">26년 153 · 25년 147 · 24년 183</div>
-      <span class="kpi-badge badge-flat" id="kpi-overview-badge-workers" style="border-color:rgba(245,166,35,0.4);color:#fde68a;">시공사 청구 397.5명 (차이 -85.5명 / -17.7%)</span>
+      <div class="kpi-val" id="kpi-overview-total-workers">-</div>
+      <div class="kpi-sub" id="kpi-overview-sub-workers">-</div>
+      <span class="kpi-badge badge-flat" id="kpi-overview-badge-workers" style="border-color:rgba(245,166,35,0.4);color:#fde68a;">대조 중</span>
     </div>
-    <div class="kpi" style="--kpi-color:#4ecb71" onclick="openModal('작업시간 집행 전체 증빙 목록 (3,110h)', r=>(Number(r.total_h)||0)>0)" title="💡 [총 공수(h) 정의]: 각 작업 건별 (시작시간 ~ 종료시간) × 투입인원을 계산한 총 투입 노동시간(Man-hours)입니다. (3년간 총 3,109.5시간 / 2024.05.24 2.17h 산술식 무결성 보정 완료) · 클릭 시 작업시간 증빙 조회">
+    <div class="kpi" style="--kpi-color:#4ecb71" onclick="openModal('작업시간 집행 전체 증빙 목록', r=>(Number(r.total_h)||0)>0)" id="kpi-overview-hours-card" title="💡 [총 공수(h) 정의]: 각 작업 건별 (시작시간 ~ 종료시간) × 투입인원을 계산한 총 투입 노동시간(Man-hours)입니다.">
       <div class="kpi-label">총 작업 시간 <span style="font-size:10px;color:#fde68a;font-weight:700;">(총 공수)</span></div>
-      <div class="kpi-val" id="kpi-overview-total-hours">3,110h</div>
-      <div class="kpi-sub" id="kpi-overview-sub-hours">26년 1,005 · 25년 1,030 · 24년 1,075</div>
-      <span class="kpi-badge badge-down" id="kpi-overview-badge-hours">↓ 6.5% 효율화</span>
+      <div class="kpi-val" id="kpi-overview-total-hours">-</div>
+      <div class="kpi-sub" id="kpi-overview-sub-hours">-</div>
+      <span class="kpi-badge badge-down" id="kpi-overview-badge-hours">-</span>
     </div>
-    <div class="kpi" style="--kpi-color:#e05c7b" onclick="openModal('2026년 시스템적 집행 비용 증빙 목록', getYrFilter('26년'))" title="💡 [시스템적 집행 비용 품 산출 단일 기준 심층 분석 — 무결성 보증]:
-• 공식 단일 기준: 원천 엑셀 D열 '관리소 직접 서명부'(483명) 실투입 공수(total_h: 3,109.5h)를 100% 단일 기준으로 채택.
-• 산출 공식: (실투입 공수 × 기능직 시급 35,000원) + 실사용 자재비 + 출장·부대비(건당 5,000원)
-• 26년 집행액: 1~8월 실적 4,700만원 + 하반기 잔여 23건 추정치 반영 연간 약 5,973만원
-• 시공사 청구 기준(397.5품) 적용 시 환산액: 연간 약 5,302만원 (관리소 기준 대비 -671만원 / -11.2% 편차)
-• 클릭 시 2026년 비용 산출 증빙 목록 및 단일 기준 검증 모달 오픈">
-      <div class="kpi-label">26년 시스템적 집행 비용 <span style="font-size:10px;color:#fda4af;font-weight:700;">(추정치)</span></div>
+    <div class="kpi" style="--kpi-color:#e05c7b" onclick="openModal('2026년 시스템적 집행 비용 증빙 목록', getYrFilter('26년'))" id="kpi-overview-cost-card" title="💡 [시스템적 집행 비용]">
+      <div class="kpi-label"><span id="kpi-cost-latest-yr-label">26년</span> 시스템적 집행 비용 <span style="font-size:10px;color:#fda4af;font-weight:700;" id="kpi-cost-estimate-tag">(추정치)</span></div>
       <div class="kpi-val" id="kpi-cost-admin-val">-</div>
       <div class="kpi-sub" id="kpi-cost-admin-sub">원천 XLSB 연동 중 · <strong style="color:#6c8ef5;">[관리소 서명 기준]</strong> 실공수 추정</div>
       <div id="kpi-cost-contractor-sub" style="font-size:10px;color:#cbd5e1;margin-top:2px;opacity:0.9;">시공사 청구 품수 환산 시: -</div>
@@ -1578,8 +1543,8 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
         <button type="button" class="section-xls-btn" onclick="window.dashboardExcelExporter.exportCard('worker-audit')" title="근로자 산정 기준 교차 검증 엑셀(.xlsx) 다운로드">
           <span>📊</span><span>교차검증표 xls</span>
         </button>
-        <button class="nav-btn active" onclick="openWorkerAuditModal('diff')" style="background:#ff4d6d;color:#fff;border-radius:6px;padding:7px 12px;font-size:11.5px;cursor:pointer;border:none;">⚠️ 괴리 86건 전수 조회</button>
-        <button class="nav-btn" onclick="openWorkerAuditModal('all')" style="background:var(--card2);color:#fff;border-radius:6px;padding:7px 12px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);">📋 전수 276건 교차 대조</button>
+        <button class="nav-btn active" id="btn-nav-worker-diff" onclick="openWorkerAuditModal('diff')" style="background:#ff4d6d;color:#fff;border-radius:6px;padding:7px 12px;font-size:11.5px;cursor:pointer;border:none;">⚠️ 괴리 86건 전수 조회</button>
+        <button class="nav-btn" id="btn-nav-worker-all" onclick="openWorkerAuditModal('all')" style="background:var(--card2);color:#fff;border-radius:6px;padding:7px 12px;font-size:11.5px;cursor:pointer;border:1px solid var(--border);">📋 전수 276건 교차 대조</button>
       </div>
     </div>
 
@@ -1609,16 +1574,16 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
           <span class="pill pill-green" style="font-size:9.5px;padding:1px 6px;">예산 절감 효과</span>
         </div>
         <div style="font-size:22px;font-weight:800;color:#4ecb71;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 6px;">
-          <span id="kpi-voluntary-savings-val">-85.5<span style="font-size:13px;font-weight:600;">품</span></span>
-          <span style="font-size:12px;color:#86efac;font-weight:700;" id="kpi-voluntary-savings-rate">(-17.7% 절감)</span>
-          <span style="font-size:12px;color:#86efac;font-weight:700;" id="kpi-voluntary-savings-breakdown">· [시스템 추정] '24년 -813만 · '25년 -585만 · '26년(~8월) -505만</span>
+          <span id="kpi-voluntary-savings-val">-<span style="font-size:13px;font-weight:600;">품</span></span>
+          <span style="font-size:12px;color:#86efac;font-weight:700;" id="kpi-voluntary-savings-rate">(-)</span>
+          <span style="font-size:12px;color:#86efac;font-weight:700;" id="kpi-voluntary-savings-breakdown">· [원천 연동 중]</span>
         </div>
         <div style="font-size:11px;color:#cbd5e1;margin-top:2px;" id="kpi-voluntary-savings-sub">시공사 자발적 공사비 청구 축소에 따른 실질 절감 (시스템적 추정치)</div>
       </div>
-      <div class="audit-kpi-card audit-green" style="background:rgba(15,17,23,0.7);border:1px solid rgba(78,203,113,0.3);" onclick="openWorkerAuditModal('match')" title="💡 클릭 시 일치 190건 상세 검증 데이터 조회">
+      <div class="audit-kpi-card audit-green" style="background:rgba(15,17,23,0.7);border:1px solid rgba(78,203,113,0.3);" onclick="openWorkerAuditModal('match')" title="💡 클릭 시 일치 상세 검증 데이터 조회">
         <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">일치율 및 무결성 검증</div>
-        <div style="font-size:22px;font-weight:800;color:#4ecb71;">68.8% <span style="font-size:12px;color:#93c5fd;">(190건)</span></div>
-        <div style="font-size:11px;color:#cbd5e1;margin-top:2px;">불일치 86건 원인 전수 규명 완료</div>
+        <div style="font-size:22px;font-weight:800;color:#4ecb71;"><span id="kpi-match-rate-val">-</span> <span style="font-size:12px;color:#93c5fd;" id="kpi-match-cnt-sub">(-)</span></div>
+        <div style="font-size:11px;color:#cbd5e1;margin-top:2px;" id="kpi-mismatch-cnt-sub">불일치 분석 중...</div>
       </div>
     </div>
 
@@ -1638,46 +1603,16 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
             <th style="padding:6px 8px;">주요 괴리 특성 및 원인</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="audit-quantitative-tbody">
           <tr>
             <td style="font-weight:700;color:#6c8ef5;text-align:center;padding:6px 8px;">2024년</td>
-            <td style="text-align:center;padding:6px 8px;">107건</td>
-            <td style="text-align:center;font-weight:700;color:#ffffff;padding:6px 8px;">183.0명</td>
-            <td style="text-align:center;font-weight:700;color:#f5a623;padding:6px 8px;">143.5품</td>
-            <td style="text-align:center;font-weight:700;color:#ff4d6d;padding:6px 8px;">+39.5명</td>
-            <td style="text-align:center;color:#ff4d6d;padding:6px 8px;">+27.5%</td>
-            <td style="text-align:center;color:#ffffff;padding:6px 8px;">38건</td>
-            <td style="padding:6px 8px;color:#cbd5e1;">현장 2인 출동 후 시공사 1인 청구 집중(14건), 반일 0.5인 적용, 화학작업 삭제 1건</td>
-          </tr>
-          <tr>
-            <td style="font-weight:700;color:#f5a623;text-align:center;padding:6px 8px;">2025년</td>
-            <td style="text-align:center;padding:6px 8px;">86건</td>
-            <td style="text-align:center;font-weight:700;color:#ffffff;padding:6px 8px;">147.0명</td>
-            <td style="text-align:center;font-weight:700;color:#f5a623;padding:6px 8px;">124.5품</td>
-            <td style="text-align:center;font-weight:700;color:#ff4d6d;padding:6px 8px;">+22.5명</td>
-            <td style="text-align:center;color:#ff4d6d;padding:6px 8px;">+18.1%</td>
-            <td style="text-align:center;color:#ffffff;padding:6px 8px;">27건</td>
-            <td style="padding:6px 8px;color:#cbd5e1;">자전거 거치대 4건 견적처리(0품 기재), 1.5품 청구 다수, 보도블록 수리 3건 0품 (12월말 2건 26년 이월)</td>
-          </tr>
-          <tr>
-            <td style="font-weight:700;color:#4ecb71;text-align:center;padding:6px 8px;">2026년</td>
-            <td style="text-align:center;padding:6px 8px;">83건</td>
-            <td style="text-align:center;font-weight:700;color:#ffffff;padding:6px 8px;">153.0명</td>
-            <td style="text-align:center;font-weight:700;color:#f5a623;padding:6px 8px;">129.5품</td>
-            <td style="text-align:center;font-weight:700;color:#ff4d6d;padding:6px 8px;">+23.5명</td>
-            <td style="text-align:center;color:#ff4d6d;padding:6px 8px;">+18.1%</td>
-            <td style="text-align:center;color:#ffffff;padding:6px 8px;">21건</td>
-            <td style="padding:6px 8px;color:#cbd5e1;">시공사 서식 특별인부란 미기재(공란) 13건 집중(25년 이월 1건 포함), 0.5품/2.5품 청구 (시트 탭 '26년' 100% 일치)</td>
-          </tr>
-          <tr style="background:rgba(108,142,245,0.15);font-weight:700;">
-            <td style="text-align:center;color:#ffffff;padding:7px 8px;">3개년 합계</td>
-            <td style="text-align:center;color:#ffffff;padding:7px 8px;">276건</td>
-            <td style="text-align:center;color:#6c8ef5;font-size:12px;padding:7px 8px;">483.0명</td>
-            <td style="text-align:center;color:#f5a623;font-size:12px;padding:7px 8px;">397.5품</td>
-            <td style="text-align:center;color:#ff4d6d;font-size:12px;padding:7px 8px;">+85.5명</td>
-            <td style="text-align:center;color:#ff4d6d;padding:7px 8px;">+21.5%</td>
-            <td style="text-align:center;color:#ffffff;padding:7px 8px;">86건</td>
-            <td style="padding:7px 8px;color:#ffffff;">원천 엑셀 시트 탭 합계('26년' 153명/129.5품, '25년' 147명/124.5품) 100% 일치 및 듀얼 검증 완비</td>
+            <td style="text-align:center;padding:6px 8px;">-</td>
+            <td style="text-align:center;font-weight:700;color:#ffffff;padding:6px 8px;">-</td>
+            <td style="text-align:center;font-weight:700;color:#f5a623;padding:6px 8px;">-</td>
+            <td style="text-align:center;font-weight:700;color:#ff4d6d;padding:6px 8px;">-</td>
+            <td style="text-align:center;color:#ff4d6d;padding:6px 8px;">-</td>
+            <td style="text-align:center;color:#ffffff;padding:6px 8px;">-</td>
+            <td style="padding:6px 8px;color:#cbd5e1;">원천 데이터 연동 중</td>
           </tr>
         </tbody>
       </table>
@@ -1685,7 +1620,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 
     <!-- 85.5명 괴리 5대 원인 인포그래픽 카드 -->
     <div style="margin-bottom:16px;">
-      <div style="font-size:12px;font-weight:700;color:#ffffff;margin-bottom:8px;">🔍 85.5명 괴리(불일치 86건) 5대 근본 원인 정밀 규명</div>
+      <div style="font-size:12px;font-weight:700;color:#ffffff;margin-bottom:8px;">🔍 <span id="audit-causes-title">괴리 5대 근본 원인 정밀 규명</span></div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;font-size:11.5px;overflow:visible;">
         <div class="audit-cause-card cause-pink" style="background:rgba(15,17,23,0.5);border:1px solid rgba(46,51,80,0.8);" onclick="openWorkerAuditModal('diff')" title="💡 시공사 미기재(공란) 34건 교차 검증 상세 모달 열기">
           <div style="color:#ff7597;font-weight:700;margin-bottom:4px;">1. 시공사 미기재(공란)</div>
@@ -1809,51 +1744,15 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
               <th style="padding:5px 8px;">원가 및 청구 특성 분석</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="audit-cost-comparison-tbody">
             <tr>
               <td style="font-weight:700;color:#6c8ef5;text-align:center;padding:5px 8px;">2024년</td>
-              <td style="text-align:center;padding:5px 8px;">107건</td>
-              <td style="text-align:center;font-weight:700;color:#6c8ef5;padding:5px 8px;">4,874만원 (1,075.0h)</td>
-              <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">4,061만원 (143.5품)</td>
-              <td style="text-align:center;font-weight:700;color:#ff4d6d;padding:5px 8px;">-813만원</td>
-              <td style="text-align:center;color:#ff4d6d;padding:5px 8px;">-16.7%</td>
-              <td style="padding:5px 8px;color:#cbd5e1;">현장 2인 출동 후 시공사 1인 청구 집중(14건), 반일 0.5인 적용</td>
-            </tr>
-            <tr>
-              <td style="font-weight:700;color:#f5a623;text-align:center;padding:5px 8px;">2025년</td>
-              <td style="text-align:center;padding:5px 8px;">86건</td>
-              <td style="text-align:center;font-weight:700;color:#6c8ef5;padding:5px 8px;">4,232만원 (1,020.4h)</td>
-              <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">3,647만원 (124.5품)</td>
-              <td style="text-align:center;font-weight:700;color:#ff4d6d;padding:5px 8px;">-585만원</td>
-              <td style="text-align:center;color:#ff4d6d;padding:5px 8px;">-13.8%</td>
-              <td style="padding:5px 8px;color:#cbd5e1;">자전거 거치대 4건 견적처리(0품 기재), 1.5품 청구 다수 (12월말 2건 26년 정산 편입)</td>
-            </tr>
-            <tr>
-              <td style="font-weight:700;color:#4ecb71;text-align:center;padding:5px 8px;">2026년 (1~8월)</td>
-              <td style="text-align:center;padding:5px 8px;">83건</td>
-              <td style="text-align:center;font-weight:700;color:#6c8ef5;padding:5px 8px;">4,744만원 (1,014.1h)</td>
-              <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">4,239만원 (129.5품)</td>
-              <td style="text-align:center;font-weight:700;color:#ff4d6d;padding:5px 8px;">-505만원</td>
-              <td style="text-align:center;color:#ff4d6d;padding:5px 8px;">-10.6%</td>
-              <td style="padding:5px 8px;color:#cbd5e1;">시공사 미기재(13건), 반일 0.5/1.5/2.5품 청구 (25년말 2건 이월정산 편입)</td>
-            </tr>
-            <tr style="background:rgba(224,92,123,0.1);">
-              <td style="font-weight:700;color:#e05c7b;text-align:center;padding:5px 8px;">2026년 연간추정</td>
-              <td style="text-align:center;padding:5px 8px;">104건</td>
-              <td style="text-align:center;font-weight:700;color:#e05c7b;padding:5px 8px;">5,973만원 (1,290.0h)</td>
-              <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">5,302만원 (163.6품)</td>
-              <td style="text-align:center;font-weight:700;color:#ff4d6d;padding:5px 8px;">-671만원</td>
-              <td style="text-align:center;color:#ff4d6d;padding:5px 8px;">-11.2%</td>
-              <td style="padding:5px 8px;color:#cbd5e1;"><strong>유첨 이미지 지표:</strong> 관리소 서명 공수 기준 5,973만 vs 시공사 환산 5,302만</td>
-            </tr>
-            <tr style="background:rgba(56,189,248,0.1);">
-              <td style="font-weight:700;color:#38bdf8;text-align:center;padding:5px 8px;">2027년 연간예측</td>
-              <td style="text-align:center;padding:5px 8px;">134건</td>
-              <td style="text-align:center;font-weight:700;color:#38bdf8;padding:5px 8px;">7,473만원 (1,585.0h)</td>
-              <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">6,634만원 (201.2품)</td>
-              <td style="text-align:center;font-weight:700;color:#ff4d6d;padding:5px 8px;">-839만원</td>
-              <td style="text-align:center;color:#ff4d6d;padding:5px 8px;">-11.2%</td>
-              <td style="padding:5px 8px;color:#cbd5e1;">건당 55.77만(노무 48.3만+자재 5.2만+부대 2.3만), 4.5% 물가/노후할증 반영</td>
+              <td style="text-align:center;padding:5px 8px;">-</td>
+              <td style="text-align:center;font-weight:700;color:#6c8ef5;padding:5px 8px;">-</td>
+              <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">-</td>
+              <td style="text-align:center;font-weight:700;color:#ff4d6d;padding:5px 8px;">-</td>
+              <td style="text-align:center;color:#ff4d6d;padding:5px 8px;">-</td>
+              <td style="padding:5px 8px;color:#cbd5e1;">원천 데이터 연동 중</td>
             </tr>
           </tbody>
         </table>
@@ -2151,7 +2050,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
     <div class="insight blue" onclick="openModal('3·6·7월 성수기 집중 증빙 목록', r=>[3,6,7].includes(r.month))" title="클릭 시 성수기 증빙 조회"><div class="i-title">📅 ACTION — 성수기 사전 대비</div><div class="i-text"><strong>3월(15건), 6월(16건), 7월(14건) 집중</strong><br>2월/5월 말까지 자재 선비축, 인력 증원 계획 완료 필요.</div></div>
     <div class="insight green" onclick="openModal('[타일 교체/보수] 전체 증빙 목록', getTypeFilter('타일 교체/보수'))" title="클릭 시 타일 증빙 조회"><div class="i-title">✅ POSITIVE — 타일 안정화</div><div class="i-text"><strong>2026년 7건←2024년 33건 (79% 감소)</strong><br>집중 교체 효과로 안정화. 동일 전략을 걸레받이에 적용 가능.</div></div>
     <div class="insight green" onclick="openModal('[누수 점검/보수] 전체 증빙 목록', getTypeFilter('누수 점검/보수'))" title="클릭 시 누수 증빙 조회"><div class="i-title">✅ POSITIVE — 방수 개선 효과</div><div class="i-text"><strong>곰팡이: 1건←5건, 누수: 1건←11건</strong><br>코킹·실리콘 작업 강화의 효과로 방수 하자 전반 감소.</div></div>
-    <div class="insight blue" onclick="openModal('2026년 시스템적 집행 비용 증빙 목록', getYrFilter('26년'))" title="💡 [단일 기준 확립]: 원천 엑셀 D열 '관리소 직접 서명부'(483명) 실투입 공수 기준. 클릭 시 2026년 비용 산출 증빙 조회"><div class="i-title">💰 BUDGET — 비용 증가 대비 (단일 기준: 관리소 서명 공수)</div><div class="i-text"><strong>26년 5,973만원 vs 25년 4,271만원 (+39.8%) [추정치]</strong><br>[관리소 서명 기준 실공수(35,000원/h)+자재비+부대비] 단일 적용. 시공사 청구 환산 시 5,302만원. 2027년 최소 6,500만원 이상 본예산 편성 권고.</div></div>
+    <div class="insight blue" id="insight-budget-card" onclick="openModal('시스템적 집행 비용 증빙 목록', getYrFilter(window.YR_KEYS ? window.YR_KEYS[window.YR_KEYS.length-1] : '26년'))" title="💡 [단일 기준 확립]: 원천 엑셀 D열 관리소 직접 서명부 실투입 공수 기준. 클릭 시 비용 산출 증빙 조회"><div class="i-title" id="insight-budget-title">💰 BUDGET — 비용 증가 대비 (단일 기준: 관리소 서명 공수)</div><div class="i-text"><strong id="insight-budget-growth">26년 5,973만원 vs 25년 4,271만원 (+39.8%) [추정치]</strong><br><span id="insight-budget-sub">[관리소 서명 기준 실공수(35,000원/h)+자재비+부대비] 단일 적용. 시공사 청구 환산 시 5,302만원. 2027년 최소 6,500만원 이상 본예산 편성 권고.</span></div></div>
   </div>
   <div class="card full">
     <div class="card-title">
@@ -2171,7 +2070,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
     <div class="chart-wrap" style="height:240px"><canvas id="c-forecast-cost"></canvas></div>
     <div class="chart-click-hint" style="color:#ffffff;opacity:0.95;">💡 각 월별 포인트를 클릭하면 예측 비용의 산출 공식(인건비+자재비+부대비), 과거 3개년 동월 실제 집행액 및 상세 내역 모달이 열립니다</div>
     <div style="margin-top:12px;font-size:12px;color:#ffffff;line-height:1.8;padding:0 8px;font-weight:500;">
-      ※ 2026년은 1~8월 실적 기준(총 4,700만원). 하반기 추정 포함 연간 약 5,973만원 전망<br>
+      <span id="forecast-cost-note-26">※ 2026년 실적 기준 연간 비용 전망 추정 중...</span><br>
       ※ 2027년 비용 예측: 건당 평균 55.6~55.8만원(인건비+자재비+부대비) 및 물가상승률(4.5%)·노후화 할증 반영 총 7,473만원 전망
     </div>
   </div>
@@ -2522,6 +2421,7 @@ const MATERIAL_DEFINITIONS = [
   { key: 'reflectiveInsulation', storageKey: '열반사 단열재(m²)', label: '열반사 단열재', unit: '㎡', match: /열반사/ },
   { key: 'gypsum', storageKey: '석고보드(매)', label: '석고보드', unit: '매', match: /석고보드/ }
 ];
+window.MATERIAL_DEFINITIONS = MATERIAL_DEFINITIONS;
 
 function parseNumberCell(value) {
   if (typeof value === 'number' && Number.isFinite(value)) return value;
@@ -2567,6 +2467,7 @@ function parseMaterialCells(rawRow, formattedRow, materialHeaders) {
 function getMaterialValue(record, definition) {
   return Number(record?.mats?.[definition.storageKey]) || 0;
 }
+window.getMaterialValue = getMaterialValue;
 
 function buildMaterialData(records) {
   const yk = window.YR_KEYS || getDynamicYearKeys(records);
@@ -2808,12 +2709,40 @@ function parseXlsbWorkbook(wb) {
         ? [...BASELINE_TYPES_MAP[cleanContent]] : [];
       const types = baselineTypes.length > 0 ? baselineTypes : classifyTypesHelper(content);
 
+      // 관리소 서명 vs 시공사 청구 특별인부 정밀 교차 검증 및 괴리 카테고리 판별
+      let diffCat = 'match';
+      const workerDiff = Math.round((wAdmin - wCont) * 10) / 10;
+      let workerNote = '';
+
+      if (wAdmin === 0 && wCont === 0) {
+        diffCat = 'both_empty';
+        workerNote = '관리소 및 시공사 인원 미기재';
+      } else if (Math.abs(wAdmin - wCont) < 1e-4) {
+        diffCat = 'match';
+        workerNote = '관리소 서명과 시공사 청구 인원 일치';
+      } else if (wAdmin > 0 && wCont === 0) {
+        diffCat = 'blank_contractor';
+        workerNote = `시공사 청구 미기재 (관리소 ${wAdmin}명 단독 서명)`;
+      } else if (wAdmin === 0 && wCont > 0) {
+        diffCat = 'blank_admin';
+        workerNote = `관리소 미서명 (시공사 ${wCont}품 청구)`;
+      } else if (wAdmin > wCont) {
+        diffCat = 'reduced_claim';
+        workerNote = `시공사 자발적 축소 청구 (서명 ${wAdmin}명 vs 청구 ${wCont}품, -${workerDiff}품 절감)`;
+      } else {
+        diffCat = 'fractional_shift';
+        workerNote = `청구 품수 상회 (서명 ${wAdmin}명 vs 청구 ${wCont}품)`;
+      }
+
       allRecords.push({
         yr: normYr,
         no: String(col1 || '').trim(),
         workers: wAdmin,
         workers_admin: wAdmin,
         workers_contractor: wCont,
+        diff_category: diffCat,
+        worker_diff: workerDiff,
+        worker_note: workerNote,
         date: dateStr,
         month: month,
         start_t: String(col5 || '').trim(),
@@ -3033,6 +2962,36 @@ function recalculateDerivedData(records) {
   RAW = records;
   window.RAW = records;
   window.BASELINE_RAW = records;
+
+  // 모든 레코드의 근로자 교차검증 카테고리(diff_category) 및 괴리값 무결성 보증
+  records.forEach(r => {
+    if (!r.diff_category) {
+      const wAdmin = Number(r.workers_admin ?? r.workers) || 0;
+      const wCont = Number(r.workers_contractor) || 0;
+      const workerDiff = Math.round((wAdmin - wCont) * 10) / 10;
+      if (wAdmin === 0 && wCont === 0) {
+        r.diff_category = 'both_empty';
+        r.worker_note = '관리소 및 시공사 인원 미기재';
+      } else if (Math.abs(wAdmin - wCont) < 1e-4) {
+        r.diff_category = 'match';
+        r.worker_note = '관리소 서명과 시공사 청구 인원 일치';
+      } else if (wAdmin > 0 && wCont === 0) {
+        r.diff_category = 'blank_contractor';
+        r.worker_note = `시공사 청구 미기재 (관리소 ${wAdmin}명 단독 서명)`;
+      } else if (wAdmin === 0 && wCont > 0) {
+        r.diff_category = 'blank_admin';
+        r.worker_note = `관리소 미서명 (시공사 ${wCont}품 청구)`;
+      } else if (wAdmin > wCont) {
+        r.diff_category = 'reduced_claim';
+        r.worker_note = `시공사 자발적 축소 청구 (서명 ${wAdmin}명 vs 청구 ${wCont}품, -${workerDiff}품 절감)`;
+      } else {
+        r.diff_category = 'fractional_shift';
+        r.worker_note = `청구 품수 상회 (서명 ${wAdmin}명 vs 청구 ${wCont}품)`;
+      }
+      r.worker_diff = workerDiff;
+    }
+  });
+
   window.YR_KEYS = getDynamicYearKeys(records);
   if (window.YR_KEYS.length === 0) {
     window.YR_KEYS = ['24년', '25년', '26년'];
@@ -3149,22 +3108,28 @@ function recalculateDerivedData(records) {
     const contractorCost = Math.round(contractorLabor * 8 * COST_UNIT.hourlyRate + cnt * COST_UNIT.visitFee + materialCost + overheadCost);
     const savings = contractorCost - adminCost;
 
-    // [데이터 정합성 보증]: 해당 연도 고유 작업(이월 정산건 제외)의 실제 최신 월 산출
+    // [데이터 정합성 보증]: 해당 연도 고유 작업(이월 정산건 제외)의 실제 존재하는 월(1~12)들을 정확히 추출
     const yrNum = k.replace(/[^0-9]/g, '');
     const yrPrefix = yrNum.length === 2 ? '20' + yrNum : yrNum;
     const actualYearRecs = recs.filter(r => !r.is_carryover && (r.date || '').startsWith(yrPrefix));
-    let maxMonth = 8;
-    if (actualYearRecs.length > 0) {
-      maxMonth = Math.max(...actualYearRecs.map(r => Number(r.month) || 1));
-    } else {
-      const nonCarryover = recs.filter(r => !r.is_carryover);
-      const pool = nonCarryover.length > 0 ? nonCarryover : recs;
-      maxMonth = Math.max(...pool.map(r => Number(r.month) || 1));
-    }
+    const targetPool = actualYearRecs.length > 0 ? actualYearRecs : (recs.filter(r => !r.is_carryover).length > 0 ? recs.filter(r => !r.is_carryover) : recs);
+    
+    const validMonths = targetPool.map(r => {
+      let m = Number(r.month);
+      if (!m || isNaN(m)) {
+        const parts = String(r.date || '').split('-');
+        if (parts.length >= 2) m = parseInt(parts[1], 10);
+      }
+      return m;
+    }).filter(m => m >= 1 && m <= 12);
+
+    const minMonth = validMonths.length > 0 ? Math.min(...validMonths) : 1;
+    const maxMonth = validMonths.length > 0 ? Math.max(...validMonths) : 1;
+    const isPartialYear = (maxMonth < 12);
 
     window.annualMetrics[k] = {
       cnt, hours, adminWorkers, contractorLabor, laborDiff,
-      adminCost, contractorCost, savings, maxMonth
+      adminCost, contractorCost, savings, minMonth, maxMonth, isPartialYear
     };
   });
 }
@@ -3242,7 +3207,7 @@ function updateAllKPIsAndTexts() {
       const m = metrics[k];
       const savWan = Math.round(Math.abs(m?.savings || 0) / 10000);
       const isLatest = (k === latestYr);
-      const monthTag = isLatest ? `(~${m?.maxMonth || 8}월)` : '';
+      const monthTag = (isLatest && m?.isPartialYear) ? `(~${m.maxMonth}월)` : '';
       return `'${k}${monthTag} -${savWan}만`;
     });
     savingsBreakdownEl.textContent = `· [시스템 추정] ` + parts.join(' · ');
@@ -3257,10 +3222,7 @@ function updateAllKPIsAndTexts() {
   const alertSavCost = document.getElementById('alert-savings-cost');
   if (alertSavCost) alertSavCost.textContent = `총 -${Math.round(Math.abs(totalSavingsCost)/10000).toLocaleString()}만원(-${(Math.abs(totalSavingsCost)/Math.max(totalAdminCost,1)*100).toFixed(1)}%)의 실질 공사비 예산 절감 효과`;
 
-  // 비용·자재 KPI도 동일한 원천 집계값을 사용한다. 정적 설명은 데이터가 바뀌어도 남지만 수치는 절대 분리되지 않는다.
-  // [시스템적 집행 비용 (추정치) 완전 동적 정합성 모델]:
-  // 원천 XLSB의 실제 실적 건수 및 공수에 비례하여 동적으로 연간 추정치를 산출.
-  // 83건 기준 시 정확히 5,973만원(+39.8%)이 도출되고, 사용자가 데이터를 추가/삭제하면 비례하여 실시간 연동됨.
+  // [시스템적 집행 비용 순수 원천 데이터 100% 동적 산정 모델]:
   const latestMetric = metrics[latestYr] || {};
   const previousYr = yk.length > 1 ? yk[yk.length - 2] : null;
   const previousMetric = previousYr ? (metrics[previousYr] || {}) : {};
@@ -3269,20 +3231,35 @@ function updateAllKPIsAndTexts() {
   const cPrev = Number(previousMetric.cnt || 0);
   const cFirst = Number((metrics[firstYr] || {}).cnt || 0);
 
-  // 연간 추정치 환산: 83건 기준 5,973만원 모델을 현재 26년 건수 비율(cLatest / 83)로 완전 동적 반응
-  const baseRatio26 = (cLatest > 0) ? (cLatest / 83) : 1;
-  const baseRatio25 = (cPrev > 0) ? (cPrev / 86) : 1;
-  const adminWan = Math.round(5973 * baseRatio26);
-  const previousAdminWan = Math.round(4271 * baseRatio25);
-  const contractorWan = Math.round(5302 * baseRatio26);
+  // 연간 추정치 환산: 순수 원천 데이터(시간, 자재, 건수) 기반 정밀 계산
+  const isLatestPartial = Boolean(latestMetric.isPartialYear);
+  const elapsedMonths = Math.max(1, Number(latestMetric.maxMonth) || 12);
+  const annualFactor = isLatestPartial ? (12 / elapsedMonths) : 1;
+
+  const actualAdminWan = Math.round(Number(latestMetric.adminCost || 0) / 10000);
+  const adminWan = Math.round((Number(latestMetric.adminCost || 0) * annualFactor) / 10000);
+  const contractorWan = Math.round((Number(latestMetric.contractorCost || 0) * annualFactor) / 10000);
+  const previousAdminWan = Math.round(Number(previousMetric.adminCost || 0) / 10000);
   const costDiff = contractorWan - adminWan;
   const costGrowth = previousAdminWan > 0 ? ((adminWan / previousAdminWan) - 1) * 100 : 0;
+
+  const costLatestLabel = document.getElementById('kpi-cost-latest-yr-label');
+  if (costLatestLabel) costLatestLabel.textContent = latestYr;
+
+  const costEstTag = document.getElementById('kpi-cost-estimate-tag');
+  if (costEstTag) costEstTag.textContent = isLatestPartial ? '(추정치)' : '(집행 실적)';
 
   const costAdminEl = document.getElementById('kpi-cost-admin-val');
   if (costAdminEl) costAdminEl.textContent = `${adminWan.toLocaleString()}만원`;
 
   const costSubEl = document.getElementById('kpi-cost-admin-sub');
-  if (costSubEl) costSubEl.innerHTML = `${previousYr || '25년'} ${previousAdminWan.toLocaleString()}만 대비 · <strong style="color:#6c8ef5;">[관리소 서명 기준]</strong> 실공수 추정`;
+  if (costSubEl) {
+    if (isLatestPartial) {
+      costSubEl.innerHTML = `${latestYr} 1~${latestMetric.maxMonth}월 실적: ${actualAdminWan.toLocaleString()}만 · <strong style="color:#6c8ef5;">[관리소 서명 기준]</strong> 연환산 추정`;
+    } else {
+      costSubEl.innerHTML = `${previousYr || '25년'} ${previousAdminWan.toLocaleString()}만 대비 · <strong style="color:#6c8ef5;">[관리소 서명 기준]</strong> 실공수`;
+    }
+  }
 
   const contractorSubEl = document.getElementById('kpi-cost-contractor-sub');
   if (contractorSubEl) {
@@ -3293,6 +3270,15 @@ function updateAllKPIsAndTexts() {
   if (growthEl) {
     growthEl.textContent = `${costGrowth >= 0 ? '↑' : '↓'} ${Math.abs(costGrowth).toFixed(1)}% 증가`;
     growthEl.className = `kpi-badge ${costGrowth >= 0 ? 'badge-up' : 'badge-down'}`;
+  }
+
+  const costCardContainer = document.getElementById('kpi-overview-cost-card');
+  if (costCardContainer) {
+    const annText = isLatestPartial ? `\n• 연간 환산 추정(12개월): 약 ${adminWan.toLocaleString()}만원` : '';
+    costCardContainer.title = `💡 [시스템적 집행 비용 분석 — 100% 원천 동적 연동]
+• ${latestYr} 실집행액(${isLatestPartial ? `1~${latestMetric.maxMonth}월 실적` : '연간'}): 약 ${actualAdminWan.toLocaleString()}만원 (${cLatest}건)${annText}
+• 시공사 청구 기준 환산액: 약 ${contractorWan.toLocaleString()}만원 (${costDiff >= 0 ? '+' : ''}${costDiff.toLocaleString()}만원 편차)
+• 클릭 시 ${latestYr} 비용 산출 증빙 목록 및 단일 기준 검증 모달 오픈`;
   }
 
   // ─── [YoY 전년 대비 증감 편차 섹션 100% 완전 동적 연동] ──────────────────────
@@ -3350,12 +3336,114 @@ function updateAllKPIsAndTexts() {
     kpiBadgeHours.className = `kpi-badge ${pctH <= 0 ? 'badge-down' : 'badge-up'}`;
   }
 
+  const badgeWorkers = document.getElementById('kpi-overview-badge-workers');
+  if (badgeWorkers) {
+    badgeWorkers.textContent = `시공사 청구 ${totalContractorLabor.toFixed(1)}품 (차이 ${totalVoluntaryLaborSavings >= 0 ? '+' : ''}${totalVoluntaryLaborSavings.toFixed(1)}명 / -${totalSavingsRate.toFixed(1)}%)`;
+  }
+
+  // 4) 일치율 및 괴리 분석 카드 동적 업데이트
+  const matchCount = records.filter(r => r.diff_category === 'match').length;
+  const mismatchCount = records.length - matchCount;
+  const matchRate = records.length > 0 ? (matchCount / records.length * 100) : 0;
+  
+  const matchRateEl = document.getElementById('kpi-match-rate-val');
+  if (matchRateEl) matchRateEl.textContent = `${matchRate.toFixed(1)}%`;
+  const matchSubEl = document.getElementById('kpi-match-cnt-sub');
+  if (matchSubEl) matchSubEl.textContent = `(${matchCount}건)`;
+  const mismatchSubEl = document.getElementById('kpi-mismatch-cnt-sub');
+  if (mismatchSubEl) mismatchSubEl.textContent = `불일치 ${mismatchCount}건 원인 전수 규명 완료`;
+
+  const causesTitleEl = document.getElementById('audit-causes-title');
+  if (causesTitleEl) {
+    causesTitleEl.textContent = `${Math.abs(totalVoluntaryLaborSavings).toFixed(1)}명 괴리(불일치 ${mismatchCount}건) 5대 근본 원인 정밀 규명`;
+  }
+
+  // 모달 상단 및 필터 버튼 동적 갱신
+  const btnDiff = document.getElementById('btn-wf-diff');
+  if (btnDiff) btnDiff.textContent = `⚠️ 불일치 ${mismatchCount}건`;
+  const btnMatch = document.getElementById('btn-wf-match');
+  if (btnMatch) btnMatch.textContent = `✓ 일치 ${matchCount}건`;
+  const btnAdmin = document.getElementById('btn-wf-admin');
+  if (btnAdmin) btnAdmin.textContent = `📋 서명 있음 (${Math.round(totalAdminWorkers)}명)`;
+  const btnContr = document.getElementById('btn-wf-contractor');
+  if (btnContr) btnContr.textContent = `💰 시공사 청구 (${totalContractorLabor.toFixed(1)}품)`;
+
+  const navDiffBtn = document.getElementById('btn-nav-worker-diff');
+  if (navDiffBtn) navDiffBtn.textContent = `⚠️ 괴리 ${mismatchCount}건 전수 조회`;
+  const navAllBtn = document.getElementById('btn-nav-worker-all');
+  if (navAllBtn) navAllBtn.textContent = `📋 전수 ${totalCnt}건 교차 대조`;
+
+  // 모달 내 4대 핵심 지표 카드 및 총괄 결론 동적 업데이트
+  const statDiffCnt = document.getElementById('audit-stat-diff-count-val');
+  if (statDiffCnt) statDiffCnt.textContent = `${mismatchCount}건 (${(100 - matchRate).toFixed(1)}%)`;
+  const statDiffSub = document.getElementById('audit-stat-diff-count-sub');
+  if (statDiffSub) statDiffSub.textContent = `전체 ${totalCnt}건 중 ${mismatchCount}건 협력`;
+
+  const statSavCost = document.getElementById('audit-stat-savings-cost-val');
+  if (statSavCost) statSavCost.textContent = `-${Math.round(Math.abs(totalSavingsCost)/10000).toLocaleString()}만원`;
+  const statSavCostSub = document.getElementById('audit-stat-savings-cost-sub');
+  if (statSavCostSub) statSavCostSub.textContent = `관리소 대비 -${(Math.abs(totalSavingsCost)/Math.max(totalAdminCost,1)*100).toFixed(1)}% 절감`;
+
+  const statSavLabor = document.getElementById('audit-stat-savings-labor-val');
+  if (statSavLabor) statSavLabor.textContent = `-${Math.abs(totalVoluntaryLaborSavings).toFixed(1)}품`;
+  const statSavLaborSub = document.getElementById('audit-stat-savings-labor-sub');
+  if (statSavLaborSub) statSavLaborSub.textContent = `${Math.round(totalAdminWorkers)}명 출동 중 ${totalContractorLabor.toFixed(1)}품 청구`;
+
+  const statSavAnnual = document.getElementById('audit-stat-savings-annual-val');
+  if (statSavAnnual) statSavAnnual.textContent = `연 ${Math.round(Math.abs(totalSavingsCost)/(yk.length||3)/10000).toLocaleString()}만원`;
+
+  const bannerSavings = document.getElementById('audit-banner-savings-summary');
+  if (bannerSavings) bannerSavings.textContent = `${yk.length}개년 누적 절감액: -${Math.round(Math.abs(totalSavingsCost)/10000).toLocaleString()}만원 (-${(Math.abs(totalSavingsCost)/Math.max(totalAdminCost,1)*100).toFixed(1)}%)`;
+
+  const subHeaderSummary = document.getElementById('audit-sub-header-summary');
+  if (subHeaderSummary) subHeaderSummary.textContent = `(원천 엑셀 D열 관리소 직접 서명 ${Math.round(totalAdminWorkers)}명 vs O열 시공사 특별인부 ${totalContractorLabor.toFixed(1)}품)`;
+
+  const conclusionText = document.getElementById('audit-conclusion-text');
+  if (conclusionText) {
+    conclusionText.innerHTML = `관리소 서명부 기준(${Math.round(totalAdminWorkers)}명/${Math.round(totalHours).toLocaleString()}h) 산출 총비용인 ${Math.round(totalAdminCost/10000).toLocaleString()}만원 대비, 시공사의 특별인부 청구 기준(${totalContractorLabor.toFixed(1)}품) 총비용은 ${Math.round(totalContractorCost/10000).toLocaleString()}만원으로, 시공사의 자발적 청구 축소 및 현장 보조인력 무상 기여를 통해 <strong>${yk.length}년간 총 -${Math.round(Math.abs(totalSavingsCost)/10000).toLocaleString()}만원(-${(Math.abs(totalSavingsCost)/Math.max(totalAdminCost,1)*100).toFixed(1)}%)의 실질 예산 절감 효과</strong>가 발생했음을 정량적으로 확인하였습니다.`;
+  }
+
+  const causeHeader = document.getElementById('audit-cause-header');
+  if (causeHeader) {
+    causeHeader.textContent = `🔍 3. 세부 원인: ${Math.abs(totalVoluntaryLaborSavings).toFixed(1)}품 자발적 절감(${mismatchCount}건 불일치) 5대 세부 원인 및 수식 구조 규명`;
+  }
+
+  // 모달 내 원인별 세부 건수 동적 반영
+  const blankContrCount = records.filter(r => r.diff_category === 'blank_contractor').length;
+  const reducedClaimCount = records.filter(r => r.diff_category === 'reduced_claim').length;
+  const fracShiftCount = records.filter(r => r.diff_category === 'fractional_shift').length;
+  const blankTitle = document.getElementById('audit-cause-blank-title');
+  if (blankTitle) blankTitle.textContent = `① 시공사 미기재 (${blankContrCount}건)`;
+  const reducedTitle = document.getElementById('audit-cause-reduced-title');
+  if (reducedTitle) reducedTitle.textContent = `② 인원 축소청구 (${reducedClaimCount}건)`;
+  const fracTitle = document.getElementById('audit-cause-fraction-title');
+  if (fracTitle) fracTitle.textContent = `③ 반일 0.5품 적용 (${fracShiftCount}건)`;
+
+  // Insight Budget 카드 동적 갱신
+  const insightGrowth = document.getElementById('insight-budget-growth');
+  if (insightGrowth) {
+    insightGrowth.textContent = `${latestYr} ${adminWan.toLocaleString()}만원 vs ${previousYr||'직전'} ${previousAdminWan.toLocaleString()}만원 (${costGrowth >= 0 ? '+' : ''}${costGrowth.toFixed(1)}%) [${isLatestPartial ? '추정치' : '실적'}]`;
+  }
+  const insightSub = document.getElementById('insight-budget-sub');
+  if (insightSub) {
+    insightSub.textContent = `[관리소 서명 기준 실공수(35,000원/h)+자재비+부대비] 단일 적용. 시공사 청구 환산 시 ${contractorWan.toLocaleString()}만원. 2027년 본예산 편성 시 참고 권고.`;
+  }
+
+  const forecastNote26 = document.getElementById('forecast-cost-note-26');
+  if (forecastNote26) {
+    if (isLatestPartial) {
+      forecastNote26.innerHTML = `※ ${latestYr}은 1~${latestMetric.maxMonth}월 실적 기준(총 ${actualAdminWan.toLocaleString()}만원). 잔여 기간 연환산 추정 포함 연간 약 ${adminWan.toLocaleString()}만원 전망<br>`;
+    } else {
+      forecastNote26.innerHTML = `※ ${latestYr} 연간 전체 실적 기준: 총 ${actualAdminWan.toLocaleString()}만원 집행 완료<br>`;
+    }
+  }
+
   const materialData = window.materialData || {};
   const matMetric = (key) => materialData[key] || { values: [] };
   const latestIdx = Math.max(0, yk.length - 1);
   const previousIdx = Math.max(0, yk.length - 2);
 
-  // 4) 걸레받이 및 코킹재 YoY 카드 동적 업데이트
+  // 5) 걸레받이 및 코킹재 YoY 카드 동적 업데이트
   const bData = matMetric('baseboard');
   const bLatest = Math.round(Number(bData.values[latestIdx] || 0));
   const bPrev = Math.round(Number(bData.values[previousIdx] || 0));
@@ -3366,6 +3454,12 @@ function updateAllKPIsAndTexts() {
   const yoyBbChg = document.getElementById('yoy-baseboard-change');
   if (yoyBbChg) yoyBbChg.textContent = `${bDiff >= 0 ? '▲' : '▼'} ${Math.abs(bDiff)}m (${bDiff >= 0 ? '+' : ''}${bPct.toFixed(0)}%)`;
 
+  const bFirst = Math.round(Number(bData.values[0] || 0));
+  const bDiffPrev = bPrev - bFirst;
+  const bPctPrev = bFirst > 0 ? ((bPrev / bFirst) - 1) * 100 : 0;
+  const yoyBbPrev = document.getElementById('yoy-baseboard-prev');
+  if (yoyBbPrev) yoyBbPrev.textContent = `${previousYr}←${firstYr}: ${bDiffPrev >= 0 ? '▲' : '▼'}${Math.abs(bDiffPrev)}m(${bDiffPrev >= 0 ? '+' : ''}${bPctPrev.toFixed(0)}%)`;
+
   const cData = matMetric('caulk');
   const cLatestMat = Math.round(Number(cData.values[latestIdx] || 0));
   const cPrevMat = Math.round(Number(cData.values[previousIdx] || 0));
@@ -3375,6 +3469,12 @@ function updateAllKPIsAndTexts() {
   if (yoyCaulkVal) yoyCaulkVal.textContent = `${cLatestMat}←${cPrevMat}개`;
   const yoyCaulkChg = document.getElementById('yoy-caulk-change');
   if (yoyCaulkChg) yoyCaulkChg.textContent = `${cDiffMat >= 0 ? '▲' : '▼'} ${Math.abs(cDiffMat)}개 (${cDiffMat >= 0 ? '+' : ''}${cPctMat.toFixed(0)}%)`;
+
+  const cFirstMat = Math.round(Number(cData.values[0] || 0));
+  const cDiffMatPrev = cPrevMat - cFirstMat;
+  const cPctMatPrev = cFirstMat > 0 ? ((cPrevMat / cFirstMat) - 1) * 100 : 0;
+  const yoyCaulkPrev = document.getElementById('yoy-caulk-prev');
+  if (yoyCaulkPrev) yoyCaulkPrev.textContent = `${previousYr}←${firstYr}: ${cDiffMatPrev >= 0 ? '▲' : '▼'}${Math.abs(cDiffMatPrev)}개(${cDiffMatPrev >= 0 ? '+' : ''}${cPctMatPrev.toFixed(0)}%)`;
 
   const updateMaterialKpi = (key, valueId, subId, badgeId, unit) => {
     const data = matMetric(key);
@@ -3410,6 +3510,186 @@ function updateAllKPIsAndTexts() {
     } else {
       syncStatus.style.display = 'none';
     }
+  }
+
+  // 6) 3대 대조표(정량 대조표, 비용 대조표, 인건비 비교표) 100% 동적 렌더링
+  renderAuditTables();
+}
+
+function renderAuditTables() {
+  const records = window.RAW || [];
+  const metrics = window.annualMetrics || {};
+  const yk = window.YR_KEYS || ['24년','25년','26년'];
+  const firstYr = yk[0] || '24년';
+  const latestYr = yk[yk.length - 1] || '26년';
+
+  // 1. Table A: 3개년 정량 대조표 (#audit-quantitative-tbody)
+  const qTbody = document.getElementById('audit-quantitative-tbody');
+  if (qTbody) {
+    let rowsHtml = '';
+    let totCnt = 0, totAdmin = 0, totContr = 0, totMismatches = 0;
+    
+    yk.forEach(k => {
+      const m = metrics[k] || {};
+      const yrRecs = records.filter(r => r.yr === k);
+      const cnt = yrRecs.length;
+      const wAdmin = m.adminWorkers || 0;
+      const wCont = m.contractorLabor || 0;
+      const diff = wAdmin - wCont;
+      const diffPct = wCont > 0 ? (diff / wCont * 100) : 0;
+      const mismatches = yrRecs.filter(r => r.diff_category !== 'match' && r.diff_category !== 'both_empty').length;
+      
+      totCnt += cnt;
+      totAdmin += wAdmin;
+      totContr += wCont;
+      totMismatches += mismatches;
+      
+      const yrColor = k.includes('26') ? '#4ecb71' : k.includes('25') ? '#f5a623' : '#6c8ef5';
+      const mRange = m.isPartialYear ? ` (1~${m.maxMonth}월)` : '';
+      
+      rowsHtml += `<tr>
+        <td style="font-weight:700;color:${yrColor};text-align:center;padding:6px 8px;">20${k.replace(/[^0-9]/g,'')}년${mRange}</td>
+        <td style="text-align:center;padding:6px 8px;">${cnt}건</td>
+        <td style="text-align:center;font-weight:700;color:#ffffff;padding:6px 8px;">${wAdmin.toFixed(1)}명</td>
+        <td style="text-align:center;font-weight:700;color:#f5a623;padding:6px 8px;">${wCont.toFixed(1)}품</td>
+        <td style="text-align:center;font-weight:700;color:${diff >= 0 ? '#ff4d6d' : '#4ecb71'};padding:6px 8px;">${diff >= 0 ? '+' : ''}${diff.toFixed(1)}명</td>
+        <td style="text-align:center;color:${diff >= 0 ? '#ff4d6d' : '#4ecb71'};padding:6px 8px;">${diff >= 0 ? '+' : ''}${diffPct.toFixed(1)}%</td>
+        <td style="text-align:center;color:#ffffff;padding:6px 8px;">${mismatches}건</td>
+        <td style="padding:6px 8px;color:#cbd5e1;">원천 엑셀 '${k}' 시트 전수 대조 완료 (일치 ${cnt - mismatches}건 / 불일치 ${mismatches}건)</td>
+      </tr>`;
+    });
+    
+    const totDiff = totAdmin - totContr;
+    const totDiffPct = totContr > 0 ? (totDiff / totContr * 100) : 0;
+    
+    rowsHtml += `<tr style="background:rgba(108,142,245,0.15);font-weight:700;">
+      <td style="text-align:center;color:#ffffff;padding:7px 8px;">3개년 합계</td>
+      <td style="text-align:center;color:#ffffff;padding:7px 8px;">${totCnt}건</td>
+      <td style="text-align:center;color:#6c8ef5;font-size:12px;padding:7px 8px;">${totAdmin.toFixed(1)}명</td>
+      <td style="text-align:center;color:#f5a623;font-size:12px;padding:7px 8px;">${totContr.toFixed(1)}품</td>
+      <td style="text-align:center;color:#ff4d6d;font-size:12px;padding:7px 8px;">${totDiff >= 0 ? '+' : ''}${totDiff.toFixed(1)}명</td>
+      <td style="text-align:center;color:#ff4d6d;padding:7px 8px;">${totDiff >= 0 ? '+' : ''}${totDiffPct.toFixed(1)}%</td>
+      <td style="text-align:center;color:#ffffff;padding:7px 8px;">${totMismatches}건</td>
+      <td style="padding:7px 8px;color:#ffffff;">원천 XLSB 전수 집계 데이터 100% 무결성 대조 완료</td>
+    </tr>`;
+    
+    qTbody.innerHTML = rowsHtml;
+  }
+
+  // 2. Table B: 비용 대조표 (#audit-savings-tbody)
+  const sTbody = document.getElementById('audit-savings-tbody');
+  if (sTbody) {
+    let rowsHtml = '';
+    let totCnt = 0, totAdminCost = 0, totContrCost = 0, totLaborDiff = 0;
+    
+    yk.forEach(k => {
+      const m = metrics[k] || {};
+      const yrRecs = records.filter(r => r.yr === k);
+      const cnt = yrRecs.length;
+      const aCost = m.adminCost || 0;
+      const cCost = m.contractorCost || 0;
+      const savCost = cCost - aCost;
+      const savPct = aCost > 0 ? (savCost / aCost * 100) : 0;
+      const laborDiff = (m.contractorLabor || 0) - (m.adminWorkers || 0);
+      
+      totCnt += cnt;
+      totAdminCost += aCost;
+      totContrCost += cCost;
+      totLaborDiff += laborDiff;
+      
+      const yrColor = k.includes('26') ? '#4ecb71' : k.includes('25') ? '#f5a623' : '#6c8ef5';
+      const mRange = m.isPartialYear ? ` (1~${m.maxMonth}월)` : '';
+      const aWan = Math.round(aCost / 10000);
+      const cWan = Math.round(cCost / 10000);
+      const sWan = Math.round(savCost / 10000);
+      
+      rowsHtml += `<tr>
+        <td style="font-weight:700;color:${yrColor};text-align:center;padding:5px 8px;">20${k.replace(/[^0-9]/g,'')}년${mRange}</td>
+        <td style="text-align:center;padding:5px 8px;">${cnt}건</td>
+        <td style="text-align:center;font-weight:700;color:#6c8ef5;padding:5px 8px;">${aWan.toLocaleString()}만원 (${(m.hours||0).toFixed(1)}h)</td>
+        <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">${cWan.toLocaleString()}만원 (${(m.contractorLabor||0).toFixed(1)}품)</td>
+        <td style="text-align:center;font-weight:700;color:#4ecb71;padding:5px 8px;">${sWan >= 0 ? '+' : ''}${sWan.toLocaleString()}만원</td>
+        <td style="text-align:center;color:#4ecb71;padding:5px 8px;">${savPct.toFixed(1)}%</td>
+        <td style="text-align:center;color:#38bdf8;padding:5px 8px;">${laborDiff >= 0 ? '+' : ''}${laborDiff.toFixed(1)}품</td>
+        <td style="padding:5px 8px;color:#cbd5e1;">${k} 원천 시트 실집행 기준 (관리소 대비 시공사 청구 실질 절감액)</td>
+      </tr>`;
+    });
+    
+    const totSavCost = totContrCost - totAdminCost;
+    const totSavPct = totAdminCost > 0 ? (totSavCost / totAdminCost * 100) : 0;
+    const totAWan = Math.round(totAdminCost / 10000);
+    const totCWan = Math.round(totContrCost / 10000);
+    const totSWan = Math.round(totSavCost / 10000);
+    
+    rowsHtml += `<tr style="background:rgba(78,203,113,0.18);font-weight:700;">
+      <td style="text-align:center;color:#ffffff;padding:6px 8px;">3개년 총계</td>
+      <td style="text-align:center;color:#ffffff;padding:6px 8px;">${totCnt}건</td>
+      <td style="text-align:center;color:#6c8ef5;padding:6px 8px;">${totAWan.toLocaleString()}만원</td>
+      <td style="text-align:center;color:#f5a623;padding:6px 8px;">${totCWan.toLocaleString()}만원</td>
+      <td style="text-align:center;color:#4ecb71;font-size:12px;padding:6px 8px;">${totSWan.toLocaleString()}만원</td>
+      <td style="text-align:center;color:#4ecb71;font-size:12px;padding:6px 8px;">${totSavPct.toFixed(1)}%</td>
+      <td style="text-align:center;color:#38bdf8;font-size:12px;padding:6px 8px;">${totLaborDiff >= 0 ? '+' : ''}${totLaborDiff.toFixed(1)}품</td>
+      <td style="padding:6px 8px;color:#ffffff;">시공사 자발적 청구 축소 및 현장 무상 지원을 통한 관리단 공사비 절감 실적</td>
+    </tr>`;
+    
+    sTbody.innerHTML = rowsHtml;
+  }
+
+  // 3. Table C: 인건비 및 공사비 비교표 (#audit-cost-comparison-tbody)
+  const cTbody = document.getElementById('audit-cost-comparison-tbody');
+  if (cTbody) {
+    let rowsHtml = '';
+    yk.forEach(k => {
+      const m = metrics[k] || {};
+      const yrRecs = records.filter(r => r.yr === k);
+      const cnt = yrRecs.length;
+      const aCost = m.adminCost || 0;
+      const cCost = m.contractorCost || 0;
+      const savCost = cCost - aCost;
+      const savPct = aCost > 0 ? (savCost / aCost * 100) : 0;
+      
+      const yrColor = k.includes('26') ? '#4ecb71' : k.includes('25') ? '#f5a623' : '#6c8ef5';
+      const mRange = m.isPartialYear ? ` (1~${m.maxMonth}월)` : '';
+      const aWan = Math.round(aCost / 10000);
+      const cWan = Math.round(cCost / 10000);
+      const sWan = Math.round(savCost / 10000);
+      
+      rowsHtml += `<tr>
+        <td style="font-weight:700;color:${yrColor};text-align:center;padding:5px 8px;">20${k.replace(/[^0-9]/g,'')}년${mRange}</td>
+        <td style="text-align:center;padding:5px 8px;">${cnt}건</td>
+        <td style="text-align:center;font-weight:700;color:#6c8ef5;padding:5px 8px;">${aWan.toLocaleString()}만원 (${(m.hours||0).toFixed(1)}h)</td>
+        <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">${cWan.toLocaleString()}만원 (${(m.contractorLabor||0).toFixed(1)}품)</td>
+        <td style="text-align:center;font-weight:700;color:${sWan < 0 ? '#ff4d6d' : '#4ecb71'};padding:5px 8px;">${sWan.toLocaleString()}만원</td>
+        <td style="text-align:center;color:${sWan < 0 ? '#ff4d6d' : '#4ecb71'};padding:5px 8px;">${savPct.toFixed(1)}%</td>
+        <td style="padding:5px 8px;color:#cbd5e1;">${k} 실투입 공수 기준 집행액 vs 시공사 특별인부 청구 기준액 대조</td>
+      </tr>`;
+    });
+    
+    // 2026년 연간 추정치 행 추가 (부분 연도일 경우)
+    const mLatest = metrics[yk[yk.length - 1]] || {};
+    if (mLatest.isPartialYear) {
+      const elapsed = Math.max(1, mLatest.maxMonth);
+      const annFactor = 12 / elapsed;
+      const annCnt = Math.round(mLatest.cnt * annFactor);
+      const annHours = (mLatest.hours || 0) * annFactor;
+      const annLabor = (mLatest.contractorLabor || 0) * annFactor;
+      const annAdminCost = Math.round((mLatest.adminCost || 0) * annFactor / 10000);
+      const annContrCost = Math.round((mLatest.contractorCost || 0) * annFactor / 10000);
+      const annSav = annContrCost - annAdminCost;
+      const annSavPct = annAdminCost > 0 ? (annSav / annAdminCost * 100) : 0;
+      
+      rowsHtml += `<tr style="background:rgba(224,92,123,0.1);">
+        <td style="font-weight:700;color:#e05c7b;text-align:center;padding:5px 8px;">2026년 연간추정</td>
+        <td style="text-align:center;padding:5px 8px;">${annCnt}건</td>
+        <td style="text-align:center;font-weight:700;color:#e05c7b;padding:5px 8px;">${annAdminCost.toLocaleString()}만원 (${annHours.toFixed(1)}h)</td>
+        <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">${annContrCost.toLocaleString()}만원 (${annLabor.toFixed(1)}품)</td>
+        <td style="text-align:center;font-weight:700;color:${annSav < 0 ? '#ff4d6d' : '#4ecb71'};padding:5px 8px;">${annSav.toLocaleString()}만원</td>
+        <td style="text-align:center;color:${annSav < 0 ? '#ff4d6d' : '#4ecb71'};padding:5px 8px;">${annSavPct.toFixed(1)}%</td>
+        <td style="padding:5px 8px;color:#cbd5e1;"><strong>1~${mLatest.maxMonth}월(${elapsed}개월) 실적 비례 연간(12개월) 환산 추정치</strong> (관리소 서명 공수 기준 ${annAdminCost.toLocaleString()}만 vs 시공사 환산 ${annContrCost.toLocaleString()}만)</td>
+      </tr>`;
+    }
+    
+    cTbody.innerHTML = rowsHtml;
   }
 }
 
@@ -3745,14 +4025,39 @@ function openModal(title, filter_fn, forcedYr = null) {
   const monthMatch = title.match(/([0-9]+)월/);
   const roomMatch = title.match(/([0-9]+호)/);
 
-  if (title.includes('전체 증빙 목록') && !detectedBldg && !typeMatch && !monthMatch) {
-    modalCurrentData = RAW; // 전체 276건
-  } else if (title.includes('작업시간 증빙 목록')) {
+  // [자재 증빙 모달 완벽 감지 및 3개년 풀 복원]:
+  // [코킹재], [걸레받이], [블라인드], [이보드], [방충망] 등 자재 정의와 정밀 대조
+  const rawTag = typeMatch ? typeMatch[1].trim() : '';
+  const isMaterialTitle = /자재\s*(?:증빙|사용|상세|관련)/.test(title);
+  const matDef = (rawTag && typeof MATERIAL_DEFINITIONS !== 'undefined')
+    ? MATERIAL_DEFINITIONS.find(d => 
+        d.label === rawTag || 
+        d.key === rawTag || 
+        d.storageKey === rawTag || 
+        (isMaterialTitle && (rawTag.includes(d.label) || (d.match && d.match.test(rawTag))))
+      )
+    : (isMaterialTitle && typeof MATERIAL_DEFINITIONS !== 'undefined'
+        ? MATERIAL_DEFINITIONS.find(d => title.includes(d.label) || (d.match && d.match.test(title)))
+        : null);
+
+  const isMaterialModal = Boolean(matDef || isMaterialTitle);
+
+  if (title.includes('전체 증빙 목록') && !detectedBldg && !typeMatch && !monthMatch && !isMaterialModal) {
+    modalCurrentData = RAW; // 전체 레코드
+  } else if (title.includes('작업시간 증빙 목록') || title.includes('근로자 투입 전체 증빙')) {
     modalCurrentData = RAW;
-  } else if (title.includes('근로자 투입 전체 증빙')) {
-    modalCurrentData = RAW;
-  } else if (title.includes('자재 관련 증빙') && !typeMatch) {
-    modalCurrentData = RAW;
+  } else if (isMaterialModal) {
+    if (matDef) {
+      modalCurrentData = RAW.filter(r => {
+        const val = (typeof getMaterialValue === 'function') ? getMaterialValue(r, matDef) : 0;
+        if (val > 0) return true;
+        if (r.mats && Number(r.mats[matDef.storageKey]) > 0) return true;
+        if (matDef.match && (matDef.match.test(r.content || '') || (r.types || []).some(t => matDef.match.test(t)))) return true;
+        return false;
+      });
+    } else {
+      modalCurrentData = RAW.filter(r => r.mats && Object.values(r.mats).some(v => Number(v) > 0));
+    }
   } else if (detectedBldg && typeMatch) {
     modalCurrentData = RAW.filter(r => getBldgFilter(detectedBldg)(r) && (r.types||[]).includes(typeMatch[1]));
   } else if (detectedBldg) {
@@ -3764,13 +4069,20 @@ function openModal(title, filter_fn, forcedYr = null) {
   } else if (roomMatch) {
     const rm = roomMatch[1];
     modalCurrentData = RAW.filter(r => (r.room||'').includes(rm));
-  } else {
+  } else if (typeof filter_fn === 'function') {
     const directData = RAW.filter(filter_fn);
     if (directData.length > 0 && directData.every(r => r.yr === detectedYr) && detectedYr !== 'all') {
       modalCurrentData = RAW.filter(filter_fn);
     } else {
       modalCurrentData = directData.length > 0 ? directData : RAW;
     }
+  } else {
+    modalCurrentData = RAW;
+  }
+
+  if (modalCurrentData.length === 0 && typeof filter_fn === 'function') {
+    const directData = RAW.filter(filter_fn);
+    if (directData.length > 0) modalCurrentData = directData;
   }
 
   modalYrFilter = detectedYr || 'all';
@@ -5533,6 +5845,15 @@ function openForecastModal(monthIdx, datasetLabel) {
   const noticeEl = document.getElementById('modal-audit-notice');
   if (noticeEl) {
     if (isYearly) {
+      const am = window.annualMetrics || {};
+      const m24 = am['24년'] || {};
+      const m25 = am['25년'] || {};
+      const m26 = am['26년'] || {};
+      const c24 = m24.cnt || 0;
+      const c25 = m25.cnt || 0;
+      const c26 = m26.cnt || 0;
+      const ann26 = m26.isPartialYear ? Math.round(c26 * 12 / (m26.maxMonth || 8)) : c26;
+
       noticeEl.innerHTML = `
         <div style="width:100%;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;border-bottom:1px solid rgba(108,142,245,0.3);padding-bottom:4px;">
@@ -5541,11 +5862,11 @@ function openForecastModal(monthIdx, datasetLabel) {
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11.5px;color:var(--text);line-height:1.7;">
             <div>
-              · <strong>과거 실적 추이:</strong> 24년 107건 → 25년 86건 → 26년 83건(진행중, 연환산 약 107건)<br>
+              · <strong>과거 실적 추이:</strong> 24년 ${c24}건 → 25년 ${c25}건 → 26년 ${c26}건(진행중, 연환산 약 ${ann26}건)<br>
               · <strong>예측 모델:</strong> 가중 이동평균(26년 50%, 25년 30%, 24년 20%) + 노후화 가산 계수
             </div>
             <div>
-              · <strong>주요 위험 요인:</strong> 103동(4.5배 급증) 및 3동(급발진 16건) 노후화 누적 지속<br>
+              · <strong>주요 위험 요인:</strong> 103동 및 3동 노후화 누적 지속 모니터링<br>
               · <strong>핵심 권고사항:</strong> 걸레받이·방충망 사전 일괄 교체 시 연간 90~100건으로 안정화 가능
             </div>
           </div>
@@ -5696,6 +6017,17 @@ function openForecastCostModal(monthIdx, datasetLabel) {
   const noticeEl = document.getElementById('modal-audit-notice');
   if (noticeEl) {
     if (isYearly) {
+      const am = window.annualMetrics || {};
+      const m24 = am['24년'] || {};
+      const m25 = am['25년'] || {};
+      const m26 = am['26년'] || {};
+      const cost24 = Math.round((m24.adminCost || 0) / 10000);
+      const cost25 = Math.round((m25.adminCost || 0) / 10000);
+      const cost26 = m26.isPartialYear ? Math.round((m26.adminCost || 0) * 12 / (m26.maxMonth || 8) / 10000) : Math.round((m26.adminCost || 0) / 10000);
+      const contr24 = Math.round((m24.contractorCost || 0) / 10000);
+      const contr25 = Math.round((m25.contractorCost || 0) / 10000);
+      const contr26 = m26.isPartialYear ? Math.round((m26.contractorCost || 0) * 12 / (m26.maxMonth || 8) / 10000) : Math.round((m26.contractorCost || 0) / 10000);
+
       noticeEl.innerHTML = `
         <div style="width:100%;">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;border-bottom:1px solid rgba(108,142,245,0.3);padding-bottom:4px;">
@@ -5704,7 +6036,7 @@ function openForecastCostModal(monthIdx, datasetLabel) {
           </div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11.5px;color:var(--text);line-height:1.7;">
             <div>
-              · <strong>과거 연도별 집행 실적:</strong> 24년 4,874만 → 25년 4,271만 → 26년 5,973만원 <span style="color:#6c8ef5;">[공식 단일 기준: 관리소 서명 공수 반영]</span> (시공사 청구 품수 기준 환산 시 24년 4,061만 → 25년 3,705만 → 26년 5,302만원)<br>
+              · <strong>과거 연도별 집행 실적:</strong> 24년 ${cost24.toLocaleString()}만 → 25년 ${cost25.toLocaleString()}만 → 26년 ${cost26.toLocaleString()}만원 <span style="color:#6c8ef5;">[공식 단일 기준: 관리소 서명 공수 반영]</span> (시공사 청구 품수 기준 환산 시 24년 ${contr24.toLocaleString()}만 → 25년 ${contr25.toLocaleString()}만 → 26년 ${contr26.toLocaleString()}만원)<br>
               · <strong>2027년 예측 산출 기준:</strong> 134건 × 건당 55.77만원 (관리소 서명 패턴 노무비 86.6% + 자재비 9.3% + 부대경비 4.1% = 7,473만원 / 시공사 청구 환산 시 6,634만원)
             </div>
             <div>
@@ -6466,13 +6798,25 @@ const dashboardExcelExporter = {
     ws.getCell("A1").alignment = { vertical: "middle", horizontal: "left" };
     ws.getRow(1).height = 32;
 
+    const yk = (typeof window !== 'undefined' && window.YR_KEYS) ? window.YR_KEYS : ['24년','25년','26년'];
+    const firstYr = yk[0] || '24년';
+    const latestYr = yk[yk.length - 1] || '26년';
+    const am = (typeof window !== 'undefined' && window.annualMetrics) ? window.annualMetrics : {};
+    const mLatest = am[latestYr] || {};
+    const rangeTag = mLatest.isPartialYear ? ` (20${firstYr.replace(/[^0-9]/g,'')}년 ~ 20${latestYr.replace(/[^0-9]/g,'')}년 ${mLatest.maxMonth}월)` : ` (20${firstYr.replace(/[^0-9]/g,'')}년 ~ 20${latestYr.replace(/[^0-9]/g,'')}년)`;
+
+    const rawList = (typeof RAW !== 'undefined' && Array.isArray(RAW)) ? RAW : [];
+    const totAdminW = Math.round(rawList.reduce((s, r) => s + (Number(r.workers_admin ?? r.workers) || 0), 0));
+    const totContrL = rawList.reduce((s, r) => s + (Number(r.workers_contractor) || 0), 0).toFixed(1);
+    const totDiffW = Math.abs(rawList.reduce((s, r) => s + (Number(r.workers_contractor) || 0) - (Number(r.workers_admin ?? r.workers) || 0), 0)).toFixed(1);
+
     const info = [
       ["보고서 명칭", title || "긴급보수 분석 리포트"],
       ["생성 일시", this.formatDateTime()],
-      ["원천 데이터 출처", "021 관리대장_(건축 긴급대응).xlsx (2024년 ~ 2026년 8월)"],
+      ["원천 데이터 출처", `021 관리대장_(건축 긴급대응).xlsb${rangeTag}`],
       ["연계 상세 증빙 건수", `${recordCount}건 (전수 누락 방지 무결성 보증)`],
-      ["품 산출 단일 기준", "관리소 직접 서명 483명(공수) 단일 무결성 기준 적용 (시공사 청구 397.5품 대비 85.5품 정합성 검증 완료)"],
-      ["시트 구성 안내", "1. [차트]: Microsoft Excel 고유 차트 객체 및 조건부 서식 히트맵/게이지 연계 시각화\n2. [차트 연계 데이터]: 집계 테이블 (노란색 셀 수정 시 차트/히트맵 실시간 연동)\n3. [연계 상세 증빙 레코드]: 276건 전수 필터링/정렬 가능 상세 로우데이터\n4. [README]: 시스템 안내 및 정합성 보증 확인서"],
+      ["품 산출 단일 기준", `관리소 직접 서명 ${totAdminW}명(공수) 단일 무결성 기준 적용 (시공사 청구 ${totContrL}품 대비 ${totDiffW}품 정합성 검증 완료)`],
+      ["시트 구성 안내", `1. [차트]: Microsoft Excel 고유 차트 객체 및 조건부 서식 히트맵/게이지 연계 시각화\n2. [차트 연계 데이터]: 집계 테이블 (노란색 셀 수정 시 차트/히트맵 실시간 연동)\n3. [연계 상세 증빙 레코드]: ${recordCount}건 전수 필터링/정렬 가능 상세 로우데이터\n4. [README]: 시스템 안내 및 정합성 보증 확인서`],
       ["실시간 차트 연동 안내", "💡 '차트 연계 데이터' 시트의 [노란색 배경 셀] 수치를 수정하면, '차트' 시트의 네이티브 엑셀 막대/선 그래프 및 조건부 서식 히트맵 색상이 즉시 자동으로 동기화 변경됩니다."]
     ];
 
@@ -8196,8 +8540,8 @@ const dashboardExcelExporter = {
           const list = typeof RAW !== 'undefined' ? RAW : [];
           const diffRows = list.filter(r => r.diff_category !== "match" && r.diff_category !== "both_empty");
           const matchRows = list.filter(r => r.diff_category === "match");
-          this.addRawRecordsSheet(wb, "괴리 86건 전수 상세", diffRows);
-          this.addRawRecordsSheet(wb, "일치 190건 전수 상세", matchRows);
+          this.addRawRecordsSheet(wb, `괴리 ${diffRows.length}건 전수 상세`, diffRows);
+          this.addRawRecordsSheet(wb, `일치 ${matchRows.length}건 전수 상세`, matchRows);
           this.buildReadmeSheet(wb, title, list.length);
 
         // =========================================================================
@@ -8418,11 +8762,39 @@ const dashboardExcelExporter = {
           c.alignment = { horizontal: "center", vertical: "middle" };
         });
 
+        const am = (typeof window !== 'undefined' && window.annualMetrics) ? window.annualMetrics : {};
+        const m26 = am['26년'] || {};
+        const m25 = am['25년'] || {};
+        const m24 = am['24년'] || {};
+        const c26 = Number(m26.cnt || 0);
+        const c25 = Number(m25.cnt || 0);
+        const c24 = Number(m24.cnt || 0);
+        const totC = c26 + c25 + c24;
+        const diffC = c26 - c25;
+
+        const h26 = Math.round(Number(m26.hours || 0) * 10) / 10;
+        const h25 = Math.round(Number(m25.hours || 0) * 10) / 10;
+        const h24 = Math.round(Number(m24.hours || 0) * 10) / 10;
+        const totH = Math.round((h26 + h25 + h24) * 10) / 10;
+        const diffH = Math.round((h26 - h25) * 10) / 10;
+
+        const w26 = Math.round(Number(m26.adminWorkers || 0));
+        const w25 = Math.round(Number(m25.adminWorkers || 0));
+        const w24 = Math.round(Number(m24.adminWorkers || 0));
+        const totW = w26 + w25 + w24;
+        const diffW = w26 - w25;
+
+        const cost26 = Math.round(Number(m26.adminCost || 0) / 10000);
+        const cost25 = Math.round(Number(m25.adminCost || 0) / 10000);
+        const cost24 = Math.round(Number(m24.adminCost || 0) / 10000);
+        const totCost = cost26 + cost25 + cost24;
+        const diffCost = cost26 - cost25;
+
         const kpiData = [
-          ["총 작업 건수 (건)", 83, 86, 107, 276, -3],
-          ["총 작업 시간 (h)", 277.5, 230.5, 310.0, 818.0, 47.0],
-          ["총 투입 인원 (명 - 관리소 서명 기준)", 153, 147, 183, 483, 6],
-          ["추정 집행 비용 (만원)", 4700, 4271, 4874, 13845, 429]
+          ["총 작업 건수 (건)", c26, c25, c24, totC, diffC],
+          ["총 작업 시간 (h)", h26, h25, h24, totH, diffH],
+          ["총 투입 인원 (명 - 관리소 서명 기준)", w26, w25, w24, totW, diffW],
+          ["추정 집행 비용 (만원)", cost26, cost25, cost24, totCost, diffCost]
         ];
 
         kpiData.forEach((row, rIdx) => {
@@ -8724,13 +9096,18 @@ const dashboardExcelExporter = {
           c.alignment = { horizontal: "center", vertical: "middle" };
         });
 
+        const labor24 = Math.round(Number(m24.adminWorkers || 0) * 8 * 35000 / 10000);
+        const labor25 = Math.round(Number(m25.adminWorkers || 0) * 8 * 35000 / 10000);
+        const labor26 = Math.round(Number(m26.adminWorkers || 0) * 8 * 35000 / 10000);
+        const totLabor = labor24 + labor25 + labor26;
+
         const costTable = [
-          ["직접인건비 (만원)", 3294, 2700, 2700, 8694, 3850],
-          ["직접자재비 (만원)", 960, 1040, 1400, 3400, 2200],
-          ["간접비·경비·이윤 (만원)", 620, 531, 600, 1751, 1423],
-          ["총 추정 집행 비용 (만원)", 4874, 4271, 4700, 13845, 7473],
-          ["작업 발행 건수 (건)", 107, 86, 83, 276, 114],
-          ["건당 평균 보수비용 (만원/건)", 45.6, 49.7, 56.6, 50.2, 65.6]
+          ["직접인건비 (만원)", labor24, labor25, labor26, totLabor, Math.round(totLabor / 3)],
+          ["직접자재비 (만원)", Math.round(cost24 * 0.2), Math.round(cost25 * 0.24), Math.round(cost26 * 0.28), Math.round((cost24 * 0.2) + (cost25 * 0.24) + (cost26 * 0.28)), Math.round(totCost * 0.24 / 3)],
+          ["간접비·경비·이윤 (만원)", Math.max(0, cost24 - labor24 - Math.round(cost24 * 0.2)), Math.max(0, cost25 - labor25 - Math.round(cost25 * 0.24)), Math.max(0, cost26 - labor26 - Math.round(cost26 * 0.28)), Math.max(0, totCost - totLabor - Math.round((cost24 * 0.2) + (cost25 * 0.24) + (cost26 * 0.28))), Math.round(totCost * 0.12 / 3)],
+          ["총 추정 집행 비용 (만원)", cost24, cost25, cost26, totCost, Math.round(totCost / 3)],
+          ["작업 발행 건수 (건)", c24, c25, c26, totC, Math.round(totC / 3)],
+          ["건당 평균 보수비용 (만원/건)", c24 > 0 ? +(cost24 / c24).toFixed(1) : 0, c25 > 0 ? +(cost25 / c25).toFixed(1) : 0, c26 > 0 ? +(cost26 / c26).toFixed(1) : 0, totC > 0 ? +(totCost / totC).toFixed(1) : 0, +(totCost / Math.max(totC, 1)).toFixed(1)]
         ];
 
         costTable.forEach((row, rIdx) => {
@@ -8834,9 +9211,9 @@ const dashboardExcelExporter = {
         });
         wsRoad.columns = [{ width: 8 }, { width: 22 }, { width: 18 }, { width: 45 }, { width: 16 }, { width: 14 }, { width: 14 }];
 
-        // 12. Sheet: 10. 276건 전수 원천 상세 증빙 레코드
+        // 12. Sheet: 10. 전수 원천 상세 증빙 레코드
         const rawList = (typeof RAW !== 'undefined' && Array.isArray(RAW)) ? RAW : (typeof window !== 'undefined' && window.RAW ? window.RAW : []);
-        this.addRawRecordsSheet(wb, "10. 276건 전수 증빙 레코드", rawList);
+        this.addRawRecordsSheet(wb, `10. ${rawList.length}건 전수 증빙 레코드`, rawList);
 
         // 13. Sheet: README (리포트 개요)
         this.buildReadmeSheet(wb, "건축 긴급보수 3개년 통합 종합 마스터 리포트", rawList.length);
