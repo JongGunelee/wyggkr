@@ -1911,7 +1911,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       <div class="chart-click-hint">💡 클릭 시 해당 연도 자재 관련 증빙 조회</div>
     </div>
     <div class="card">
-      <div class="card-title"><span class="icon">🥧</span> 26년 자재 구성 비율</div>
+      <div class="card-title"><span class="icon">🥧</span> <span id="mat-doughnut-year">26년</span> 자재 구성 비율</div>
       <div class="chart-wrap" style="height:280px"><canvas id="c-matDoughnut"></canvas></div>
       <div class="chart-click-hint">💡 클릭 시 해당 자재 사용 증빙 조회</div>
     </div>
@@ -3097,6 +3097,10 @@ function updateAllKPIsAndTexts() {
   const yearsRangeEl = document.getElementById('header-years-range');
   if (yearsRangeEl) {
     yearsRangeEl.textContent = `20${firstYr.replace(/[^0-9]/g, '')}~20${latestYr.replace(/[^0-9]/g, '')}년`;
+  }
+  const matDoughnutYrEl = document.getElementById('mat-doughnut-year');
+  if (matDoughnutYrEl) {
+    matDoughnutYrEl.textContent = typeof formatYearLabel === 'function' ? formatYearLabel(latestYr) : latestYr;
   }
 
   const totalCnt = records.length;
@@ -6144,7 +6148,46 @@ buildChart('c-matDoughnut',{
     datasets:[{data:[materialSeries('caulk')[0],materialSeries('baseboard')[0],materialSeries('blind')[0],materialSeries('eboard')[0]],
       backgroundColor:[alpha('#6c8ef5',.8),alpha('#e05c7b',.8),alpha('#f5a623',.8),alpha('#4ecb71',.8)],
       borderColor:'#1a1d27',borderWidth:2}]},
-  options:{...BASE,cutout:'60%',scales:{x:{display:false},y:{display:false}},plugins:{...BASE.plugins,legend:{position:'bottom'}}}
+  options:{...BASE,cutout:'60%',scales:{x:{display:false},y:{display:false}},plugins:{...BASE.plugins,legend:{position:'bottom'}}},
+  plugins: [{
+    id: 'emptyDoughnutNotice',
+    afterDraw(chart) {
+      const { chartArea, ctx } = chart;
+      if (!chartArea) return;
+      const { top, bottom, left, right, width, height } = chartArea;
+      const dataArr = (chart.data.datasets && chart.data.datasets[0] && chart.data.datasets[0].data) || [];
+      const total = dataArr.reduce((s, v) => s + (Number(v) || 0), 0);
+      if (total === 0) {
+        ctx.save();
+        const centerX = (left + right) / 2;
+        const centerY = (top + bottom) / 2;
+        const outerRadius = Math.min(width, height) / 2 * 0.82;
+        const innerRadius = outerRadius * 0.6;
+
+        // 1. 은은한 회색 도넛 링 렌더링
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2, false);
+        ctx.arc(centerX, centerY, innerRadius, Math.PI * 2, 0, true);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // 2. 중앙 안내 문구 (실적 없음 명확 고지)
+        const yrTxt = typeof yearLabel === 'function' ? yearLabel(latestYrName) : latestYrName;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 12px "Segoe UI", "Malgun Gothic", sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(`${yrTxt} 주요 자재`, centerX, centerY - 10);
+        ctx.font = '11px "Segoe UI", "Malgun Gothic", sans-serif';
+        ctx.fillStyle = '#64748b';
+        ctx.fillText('투입 실적 없음 (0건)', centerX, centerY + 10);
+        ctx.restore();
+      }
+    }
+  }]
 },(ds,idx)=>{
   const defs=[MATERIAL_DEFINITIONS.find(d=>d.key==='caulk'), MATERIAL_DEFINITIONS.find(d=>d.key==='baseboard'), MATERIAL_DEFINITIONS.find(d=>d.key==='blind'), MATERIAL_DEFINITIONS.find(d=>d.key==='eboard')];
   const def=defs[idx];
