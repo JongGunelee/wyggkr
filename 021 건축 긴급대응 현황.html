@@ -1781,8 +1781,8 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 
   <div class="card full" style="margin-top:20px">
     <div class="card-title">
-      <span class="icon">🗓️</span> 2027년 작업 예측 <span style="font-size:12px;opacity:0.8;font-weight:400;color:#ffffff;opacity:0.95;font-weight:600;margin-left:4px;">(건/비용)</span>
-      <button type="button" class="section-xls-btn" onclick="window.dashboardExcelExporter.exportCard('forecast-2027')" title="2027년 월별 작업 건수·비용 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드">📊 2027 예측 엑셀 저장</button>
+      <span class="icon">🗓️</span> 2027년 작업 예측 <span style="font-size:12px;font-weight:600;color:#ffffff;margin-left:4px;">(건수)</span>
+      <button type="button" class="section-xls-btn" onclick="window.dashboardExcelExporter.exportCard('forecast-2027')" title="2027년 월별 작업 건수 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드"><span>📊</span><span>xls</span></button>
     </div>
     <div class="chart-wrap" style="height:240px"><canvas id="c-forecast"></canvas></div>
     <div class="chart-click-hint" style="color:#ffffff;opacity:0.95;">💡 각 월별 포인트를 클릭하면 예측 건수의 산출 공식, 과거 3개년 동월 증빙 및 상세 논리적 산출 근거 모달이 열립니다</div>
@@ -1794,6 +1794,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   <div class="card full" style="margin-top:20px">
     <div class="card-title">
       <span class="icon">🗓️</span> 2027년 작업 예측 <span style="font-size:12px;font-weight:600;color:#ffffff;margin-left:4px;">(비용)</span>
+      <button type="button" class="section-xls-btn" onclick="window.dashboardExcelExporter.exportCard('forecast-cost-2027')" title="2027년 월별 작업 비용 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드"><span>📊</span><span>xls</span></button>
     </div>
     <div class="chart-wrap" style="height:240px"><canvas id="c-forecast-cost"></canvas></div>
     <div class="chart-click-hint" style="color:#ffffff;opacity:0.95;">💡 각 월별 포인트를 클릭하면 예측 비용의 산출 공식(인건비+자재비+부대비), 과거 3개년 동월 실제 집행액 및 상세 내역 모달이 열립니다</div>
@@ -6963,15 +6964,28 @@ buildChart('c-forecast',{
 });
 
 const forecastExportButton = document.querySelector('#c-forecast')?.closest('.card')
-  ?.querySelector('.card-title .card-header-actions .section-xls-btn');
+  ?.querySelector('.card-title .card-header-actions .section-xls-btn, .card-title .section-xls-btn');
 if (forecastExportButton) {
-  forecastExportButton.innerHTML = '<span>📊</span><span>2027 예측 엑셀 저장</span>';
-  forecastExportButton.title = '2027년 건수·비용 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드';
+  forecastExportButton.innerHTML = '<span>📊</span><span>xls</span>';
+  forecastExportButton.title = '2027년 건수 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드';
   forecastExportButton.setAttribute('onclick', "window.dashboardExcelExporter.exportCard('forecast-2027')");
   forecastExportButton.onclick = function(event) {
     event.preventDefault();
     event.stopPropagation();
     window.dashboardExcelExporter?.exportCard('forecast-2027');
+  };
+}
+
+const forecastCostExportButton = document.querySelector('#c-forecast-cost')?.closest('.card')
+  ?.querySelector('.card-title .card-header-actions .section-xls-btn, .card-title .section-xls-btn');
+if (forecastCostExportButton) {
+  forecastCostExportButton.innerHTML = '<span>📊</span><span>xls</span>';
+  forecastCostExportButton.title = '2027년 비용 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드';
+  forecastCostExportButton.setAttribute('onclick', "window.dashboardExcelExporter.exportCard('forecast-cost-2027')");
+  forecastCostExportButton.onclick = function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    window.dashboardExcelExporter?.exportCard('forecast-cost-2027');
   };
 }
 
@@ -8212,6 +8226,12 @@ const dashboardExcelExporter = {
 
   // 7. 개별 캔버스 차트 전용 엑셀 내보내기 (다중 컬러 배열 완전 지원)
   exportChart: function(canvasId, customTitle = null) {
+    if (canvasId === 'c-forecast-cost') {
+      return this.exportCard('forecast-cost-2027', customTitle);
+    }
+    if (canvasId === 'c-forecast') {
+      return this.exportCard('forecast-2027', customTitle);
+    }
     this.ensureLibs(async () => {
       try {
         const chart = window.dashboardCharts ? window.dashboardCharts[canvasId] : null;
@@ -9863,11 +9883,132 @@ const dashboardExcelExporter = {
         // =========================================================================
         // [2027년 예측 건수·비용 산식 연계 전용]
         // =========================================================================
-        } else if (type === "forecast-2027") {
-          title = customTitle || "2027년 작업 예측 건수·비용 산식 검증";
+        } else if (type === "forecast-2027" || type === "forecast-cost-2027") {
+          const isCost = (type === "forecast-cost-2027");
+          title = customTitle || (isCost ? "2027년 작업 예측 (비용) 산식 검증 및 연동 리포트" : "2027년 작업 예측 (건수) 산식 검증 및 연동 리포트");
           filename = `[021_건축긴급대응]_${this.sanitizeFilename(title)}_${timestamp}.xlsx`;
           const costAudit = this.addCostAuditSheets(wb);
           this.addForecastWorkbookSheet(wb, costAudit);
+
+          const model = window.forecastModel27 || buildForecastModel2027();
+          const latestYrStr = formatYearLabel(model.latestYear);
+
+          const chartSheet = wb.addWorksheet("차트");
+          chartSheet.properties.showGridLines = true;
+          chartSheet.getCell("A1").value = "📊 " + title;
+          chartSheet.getCell("A1").font = { bold: true, size: 14, color: { argb: "FF1E293B" } };
+          chartSheet.getCell("A2").value = "💡 '단가 및 모델' 또는 '원천 입력'의 값을 수정하면 2027 월별 예측과 이 차트가 Excel에서 자동 재계산됩니다.";
+          chartSheet.getCell("A2").font = { italic: true, size: 10, color: { argb: "FF64748B" } };
+          chartSheet.columns = Array.from({ length: 16 }, () => ({ width: 11 }));
+
+          const dataSheet = wb.addWorksheet("차트 연계 데이터");
+          dataSheet.mergeCells("A1:D1");
+          dataSheet.getCell("A1").value = isCost
+            ? "💡 '2027 월별 예측' 시트와 100% 동적 수식으로 연동된 월별 비용 데이터입니다."
+            : "💡 '2027 월별 예측' 시트와 100% 동적 수식으로 연동된 월별 건수 데이터입니다.";
+          dataSheet.getCell("A1").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F2FF" } };
+
+          const headers = isCost
+            ? ["구분 / 항목", latestYrStr + " 실제 집행비용", latestYrStr + " 잔여월 비용 예측", "2027년 월별 예측 비용"]
+            : ["구분 / 항목", latestYrStr + " 실제 월별 실적", latestYrStr + " 잔여월 예측", "2027년 월별 예측"];
+          headers.forEach((h, i) => {
+            const c = dataSheet.getCell(4, i + 1);
+            c.value = h;
+            c.font = { bold: true, color: { argb: "FFFFFFFF" } };
+            c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF24476B" } };
+            c.alignment = { horizontal: "center", vertical: "middle" };
+          });
+
+          for (let m = 1; m <= 12; m++) {
+            const r = 4 + m;
+            const rF = 19 + m;
+            dataSheet.getCell(r, 1).value = m + "월";
+
+            if (isCost) {
+              const actualCell = dataSheet.getCell(r, 2);
+              if (m <= model.maxMonth) {
+                actualCell.value = { formula: "IF('2027 월별 예측'!G" + rF + ">0,ROUND('2027 월별 예측'!G" + rF + "/10000,0),0)", result: Math.round((calculateXlsbCostContribution(model.currentYearRows.filter(x => Number(x.month) === m), false) || 0) / 10000) };
+              } else {
+                actualCell.value = null;
+              }
+              actualCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
+              actualCell.numFmt = '#,##0"만원"';
+              actualCell.alignment = { horizontal: "center" };
+
+              const remainCell = dataSheet.getCell(r, 3);
+              if (m > model.maxMonth) {
+                remainCell.value = { formula: "IF('2027 월별 예측'!H" + rF + ">0,ROUND('2027 월별 예측'!H" + rF + "/10000,0),0)", result: Math.round((model.currentYearAdminCost / model.maxMonth) / 10000) };
+              } else {
+                remainCell.value = null;
+              }
+              remainCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
+              remainCell.numFmt = '#,##0"만원"';
+              remainCell.alignment = { horizontal: "center" };
+
+              const predCell = dataSheet.getCell(r, 4);
+              predCell.value = { formula: "'2027 월별 예측'!I" + rF, result: model.costs27Forecast[m - 1] };
+              predCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
+              predCell.numFmt = '#,##0"만원"';
+              predCell.alignment = { horizontal: "center" };
+            } else {
+              const actualCell = dataSheet.getCell(r, 2);
+              if (m <= model.maxMonth) {
+                actualCell.value = { formula: "'2027 월별 예측'!B" + rF, result: model.actualCounts[m - 1] || 0 };
+              } else {
+                actualCell.value = null;
+              }
+              actualCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
+              actualCell.numFmt = '#,##0"건"';
+              actualCell.alignment = { horizontal: "center" };
+
+              const remainCell = dataSheet.getCell(r, 3);
+              if (m > model.maxMonth) {
+                remainCell.value = { formula: "'2027 월별 예측'!C" + rF, result: model.forecastCounts[m - 1] || 0 };
+              } else {
+                remainCell.value = null;
+              }
+              remainCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
+              remainCell.numFmt = '#,##0"건"';
+              remainCell.alignment = { horizontal: "center" };
+
+              const predCell = dataSheet.getCell(r, 4);
+              predCell.value = { formula: "'2027 월별 예측'!F" + rF, result: model.counts27Forecast[m - 1] || 0 };
+              predCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
+              predCell.numFmt = '#,##0"건"';
+              predCell.alignment = { horizontal: "center" };
+            }
+          }
+
+          dataSheet.columns = [{ width: 16 }, { width: 22 }, { width: 22 }, { width: 22 }];
+
+          chartSpec = {
+            title: isCost ? "2027년 긴급보수 비용 예측 (월별 실적·추정·예측 대조)" : "2027년 긴급보수 건수 예측 (월별 실적·추정·예측 대조)",
+            type: "line",
+            sheetName: "차트 연계 데이터",
+            categoryCol: 1,
+            categoryValues: Array.from({ length: 12 }, (_, i) => (i + 1) + "월"),
+            headerRow: 4,
+            dataStartRow: 5,
+            dataEndRow: 16,
+            series: isCost ? [
+              { name: latestYrStr + " 실제 집행비용", col: 2, color: "4ECB71", values: model.actualCostsWan || [] },
+              { name: latestYrStr + " 잔여월 비용 예측", col: 3, color: "F5A623", values: Array.from({length:12}, (_, i) => i >= model.maxMonth ? Math.round(model.currentYearAdminCost/model.maxMonth/10000) : null) },
+              { name: "2027년 월별 예측 비용", col: 4, color: "38BDF8", values: model.costs27Forecast || [] }
+            ] : [
+              { name: latestYrStr + " 실제 월별 실적", col: 2, color: "4ECB71", values: model.actualCounts || [] },
+              { name: latestYrStr + " 잔여월 예측", col: 3, color: "F5A623", values: model.forecastCounts || [] },
+              { name: "2027년 월별 예측", col: 4, color: "E05C7B", values: model.counts27Forecast || [] }
+            ],
+            valFormatCode: isCost ? '#,##0"만원"' : '#,##0"건"',
+            hideLegend: false,
+            invertIfNegative: 0,
+            tickLblPos: "low",
+            fromCol: 0,
+            toCol: 14,
+            fromRow: 3,
+            toRow: 23
+          };
+
           const list = typeof RAW !== 'undefined' ? RAW : [];
           this.addRawRecordsSheet(wb, "원천 상세 증빙", list);
           this.buildReadmeSheet(wb, title, list.length);
@@ -10867,6 +11008,10 @@ function injectExcelExportButtons(root) {
         window.dashboardExcelExporter.exportCard('bldg-table');
       } else if (card.querySelector('#repair-table-body')) {
         window.dashboardExcelExporter.exportCard('repair-table');
+      } else if (canvas && canvas.id === 'c-forecast-cost') {
+        window.dashboardExcelExporter.exportCard('forecast-cost-2027');
+      } else if (canvas && canvas.id === 'c-forecast') {
+        window.dashboardExcelExporter.exportCard('forecast-2027');
       } else if (canvas) {
         window.dashboardExcelExporter.exportChart(canvas.id);
       } else {
