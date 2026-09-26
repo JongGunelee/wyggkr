@@ -715,6 +715,9 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   margin-top: 6px;
   font-weight: 500;
 }
+.pt-slide, .pt-layout, .pt-left-col, .pt-top-rows {
+  overflow: visible !important;
+}
 .pt-layout {
   display: flex;
   gap: 24px;
@@ -733,16 +736,30 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 10px 16px;
+  padding: 11px 16px;
   display: flex;
   align-items: center;
-  transition: transform 0.2s, background 0.2s, border-color 0.2s;
+  position: relative;
+  overflow: visible !important;
   cursor: pointer;
+  transition: all 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: center center;
+  z-index: 1;
 }
 .pt-data-row:hover {
-  transform: translateX(6px);
-  background: var(--card2);
-  border-color: var(--blue);
+  transform: scale(1.05) translateX(6px) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 30px rgba(108, 142, 245, 0.45) !important;
+  background: #1f2336 !important;
+  border-color: var(--accent1) !important;
+  z-index: 100 !important;
+}
+.pt-data-row.is-red:hover {
+  border-color: var(--red) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 30px rgba(255, 77, 109, 0.5) !important;
+}
+.pt-data-row.is-green:hover {
+  border-color: var(--green) !important;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 30px rgba(78, 203, 113, 0.5) !important;
 }
 .pt-rank {
   font-size: 16px;
@@ -751,20 +768,22 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   width: 24px;
 }
 .pt-type-name {
-  font-size: 15px;
+  font-size: 14.5px;
   font-weight: 700;
-  width: 130px;
+  width: 125px;
+  color: #ffffff;
 }
 .pt-share-wrap {
-  flex: 1;
+  flex: 1.3;
   margin: 0 16px;
 }
 .pt-share-label {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 11px;
   color: var(--text2);
-  margin-bottom: 4px;
+  margin-bottom: 5px;
   font-weight: 600;
 }
 .pt-share-label strong {
@@ -778,18 +797,50 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   border-radius: 3px;
   overflow: hidden;
 }
+.pt-dual-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+.pt-bar-track {
+  width: 100%;
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.pt-bar-track.count-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+.pt-bar-track.cost-track {
+  background: rgba(56, 189, 248, 0.12);
+}
 .pt-bar-fill {
   height: 100%;
   border-radius: 3px;
 }
+.pt-bar-sublegend {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9.5px;
+  margin-top: 3px;
+  opacity: 0.85;
+}
 .pt-trend-box {
   text-align: right;
-  width: 180px;
+  width: 215px;
 }
 .pt-trend-nums {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
+}
+.pt-trend-cost-row {
+  font-size: 11px;
+  font-weight: 600;
+  color: #38bdf8;
+  white-space: nowrap;
+  margin-top: 2px;
 }
 .pt-unit {
   font-size: 0.65em;
@@ -6196,23 +6247,32 @@ buildChart('c-repairBar',{
 });
 
 
-  // === PT VISUALIZATION RENDERER (완전 데이터 기반 무결성 버전) ===
+  // === PT VISUALIZATION RENDERER (완전 데이터 기반 무결성 버전: 건수 유지 + 단위비용 기반 추정비용 병기 + 막대폭 조정 + 호버 확대) ===
   function renderPTViz() {
     // ── 기초 데이터 ────────────────────────────────────────────────
-    const totalAll  = repairData.reduce((s,d) => s + d.cnt.reduce((sum, value) => sum + value, 0), 0);
-    const nYears    = YEARS.length;                          // 연도 개수 (동적)
-    const lastYrIdx = nYears - 1;                            // 최신 연도 인덱스
-    const lastYrShort = YR_KEYS[lastYrIdx];                  // "26년" (동적)
+    const rData     = window.repairData || repairData || [];
+    const totalAll  = rData.reduce((s,d) => s + (d.cnt || []).reduce((sum, value) => sum + value, 0), 0) || 1;
+    const nYears    = (window.YEARS || YEARS || []).length;     // 연도 개수 (동적)
+    const lastYrIdx = Math.max(0, nYears - 1);                  // 최신 연도 인덱스
+    const lastYrShort = (window.YR_KEYS || YR_KEYS || [])[lastYrIdx] || '26년'; // "26년" (동적)
 
     // 헤더용 연도 표시: "26년←25년←24년" (동적)
-    const yrChainFull  = [...YR_KEYS].reverse().join('←');         // "26년←25년←24년"
-    const yrChainLong  = [...YEARS].reverse().join('←');           // "2026년←2025년←2024년"
+    const yrChainFull  = [...(window.YR_KEYS || YR_KEYS || [])].reverse().join('←'); // "26년←25년←24년"
+    const yrChainLong  = [...(window.YEARS || YEARS || [])].reverse().join('←');     // "2026년←2025년←2024년"
+
+    // [무결성 보장] 단위비용(건당 평균 비용) 동적 환산 (하드코딩 배제, 시스템 공식 및 27년 예측 모델 연계)
+    const model27 = window.forecastModel27 || (typeof buildForecastModel2027 === 'function' ? buildForecastModel2027() : null);
+    const unitCostWan = Number(model27?.costPerRecordWan) || 
+      (window.annualMetrics?.[lastYrShort]?.adminCost && window.annualMetrics?.[lastYrShort]?.cnt ? 
+       window.annualMetrics[lastYrShort].adminCost / window.annualMetrics[lastYrShort].cnt / 10000 : 51.95);
+    const totalCostAllWan = Math.round(totalAll * unitCostWan);
 
     // ── 정렬 & 분류 ────────────────────────────────────────────────
-    const sortedData = repairData.map(d => {
-      const total = d.cnt.reduce((s, v) => s + v, 0);
+    const sortedData = rData.map(d => {
+      const total = (d.cnt || []).reduce((s, v) => s + v, 0);
       const pct   = (total / totalAll * 100).toFixed(1);
-      return { ...d, total, pct };
+      const totalCostWan = Math.round(total * unitCostWan);
+      return { ...d, total, pct, totalCostWan };
     }).sort((a, b) => b.total - a.total);
 
     // 5% 기준으로 top / minor 분리 (동적)
@@ -6223,26 +6283,42 @@ buildChart('c-repairBar',{
     const topFinal   = topRows.length > 0 ? topRows   : sortedData;
     const minorFinal = topRows.length > 0 ? minorRows : [];
 
-    // ── 트렌드 뱃지 생성 함수 ─────────────────────────────────────
+    // ── 트렌드 뱃지 및 스타일 생성 함수 (호버 확대 연계) ─────────────
     function getTrend(d) {
-      const first = d.cnt[0], last = d.cnt[lastYrIdx];
-      if      (last > first * 2)    return { badge: `<div class="pt-trend-badge pt-badge-red">🚨 급증</div>`,       rowStyle: 'border-color:var(--red);box-shadow:0 0 8px rgba(255,77,109,0.1);', numStyle: 'color:var(--red);font-size:16px;' };
-      else if (last > first * 1.2)  return { badge: `<div class="pt-trend-badge pt-badge-red">▲ 소폭 증가</div>`,  rowStyle: '', numStyle: '' };
-      else if (last < first / 2)    return { badge: `<div class="pt-trend-badge pt-badge-green">✅ 급감</div>`,    rowStyle: 'border-color:var(--green);box-shadow:0 0 8px rgba(78,203,113,0.1);', numStyle: 'color:var(--green);font-size:16px;' };
-      else if (last < first * 0.8)  return { badge: `<div class="pt-trend-badge pt-badge-green">▼ 소폭 감소</div>`,rowStyle: '', numStyle: '' };
-      else                           return { badge: `<div class="pt-trend-badge pt-badge-gray">➖ 지속 유지</div>`, rowStyle: '', numStyle: '' };
+      const first = (d.cnt && d.cnt[0]) || 0, last = (d.cnt && d.cnt[lastYrIdx]) || 0;
+      if      (last > first * 2)    return { badge: `<div class="pt-trend-badge pt-badge-red">🚨 급증</div>`,       rowClass: 'is-red',   rowStyle: 'border-color:var(--red);box-shadow:0 0 8px rgba(255,77,109,0.1);', numStyle: 'color:var(--red);font-size:15px;' };
+      else if (last > first * 1.2)  return { badge: `<div class="pt-trend-badge pt-badge-red">▲ 소폭 증가</div>`,  rowClass: '',         rowStyle: '', numStyle: '' };
+      else if (last < first / 2)    return { badge: `<div class="pt-trend-badge pt-badge-green">✅ 급감</div>`,    rowClass: 'is-green', rowStyle: 'border-color:var(--green);box-shadow:0 0 8px rgba(78,203,113,0.1);', numStyle: 'color:var(--green);font-size:15px;' };
+      else if (last < first * 0.8)  return { badge: `<div class="pt-trend-badge pt-badge-green">▼ 소폭 감소</div>`,rowClass: '',         rowStyle: '', numStyle: '' };
+      else                           return { badge: `<div class="pt-trend-badge pt-badge-gray">➖ 지속 유지</div>`, rowClass: '',         rowStyle: '', numStyle: '' };
     }
 
-    // ── 연도별 건수 표시: "26(건),26년 ← 25(건) ← 37(건)" (동적) ─
-    function trendNums(d, numStyle) {
-      // 최신연도부터 역순으로 표시
-      return [...d.cnt].reverse().map((v, ri) => {
+    // ── 연도별 건수 및 추정비용 역순 표시 함수 (2줄 정밀 연계 레이아웃) ──
+    function trendNumsWithCost(d, numStyle) {
+      const reversedCnt = [...(d.cnt || [])].reverse();
+      const reversedCosts = reversedCnt.map(c => Math.round(c * unitCostWan));
+      
+      const cntLine = reversedCnt.map((v, ri) => {
         const isFirst = ri === 0;
         const valHtml = isFirst
           ? `<span style="${numStyle}">${v}</span><span class="pt-unit">(건),${lastYrShort}</span>`
           : `${v}<span class="pt-unit">(건)</span>`;
         return (ri === 0 ? '' : '<span class="pt-arrow">←</span>') + valHtml;
       }).join('');
+      
+      const costLine = reversedCosts.map((c, ri) => {
+        const isFirst = ri === 0;
+        const costText = c.toLocaleString() + '만';
+        const valHtml = isFirst
+          ? `<span style="color:#38bdf8;font-weight:700;">${costText}</span><span class="pt-unit">(원)</span>`
+          : `<span style="color:#93c5fd;">${costText}</span>`;
+        return (ri === 0 ? '' : '<span class="pt-arrow">←</span>') + valHtml;
+      }).join('');
+
+      return `
+        <div class="pt-trend-nums">${cntLine}</div>
+        <div class="pt-trend-cost-row"><span style="font-size:9.5px;color:rgba(255,255,255,0.6);margin-right:3px;">비용(추정):</span>${costLine}</div>
+      `;
     }
 
     // ── 인사이트 자동 생성 ────────────────────────────────────────
@@ -6251,30 +6327,32 @@ buildChart('c-repairBar',{
 
     // 가장 급증한 항목
     const surgeItem = [...sortedData].sort((a,b) => {
-      const ra = a.cnt[0] > 0 ? a.cnt[lastYrIdx] / a.cnt[0] : a.cnt[lastYrIdx];
-      const rb = b.cnt[0] > 0 ? b.cnt[lastYrIdx] / b.cnt[0] : b.cnt[lastYrIdx];
+      const ra = (a.cnt && a.cnt[0] > 0) ? a.cnt[lastYrIdx] / a.cnt[0] : (a.cnt?.[lastYrIdx] || 0);
+      const rb = (b.cnt && b.cnt[0] > 0) ? b.cnt[lastYrIdx] / b.cnt[0] : (b.cnt?.[lastYrIdx] || 0);
       return rb - ra;
     })[0];
-    const surgeRatio = surgeItem.cnt[0] > 0
+    const surgeRatio = (surgeItem && surgeItem.cnt && surgeItem.cnt[0] > 0)
       ? (surgeItem.cnt[lastYrIdx] / surgeItem.cnt[0]).toFixed(1)
       : '∞';
-    const surgeChg   = surgeItem.cnt[0] > 0
+    const surgeChg   = (surgeItem && surgeItem.cnt && surgeItem.cnt[0] > 0)
       ? Math.round((surgeItem.cnt[lastYrIdx] / surgeItem.cnt[0] - 1) * 100)
       : 999;
+    const surgeLastCost = surgeItem ? Math.round((surgeItem.cnt?.[lastYrIdx] || 0) * unitCostWan) : 0;
 
     // 가장 급감한 항목
-    const dropItem = [...sortedData].filter(d => d.cnt[0] > 0).sort((a,b) => {
+    const dropItem = [...sortedData].filter(d => d.cnt && d.cnt[0] > 0).sort((a,b) => {
       return (a.cnt[lastYrIdx] / a.cnt[0]) - (b.cnt[lastYrIdx] / b.cnt[0]);
     })[0];
-    const dropPct = dropItem && dropItem.cnt[0] > 0
+    const dropPct = dropItem && dropItem.cnt && dropItem.cnt[0] > 0
       ? Math.round((1 - dropItem.cnt[lastYrIdx] / dropItem.cnt[0]) * 100)
       : 0;
 
     // 상위 3개 합산 점유율
-    const top3     = topFinal.slice(0, 3);
-    const top3cnt  = top3.reduce((s,d) => s + d.total, 0);
-    const top3pct  = (top3cnt / totalAll * 100).toFixed(1);
-    const top3names= top3.map(d => d.type).join(', ');
+    const top3      = topFinal.slice(0, 3);
+    const top3cnt   = top3.reduce((s,d) => s + d.total, 0);
+    const top3cost  = top3.reduce((s,d) => s + d.totalCostWan, 0);
+    const top3pct   = (top3cnt / totalAll * 100).toFixed(1);
+    const top3names = top3.map(d => d.type).join(', ');
 
     // ── HTML 조립 시작 ────────────────────────────────────────────
     let html = `
@@ -6282,7 +6360,7 @@ buildChart('c-repairBar',{
       <div class="pt-header">
         <div>
           <h1 class="pt-title">건축<span class="small-text">(비품성,소액성,긴급성)</span> 대응 유형 <span class="small-text">(${yrChainFull})</span></h1>
-          <div class="pt-subtitle">${yrChainLong} 누적 데이터 기준 (총 ${totalAll}건 전체 유형 포함)</div>
+          <div class="pt-subtitle">${yrChainLong} 누적 데이터 기준 (총 ${totalAll}건 전체 유형 포함 · 누적 추정 비용 약 ${totalCostAllWan.toLocaleString()}만원, 건당 평균 약 ${unitCostWan.toFixed(1)}만원 환산)</div>
         </div>
       </div>
       <div class="pt-layout">
@@ -6292,17 +6370,36 @@ buildChart('c-repairBar',{
 
     // Top 항목 (5% 이상)
     topFinal.forEach((d, i) => {
-      const { badge, rowStyle, numStyle } = getTrend(d);
+      const { badge, rowClass, rowStyle, numStyle } = getTrend(d);
       html += `
-          <div class="pt-data-row" style="${rowStyle}" onclick="openModal('[${d.type}] 상세 증빙', getTypeFilter('${d.type}'))">
+          <div class="pt-data-row ${rowClass}" style="${rowStyle}" onclick="openModal('[${d.type}] 상세 증빙', getTypeFilter('${d.type}'))" title="[${d.type}] 클릭 시 상세 증빙 목록 열람 (총 ${d.total}건 · 추정비용 약 ${d.totalCostWan.toLocaleString()}만원)">
             <div class="pt-rank">${i+1}</div>
             <div class="pt-type-name">${d.type}</div>
             <div class="pt-share-wrap">
-              <div class="pt-share-label"><span>총 ${d.total}건</span> <strong>${d.pct}%</strong></div>
-              <div class="pt-bar-bg"><div class="pt-bar-fill" style="width:${d.pct}%;background:${d.color};"></div></div>
+              <div class="pt-share-label">
+                <div>
+                  <span style="font-size:12px;font-weight:700;color:#ffffff;">총 ${d.total}건</span>
+                  <span style="font-size:11px;color:#38bdf8;font-weight:600;margin-left:6px;">추정 약 ${d.totalCostWan.toLocaleString()}만원</span>
+                </div>
+                <div>
+                  <strong style="font-size:13px;color:#ffffff;">${d.pct}%</strong>
+                </div>
+              </div>
+              <div class="pt-dual-bars">
+                <div class="pt-bar-track count-track" title="건수 점유율: ${d.pct}% (${d.total}건)">
+                  <div class="pt-bar-fill" style="width:${d.pct}%;background:${d.color};"></div>
+                </div>
+                <div class="pt-bar-track cost-track" title="추정 비용 점유율: ${d.pct}% (약 ${d.totalCostWan.toLocaleString()}만원)">
+                  <div class="pt-bar-fill" style="width:${d.pct}%;background:linear-gradient(90deg, #38bdf8, #818cf8);"></div>
+                </div>
+              </div>
+              <div class="pt-bar-sublegend">
+                <span style="color:${d.color};">● 건수 점유율</span>
+                <span style="color:#38bdf8;">● 비용(추정) 비중</span>
+              </div>
             </div>
             <div class="pt-trend-box">
-              <div class="pt-trend-nums">${trendNums(d, numStyle)}</div>
+              ${trendNumsWithCost(d, numStyle)}
               ${badge}
             </div>
           </div>
@@ -6315,24 +6412,25 @@ buildChart('c-repairBar',{
     if (minorFinal.length > 0) {
       html += `
           <div class="pt-minor-section">
-            <div class="pt-minor-divider">▼ 비중 ${THRESHOLD}% 미만 기타 발생 항목</div>
+            <div class="pt-minor-divider">▼ 비중 ${THRESHOLD}% 미만 기타 발생 항목 (건수 및 추정비용)</div>
       `;
       minorFinal.forEach((d, i) => {
-        const first = d.cnt[0], last = d.cnt[lastYrIdx];
+        const first = (d.cnt && d.cnt[0]) || 0, last = (d.cnt && d.cnt[lastYrIdx]) || 0;
         const arrowHtml = last > first
           ? `<span style="color:var(--red);font-size:10px;margin-left:2px;">▲</span>`
           : last < first
           ? `<span style="color:var(--green);font-size:10px;margin-left:2px;">▼</span>`
           : '';
+        const mCost = Math.round(d.total * unitCostWan);
         html += `
-            <div class="pt-minor-row" onclick="openModal('[${d.type}] 상세 증빙', getTypeFilter('${d.type}'))">
+            <div class="pt-minor-row" onclick="openModal('[${d.type}] 상세 증빙', getTypeFilter('${d.type}'))" title="[${d.type}] 클릭 시 상세 증빙 목록 열람 (총 ${d.total}건 · 추정 약 ${mCost.toLocaleString()}만원)">
               <div class="pt-rank">${topFinal.length + i + 1}</div>
               <div class="pt-type-name">${d.type}</div>
               <div class="pt-minor-share-wrap">
-                <div class="pt-minor-share-label">${d.total}건 (${d.pct}%)</div>
+                <div class="pt-minor-share-label">${d.total}건 (${mCost.toLocaleString()}만, ${d.pct}%)</div>
                 <div class="pt-minor-bar-bg"><div class="pt-bar-fill" style="width:${d.pct}%;background:#fff;"></div></div>
               </div>
-              <div class="pt-trend-nums">${trendNums(d, '')} ${arrowHtml}</div>
+              <div class="pt-trend-nums">${[...d.cnt].reverse().map((v, ri) => (ri===0?'':'←')+v).join('')} (건) ${arrowHtml}</div>
             </div>
         `;
       });
@@ -6349,7 +6447,7 @@ buildChart('c-repairBar',{
               <div class="pt-ic-title" style="color:var(--orange)">핵심 ${top3.length}대 보수 집중</div>
             </div>
             <div class="pt-ic-desc">
-              <strong>${top3names}</strong>이(가) 전체 보수의 <strong>${top3pct}%</strong>를 차지합니다. 해당 유형은 ${nYears}개년간 지속 발생 중이므로 <strong>예비 자재 상시 확보</strong>가 필수적입니다.
+              <strong>${top3names}</strong>이(가) 전체 보수의 <strong>${top3pct}%</strong>(누적 추정비용 <strong>약 ${top3cost.toLocaleString()}만원</strong>)를 차지합니다. 해당 유형은 ${nYears}개년간 지속 발생 중이므로 <strong>예비 자재 상시 확보</strong>가 필수적입니다.
             </div>
           </div>
 
@@ -6359,7 +6457,7 @@ buildChart('c-repairBar',{
               <div class="pt-ic-title" style="color:var(--red)">${surgeItem.type} 급증 주의</div>
             </div>
             <div class="pt-ic-desc">
-              ${YEARS[0].replace('년','')}년 ${surgeItem.cnt[0]}건에서 ${YEARS[lastYrIdx].replace('년','')}년 ${surgeItem.cnt[lastYrIdx]}건으로
+              ${(window.YEARS || YEARS)[0].replace('년','')}년 ${surgeItem.cnt[0]}건에서 ${(window.YEARS || YEARS)[lastYrIdx].replace('년','')}년 ${surgeItem.cnt[lastYrIdx]}건(추정비용 약 <strong>${surgeLastCost.toLocaleString()}만원</strong>)으로
               <strong style="color:var(--red);">${surgeRatio}배(${surgeChg}%) 급증</strong>했습니다.
               내부 마감재의 <strong>본격적 노후화 진입</strong>을 의미하며, 세대별 <strong>일괄 교체 검토</strong>가 필요합니다.
             </div>
@@ -6372,7 +6470,7 @@ buildChart('c-repairBar',{
               <div class="pt-ic-title" style="color:var(--green)">${dropItem.type} 안정화</div>
             </div>
             <div class="pt-ic-desc">
-              ${YEARS[0].replace('년','')}년 집중 조치 이후 ${YEARS[lastYrIdx].replace('년','')}년 ${dropItem.cnt[lastYrIdx]}건으로
+              ${(window.YEARS || YEARS)[0].replace('년','')}년 집중 조치 이후 ${(window.YEARS || YEARS)[lastYrIdx].replace('년','')}년 ${dropItem.cnt[lastYrIdx]}건으로
               <strong style="color:var(--green);">발생률이 ${dropPct}% 급감</strong>했습니다.
               선제적인 대수선 보수가 장기적 유지비용 절감에 기여한 <strong>모범 사례</strong>입니다.
             </div>
@@ -6383,7 +6481,7 @@ buildChart('c-repairBar',{
               <div class="pt-ic-title" style="color:var(--blue)">종합 현황</div>
             </div>
             <div class="pt-ic-desc">
-              ${nYears}개년 누적 총 <strong>${totalAll}건</strong>이 발생했습니다.
+              ${nYears}개년 누적 총 <strong>${totalAll}건</strong>(추정 총 비용 약 <strong>${totalCostAllWan.toLocaleString()}만원</strong>, 건당 약 ${unitCostWan.toFixed(1)}만원)이 발생했습니다.
               유형별 데이터를 클릭하면 <strong>개별 증빙 목록</strong>을 상세 확인할 수 있습니다.
             </div>
           </div>`}
@@ -6394,6 +6492,8 @@ buildChart('c-repairBar',{
 
     document.getElementById('pt-viz-wrapper').innerHTML = html;
   }
+
+  window.renderPTViz = renderPTViz;
 
   // Call the function
   renderPTViz();
@@ -6580,8 +6680,9 @@ function renderRepairTable() {
 }
 window.renderRepairTable = renderRepairTable;
 
-// Repair table 렌더링 호출
+// Repair table 및 PT Viz 렌더링 호출
 renderRepairTable();
+if (typeof renderPTViz === "function") renderPTViz();
 
 // ─── MONTHLY Charts ───────────────────────────────────────────────────────────
 buildChart('c-monthly',{

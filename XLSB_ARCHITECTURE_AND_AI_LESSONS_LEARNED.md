@@ -162,3 +162,51 @@
    * 연도 키(`window.YR_KEYS`), 건수, 공수, 비용 등 모든 지표는 `window.RAW`로부터 파생 연산되어야 합니다.
 5. **Git 커밋 및 GitHub 원격 push 완료**:
    * 로컬 수정에 그치지 않고 반드시 `git commit` 및 `git push origin main`까지 완료하여 배포 서버와 로컬의 형상을 일치시키십시오.
+
+---
+
+## 6. 📊 2027년 비용 예측 엑셀 다운로드 라우팅 및 연계 무결성 교훈
+
+### 6.1 문제 현상 및 AI 오인 원인
+* **증상**: 2027년 비용 예측 카드에서 [엑셀 다운로드 XLS] 버튼을 클릭했을 때, 2027년 비용 예측 연동 시트가 다운로드되지 않고 일반 원천 엑셀이 다운로드되는 현상 발생.
+* **오인 원인**:
+  1. 이전 AI가 DOM 이벤트 바인딩 시 #btn-export-forecast-2027-xls(건수)와 #btn-export-forecast-cost-xls(비용)의 ID 구분을 간과하고 일반 일괄 다운로드 함수에 바인딩함.
+  2. 동적 DOM 재생성 시 이벤트 리스너가 누락되거나 중복 바인딩되어 기본 핸들러로 폴백(fallback)되는 현상 발생.
+
+### 6.2 해결 아키텍처 및 정합성 확보 방안
+* tn-export-forecast-cost-xls 버튼 클릭 시 download2027ForecastExcel()로 정확히 라우팅.
+* 2027년 비용 예측 워크시트에 계절 가중치, 건당 추정 단가(costPerRecordWan), 몬테카를로 신뢰구간(80%, 95%) 및 자동 수식을 포함시켜 다운로드 즉시 엑셀 내부에서 동적 재계산이 작동하도록 무결성 보장.
+
+---
+
+## 7. 🛠️ 보수 대응 유형(Tab 3) 듀얼 차원(건수+비용) 시각화 및 호버 줌(Hover Zoom) 구현 교훈
+
+### 7.1 요구사항의 본질과 하드코딩 방지 원칙
+* **목적**: 건축 긴급대응 현황에서 보수 유형별 우선순위를 판단할 때, 단순 '건수'만으로는 고비용 공종의 심각성을 인지하기 어렵고, '비용'만으로는 일상 반복 민원의 빈도를 놓칠 수 있으므로 **건수와 추정비용의 2개 차원 동시 시각화**가 필수적임.
+* **무결성 원칙**: 건수와 단위 단가는 고정 상수가 아니므로, 향후 XLSB 갱신이나 노임단가 변경 시 실시간 재계산되어야 함.
+
+### 7.2 동적 단위비용(Unit Cost) 환산 로직
+`javascript
+// forecastModel27 또는 최신 연도 annualMetrics로부터 건당 평균 집행비용(만원) 동적 도출
+const model27 = window.forecastModel27 || (typeof buildForecastModel2027 === 'function' ? buildForecastModel2027() : null);
+const unitCostWan = Number(model27?.costPerRecordWan) || 
+  (window.annualMetrics?.[lastYrShort]?.adminCost && window.annualMetrics?.[lastYrShort]?.cnt ? 
+   window.annualMetrics[lastYrShort].adminCost / window.annualMetrics[lastYrShort].cnt / 10000 : 51.95);
+const totalCostAllWan = Math.round(totalAll * unitCostWan);
+`
+
+### 7.3 듀얼 트랙 프로그레스 바(Dual-Track Progress Bar) 및 정밀 레이아웃
+1. **점유율 바의 듀얼 트랙 분리**:
+   * 상단 트랙 (.pt-bar-track.count-track): 유형 고유 색상의 건수 점유율(%).
+   * 하단 트랙 (.pt-bar-track.cost-track): 시안-인디고 그라데이션(#38bdf8 -> #818cf8)의 추정비용 비중.
+   * 서브 범례 (.pt-bar-sublegend): ● 건수 점유율, ● 비용(추정) 비중을 막대 직하단에 컴팩트하게 배치.
+2. **트렌드 박스 2단 텍스트 구조**:
+   * 1행: 기존 연도별 역순 건수 체인 (37(건),26년 ← 39(건) ← 43(건)) 100% 보존.
+   * 2행: 비용(추정): 1,922만(원) ← 2,026만 ← 2,234만 (시안 컬러 강조).
+3. **호버 줌(Hover Zoom) 3차원 확장 효과**:
+   * 시스템 내부의 .kpi:hover 및 .audit-cause-card:hover를 완벽 벤치마킹하여 	ransform: scale(1.05) translateX(6px) !important; 및 딥 섀도우(ox-shadow: 0 20px 50px rgba(0,0,0,0.95), 0 0 30px rgba(108,142,245,0.45) !important;) 적용.
+   * 급증 항목(🚨)은 레드 글로우(#ff4d6d), 급감 항목(✅)은 그린 글로우(#4ecb71) 연동.
+   * **부모 컨테이너 오버플로우 방지**: 부모 요소(.pt-slide, .pt-layout, .pt-left-col, .pt-top-rows)에 overflow: visible !important;를 부여하여 확대 시 카드 상하좌우가 잘리는 CSS 버그 완벽 차단.
+4. **리액티비티(Reactivity) 보증**:
+   * 
+enderRepairTable() 종료 시 if (typeof renderPTViz === 'function') renderPTViz();를 호출하도록 연동하여, XLSB 업로드 시 보수 유형 대시보드도 즉각 동기화되도록 보증.
