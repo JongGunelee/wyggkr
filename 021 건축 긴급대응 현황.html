@@ -1499,8 +1499,8 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
           <span style="font-size:18px;">🔍</span>
           <strong style="font-size:16px;color:#ffffff;">근로자 산정 기준 심층 분석 & 데이터 정합성 전수 검증 보고서</strong>
-          <span class="pill pill-green" style="font-size:11px;font-weight:700;">무결성 전수점검 완료</span>
-          <span class="pill pill-orange" style="font-size:11px;font-weight:700;">원천 엑셀 전수 대조 100%</span>
+          <span class="pill pill-orange" id="raw-cost-integrity-pill" style="font-size:11px;font-weight:700;">비용 산식 검증 대기</span>
+          <span class="pill pill-orange" id="raw-source-integrity-pill" style="font-size:11px;font-weight:700;">원천 전수 대조 대기</span>
         </div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6;">
           원천 엑셀('021 관리대장_(건축 긴급대응).xlsx') 워크시트 필드 
@@ -1772,7 +1772,8 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 
   <div class="card full" style="margin-top:20px">
     <div class="card-title">
-      <span class="icon">🗓️</span> 2027년 작업 예측 <span style="font-size:12px;opacity:0.8;font-weight:400;color:#ffffff;opacity:0.95;font-weight:600;margin-left:4px;">(건)</span>
+      <span class="icon">🗓️</span> 2027년 작업 예측 <span style="font-size:12px;opacity:0.8;font-weight:400;color:#ffffff;opacity:0.95;font-weight:600;margin-left:4px;">(건/비용)</span>
+      <button type="button" class="section-xls-btn" onclick="window.dashboardExcelExporter.exportCard('forecast-2027')" title="2027년 월별 작업 건수·비용 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드">📊 2027 예측 엑셀 저장</button>
     </div>
     <div class="chart-wrap" style="height:240px"><canvas id="c-forecast"></canvas></div>
     <div class="chart-click-hint" style="color:#ffffff;opacity:0.95;">💡 각 월별 포인트를 클릭하면 예측 건수의 산출 공식, 과거 3개년 동월 증빙 및 상세 논리적 산출 근거 모달이 열립니다</div>
@@ -2463,13 +2464,22 @@ function validateRawIntegrity(wb, records) {
   const mergedContractorRecords = list.filter(r => r.contractor_source_state === 'merged');
   const sheetParsedRows = Object.values(stats.sheets || {}).reduce((sum, sheet) => sum + (Number(sheet.parsedRows) || 0), 0);
   const headerErrorCount = (stats.headerErrors || []).length;
-  const yearConflictCount = (stats.yearLabelConflictCount || 0) + (stats.futureSettlementDateCount || 0);
+  const yearConflictCount = Number(stats.futureSettlementDateCount) || 0;
+  const contractorCostInputsFinite = list.every(record => Number.isFinite(calculateXlsbCostContribution([record], false))
+    && Number.isFinite(calculateXlsbCostContribution([record], true)));
+  const calculationOk = duplicateGroups === 0
+    && (stats.parsedRows || 0) === list.length && sheetParsedRows === list.length
+    && headerErrorCount === 0 && yearConflictCount === 0
+    && (stats.formulaCacheMismatchCount || 0) === 0
+    && list.every(record => Number.isFinite(Number(record.total_h)))
+    && contractorCostInputsFinite;
   const report = {
     ok: duplicateGroups === 0 && requiredMissing === 0
       && (stats.parsedRows || 0) === list.length && sheetParsedRows === list.length
       && headerErrorCount === 0 && yearConflictCount === 0
       && (stats.invalidContractorCellCount || 0) === 0
       && (stats.formulaCacheMismatchCount || 0) === 0,
+    calculationOk,
     source: window._rawXlsbSourceUrl || 'XLSB',
     sourceSha256: window.lastXlsbSourceHash || '',
     sheets: wb?.SheetNames || [],
@@ -2511,8 +2521,9 @@ function validateRawIntegrity(wb, records) {
       + (details ? ': ' + details : '') + '을 발견했습니다.');
   }
   if (yearConflictCount > 0) {
-    const details = (stats.yearLabelConflicts || []).map(item =>
-      item.sheet + '!' + item.row + '행(A=' + item.label + ', 날짜=' + item.date + ')').join(', ');
+    const details = list.filter(record => Number(record.source_year) > Number(record.settlement_year))
+      .map(record => record.source_sheet + '!' + record.source_row + '행(작업연도=' + record.source_year
+        + ', 정산연도=' + record.settlement_year + ')').join(', ');
     report.warnings.push('원천 연도 라벨과 작업일 또는 정산 시트 연도 불일치 ' + yearConflictCount + '건'
       + (details ? ': ' + details : '') + '을 발견했습니다.');
   }
@@ -2531,7 +2542,9 @@ function validateRawIntegrity(wb, records) {
   if (duplicateGroups > 0) report.warnings.push('중복 작업 레코드 ' + duplicateGroups + '그룹(' + duplicateRows + '행)을 발견했습니다.');
   if (requiredMissing > 0) report.warnings.push('필수 필드 누락 레코드 ' + requiredMissing + '건: ' + requiredMissingRows.join(', '));
   if (report.carryoverCount > 0) {
-    report.notices.push('전년도 이월 ' + report.carryoverCount + '건은 정산 시트 연도에 귀속하고 연환산 시 1회만 반영합니다.');
+    const carryoverDetails = list.filter(record => record.is_carryover).map(record =>
+      record.source_sheet + '!' + record.source_row + '행(' + record.source_year + '년 작업 → ' + record.settlement_year + '년 정산)');
+    report.notices.push('전년도 이월 ' + report.carryoverCount + '건은 정산 시트 연도에 귀속하고 연환산 시 1회만 반영합니다: ' + carryoverDetails.join(', ') + '.');
   }
   report.notices.push('O열 공란 ' + report.blankContractorCandidateCount + '건, 숫자 0 ' + report.zeroContractorCandidateCount
     + '건을 네고 후보로 표시했습니다. 합계 ' + report.negotiationCandidateCount + '건 (관리소 서명 인원 있음 ' + report.signedNegotiationCandidateCount + '건).');
@@ -2557,9 +2570,21 @@ function updateRawIntegrityStatus(report) {
   const sourceLabel = report.source === 'cache' ? '캐시' : 'GitHub XLSB';
   const yearCounts = Object.entries(report.perYear || {}).sort((a, b) => a[0].localeCompare(b[0], 'ko'))
     .map(item => item[0] + ' ' + item[1] + '건').join(' · ');
-  const valid = Boolean(report.ok) && warningCount === 0;
-  el.textContent = sourceLabel + ' ' + report.recordCount + '건 전수대조 · ' + (valid ? '무결성 확인' : '경고 ' + warningCount + '건');
-  el.style.color = report.source === 'cache' ? '#fb923c' : (valid ? '#4ade80' : '#fbbf24');
+  const calculationOk = Boolean(report.calculationOk);
+  el.textContent = sourceLabel + ' ' + report.recordCount + '건 전수대조 · '
+    + (calculationOk ? '비용 산식 통과' : '비용 계산 점검 필요')
+    + (warningCount ? ' · 원천 주의 ' + warningCount + '건' : ' · 원천 오류 없음');
+  el.style.color = report.source === 'cache' ? '#fb923c' : (calculationOk ? (warningCount ? '#fbbf24' : '#4ade80') : '#f87171');
+  const costPill = document.getElementById('raw-cost-integrity-pill');
+  if (costPill) {
+    costPill.textContent = calculationOk ? '비용 산식 검증 통과' : '비용 산식 재검증 필요';
+    costPill.className = 'pill ' + (calculationOk ? 'pill-green' : 'pill-red');
+  }
+  const sourcePill = document.getElementById('raw-source-integrity-pill');
+  if (sourcePill) {
+    sourcePill.textContent = warningCount ? '원천 예외 ' + warningCount + '건 확인' : '원천 예외 없음';
+    sourcePill.className = 'pill ' + (warningCount ? 'pill-orange' : 'pill-green');
+  }
   const negotiationFilterBtn = document.getElementById('btn-wf-negotiation');
   if (negotiationFilterBtn) negotiationFilterBtn.textContent = '💬 O열 네고 후보 ' + report.negotiationCandidateCount;
   const summaryNotes = [
@@ -2571,6 +2596,7 @@ function updateRawIntegrityStatus(report) {
     '• XLSB 시간 계보: Excel day fraction × 24를 정밀도 손실 없이 사용하고 실제 수식 참조 셀과 캐시를 대조',
     '• 원천 XLSB SHA-256: ' + (report.sourceSha256 || '계산 불가'),
     '• 연도/정산 계보: 이월 ' + report.carryoverCount + '건 · 연도 충돌 ' + report.yearConflictCount + '건',
+    '• 비용 계산 검증: ' + (report.calculationOk ? '통과' : '점검 필요') + ' (시공사 환산 비교는 O열 비수치 원천 예외에 유의)',
     '• O열 네고 후보: 공란 ' + report.blankContractorCandidateCount + '건 · 숫자 0 ' + report.zeroContractorCandidateCount + '건 · 합계 ' + report.negotiationCandidateCount + '건',
     '• O열 병합 공유: ' + report.mergedContractorCellCount + '건 (독립 공란 후보 및 수량 중복 산입 제외)',
     '• 중복 작업: ' + report.duplicateGroups + '그룹 (' + report.duplicateRows + '행)',
@@ -2792,7 +2818,7 @@ function parseXlsbWorkbook(wb) {
         inheritedDateFromRow = lastKnownDate.row;
       }
       const sourceYear = dateYear || yearFromLabel || yrNum;
-      if (dateYear && yearFromLabel && dateYear !== yearFromLabel) {
+      if (dateYear && yearFromLabel && dateYear > yrNum && dateYear !== yearFromLabel) {
         parseStats.yearLabelConflictCount++;
         parseStats.yearLabelConflicts.push({ sheet: sname, row: sourceRowNumber, label: yearLabelText, date: dateText, sourceYear: dateYear });
       }
@@ -3102,6 +3128,8 @@ window.dashboardCharts = window.dashboardCharts || {};
 
 // ─── 비용 산출 기준 파라미터 (단가 변경 시 자동 재계산 연동 — 전역 호이스팅 완료) ────────────────
 const COST_UNIT = {
+  forecastInflationRate: 0.045,
+  forecastCountGrowthRate: 0.05,
   hourlyRate: 35000, // 기능직 평균 시급 (대한건설협회 시중노임단가 및 긴급출동 프리미엄 준용)
   visitFee: 5000,    // 건당 출장/부대경비
   matCost: {
@@ -3185,6 +3213,16 @@ function calculateXlsbCostContribution(records, contractorBased) {
     + list.length * COST_UNIT.visitFee
     + materialCost
     + list.length * COST_UNIT.matCost.etc;
+}
+
+function getLatestContractorCostRatio() {
+  const years = window.YR_KEYS || [];
+  const latestYear = years[years.length - 1];
+  const metric = window.annualMetrics?.[latestYear] || {};
+  const adminCost = Number(metric.projectedAdminCost ?? metric.adminCost);
+  const contractorCost = Number(metric.projectedContractorCost ?? metric.contractorCost);
+  return Number.isFinite(adminCost) && adminCost > 0 && Number.isFinite(contractorCost) && contractorCost >= 0
+    ? contractorCost / adminCost : 1;
 }
 
 function recalculateDerivedData(records) {
@@ -3362,7 +3400,10 @@ function recalculateDerivedData(records) {
     // [데이터 정합성 보증]: 해당 연도 고유 작업(이월 정산건 제외)의 실제 존재하는 월(1~12)들을 정확히 추출
     const yrNum = k.replace(/[^0-9]/g, '');
     const yrPrefix = yrNum.length === 2 ? '20' + yrNum : yrNum;
-    const actualYearRecs = recs.filter(r => !r.is_carryover && (r.date || '').startsWith(yrPrefix));
+    const actualYearRecs = recs.filter(r => !r.is_carryover && (
+      String(r.date || '').startsWith(yrPrefix)
+      || (!r.date && Number(r.source_year || r.settlement_year || yrPrefix) === Number(yrPrefix))
+    ));
     const targetPool = actualYearRecs.length > 0 ? actualYearRecs : (recs.filter(r => !r.is_carryover).length > 0 ? recs.filter(r => !r.is_carryover) : recs);
     
     const validMonths = targetPool.map(r => {
@@ -3374,9 +3415,9 @@ function recalculateDerivedData(records) {
       return m;
     }).filter(m => m >= 1 && m <= 12);
 
-    const minMonth = validMonths.length > 0 ? Math.min(...validMonths) : 1;
-    const maxMonth = validMonths.length > 0 ? Math.max(...validMonths) : 1;
-    const isPartialYear = (maxMonth < 12);
+    const minMonth = validMonths.length > 0 ? Math.min(...validMonths) : 0;
+    const maxMonth = validMonths.length > 0 ? Math.max(...validMonths) : 0;
+    const isPartialYear = maxMonth > 0 && maxMonth < 12;
     const carryoverRecs = recs.filter(r => r.is_carryover);
     const currentYearRecs = actualYearRecs.length > 0 ? actualYearRecs : recs.filter(r => !r.is_carryover);
     const projectionFactor = isPartialYear && currentYearRecs.length > 0 ? 12 / maxMonth : 1;
@@ -3565,8 +3606,9 @@ function updateAllKPIsAndTexts() {
   // [월 범위 정밀 논리 표기]: minMonth와 maxMonth가 동일하면 단일월(예: 2월), 다르면 범위(예: 1~10월)
   const getDynamicMonthText = (m) => {
     if (!m) return '';
-    const minM = Number(m.minMonth) || 1;
-    const maxM = Number(m.maxMonth) || 1;
+    const minM = Number(m.minMonth) || 0;
+    const maxM = Number(m.maxMonth) || 0;
+    if (maxM < 1) return '월 정보 없음';
     return minM === maxM ? `${maxM}월` : `${minM}~${maxM}월`;
   };
   const latestMonthRangeText = getDynamicMonthText(latestMetric);
@@ -3579,7 +3621,7 @@ function updateAllKPIsAndTexts() {
   const contractorWan = Math.round(projectedContractorRaw / 10000);
   const carryoverCount = Number(latestMetric.carryoverCount) || 0;
   const negotiationCandidateCount = (window.RAW || []).filter(r => r.negotiation_candidate).length;
-  const previousAdminWan = Math.round(Number(previousMetric.adminCost || 0) / 10000);
+  const previousAdminWan = Math.round(Number(previousMetric.projectedAdminCost ?? previousMetric.adminCost ?? 0) / 10000);
   const costDiff = contractorWan - adminWan;
   const costGrowth = (previousYr && previousAdminWan > 0) ? ((adminWan / previousAdminWan) - 1) * 100 : null;
 
@@ -4168,8 +4210,7 @@ function updateAllKPIsAndTexts() {
     const top2 = sortedByLatest[1]?.name || '차순위 발생동';
     const repTypes = window.repairData || [];
     const topRep = repTypes[0]?.type || '소모성 자재';
-    const predCostWan = Math.max(1, Math.round(adminWan * 1.1));
-    const budgetWan = Math.round(predCostWan * 0.9);
+    const budgetWan = Math.max(1, Math.round(Number(window.cost27TotalWan) || 0));
 
     roadmapTbody.innerHTML = `
       <tr><td>1</td><td>${top1} 긴급 점검</td><td>${top1} 전 세대</td><td>구조·마감 점검, 2027년 예비비 증액 검토</td><td>2026년 10월</td><td><span class="pill pill-red">CRITICAL</span></td></tr>
@@ -5769,6 +5810,96 @@ function sortBldgTable(key) {
 window.renderBldgTable = renderBldgTable;
 window.sortBldgTable = sortBldgTable;
 
+function allocateRoundedTotal(weights, targetTotal) {
+  const total = Math.max(0, Math.round(Number(targetTotal) || 0));
+  if (!weights.length) return [];
+  const positiveWeights = weights.map(v => Math.max(0, Number(v) || 0));
+  const weightSum = positiveWeights.reduce((sum, value) => sum + value, 0);
+  const normalized = weightSum > 0
+    ? positiveWeights.map(value => value / weightSum * total)
+    : positiveWeights.map(() => total / positiveWeights.length);
+  const allocated = normalized.map(Math.round);
+  const residualIndex = positiveWeights.reduce((best, value, index) => value > positiveWeights[best] ? index : best, 0);
+  allocated[residualIndex] += total - allocated.reduce((sum, value) => sum + value, 0);
+  return allocated;
+}
+
+function buildForecastModel2027(records = window.RAW || [], annualMetrics = window.annualMetrics || {}, yearKeys = window.YR_KEYS || []) {
+  const latestYearKey = yearKeys[yearKeys.length - 1] || '26년';
+  const yearDigits = String(latestYearKey).replace(/[^0-9]/g, '');
+  const latestYear = yearDigits.length === 2 ? Number('20' + yearDigits) : Number(yearDigits) || 2026;
+  const latestMetric = annualMetrics[latestYearKey] || {};
+  const latestRows = records.filter(record => record.yr === latestYearKey);
+  const carryoverRows = latestRows.filter(record => Boolean(record.is_carryover));
+  const currentYearRows = latestRows.filter(record => !record.is_carryover && String(record.date || '').startsWith(String(latestYear)));
+  const maxMonth = Math.max(0, Number(latestMetric.maxMonth) || 0);
+  const actualCounts = new Array(12).fill(null);
+  const forecastCounts = new Array(12).fill(null);
+  const monthlyBaseCounts = new Array(12).fill(0);
+  const monthlyActualCostWan = new Array(12).fill(null);
+  const monthlyForecastCostWan = new Array(12).fill(null);
+  const monthlyActualCostRaw = new Array(12).fill(0);
+
+  for (let month = 1; month <= 12; month++) {
+    if (month <= maxMonth) {
+      const monthRows = currentYearRows.filter(record => Number(record.month) === month);
+      actualCounts[month - 1] = monthRows.length;
+      monthlyBaseCounts[month - 1] = monthRows.length;
+      monthlyActualCostRaw[month - 1] = calculateXlsbCostContribution(monthRows, false);
+    }
+  }
+
+  const currentYearCount = Number(latestMetric.currentYearCount ?? currentYearRows.length) || 0;
+  const averageMonthlyCount = currentYearCount > 0 && maxMonth > 0 ? Math.max(0, Math.round(currentYearCount / maxMonth)) : 0;
+  const currentYearAdminCost = Number(latestMetric.currentYearAdminCost
+    ?? calculateXlsbCostContribution(currentYearRows, false)) || 0;
+  const averageMonthlyCostWan = currentYearAdminCost > 0 && maxMonth > 0 ? Math.max(0, Math.round(currentYearAdminCost / maxMonth / 10000)) : 0;
+  if (maxMonth > 0) {
+    const actualTargetWan = Math.round(currentYearAdminCost / 10000);
+    const allocatedActualWan = allocateRoundedTotal(monthlyActualCostRaw.slice(0, maxMonth), actualTargetWan);
+    for (let index = 0; index < maxMonth; index++) monthlyActualCostWan[index] = allocatedActualWan[index] || 0;
+    const annualizedCurrentYearWan = Math.round(currentYearAdminCost * 12 / maxMonth / 10000);
+    const forecastTotalWan = Math.max(0, annualizedCurrentYearWan - actualTargetWan);
+    const remainingMonths = 12 - maxMonth;
+    if (remainingMonths > 0) {
+      const perMonthWan = Math.round(forecastTotalWan / remainingMonths);
+      for (let month = maxMonth; month < 12; month++) monthlyForecastCostWan[month] = perMonthWan;
+      monthlyForecastCostWan[11] += forecastTotalWan - perMonthWan * remainingMonths;
+    }
+  }
+  for (let month = maxMonth + 1; month <= 12; month++) {
+    forecastCounts[month - 1] = averageMonthlyCount;
+    monthlyBaseCounts[month - 1] = averageMonthlyCount;
+  }
+
+  const projectedCountLatest = Math.max(0, Number(latestMetric.projectedCnt
+    ?? Math.round((maxMonth > 0 ? currentYearCount * 12 / maxMonth : currentYearCount) + carryoverRows.length)) || 0);
+  const baseCountTotal = monthlyBaseCounts.reduce((sum, value) => sum + value, 0);
+  const monthlyWeights = baseCountTotal > 0
+    ? monthlyBaseCounts.map(value => value * projectedCountLatest / baseCountTotal)
+    : new Array(12).fill(projectedCountLatest / 12);
+  const countGrowthRate = Number(COST_UNIT.forecastCountGrowthRate ?? 0.05);
+  const totalPred27 = Math.max(1, Math.round(projectedCountLatest * (1 + countGrowthRate)));
+  const counts27Forecast = allocateRoundedTotal(monthlyWeights, totalPred27);
+
+  const latestAnnualizedAdminCost = Math.max(0, Number(latestMetric.projectedAdminCost ?? latestMetric.adminCost) || 0);
+  const costPerRecordWan = projectedCountLatest > 0
+    ? latestAnnualizedAdminCost / projectedCountLatest / 10000 : 0;
+  const inflationRate = Number(COST_UNIT.forecastInflationRate ?? 0.045);
+  const cost27TotalWan = Math.max(1, Math.round(totalPred27 * costPerRecordWan * (1 + inflationRate)));
+  const costs27Forecast = counts27Forecast.map(count => Math.round(count * costPerRecordWan * (1 + inflationRate)));
+  costs27Forecast[11] += cost27TotalWan - costs27Forecast.reduce((sum, value) => sum + value, 0);
+
+  return {
+    latestYearKey, latestYear, latestMetric, latestRows, currentYearRows, carryoverRows,
+    currentYearCount, currentYearAdminCost, latestAnnualizedAdminCost, maxMonth, averageMonthlyCount,
+    averageMonthlyCostWan, actualCounts, forecastCounts, monthlyBaseCounts,
+    monthlyActualCostWan, monthlyForecastCostWan, projectedCountLatest,
+    monthlyWeights, totalPred27, counts27Forecast, costPerRecordWan,
+    cost27TotalWan, costs27Forecast, countGrowthRate, inflationRate
+  };
+}
+
 // ─── 전수 25개 차트 동적 생성 및 실시간 재구축 엔진 (renderAllCharts) ───────────
 function renderAllCharts() {
   if (window.dashboardCharts) {
@@ -6618,7 +6749,7 @@ document.getElementById('risk-meters').innerHTML=riskData.map(r=>`
 
 buildChart('c-cost',{
   type:'bar',
-  data:{labels:ykRev.map(yearLabel),datasets:[{label:'건축 집행 비용(만원)',data:ykRev.map(yr=>Math.round(yearMetric(yr,'adminCost')/10000)),
+  data:{labels:ykRev.map(yearLabel),datasets:[{label:'원천 작업비용 산식 합계(만원)',data:ykRev.map(yr=>Math.round(yearMetric(yr,'adminCost')/10000)),
     backgroundColor:ykRev.map((_,i)=>alpha(reverseColors[i % reverseColors.length],.7)),
     borderColor:ykRev.map((_,i)=>reverseColors[i % reverseColors.length]),borderWidth:2,borderRadius:6}]},
   options:{
@@ -6631,10 +6762,17 @@ buildChart('c-cost',{
           label: function(ctx) {
             const val = ctx.raw;
             const yr = ykRev[ctx.dataIndex];
+            const metric = window.annualMetrics?.[yr] || {};
             const contrMap = Object.fromEntries(ykRev.map(k => [yearLabel(k), Math.round(yearMetric(k, 'contractorCost') / 10000).toLocaleString()]));
+            const period = metric.isPartialYear
+              ? ' (' + metric.minMonth + '~' + metric.maxMonth + '월 누적 · 전년도 이월 포함)'
+              : ' (해당 정산연도 전체)';
+            const annualized = metric.isPartialYear
+              ? ' · KPI 연환산 ' + Math.round(Number(metric.projectedAdminCost || 0) / 10000).toLocaleString() + '만원'
+              : '';
             return [
-              ` ${yr} 집행 비용: ${val.toLocaleString()}만원 [공식단일: 관리소 서명 공수 기준]`,
-              ` (시공사 청구 품수 기준 환산 시: 약 ${contrMap[yr]||'-'}만원)`
+              ` ${yr} 원천 작업비용 산식 합계: ${val.toLocaleString()}만원${period}${annualized} [관리소 서명 공수 기준]`,
+              ` (시공사 청구 품수 환산 합계: 약 ${contrMap[yr]||'-'}만원)`
             ];
           }
         }
@@ -6671,175 +6809,108 @@ buildChart('c-cost',{
 
 
 // ─── 2027년 작업 예측 상세 가상 레코드 데이터셋 (${window.totalPred27 || 134}건) ─────────────────────────
-const FORECAST_RAW_2027 = [{"yr": "27년", "no": 1, "workers": 1, "date": "2027-01-02", "month": 1, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "103동", "room": "102호", "content": "[2027년 예측] 103동 102호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비)", "types": ["벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 2, "workers": 2, "date": "2027-01-04", "month": 1, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "202호", "content": "[2027년 예측] 2동 202호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["문보수/문교체", "누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 3, "workers": 2, "date": "2027-01-06", "month": 1, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "301호", "content": "[2027년 예측] 8동 301호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비)", "types": ["누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 4, "workers": 2, "date": "2027-01-08", "month": 1, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "7동", "room": "307호", "content": "[2027년 예측] 7동 307호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["벽면 크랙/단열재", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 5, "workers": 1, "date": "2027-01-10", "month": 1, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "A동", "room": "401호", "content": "[2027년 예측] A동 401호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 6, "workers": 2, "date": "2027-01-12", "month": 1, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "403호", "content": "[2027년 예측] 103동 403호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비) 및 벽면 크랙/단열재 병행 시공", "types": ["누수 점검/보수", "벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 7, "workers": 1, "date": "2027-01-14", "month": 1, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "405호", "content": "[2027년 예측] 2동 405호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비)", "types": ["벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 8, "workers": 2, "date": "2027-01-16", "month": 1, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "501호", "content": "[2027년 예측] 8동 501호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["문보수/문교체", "누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 9, "workers": 2, "date": "2027-01-18", "month": 1, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "7동", "room": "508호", "content": "[2027년 예측] 7동 508호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비)", "types": ["누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 10, "workers": 1, "date": "2027-02-02", "month": 2, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "102호", "content": "[2027년 예측] 2동 102호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["걸레받이 교체"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 11, "workers": 2, "date": "2027-02-04", "month": 2, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "202호", "content": "[2027년 예측] 103동 202호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 도장/도색 병행 시공", "types": ["문보수/문교체", "도장/도색"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 12, "workers": 1, "date": "2027-02-06", "month": 2, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "5동", "room": "301호", "content": "[2027년 예측] 5동 301호 도장/도색 작업 (노후 가속 대비 사전 예방 정비)", "types": ["도장/도색"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 13, "workers": 2, "date": "2027-02-08", "month": 2, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "9동", "room": "307호", "content": "[2027년 예측] 9동 307호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["걸레받이 교체", "문보수/문교체"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 14, "workers": 1, "date": "2027-02-10", "month": 2, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "3동", "room": "401호", "content": "[2027년 예측] 3동 401호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 15, "workers": 2, "date": "2027-02-12", "month": 2, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "403호", "content": "[2027년 예측] 2동 403호 도장/도색 작업 (노후 가속 대비 사전 예방 정비) 및 걸레받이 교체 병행 시공", "types": ["도장/도색", "걸레받이 교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 16, "workers": 1, "date": "2027-02-14", "month": 2, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "103동", "room": "405호", "content": "[2027년 예측] 103동 405호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["걸레받이 교체"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 17, "workers": 2, "date": "2027-02-16", "month": 2, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "5동", "room": "501호", "content": "[2027년 예측] 5동 501호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 도장/도색 병행 시공", "types": ["문보수/문교체", "도장/도색"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 18, "workers": 1, "date": "2027-02-18", "month": 2, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "9동", "room": "508호", "content": "[2027년 예측] 9동 508호 도장/도색 작업 (노후 가속 대비 사전 예방 정비)", "types": ["도장/도색"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 19, "workers": 2, "date": "2027-03-02", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "3동", "room": "102호", "content": "[2027년 예측] 3동 102호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["방충망 교체"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 20, "workers": 2, "date": "2027-03-04", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "202호", "content": "[2027년 예측] 103동 202호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비) 및 벽면 크랙/단열재 병행 시공", "types": ["씽크대 코킹/실리콘", "벽면 크랙/단열재"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 21, "workers": 1, "date": "2027-03-06", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "301호", "content": "[2027년 예측] 2동 301호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비)", "types": ["벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 22, "workers": 2, "date": "2027-03-08", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "307호", "content": "[2027년 예측] 8동 307호 타일 교체/보수 작업 (노후 가속 대비 사전 예방 정비) 및 방충망 교체 병행 시공", "types": ["타일 교체/보수", "방충망 교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 23, "workers": 2, "date": "2027-03-10", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "A동", "room": "401호", "content": "[2027년 예측] A동 401호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["방충망 교체"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 24, "workers": 2, "date": "2027-03-12", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "5동", "room": "403호", "content": "[2027년 예측] 5동 403호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비) 및 벽면 크랙/단열재 병행 시공", "types": ["씽크대 코킹/실리콘", "벽면 크랙/단열재"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 25, "workers": 1, "date": "2027-03-14", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "3동", "room": "405호", "content": "[2027년 예측] 3동 405호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비)", "types": ["벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 26, "workers": 2, "date": "2027-03-16", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "501호", "content": "[2027년 예측] 103동 501호 타일 교체/보수 작업 (노후 가속 대비 사전 예방 정비) 및 방충망 교체 병행 시공", "types": ["타일 교체/보수", "방충망 교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 27, "workers": 2, "date": "2027-03-18", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "508호", "content": "[2027년 예측] 2동 508호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["방충망 교체"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 28, "workers": 2, "date": "2027-03-20", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "텃밭/공용부", "content": "[2027년 예측] 8동 텃밭/공용부 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비) 및 벽면 크랙/단열재 병행 시공", "types": ["씽크대 코킹/실리콘", "벽면 크랙/단열재"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 29, "workers": 1, "date": "2027-03-22", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "A동", "room": "현관/로비", "content": "[2027년 예측] A동 현관/로비 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비)", "types": ["벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 30, "workers": 2, "date": "2027-03-24", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "5동", "room": "계단실", "content": "[2027년 예측] 5동 계단실 타일 교체/보수 작업 (노후 가속 대비 사전 예방 정비) 및 방충망 교체 병행 시공", "types": ["타일 교체/보수", "방충망 교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 31, "workers": 2, "date": "2027-03-26", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "3동", "room": "102호", "content": "[2027년 예측] 3동 102호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["방충망 교체"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 32, "workers": 2, "date": "2027-03-28", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "202호", "content": "[2027년 예측] 103동 202호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비) 및 벽면 크랙/단열재 병행 시공", "types": ["씽크대 코킹/실리콘", "벽면 크랙/단열재"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 33, "workers": 1, "date": "2027-03-28", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "301호", "content": "[2027년 예측] 2동 301호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비)", "types": ["벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 34, "workers": 2, "date": "2027-03-28", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "307호", "content": "[2027년 예측] 8동 307호 타일 교체/보수 작업 (노후 가속 대비 사전 예방 정비) 및 방충망 교체 병행 시공", "types": ["타일 교체/보수", "방충망 교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 35, "workers": 2, "date": "2027-03-28", "month": 3, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "A동", "room": "401호", "content": "[2027년 예측] A동 401호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["방충망 교체"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 36, "workers": 1, "date": "2027-04-02", "month": 4, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "102호", "content": "[2027년 예측] 2동 102호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 37, "workers": 2, "date": "2027-04-04", "month": 4, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "7동", "room": "202호", "content": "[2027년 예측] 7동 202호 도배 작업 (노후 가속 대비 사전 예방 정비) 및 도장/도색 병행 시공", "types": ["도배", "도장/도색"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 38, "workers": 1, "date": "2027-04-06", "month": 4, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "9동", "room": "301호", "content": "[2027년 예측] 9동 301호 도장/도색 작업 (노후 가속 대비 사전 예방 정비)", "types": ["도장/도색"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 39, "workers": 2, "date": "2027-04-08", "month": 4, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "102동", "room": "307호", "content": "[2027년 예측] 102동 307호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 도배 병행 시공", "types": ["문보수/문교체", "도배"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 40, "workers": 1, "date": "2027-04-10", "month": 4, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "401호", "content": "[2027년 예측] 2동 401호 도배 작업 (노후 가속 대비 사전 예방 정비)", "types": ["도배"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 41, "workers": 2, "date": "2027-04-12", "month": 4, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "7동", "room": "403호", "content": "[2027년 예측] 7동 403호 도장/도색 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["도장/도색", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 42, "workers": 1, "date": "2027-04-14", "month": 4, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "9동", "room": "405호", "content": "[2027년 예측] 9동 405호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 43, "workers": 2, "date": "2027-05-02", "month": 5, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "102호", "content": "[2027년 예측] 8동 102호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["방충망 교체"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 44, "workers": 2, "date": "2027-05-04", "month": 5, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "5동", "room": "202호", "content": "[2027년 예측] 5동 202호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 씽크대 코킹/실리콘 병행 시공", "types": ["문보수/문교체", "씽크대 코킹/실리콘"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 45, "workers": 1, "date": "2027-05-06", "month": 5, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "301호", "content": "[2027년 예측] 2동 301호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비)", "types": ["씽크대 코킹/실리콘"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 46, "workers": 2, "date": "2027-05-08", "month": 5, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "9동", "room": "307호", "content": "[2027년 예측] 9동 307호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["방충망 교체", "문보수/문교체"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 47, "workers": 1, "date": "2027-05-10", "month": 5, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "103동", "room": "401호", "content": "[2027년 예측] 103동 401호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 48, "workers": 2, "date": "2027-05-12", "month": 5, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "403호", "content": "[2027년 예측] 8동 403호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비) 및 방충망 교체 병행 시공", "types": ["씽크대 코킹/실리콘", "방충망 교체"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 49, "workers": 2, "date": "2027-05-14", "month": 5, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "5동", "room": "405호", "content": "[2027년 예측] 5동 405호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["방충망 교체"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 50, "workers": 2, "date": "2027-05-16", "month": 5, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "501호", "content": "[2027년 예측] 2동 501호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 씽크대 코킹/실리콘 병행 시공", "types": ["문보수/문교체", "씽크대 코킹/실리콘"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 51, "workers": 1, "date": "2027-05-18", "month": 5, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "9동", "room": "508호", "content": "[2027년 예측] 9동 508호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비)", "types": ["씽크대 코킹/실리콘"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 52, "workers": 2, "date": "2027-05-20", "month": 5, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "텃밭/공용부", "content": "[2027년 예측] 103동 텃밭/공용부 방충망 교체 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["방충망 교체", "문보수/문교체"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 53, "workers": 1, "date": "2027-05-22", "month": 5, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "8동", "room": "현관/로비", "content": "[2027년 예측] 8동 현관/로비 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 54, "workers": 1, "date": "2027-06-02", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "103동", "room": "102호", "content": "[2027년 예측] 103동 102호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비)", "types": ["씽크대 코킹/실리콘"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 55, "workers": 2, "date": "2027-06-04", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "3동", "room": "202호", "content": "[2027년 예측] 3동 202호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["방충망 교체", "누수 점검/보수"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 56, "workers": 2, "date": "2027-06-06", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "301호", "content": "[2027년 예측] 2동 301호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비)", "types": ["누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 57, "workers": 2, "date": "2027-06-08", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "307호", "content": "[2027년 예측] 8동 307호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비) 및 씽크대 코킹/실리콘 병행 시공", "types": ["걸레받이 교체", "씽크대 코킹/실리콘"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 58, "workers": 1, "date": "2027-06-10", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "5동", "room": "401호", "content": "[2027년 예측] 5동 401호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비)", "types": ["씽크대 코킹/실리콘"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 59, "workers": 2, "date": "2027-06-12", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "7동", "room": "403호", "content": "[2027년 예측] 7동 403호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["방충망 교체", "누수 점검/보수"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 60, "workers": 2, "date": "2027-06-14", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "102동", "room": "405호", "content": "[2027년 예측] 102동 405호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비)", "types": ["누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 61, "workers": 2, "date": "2027-06-16", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "501호", "content": "[2027년 예측] 103동 501호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비) 및 씽크대 코킹/실리콘 병행 시공", "types": ["걸레받이 교체", "씽크대 코킹/실리콘"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 62, "workers": 1, "date": "2027-06-18", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "3동", "room": "508호", "content": "[2027년 예측] 3동 508호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비)", "types": ["씽크대 코킹/실리콘"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 63, "workers": 2, "date": "2027-06-20", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "텃밭/공용부", "content": "[2027년 예측] 2동 텃밭/공용부 방충망 교체 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["방충망 교체", "누수 점검/보수"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 64, "workers": 2, "date": "2027-06-22", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "현관/로비", "content": "[2027년 예측] 8동 현관/로비 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비)", "types": ["누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 65, "workers": 2, "date": "2027-06-24", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "5동", "room": "계단실", "content": "[2027년 예측] 5동 계단실 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비) 및 씽크대 코킹/실리콘 병행 시공", "types": ["걸레받이 교체", "씽크대 코킹/실리콘"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 66, "workers": 1, "date": "2027-06-26", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "7동", "room": "102호", "content": "[2027년 예측] 7동 102호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비)", "types": ["씽크대 코킹/실리콘"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 67, "workers": 2, "date": "2027-06-28", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "102동", "room": "202호", "content": "[2027년 예측] 102동 202호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["방충망 교체", "누수 점검/보수"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 68, "workers": 2, "date": "2027-06-28", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "301호", "content": "[2027년 예측] 103동 301호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비)", "types": ["누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 69, "workers": 2, "date": "2027-06-28", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "3동", "room": "307호", "content": "[2027년 예측] 3동 307호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비) 및 씽크대 코킹/실리콘 병행 시공", "types": ["걸레받이 교체", "씽크대 코킹/실리콘"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 70, "workers": 1, "date": "2027-06-28", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "401호", "content": "[2027년 예측] 2동 401호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비)", "types": ["씽크대 코킹/실리콘"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 71, "workers": 2, "date": "2027-06-28", "month": 6, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "403호", "content": "[2027년 예측] 8동 403호 방충망 교체 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["방충망 교체", "누수 점검/보수"], "mats": {"방충망(개소)": 3}, "isForecast": true}, {"yr": "27년", "no": 72, "workers": 2, "date": "2027-07-02", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "102호", "content": "[2027년 예측] 2동 102호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비)", "types": ["누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 73, "workers": 2, "date": "2027-07-04", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "202호", "content": "[2027년 예측] 8동 202호 곰팡이 제거 작업 (노후 가속 대비 사전 예방 정비) 및 씽크대 코킹/실리콘 병행 시공", "types": ["곰팡이 제거", "씽크대 코킹/실리콘"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 74, "workers": 1, "date": "2027-07-06", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "5동", "room": "301호", "content": "[2027년 예측] 5동 301호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비)", "types": ["씽크대 코킹/실리콘"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 75, "workers": 2, "date": "2027-07-08", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "3동", "room": "307호", "content": "[2027년 예측] 3동 307호 타일 교체/보수 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["타일 교체/보수", "누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 76, "workers": 2, "date": "2027-07-10", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "401호", "content": "[2027년 예측] 103동 401호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비)", "types": ["누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 77, "workers": 2, "date": "2027-07-12", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "9동", "room": "403호", "content": "[2027년 예측] 9동 403호 곰팡이 제거 작업 (노후 가속 대비 사전 예방 정비) 및 씽크대 코킹/실리콘 병행 시공", "types": ["곰팡이 제거", "씽크대 코킹/실리콘"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 78, "workers": 1, "date": "2027-07-14", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "405호", "content": "[2027년 예측] 2동 405호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비)", "types": ["씽크대 코킹/실리콘"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 79, "workers": 2, "date": "2027-07-16", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "501호", "content": "[2027년 예측] 8동 501호 타일 교체/보수 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["타일 교체/보수", "누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 80, "workers": 2, "date": "2027-07-18", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "5동", "room": "508호", "content": "[2027년 예측] 5동 508호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비)", "types": ["누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 81, "workers": 2, "date": "2027-07-20", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "3동", "room": "텃밭/공용부", "content": "[2027년 예측] 3동 텃밭/공용부 곰팡이 제거 작업 (노후 가속 대비 사전 예방 정비) 및 씽크대 코킹/실리콘 병행 시공", "types": ["곰팡이 제거", "씽크대 코킹/실리콘"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 82, "workers": 1, "date": "2027-07-22", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "103동", "room": "현관/로비", "content": "[2027년 예측] 103동 현관/로비 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비)", "types": ["씽크대 코킹/실리콘"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 83, "workers": 2, "date": "2027-07-24", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "9동", "room": "계단실", "content": "[2027년 예측] 9동 계단실 타일 교체/보수 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["타일 교체/보수", "누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 84, "workers": 2, "date": "2027-07-26", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "102호", "content": "[2027년 예측] 2동 102호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비)", "types": ["누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 85, "workers": 2, "date": "2027-07-28", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "202호", "content": "[2027년 예측] 8동 202호 곰팡이 제거 작업 (노후 가속 대비 사전 예방 정비) 및 씽크대 코킹/실리콘 병행 시공", "types": ["곰팡이 제거", "씽크대 코킹/실리콘"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 86, "workers": 1, "date": "2027-07-28", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "5동", "room": "301호", "content": "[2027년 예측] 5동 301호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비)", "types": ["씽크대 코킹/실리콘"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 87, "workers": 2, "date": "2027-07-28", "month": 7, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "3동", "room": "307호", "content": "[2027년 예측] 3동 307호 타일 교체/보수 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["타일 교체/보수", "누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 88, "workers": 1, "date": "2027-08-02", "month": 8, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "102호", "content": "[2027년 예측] 2동 102호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["걸레받이 교체"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 89, "workers": 2, "date": "2027-08-04", "month": 8, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "102동", "room": "202호", "content": "[2027년 예측] 102동 202호 시트지 교체 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["시트지 교체", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 90, "workers": 1, "date": "2027-08-06", "month": 8, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "7동", "room": "301호", "content": "[2027년 예측] 7동 301호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 91, "workers": 2, "date": "2027-08-08", "month": 8, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "A동", "room": "307호", "content": "[2027년 예측] A동 307호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비) 및 시트지 교체 병행 시공", "types": ["걸레받이 교체", "시트지 교체"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 92, "workers": 1, "date": "2027-08-10", "month": 8, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "8동", "room": "401호", "content": "[2027년 예측] 8동 401호 시트지 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["시트지 교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 93, "workers": 2, "date": "2027-08-12", "month": 8, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "403호", "content": "[2027년 예측] 2동 403호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 걸레받이 교체 병행 시공", "types": ["문보수/문교체", "걸레받이 교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 94, "workers": 1, "date": "2027-08-14", "month": 8, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "102동", "room": "405호", "content": "[2027년 예측] 102동 405호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["걸레받이 교체"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 95, "workers": 2, "date": "2027-08-16", "month": 8, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "7동", "room": "501호", "content": "[2027년 예측] 7동 501호 시트지 교체 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["시트지 교체", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 96, "workers": 1, "date": "2027-08-18", "month": 8, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "A동", "room": "508호", "content": "[2027년 예측] A동 508호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 97, "workers": 2, "date": "2027-08-20", "month": 8, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "텃밭/공용부", "content": "[2027년 예측] 8동 텃밭/공용부 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비) 및 시트지 교체 병행 시공", "types": ["걸레받이 교체", "시트지 교체"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 98, "workers": 1, "date": "2027-09-02", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "9동", "room": "102호", "content": "[2027년 예측] 9동 102호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 99, "workers": 2, "date": "2027-09-04", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "5동", "room": "202호", "content": "[2027년 예측] 5동 202호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비) 및 도배 병행 시공", "types": ["씽크대 코킹/실리콘", "도배"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 100, "workers": 1, "date": "2027-09-06", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "301호", "content": "[2027년 예측] 2동 301호 도배 작업 (노후 가속 대비 사전 예방 정비)", "types": ["도배"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 101, "workers": 2, "date": "2027-09-08", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "307호", "content": "[2027년 예측] 8동 307호 버티컬/블라인드 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["버티컬/블라인드", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 102, "workers": 1, "date": "2027-09-10", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "103동", "room": "401호", "content": "[2027년 예측] 103동 401호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 103, "workers": 2, "date": "2027-09-12", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "9동", "room": "403호", "content": "[2027년 예측] 9동 403호 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비) 및 도배 병행 시공", "types": ["씽크대 코킹/실리콘", "도배"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 104, "workers": 1, "date": "2027-09-14", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "5동", "room": "405호", "content": "[2027년 예측] 5동 405호 도배 작업 (노후 가속 대비 사전 예방 정비)", "types": ["도배"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 105, "workers": 2, "date": "2027-09-16", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "501호", "content": "[2027년 예측] 2동 501호 버티컬/블라인드 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["버티컬/블라인드", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 106, "workers": 1, "date": "2027-09-18", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "8동", "room": "508호", "content": "[2027년 예측] 8동 508호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 107, "workers": 2, "date": "2027-09-20", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "텃밭/공용부", "content": "[2027년 예측] 103동 텃밭/공용부 씽크대 코킹/실리콘 작업 (노후 가속 대비 사전 예방 정비) 및 도배 병행 시공", "types": ["씽크대 코킹/실리콘", "도배"], "mats": {"코킹재(개)": 2}, "isForecast": true}, {"yr": "27년", "no": 108, "workers": 1, "date": "2027-09-22", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "9동", "room": "현관/로비", "content": "[2027년 예측] 9동 현관/로비 도배 작업 (노후 가속 대비 사전 예방 정비)", "types": ["도배"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 109, "workers": 2, "date": "2027-09-24", "month": 9, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "5동", "room": "계단실", "content": "[2027년 예측] 5동 계단실 버티컬/블라인드 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["버티컬/블라인드", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 110, "workers": 1, "date": "2027-10-02", "month": 10, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "103동", "room": "102호", "content": "[2027년 예측] 103동 102호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비)", "types": ["벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 111, "workers": 2, "date": "2027-10-04", "month": 10, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "202호", "content": "[2027년 예측] 2동 202호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 걸레받이 교체 병행 시공", "types": ["문보수/문교체", "걸레받이 교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 112, "workers": 1, "date": "2027-10-06", "month": 10, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "8동", "room": "301호", "content": "[2027년 예측] 8동 301호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["걸레받이 교체"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 113, "workers": 2, "date": "2027-10-08", "month": 10, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "7동", "room": "307호", "content": "[2027년 예측] 7동 307호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["벽면 크랙/단열재", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 114, "workers": 1, "date": "2027-10-10", "month": 10, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "A동", "room": "401호", "content": "[2027년 예측] A동 401호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 115, "workers": 2, "date": "2027-10-12", "month": 10, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "403호", "content": "[2027년 예측] 103동 403호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비) 및 벽면 크랙/단열재 병행 시공", "types": ["걸레받이 교체", "벽면 크랙/단열재"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 116, "workers": 1, "date": "2027-10-14", "month": 10, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "405호", "content": "[2027년 예측] 2동 405호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비)", "types": ["벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 117, "workers": 2, "date": "2027-10-16", "month": 10, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "501호", "content": "[2027년 예측] 8동 501호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 걸레받이 교체 병행 시공", "types": ["문보수/문교체", "걸레받이 교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 118, "workers": 1, "date": "2027-10-18", "month": 10, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "7동", "room": "508호", "content": "[2027년 예측] 7동 508호 걸레받이 교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["걸레받이 교체"], "mats": {"걸레받이(m)": 15}, "isForecast": true}, {"yr": "27년", "no": 119, "workers": 2, "date": "2027-10-20", "month": 10, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "A동", "room": "텃밭/공용부", "content": "[2027년 예측] A동 텃밭/공용부 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["벽면 크랙/단열재", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 120, "workers": 1, "date": "2027-10-22", "month": 10, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "103동", "room": "현관/로비", "content": "[2027년 예측] 103동 현관/로비 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 121, "workers": 1, "date": "2027-11-02", "month": 11, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "103동", "room": "102호", "content": "[2027년 예측] 103동 102호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비)", "types": ["벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 122, "workers": 2, "date": "2027-11-04", "month": 11, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "3동", "room": "202호", "content": "[2027년 예측] 3동 202호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["문보수/문교체", "누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 123, "workers": 2, "date": "2027-11-06", "month": 11, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "301호", "content": "[2027년 예측] 2동 301호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비)", "types": ["누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 124, "workers": 2, "date": "2027-11-08", "month": 11, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "5동", "room": "307호", "content": "[2027년 예측] 5동 307호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["벽면 크랙/단열재", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 125, "workers": 1, "date": "2027-11-10", "month": 11, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "103동", "room": "401호", "content": "[2027년 예측] 103동 401호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 126, "workers": 2, "date": "2027-11-12", "month": 11, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "3동", "room": "403호", "content": "[2027년 예측] 3동 403호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비) 및 벽면 크랙/단열재 병행 시공", "types": ["누수 점검/보수", "벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 127, "workers": 1, "date": "2027-11-14", "month": 11, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "405호", "content": "[2027년 예측] 2동 405호 벽면 크랙/단열재 작업 (노후 가속 대비 사전 예방 정비)", "types": ["벽면 크랙/단열재"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 128, "workers": 2, "date": "2027-11-16", "month": 11, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "5동", "room": "501호", "content": "[2027년 예측] 5동 501호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비) 및 누수 점검/보수 병행 시공", "types": ["문보수/문교체", "누수 점검/보수"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 129, "workers": 1, "date": "2027-12-02", "month": 12, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "2동", "room": "102호", "content": "[2027년 예측] 2동 102호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 130, "workers": 2, "date": "2027-12-04", "month": 12, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "103동", "room": "202호", "content": "[2027년 예측] 103동 202호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["누수 점검/보수", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 131, "workers": 1, "date": "2027-12-06", "month": 12, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "8동", "room": "301호", "content": "[2027년 예측] 8동 301호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 132, "workers": 2, "date": "2027-12-08", "month": 12, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "2동", "room": "307호", "content": "[2027년 예측] 2동 307호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["누수 점검/보수", "문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 133, "workers": 1, "date": "2027-12-10", "month": 12, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 7.3, "building": "103동", "room": "401호", "content": "[2027년 예측] 103동 401호 문보수/문교체 작업 (노후 가속 대비 사전 예방 정비)", "types": ["문보수/문교체"], "mats": {}, "isForecast": true}, {"yr": "27년", "no": 134, "workers": 2, "date": "2027-12-12", "month": 12, "start_t": "09:00", "end_t": "16:20", "work_t": "07:20", "total_h": 14.7, "building": "8동", "room": "403호", "content": "[2027년 예측] 8동 403호 누수 점검/보수 작업 (노후 가속 대비 사전 예방 정비) 및 문보수/문교체 병행 시공", "types": ["누수 점검/보수", "문보수/문교체"], "mats": {}, "isForecast": true}];
-
-// ─── 2027년 작업 예측 상세 메타데이터 & 산출 근거 ─────────────────────────────────
-const FORECAST_DETAILS = {
-  1:  { pred: 9,  c24: 8,  c25: 3,  c26: 7,  avg: 6.0,  type: '동절기 안정', seasonIdx: '1.05', agingAdd: '+1.5건', mainTypes: '외풍 차단, 베란다 크랙, 도어록/경첩', action: '한파 전 창호 밀폐 및 동파 취약 세대 사전 점검' },
-  2:  { pred: 9,  c24: 10, c25: 9,  c26: 7,  avg: 8.7,  type: '동절기 준비', seasonIdx: '1.00', agingAdd: '+0.5건', mainTypes: '실내 마감재, 문보수, 걸레받이', action: '봄철 성수기 대비 방충망·실리콘 자재 사전 입고' },
-  3:  { pred: 17, c24: 13, c25: 3,  c26: 15, avg: 10.3, type: '봄철 성수기 피크 1', seasonIdx: '1.45', agingAdd: '+2.5건', mainTypes: '방충망 교체, 베란다 단열재, 씽크대 코킹, 타일', action: '3동·103동 집중 순회점검 및 방충망 자재 30% 추가 확보' },
-  4:  { pred: 7,  c24: 10, c25: 9,  c26: 5,  avg: 8.0,  type: '환절기 안정기', seasonIdx: '0.85', agingAdd: '+0.0건', mainTypes: '실내 도배, 도장/도색, 소규모 문보수', action: '세대 내 요청 건 신속 당일 처리 체계 유지' },
-  5:  { pred: 11, c24: 15, c25: 8,  c26: 9,  avg: 10.7, type: '초하절기 증가세', seasonIdx: '1.10', agingAdd: '+1.0건', mainTypes: '방충망 교체, 창호 롤러, 실리콘 코킹', action: '하절기 장마철 방수 대비 사전 현장 점검 실시' },
-  6:  { pred: 18, c24: 4,  c25: 2,  c26: 16, avg: 7.3,  type: '하절기 최대 피크', seasonIdx: '1.60', agingAdd: '+3.0건', mainTypes: '장마철 누수 점검, 씽크대 코킹, 방충망 교체, 걸레받이', action: '외벽/창호 누수 긴급 대응팀 2인 1조 상시 대기 체계' },
-  7:  { pred: 16, c24: 16, c25: 7,  c26: 14, avg: 12.3, type: '장마철 피크 2', seasonIdx: '1.35', agingAdd: '+2.0건', mainTypes: '우기 누수, 곰팡이 제거, 베란다 배수관', action: '침수/누수 발생 세대 즉시 제습 및 실리콘 방수 처리' },
-  8:  { pred: 10, c24: 9,  c25: 9,  c26: 8,  avg: 8.7,  type: '혹서기 실내보수', seasonIdx: '1.05', agingAdd: '+1.0건', mainTypes: '걸레받이 교체, 시트지, 실내 문보수', action: '휴가철 비어있는 세대 집중 마감재 보수 추진' },
-  9:  { pred: 12, c24: 4,  c25: 13, c26: 0,  avg: 8.5,  type: '가을철 환절기', seasonIdx: '1.20', agingAdd: '+1.5건', mainTypes: '태풍 대비 창호 보수, 씽크대 코킹, 도배', action: '가을 태풍 대비 공용부 배수관 및 창문 잠금장치 정비' },
-  10: { pred: 11, c24: 9,  c25: 10, c26: 0,  avg: 9.5,  type: '난방 전 사전정비', seasonIdx: '1.15', agingAdd: '+1.0건', mainTypes: '방풍문 수리, 걸레받이, 크랙 보수', action: '동절기 난방 전 세대별 단열 상태 및 문틈 점검' },
-  11: { pred: 8,  c24: 0,  c25: 9,  c26: 0,  avg: 4.5,  type: '초겨울 월동준비', seasonIdx: '1.10', agingAdd: '+1.0건', mainTypes: '단열 이보드 시공, 베란다 결로 방지', action: '결로 취약 세대(103동, 2동) 단열재 사전 보강' },
-  12: { pred: 6,  c24: 0,  c25: 6,  c26: 0,  avg: 3.0,  type: '연말 동파 대비', seasonIdx: '0.90', agingAdd: '+0.5건', mainTypes: '동파 방지, 세대 출입문 방화문 보수', action: '한파 대비 공용부 동파 방지 열선 및 밸브 점검' }
-};
-
-/**
- * 2027년 작업 예측 전용 모달 실행 함수 (상세 예측 레코드 + 과거 3개년 실적 통합)
- */
 function openForecastModal(monthIdx, datasetLabel) {
-  const isYearly = monthIdx === 12;
-  const monthNum = monthIdx + 1;
-  const d = isYearly ? null : FORECAST_DETAILS[monthNum];
-  
-  modalBaseTitle = isYearly 
-    ? '🗓️ [2027년 연간 전체] 긴급보수 수요 예측 총괄 분석 (${window.totalPred27 || 134}건)'
-    : `🗓️ [2027년 ${monthNum}월] 작업 예측 상세 산출 근거 & 3개년 동월 증빙 (예측: ${d.pred}건)`;
+  const model = window.forecastModel27 || buildForecastModel2027();
+  const monthIndex = Math.max(0, Math.min(11, Number(monthIdx) || 0));
+  const monthNum = monthIndex + 1;
+  const yearLabel = formatYearLabel(model.latestYearKey);
+  const predictedCount = model.counts27Forecast[monthIndex] || 0;
+  const predictedCost = model.costs27Forecast[monthIndex] || 0;
+  const monthEvidence = (window.RAW || []).filter(r => Number(r.month) === monthNum
+    && !r.is_carryover && String(r.date || '').startsWith(String(r.settlement_year || r.yr).replace(/[^0-9]/g, '').replace(/^([0-9]{2})$/, '20$1')));
+  const yearlyHistory = (window.YR_KEYS || []).map(yr => {
+    const yearDigits = String(yr).replace(/[^0-9]/g, '');
+    const fullYear = yearDigits.length === 2 ? '20' + yearDigits : yearDigits;
+    const count = (window.RAW || []).filter(r => r.yr === yr && !r.is_carryover
+      && Number(r.month) === monthNum && String(r.date || '').startsWith(fullYear)).length;
+    return formatYearLabel(yr) + ' ' + count + '건';
+  }).join(' · ');
+  const latestActualMonthCount = model.currentYearRows.filter(r => Number(r.month) === monthNum).length;
+  const isObservedMonth = monthNum <= model.maxMonth;
 
-  // 과거 3개년 동월 실제 증빙 + 2027년 동월 상세 예측 레코드 병합
-  const pastRecords = isYearly ? RAW : RAW.filter(r => Number(r.month) === monthNum);
-  const futureRecords = isYearly ? FORECAST_RAW_2027 : FORECAST_RAW_2027.filter(r => Number(r.month) === monthNum);
-
-  modalCurrentData = [...futureRecords, ...pastRecords];
-  modalYrFilter = '27년'; // 기본 활성 탭: 2027년 예측 레코드
+  modalBaseTitle = '🗓️ [2027년 ' + monthNum + '월] 예측 ' + predictedCount + '건 · ' + (datasetLabel || '월별 산출') + ' 상세 산식 및 원천 증빙';
+  modalCurrentData = monthEvidence;
+  modalYrFilter = 'all';
   modalSearchQ = '';
   modalSortKey = '';
   modalSortAsc = true;
-  
+  modalWorkerFilter = 'all';
+
   const searchInput = document.getElementById('modal-search');
   if (searchInput) searchInput.value = '';
-
   updateModalTitle();
-  updateModalYearButtons(true); // isForecast = true
+  updateModalYearButtons(false);
 
-  // 산출 근거 카드 렌더링
   const noticeEl = document.getElementById('modal-audit-notice');
   if (noticeEl) {
-    if (isYearly) {
-      const am = window.annualMetrics || {};
-      const m24 = am['24년'] || {};
-      const m25 = am['25년'] || {};
-      const m26 = am['26년'] || {};
-      const c24 = m24.cnt || 0;
-      const c25 = m25.cnt || 0;
-      const c26 = m26.cnt || 0;
-      const ann26 = Number(m26.projectedCnt ?? c26) || c26;
-
-      noticeEl.innerHTML = `
-        <div style="width:100%;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;border-bottom:1px solid rgba(108,142,245,0.3);padding-bottom:4px;">
-            <strong style="color:#ffffff;font-size:13px;">📐 2027년 연간 총괄 수요 예측 산출 공식 (정합성 보증)</strong>
-            <span class="pill pill-red" style="font-size:11px;">연간 예측 총합 ${window.totalPred27 || 134}건 (월평균 11.2건)</span>
-          </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:11.5px;color:var(--text);line-height:1.7;">
-            <div>
-              · <strong>과거 실적 추이:</strong> 24년 ${c24}건 → 25년 ${c25}건 → 26년 ${c26}건(진행중, 연환산 약 ${ann26}건)<br>
-              · <strong>예측 모델:</strong> 가중 이동평균(26년 50%, 25년 30%, 24년 20%) + 노후화 가산 계수
-            </div>
-            <div>
-              · <strong>주요 위험 요인:</strong> 103동 및 3동 노후화 누적 지속 모니터링<br>
-              · <strong>핵심 권고사항:</strong> 걸레받이·방충망 사전 일괄 교체 시 연간 90~100건으로 안정화 가능
-            </div>
-          </div>
-        </div>
-      `;
-    } else {
-      const c26Text = d.c26 > 0 ? `${d.c26}건` : '집계중';
-      noticeEl.innerHTML = `
-        <div style="width:100%;">
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;border-bottom:1px solid rgba(108,142,245,0.3);padding-bottom:4px;">
-            <strong style="color:#ffffff;font-size:13px;">📐 ${monthNum}월 예측 건수(${d.pred}건) 정량적 산출 공식 및 논리적 근거</strong>
-            <span class="pill pill-orange" style="font-size:11px;">특성: ${d.type}</span>
-          </div>
-          <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:10px;font-size:11.5px;color:var(--text);line-height:1.75;">
-            <div>
-              · <strong>3개년 동월 실적:</strong> 24년 ${d.c24}건 | 25년 ${d.c25}건 | 26년 ${c26Text} (3년 평균: ${d.avg.toFixed(1)}건)<br>
-              · <strong>산출 공식:</strong> 기본치(${d.avg.toFixed(1)}건) × 계절지수(${d.seasonIdx}) + 노후화가속(${d.agingAdd}) = <strong>${d.pred}건</strong><br>
-              · <strong>주요 예상 공종:</strong> ${d.mainTypes}
-            </div>
-            <div style="background:rgba(26,29,39,0.5);padding:6px 10px;border-radius:6px;border:1px solid rgba(46,51,80,0.8);">
-              <strong style="color:var(--green);">🎯 선제적 대응 권고 조치:</strong><br>
-              ${d.action}<br>
-              <span style="color:var(--text2);font-size:10.5px;">※ [2027년 예측] 탭에 ${d.pred}건의 상세 예측 레코드가 표시되며, 과거 연도 탭에서 실제 증빙과 비교 가능합니다.</span>
-            </div>
-          </div>
-        </div>
-      `;
-    }
+    const actualLine = isObservedMonth
+      ? yearLabel + ' 월별 실적 ' + latestActualMonthCount + '건 (정산 시트 연도와 실제 작업 연도 일치)'
+      : yearLabel + ' 최근 실적 월 이후 월평균 ' + model.averageMonthlyCount + '건 추정';
+    const forecastFormula = '2027년 월별 건수 ' + predictedCount + '건 · 월별 최신연도 기준 월 가중치에 2027년 연간 예측 ' + model.totalPred27 + '건을 비례 배분하고 반올림 잔차는 가장 큰 가중치 월에 조정';
+    const costFormula = '2027년 월별 비용 ' + predictedCost.toLocaleString() + '만원 · 월별 예측 건수 × 최근 정산연도 연환산 건당 비용 ' + model.costPerRecordWan.toFixed(2) + '만원 × 물가상승률 ' + (model.inflationRate * 100).toFixed(1) + '%';
+    noticeEl.innerHTML =
+      '<div style="width:100%;">' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;border-bottom:1px solid rgba(108,142,245,0.3);padding-bottom:4px;">' +
+          '<strong style="color:#ffffff;font-size:13px;">📐 2027년 ' + monthNum + '월 예측 산식 및 원천 증빙 대조</strong>' +
+          '<span class="pill pill-orange" style="font-size:11px;">예측 ' + predictedCount + '건 · ' + predictedCost.toLocaleString() + '만원</span>' +
+        '</div>' +
+        '<div style="font-size:11.5px;color:var(--text);line-height:1.8;">' +
+          '· <strong>과거 동일월 정산 기록:</strong> ' + yearlyHistory + '<br>' +
+          '· <strong>최신연도 입력:</strong> ' + actualLine + '<br>' +
+          '· <strong>연간 건수 연결:</strong> ' + model.latestYearKey + ' 연환산 ' + model.projectedCountLatest + '건 = (' + model.currentYearCount + '건 × 12 / ' + model.maxMonth + '개월) + 전년도 이월 ' + model.carryoverRows.length + '건 1회 → 2027년 ' + Math.round(model.countGrowthRate * 100) + '% 증가 적용, 월별 합계 ' + model.totalPred27 + '건<br>' +
+          '· <strong>월별 건수 산식:</strong> ' + forecastFormula + '<br>' +
+          '· <strong>비용 산식:</strong> ' + costFormula + '<br>' +
+          '· <strong>주의:</strong> 표에는 실재하는 원천 XLSB 기록만 표시합니다. 전년도 이월은 월별 차트에서 제외하고 연간 정산에는 한 번 반영하며, 월별 예측 레코드를 실제 작업 증빙처럼 만들지 않습니다.' +
+        '</div>' +
+      '</div>';
   }
-
   renderModalTable();
   document.getElementById('modal').classList.add('open');
 }
 
-
-// ─── 2026/2027 예측 차트 데이터 100% 동적 산출 엔진 ───
-const r26 = (window.RAW || []).filter(r => (r.yr || '').includes('26') || (r.date || '').startsWith('2026'));
-const m26Max = Math.max(1, Number(window.annualMetrics?.[latestYrName]?.maxMonth || 7));
-const counts26Actual = new Array(12).fill(null);
-const counts26Forecast = new Array(12).fill(null);
-const counts27Forecast = new Array(12).fill(null);
-
-const monthlyCounts26 = new Array(12).fill(0);
-r26.forEach(r => {
-  const m = Number(r.month);
-  if (m >= 1 && m <= 12) monthlyCounts26[m - 1]++;
-});
-
-const actualCntSum26 = monthlyCounts26.slice(0, m26Max).reduce((s,v)=>s+v, 0);
-const avgPerMonth26 = actualCntSum26 / m26Max;
-
-for (let m = 0; m < 12; m++) {
-  if (m < m26Max) {
-    counts26Actual[m] = monthlyCounts26[m];
-  } else {
-    counts26Forecast[m] = Math.max(0, Math.round(avgPerMonth26));
-  }
-  const baseCount = (m < m26Max) ? counts26Actual[m] : counts26Forecast[m];
-  counts27Forecast[m] = Math.max(0, Math.round(baseCount * 1.05));
-}
-if (counts27Forecast.reduce((s,v)=>s+v, 0) === 0) {
-  counts27Forecast[0] = 1;
-}
-
-const totalPred27 = counts27Forecast.reduce((s,v)=>s+v, 0);
+const forecastModel27 = buildForecastModel2027();
+window.forecastModel27 = forecastModel27;
+const counts26Actual = forecastModel27.actualCounts;
+const counts26Forecast = forecastModel27.forecastCounts;
+const counts27Forecast = forecastModel27.counts27Forecast;
+const costs26Actual = forecastModel27.monthlyActualCostWan;
+const costs26Forecast = forecastModel27.monthlyForecastCostWan;
+const costs27Forecast = forecastModel27.costs27Forecast;
+const totalPred27 = forecastModel27.totalPred27;
+const costPerRecordWan = forecastModel27.costPerRecordWan;
+const cost27TotalWan = forecastModel27.cost27TotalWan;
 window.totalPred27 = totalPred27;
-
-const totalCntAll = (window.RAW || []).length || 1;
-const totalCostAll = Object.values(window.annualMetrics || {}).reduce((s,m) => s + (m.adminCost || 0), 0);
-const costPerRecordWan = (totalCntAll > 0 && totalCostAll > 0) ? (totalCostAll / totalCntAll / 10000) : 0;
-const cost27TotalWan = Math.max(1, Math.round(totalPred27 * costPerRecordWan * 1.045));
 window.cost27TotalWan = cost27TotalWan;
 
-const costs26Actual = counts26Actual.map(v => v !== null ? Math.round(v * costPerRecordWan) : null);
-const costs26Forecast = counts26Forecast.map(v => v !== null ? Math.round(v * costPerRecordWan) : null);
-const costs27Forecast = counts27Forecast.map(v => Math.round(v * costPerRecordWan * 1.045));
-
-// Tab 7 예측 안내문 동적 갱신
 const fCntNotes = document.getElementById('forecast-count-notes');
 if (fCntNotes) {
-  const remCnt = counts26Forecast.filter(v=>v!=null).reduce((s,v)=>s+v, 0);
-  const tot26Est = r26.length + remCnt;
-  fCntNotes.innerHTML = `
-    ※ ${latestYrName}은 ${window.annualMetrics?.[latestYrName]?.minMonth === m26Max ? `${m26Max}월` : `1~${m26Max}월`} 실적 기준. 잔여기간 약 ${remCnt}건 추가 예상 (총 ${tot26Est}건 전망)<br>
-    ※ 2027년 예측: 총 약 ${totalPred27}건 예상 (원천 데이터 기반 추세 모형 반영)
-  `;
+  const projectedCnt26 = forecastModel27.projectedCountLatest;
+  const carryCount = forecastModel27.carryoverRows.length;
+  const monthActualTotal = forecastModel27.actualCounts.reduce((sum, value) => sum + (value || 0), 0);
+  const monthForecastTotal = forecastModel27.forecastCounts.reduce((sum, value) => sum + (value || 0), 0);
+  fCntNotes.innerHTML =
+    '※ ' + formatYearLabel(latestYrName) + ' 월별 실적은 정산 연도와 실제 작업 연도가 일치하는 ' + monthActualTotal + '건만 표시합니다. 최근 실적월(' + forecastModel27.maxMonth + '월) 이후는 월평균 ' + forecastModel27.averageMonthlyCount + '건을 적용합니다.<br>' +
+    '※ 연간 정산 건수 ' + projectedCnt26 + '건 = 당해연도 ' + forecastModel27.currentYearCount + '건 연환산 + 전년도 이월 ' + carryCount + '건 1회. 2027년은 연간 기준에 ' + Math.round(forecastModel27.countGrowthRate * 100) + '% 증가를 적용해 ' + totalPred27 + '건이며, 월별 예측 합계도 ' + totalPred27 + '건입니다. (' + monthForecastTotal + '건은 최신연도 잔여월 단순 평균 구간)';
+}
+const fCostNote26 = document.getElementById('forecast-cost-note-26');
+if (fCostNote26) {
+  fCostNote26.textContent = '※ ' + formatYearLabel(latestYrName) + ' 월별 실적은 실제 원천 공수·자재·출장비 산식 기준이며, 전년도 이월 ' +
+    Math.round(Number(forecastModel27.latestMetric.carryoverAdminCost || 0) / 10000).toLocaleString() + '만원은 월별 날짜를 임의 배정하지 않고 연간 정산에 1회 반영합니다.';
 }
 const fCostNote27 = document.getElementById('forecast-cost-note-27');
 if (fCostNote27) {
-  fCostNote27.innerHTML = `※ 2027년 비용 예측: 건당 평균 ${costPerRecordWan.toFixed(1)}만원(인건비+자재비+부대비) 및 물가상승률(4.5%) 반영 총 ${cost27TotalWan.toLocaleString()}만원 전망`;
+  fCostNote27.textContent = '※ 2027년 비용 예측: 최근 정산연도 연환산 비용 ÷ 연환산 건수 = 건당 평균 ' +
+    costPerRecordWan.toFixed(2) + '만원, 월별 예측 건수와 물가상승률 ' +
+    (forecastModel27.inflationRate * 100).toFixed(1) + '%를 적용한 연간 합계 ' +
+    cost27TotalWan.toLocaleString() + '만원 (월별 금액 합계와 동일)';
 }
 
+const latestYearLabel = formatYearLabel(latestYrName);
 buildChart('c-forecast',{
   type:'line',
   data:{labels:MONTHS,datasets:[
-    {label:'2026년 실적',data:counts26Actual,borderColor:'#4ecb71',backgroundColor:alpha('#4ecb71',.2),pointRadius:5,pointHoverRadius:8,borderWidth:2,tension:0.3},
-    {label:'2026년 하반기 예측',data:counts26Forecast,borderColor:'#f5a623',backgroundColor:alpha('#f5a623',.2),borderDash:[5,5],pointRadius:4,pointHoverRadius:7,borderWidth:1.5,tension:0.3},
+    {label:latestYearLabel+' 실제 월별 실적',data:counts26Actual,borderColor:'#4ecb71',backgroundColor:alpha('#4ecb71',.2),pointRadius:5,pointHoverRadius:8,borderWidth:2,tension:0.3},
+    {label:latestYearLabel+' 잔여월 예측',data:counts26Forecast,borderColor:'#f5a623',backgroundColor:alpha('#f5a623',.2),borderDash:[5,5],pointRadius:4,pointHoverRadius:7,borderWidth:1.5,tension:0.3},
     {label:'2027년 월별 예측',data:counts27Forecast,borderColor:'#e05c7b',backgroundColor:alpha('#e05c7b',.2),borderDash:[8,4],pointRadius:5,pointHoverRadius:9,borderWidth:2,tension:0.3},
   ]},
   options:{
@@ -6847,107 +6918,65 @@ buildChart('c-forecast',{
     plugins:{
       ...BASE.plugins,
       legend:{display:true,labels:{boxWidth:12,padding:14,color:'#ffffff',font:{weight:'700',size:12}}},
-      tooltip:{
-        callbacks:{
-          label: function(ctx) {
-            const dsLabel = ctx.dataset.label || '';
-            const val = ctx.raw;
-            if (val === null || val === undefined) return '';
-            const m = ctx.dataIndex + 1;
-            if (dsLabel.includes('2027년')) {
-              return ` 2027년 ${m}월 예측: ${val}건 (클릭 시 산출공식 & 3개년 동월 증빙 조회)`;
-            } else if (dsLabel.includes('실적')) {
-              return ` 2026년 ${m}월 실적: ${val}건 (클릭 시 ${m}월 증빙 조회)`;
-            } else {
-              return ` 2026년 하반기 예측: ${val}건 (추세 모형)`;
-            }
-          }
-        }
-      }
+      tooltip:{callbacks:{label:function(ctx){
+        const value=ctx.raw;
+        if(value===null||value===undefined)return '';
+        return ' '+ctx.dataset.label+': '+value+'건 (클릭 시 산출식 및 원천 증빙)';
+      }}}
     },
     scales:{
-      y:{
-        beginAtZero:true,
-        grid:{color:alpha('#2e3350',1)},
-        ticks:{color:'#ffffff',font:{size:11,weight:'600'},stepSize:1,callback:v=>`${v}건`}
-      },
-      x:{
-        grid:{display:false},
-        ticks:{color:'#ffffff',font:{size:11,weight:'600'}}
-      }
+      y:{beginAtZero:true,grid:{color:alpha('#2e3350',1)},ticks:{color:'#ffffff',font:{size:11,weight:'600'},stepSize:1,callback:v=>v+'건'}},
+      x:{grid:{display:false},ticks:{color:'#ffffff',font:{size:11,weight:'600'}}}
     }
   }
 }, (dsIdx, idx) => {
-  const datasets = ['2026년 실적', '2026년 하반기 예측', '2027년 월별 예측'];
+  const datasets = [latestYearLabel+' 실제 월별 실적', latestYearLabel+' 잔여월 예측', '2027년 월별 예측'];
   openForecastModal(idx, datasets[dsIdx]);
 });
+
+const forecastExportButton = document.querySelector('#c-forecast')?.closest('.card')
+  ?.querySelector('.card-title .card-header-actions .section-xls-btn');
+if (forecastExportButton) {
+  forecastExportButton.innerHTML = '<span>📊</span><span>2027 예측 엑셀 저장</span>';
+  forecastExportButton.title = '2027년 건수·비용 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드';
+  forecastExportButton.setAttribute('onclick', "window.dashboardExcelExporter.exportCard('forecast-2027')");
+  forecastExportButton.onclick = function(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    window.dashboardExcelExporter?.exportCard('forecast-2027');
+  };
+}
 
 buildChart('c-forecast-cost',{
   type:'line',
   data:{labels:MONTHS,datasets:[
-    {label:'2026년 실적',data:costs26Actual,borderColor:'#4ecb71',backgroundColor:alpha('#4ecb71',.2),pointRadius:5,pointHoverRadius:8,borderWidth:2,tension:0.3},
-    {label:'2026년 하반기 예측',data:costs26Forecast,borderColor:'#f5a623',backgroundColor:alpha('#f5a623',.2),borderDash:[5,5],pointRadius:4,pointHoverRadius:7,borderWidth:1.5,tension:0.3},
-    {label:'2027년 월별 예측',data:costs27Forecast,borderColor:'#38bdf8',backgroundColor:alpha('#38bdf8',.2),borderDash:[8,4],pointRadius:5,pointHoverRadius:9,borderWidth:2,tension:0.3},
+    {label:latestYearLabel+' 실제 집행비용',data:costs26Actual,borderColor:'#4ecb71',backgroundColor:alpha('#4ecb71',.2),pointRadius:5,pointHoverRadius:8,borderWidth:2,tension:0.3},
+    {label:latestYearLabel+' 잔여월 비용 예측',data:costs26Forecast,borderColor:'#f5a623',backgroundColor:alpha('#f5a623',.2),borderDash:[5,5],pointRadius:4,pointHoverRadius:7,borderWidth:1.5,tension:0.3},
+    {label:'2027년 월별 예측 비용',data:costs27Forecast,borderColor:'#38bdf8',backgroundColor:alpha('#38bdf8',.2),borderDash:[8,4],pointRadius:5,pointHoverRadius:9,borderWidth:2,tension:0.3},
   ]},
   options:{
     ...BASE,
     plugins:{
       ...BASE.plugins,
       legend:{display:true,labels:{boxWidth:12,padding:14,color:'#ffffff',font:{weight:'700',size:12}}},
-      tooltip:{
-        callbacks:{
-          label: function(ctx) {
-            const dsLabel = ctx.dataset.label || '';
-            const val = ctx.raw;
-            if (val === null || val === undefined) return '';
-            const m = ctx.dataIndex + 1;
-            const _tAdmin = Object.values(window.annualMetrics||{}).reduce((s,m)=>s+Number(m.adminCost||0),0);
-            const _tContr = Object.values(window.annualMetrics||{}).reduce((s,m)=>s+Number(m.contractorCost||0),0);
-            const _cRatio = (_tAdmin > 0 && _tContr > 0) ? (_tContr / _tAdmin) : 1.0;
-            const contrVal = Math.round(val * _cRatio);
-            if (dsLabel.includes('2027년')) {
-              return [
-                ` 2027년 ${m}월 예측 비용: ${val.toLocaleString()}만원 [관리소 서명 공수 단일기준]`,
-                ` (시공사 청구 품수 환산 시: 약 ${contrVal.toLocaleString()}만원)`
-              ];
-            } else if (dsLabel.includes('실적')) {
-              return [
-                ` 2026년 ${m}월 집행 실적: ${val.toLocaleString()}만원 [관리소 서명 공수 단일기준]`,
-                ` (시공사 청구 품수 환산 시: 약 ${contrVal.toLocaleString()}만원)`
-              ];
-            } else {
-              return [
-                ` 2026년 하반기 예측 비용: ${val.toLocaleString()}만원 (추세 모형) [관리소 서명 기준]`,
-                ` (시공사 청구 품수 환산 시: 약 ${contrVal.toLocaleString()}만원)`
-              ];
-            }
-          }
-        }
-      }
+      tooltip:{callbacks:{label:function(ctx){
+        const value=ctx.raw;
+        if(value===null||value===undefined)return '';
+        const ratio=getLatestContractorCostRatio();
+        return [' '+ctx.dataset.label+': '+value.toLocaleString()+'만원 [월별 원천/예측 산식 기준]',
+          ' (시공사 청구 품수 환산 참고: 약 '+Math.round(value*ratio).toLocaleString()+'만원)'];
+      }}}
     },
     scales:{
-      y:{
-        beginAtZero:true,
-        grid:{color:alpha('#2e3350',1)},
-        ticks:{color:'#ffffff',font:{size:11,weight:'600'},callback:v=>`${v}만원`}
-      },
-      x:{
-        grid:{display:false},
-        ticks:{color:'#ffffff',font:{size:11,weight:'600'}}
-      }
+      y:{beginAtZero:true,grid:{color:alpha('#2e3350',1)},ticks:{color:'#ffffff',font:{size:11,weight:'600'},callback:v=>v+'만원'}},
+      x:{grid:{display:false},ticks:{color:'#ffffff',font:{size:11,weight:'600'}}}
     }
   }
 }, (dsIdx, idx) => {
-  const datasets = ['2026년 실적', '2026년 하반기 예측', '2027년 월별 예측'];
-  openForecastCostModal(idx, datasets[dsIdx]);
+  const datasets = [latestYearLabel+' 실제 집행비용', latestYearLabel+' 잔여월 비용 예측', '2027년 월별 예측 비용'];
+  openForecastModal(idx, datasets[dsIdx]);
 });
 }
-
-// 초기 차트 전수 구축 실행 (데이터가 있을 때만 사전 렌더링)
-if (typeof RAW !== "undefined" && RAW && RAW.length > 0) { renderAllCharts(); }
-
-
-
 
 // ─── 실시간 동적 연동: 연도별 비용-건수 상관관계 및 2027년 예측 타당성 브리핑 엔진 ────
 function renderCostCorrelationAnalysis() {
@@ -6963,21 +6992,22 @@ function renderCostCorrelationAnalysis() {
       cost: Math.round(Number(m.adminCost || 0) / 10000),
       contractorCost: Math.round(Number(m.contractorCost || 0) / 10000),
       costActual: Math.round(Number(m.adminCost || 0) / 10000),
-      countAnnual: Number(m.cnt || 0), costAnnual: Math.round(Number(m.adminCost || 0) / 10000)
+      countAnnual: Number(m.projectedCnt ?? m.cnt ?? 0),
+      costAnnual: Math.round(Number(m.projectedAdminCost ?? m.adminCost ?? 0) / 10000),
+      contractorCostAnnual: Math.round(Number(m.projectedContractorCost ?? m.contractorCost ?? 0) / 10000),
+      hoursAnnual: Number(m.projectedHours ?? m.hours ?? 0)
     }];
   }));
 
   const latestYrName = sourceYears[sourceYears.length - 1] || '26년';
-  const latestStats = stats[latestYrName] || { count: 0, hours: 0, cost: 0, contractorCost: 0, countAnnual: 0, costAnnual: 0 };
-  const uLatest = latestStats.count > 0 ? (latestStats.cost / latestStats.count) : 0;
-  const hLatest = latestStats.count > 0 ? (latestStats.hours / latestStats.count) : 0;
+  const latestStats = stats[latestYrName] || { count: 0, hours: 0, cost: 0, contractorCost: 0, countAnnual: 0, costAnnual: 0, hoursAnnual: 0 };
+  const uLatest = latestStats.countAnnual > 0 ? (latestStats.costAnnual / latestStats.countAnnual) : 0;
+  const hLatest = latestStats.countAnnual > 0 ? (latestStats.hoursAnnual / latestStats.countAnnual) : 0;
 
   // 2. 2027년 예측 데이터 집계 (100% 동적 산출)
-  let n27 = (typeof window.totalPred27 !== 'undefined' && window.totalPred27 > 0) ? window.totalPred27 : Math.max(1, Math.round((latestStats.count || 1) * 1.1));
+  let n27 = (typeof window.totalPred27 !== 'undefined' && window.totalPred27 > 0) ? window.totalPred27 : Math.max(1, Math.round((latestStats.countAnnual || 1) * 1.05));
   let cost27 = (typeof window.cost27TotalWan !== 'undefined' && window.cost27TotalWan > 0) ? window.cost27TotalWan : Math.max(1, Math.round(n27 * Math.max(uLatest, 1) * 1.045));
-  const totalAdminForRatio = Object.values(window.annualMetrics || {}).reduce((s,m) => s + Number(m.adminCost || 0), 0);
-  const totalContrForRatio = Object.values(window.annualMetrics || {}).reduce((s,m) => s + Number(m.contractorCost || 0), 0);
-  const contractorRatio = (totalAdminForRatio > 0 && totalContrForRatio > 0) ? (totalContrForRatio / totalAdminForRatio) : 1.0;
+  const contractorRatio = getLatestContractorCostRatio();
   let contr27 = Math.round(cost27 * contractorRatio);
   let budgetRec = Math.round(cost27 * 0.9);
   let reserveRec = Math.max(1, Math.round(cost27 * 0.15));
@@ -6986,23 +7016,25 @@ function renderCostCorrelationAnalysis() {
   const u27 = n27 > 0 ? (cost27 / n27) : uLatest;
   const h27 = hLatest > 0 ? hLatest : 10.0;
 
-  const growthCnt26_27 = latestStats.count > 0 ? ((n27 - latestStats.count) / latestStats.count * 100).toFixed(1) : '0.0';
-  const growthCost26_27 = latestStats.cost > 0 ? ((cost27 - latestStats.cost) / latestStats.cost * 100).toFixed(1) : '0.0';
+  const growthCnt26_27 = latestStats.countAnnual > 0 ? ((n27 - latestStats.countAnnual) / latestStats.countAnnual * 100).toFixed(1) : '0.0';
+  const growthCost26_27 = latestStats.costAnnual > 0 ? ((cost27 - latestStats.costAnnual) / latestStats.costAnnual * 100).toFixed(1) : '0.0';
   const diffUnit26_27 = uLatest > 0 ? ((u27 - uLatest) / uLatest * 100).toFixed(1) : '0.0';
 
   let tableRowsHtml = '';
   sourceYears.forEach((yr, yi) => {
     const s = stats[yr];
-    const u = s.count > 0 ? (s.cost / s.count) : 0;
-    const h = s.count > 0 ? (s.hours / s.count) : 0;
+    const u = s.countAnnual > 0 ? (s.costAnnual / s.countAnnual) : 0;
+    const h = s.countAnnual > 0 ? (s.hoursAnnual / s.countAnnual) : 0;
     const yrColor = yr.includes('26') ? '#e05c7b' : yr.includes('25') ? '#f5a623' : '#6c8ef5';
     const m = window.annualMetrics?.[yr] || {};
     const mRange = m.isPartialYear ? ` (${m.minMonth === m.maxMonth ? `${m.maxMonth}월` : `${m.minMonth}~${m.maxMonth}월`})` : '';
-    const note = yr === latestYrName ? '최신 원천 실적 기반 집행 현황' : `${formatYearLabel(yr)} 원천 집행 기준 실적`;
+    const note = yr === latestYrName
+      ? '실제 원천 합계 ' + s.cost.toLocaleString() + '만원 · 연환산 비교 기준 ' + s.costAnnual.toLocaleString() + '만원'
+      : `${formatYearLabel(yr)} 정산연도 원천 비용 합계`;
 
     tableRowsHtml += `<tr>
       <td style="font-weight:700;color:${yrColor};padding:6px 8px;">${formatYearLabel(yr)}${mRange}</td>
-      <td style="text-align:center;color:#ffffff;padding:6px 8px;">${s.count}건</td>
+      <td style="text-align:center;color:#ffffff;padding:6px 8px;">${s.count}건${m.isPartialYear ? '<br><span style="font-size:10px;color:#94a3b8;">연환산 ' + s.countAnnual + '건</span>' : ''}</td>
       <td style="text-align:center;color:#ffffff;padding:6px 8px;">${s.hours.toFixed(1)}h</td>
       <td style="text-align:center;color:#ffffff;padding:6px 8px;">${h.toFixed(2)}h/건</td>
       <td style="text-align:center;color:#6c8ef5;font-weight:700;padding:6px 8px;">${s.cost.toLocaleString()}만원</td>
@@ -7020,7 +7052,7 @@ function renderCostCorrelationAnalysis() {
     <td style="text-align:center;color:#38bdf8;font-weight:700;padding:6px 8px;">${cost27.toLocaleString()}만원</td>
     <td style="text-align:center;color:#f5a623;font-weight:600;padding:6px 8px;">${contr27.toLocaleString()}만원</td>
     <td style="text-align:center;color:#ffffff;font-weight:700;padding:6px 8px;">${u27.toFixed(2)}만원</td>
-    <td style="color:#ffffff;padding:6px 8px;">원천 데이터 기반 가중 추세 모형 및 물가상승률(4.5%) 반영</td>
+      <td style="color:#ffffff;padding:6px 8px;">최신연도 연환산 비용/건 단가 × 2027 예측 건수 × 물가상승률 4.5%</td>
   </tr>`;
 
   // 전 연도 합계 및 추이 체인 계산 (완전 동적 연동)
@@ -7047,10 +7079,10 @@ function renderCostCorrelationAnalysis() {
           <th style="color:#ffffff;padding:6px 8px;">구분</th>
           <th style="color:#ffffff;padding:6px 8px;text-align:center;">작업 건수</th>
           <th style="color:#ffffff;padding:6px 8px;text-align:center;">총 공수(시간)</th>
-          <th style="color:#ffffff;padding:6px 8px;text-align:center;">건당 공수</th>
+          <th style="color:#ffffff;padding:6px 8px;text-align:center;">건당 공수(연환산)</th>
           <th style="color:#6c8ef5;padding:6px 8px;text-align:center;">[공식 단일] 관리소 기준 비용</th>
           <th style="color:#f5a623;padding:6px 8px;text-align:center;">[비교] 시공사 환산액</th>
-          <th style="color:#ffffff;padding:6px 8px;text-align:center;">건당 평균단가</th>
+          <th style="color:#ffffff;padding:6px 8px;text-align:center;">건당 평균단가(연환산)</th>
           <th style="color:#ffffff;padding:6px 8px;">주요 공종 및 비용 특성</th>
         </tr>
       </thead>
@@ -7567,6 +7599,31 @@ const dashboardExcelExporter = {
     return await zip.generateAsync({ type: outType, compression: "DEFLATE" });
   },
 
+  // ExcelJS의 calcProperties가 일부 버전에서 기존 calcPr를 덮어쓰지 않는 경우가 있어
+  // 다운로드되는 모든 수식 워크북에 자동·전체 재계산 속성을 OOXML 수준에서 보장한다.
+  patchWorkbookCalculation: async function(buffer) {
+    const ZipLib = typeof JSZip !== "undefined" ? JSZip : (typeof window !== "undefined" ? window.JSZip : globalThis.JSZip);
+    if (!ZipLib) throw new Error("엑셀 재계산 속성을 기록할 JSZip 라이브러리를 찾을 수 없습니다.");
+    const zip = await ZipLib.loadAsync(buffer);
+    const workbookEntry = zip.file("xl/workbook.xml");
+    if (!workbookEntry) throw new Error("엑셀 워크북 정의(xl/workbook.xml)를 찾을 수 없습니다.");
+    let workbookXml = await workbookEntry.async("string");
+    const required = ' calcId="191029" calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"';
+    const patchCalcPr = (_tag, existingAttrs = "") => {
+      const attrs = existingAttrs.replace(/\s+(?:calcId|calcMode|fullCalcOnLoad|forceFullCalc)\s*=\s*(?:"[^"]*"|'[^']*')/g, "");
+      return "<calcPr" + attrs + required + "/>";
+    };
+    const calcPrPattern = /<calcPr\b([^>]*?)(?:\/>|>([\s\S]*?)<\/calcPr>)/;
+    if (calcPrPattern.test(workbookXml)) {
+      workbookXml = workbookXml.replace(calcPrPattern, patchCalcPr);
+    } else {
+      workbookXml = workbookXml.replace("</workbook>", "<calcPr" + required + "/></workbook>");
+    }
+    zip.file("xl/workbook.xml", workbookXml);
+    const outType = ZipLib.support && ZipLib.support.blob ? "blob" : "nodebuffer";
+    return await zip.generateAsync({ type: outType, compression: "DEFLATE" });
+  },
+
   // 5. 표준 README 시트 추가
   buildReadmeSheet: function(workbook, title, recordCount = 0, extraNotes = {}) {
     const ws = workbook.addWorksheet("README");
@@ -7749,6 +7806,359 @@ const dashboardExcelExporter = {
       from: { row: 1, column: 1 },
       to: { row: list.length + 1, column: headers.length }
     };
+  },
+
+  // 원천 XLSB 입력과 비용 산식 검증용 수식 워크시트
+  addCostAuditSheets: function(workbook) {
+    const records = Array.isArray(window.RAW) ? window.RAW : [];
+    const years = (window.YR_KEYS || []).map(key => {
+      const digits = String(key).replace(/[^0-9]/g, '');
+      return digits.length === 2 ? Number('20' + digits) : Number(digits);
+    }).filter(year => year >= 2000).sort((a, b) => a - b);
+    const sourceYears = [...new Set(years)];
+    const lastYear = sourceYears.length ? sourceYears[sourceYears.length - 1] : new Date().getFullYear();
+    for (let year = lastYear + 1; year <= lastYear + 5; year++) sourceYears.push(year);
+
+    const rateSheet = workbook.addWorksheet('단가 및 모델');
+    rateSheet.views = [{ state: 'frozen', ySplit: 4 }];
+    rateSheet.mergeCells('A1:D1');
+    rateSheet.getCell('A1').value = '비용·예측 계산에 사용하는 편집 가능 가정값';
+    rateSheet.getCell('A1').font = { bold: true, size: 15, color: { argb: 'FFFFFFFF' } };
+    rateSheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+    rateSheet.mergeCells('A2:D2');
+    rateSheet.getCell('A2').value = '노란 입력 셀을 수정하면 원천 레코드 비용, 연도별 연환산, 2027년 월별 건수·비용 산식이 Excel 재계산으로 함께 갱신됩니다.';
+    rateSheet.getCell('A2').alignment = { wrapText: true };
+    const rateRows = [
+      ['산식 항목', '입력값', '단위', '설명'],
+      ['시간당 노무 단가', COST_UNIT.hourlyRate, '원/시간', '관리소 서명 기준 공수에 적용'],
+      ['건당 출장비', COST_UNIT.visitFee, '원/건', '기록 1건당 1회 적용'],
+      ['건당 기타 부대비', COST_UNIT.matCost.etc, '원/건', '현재 시스템 overhead 단가'],
+      ['방충망', COST_UNIT.matCost.screen, '원/개', '원천 자재 수량 × 단가'],
+      ['코킹재', COST_UNIT.matCost.silicone, '원/개', '원천 자재 수량 × 단가'],
+      ['걸레받이', COST_UNIT.matCost.baseboard, '원/m', '원천 자재 수량 × 단가'],
+      ['블라인드 하드웨어', COST_UNIT.matCost.hardware, '원/㎡', '원천 자재 수량 × 단가'],
+      ['기타 지정 자재', COST_UNIT.matCost.etc, '원/단위', '이보드·열반사 단열재·석고보드'],
+      ['2027년 물가 상승률', COST_UNIT.forecastInflationRate, '%', '2027년 예측 금액에 적용'],
+      ['2027년 작업 건수 증가율', COST_UNIT.forecastCountGrowthRate, '%', '최신 연도 연환산 건수에 적용']
+    ];
+    rateRows.forEach((row, rowIndex) => {
+      row.forEach((value, colIndex) => {
+        const cell = rateSheet.getCell(rowIndex + 4, colIndex + 1);
+        cell.value = value;
+        cell.alignment = { vertical: 'middle', wrapText: colIndex === 3 };
+        if (rowIndex === 0) {
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF24476B' } };
+        } else {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: colIndex === 1 ? { argb: 'FFFFF4CC' } : { argb: 'FFF8FAFC' } };
+        }
+      });
+    });
+    rateSheet.getCell('B13').numFmt = '0.0%';
+    rateSheet.getCell('B14').numFmt = '0.0%';
+    rateSheet.columns = [{ width: 27 }, { width: 17 }, { width: 15 }, { width: 50 }];
+
+    const inputSheet = workbook.addWorksheet('원천 입력');
+    inputSheet.views = [{ state: 'frozen', ySplit: 3, xSplit: 4 }];
+    inputSheet.mergeCells('A1:AK1');
+    inputSheet.getCell('A1').value = 'XLSB 원천값 입력표 · 계산 열은 수식 · 200개 빈 행 포함';
+    inputSheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+    inputSheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+    inputSheet.mergeCells('A2:AK2');
+    inputSheet.getCell('A2').value = '정산 연도는 워크시트 연도입니다. 날짜 변경 시 원천 작업 연도·월·이월 여부가 수식으로 갱신됩니다. 관리소 서명 인원 누락 행은 AK열 원천 총공수 기준값으로 공수를 보존합니다. 표에는 신규 레코드용 빈 행 200개가 포함됩니다. O열 공란·숫자 0만 네고 후보이며 병합 공유 셀은 제외합니다.';
+    inputSheet.getCell('A2').alignment = { wrapText: true };
+
+    const headers = [
+      '정산 연도', '원천 작업 연도', '작업일', '월', '원천 시트', '원천 행',
+      '전년도 이월', '관리소 서명 인원', '시공사 청구 품수', 'O열 원천 상태', '병합 공유',
+      '관리소 총공수(h)', '작업시간(h/인)', '방충망(개)', '코킹재(개)', '걸레받이(m)',
+      '블라인드(㎡)', '이보드(m²)', '열반사 단열재(m²)', '석고보드(매)', '출장 횟수',
+      '네고 후보', '관리소 노무비(원)', '시공사 환산 시간(h)', '자재비(원)', '기타 부대비(원)',
+      '관리소 비용(원)', '시공사 환산 비용(원)', '당해연도 월별 포함', '작업 내용',
+      '보수 유형', '건물동', '호실/구역', 'J열 수식·캐시 계보', '원천 비고', '원천 연도 라벨(날짜 누락 시 대체)', '원천 총공수 기준값(h)'
+    ];
+    const yearValue = value => {
+      const number = Number(value) || 0;
+      return number > 0 && number < 100 ? number + 2000 : number;
+    };
+    const excelDate = value => {
+      const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
+    };
+    const sourceRows = records.map(record => {
+      const state = record.contractor_source_state || 'numeric';
+      const numericContractor = state === 'numeric' || state === 'value' || state === 'zero' ? Number(record.workers_contractor) || 0 : null;
+      const mats = record.mats || {};
+      const settlementYear = yearValue(record.settlement_year || record.yr);
+      const sourceYear = yearValue(record.source_year || record.settlement_year || record.yr);
+      const formulaLineage = record.source_formula_total_h
+        ? record.source_formula_total_h + ' · 계산 ' + (Number(record.total_h) || 0) + 'h · 캐시 ' + (record.source_cached_total_h == null ? '없음' : Number(record.source_cached_total_h).toFixed(3) + 'h')
+        : (record.source_cached_total_h == null ? '원천 캐시 없음 · 계산 ' + (Number(record.total_h) || 0) + 'h' : '수식 없음 · 원천 ' + Number(record.source_cached_total_h).toFixed(3) + 'h');
+      const notes = [
+        record.settlement_note || '',
+        record.negotiation_candidate ? 'O열 ' + (state === 'blank' ? '공란' : '숫자 0') + ' 네고 후보' : '',
+        record.worker_note || '',
+        (record.material_notes || []).length ? '자재 원문 확인 필요' : ''
+      ].filter(Boolean).join(' · ');
+      return [
+        settlementYear, sourceYear, excelDate(record.date), Number(record.month) || 0,
+        record.source_sheet || '', Number(record.source_row) || 0,
+        null, Number(record.workers_admin ?? record.workers) || 0, numericContractor,
+        state, state === 'merged' ? 1 : 0, Number(record.total_h) || 0,
+        Number(record.hours) || 0, Number(mats['방충망(개)']) || 0, Number(mats['코킹재(개)']) || 0,
+        Number(mats['걸레받이(m)']) || 0, Number(mats['블라인드(㎡)']) || 0,
+        Number(mats['이보드(m²)']) || 0, Number(mats['열반사 단열재(m²)']) || 0,
+        Number(mats['석고보드(매)']) || 0, null, null, null, null, null, null, null, null, null,
+        record.content || '', Array.isArray(record.types) ? record.types.join(', ') : '',
+        record.building || '', record.room || '', formulaLineage, notes, sourceYear, Number(record.total_h) || 0
+      ];
+    });
+    const capacityRows = records.length + 200;
+    while (sourceRows.length < capacityRows) sourceRows.push(new Array(headers.length).fill(null));
+    inputSheet.addTable({
+      name: 'tblXlsbInput',
+      ref: 'A3',
+      headerRow: true,
+      totalsRow: false,
+      style: { theme: 'TableStyleMedium2', showRowStripes: true },
+      columns: headers.map(name => ({ name })),
+      rows: sourceRows
+    });
+    const dataStart = 4;
+    const sourceNumberByIndex = records;
+    const setFormula = (sheet, row, col, formula, result, numberFormat) => {
+      const cell = sheet.getCell(row, col);
+      cell.value = { formula, result };
+      if (numberFormat) cell.numFmt = numberFormat;
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'right' };
+    };
+    for (let index = 0; index < capacityRows; index++) {
+      const row = dataStart + index;
+      const record = sourceNumberByIndex[index];
+      const carry = record && record.is_carryover ? 1 : 0;
+      const adminHours = record ? Number(record.total_h) || 0 : 0;
+      const adminWorkers = record ? Number(record.workers_admin ?? record.workers) || 0 : 0;
+      const contractorHours = record ? calculateContractorHours(record) : 0;
+      const adminCost = record ? calculateXlsbCostContribution([record], false) : 0;
+      const contractorCost = record ? calculateXlsbCostContribution([record], true) : 0;
+      const mats = record ? (record.mats || {}) : {};
+      const materialCost = record
+        ? (Number(mats['방충망(개)']) || 0) * COST_UNIT.matCost.screen
+          + (Number(mats['코킹재(개)']) || 0) * COST_UNIT.matCost.silicone
+          + (Number(mats['걸레받이(m)']) || 0) * COST_UNIT.matCost.baseboard
+          + (Number(mats['블라인드(㎡)']) || 0) * COST_UNIT.matCost.hardware
+          + ((Number(mats['이보드(m²)']) || 0) + (Number(mats['열반사 단열재(m²)']) || 0) + (Number(mats['석고보드(매)']) || 0)) * COST_UNIT.matCost.etc
+        : 0;
+      const state = record ? (record.contractor_source_state || 'numeric') : '';
+      const contractorUnits = record && (state === 'numeric' || state === 'value' || state === 'zero') ? Number(record.workers_contractor) || 0 : 0;
+      const negotiation = record && Boolean(record.negotiation_candidate) ? 1 : 0;
+      const settlementYearValue = yearValue(record && (record.settlement_year || record.yr));
+      const sourceYearValue = yearValue(record && (record.source_year || record.settlement_year || record.yr));
+      const currentYearFlag = record && !record.is_carryover
+        && (String(record.date || '').startsWith(String(settlementYearValue)) || (!record.date && sourceYearValue === settlementYearValue)) ? 1 : 0;
+      const valueIfBlank = value => record ? value : '';
+      setFormula(inputSheet, row, 2, 'IF(A' + row + '="","",IF(C' + row + '="",IF(AJ' + row + '="",A' + row + ',AJ' + row + '),IFERROR(YEAR(C' + row + '),IF(AJ' + row + '="",A' + row + ',AJ' + row + '))))', valueIfBlank(sourceNumberByIndex[index] ? yearValue(sourceNumberByIndex[index].source_year || sourceNumberByIndex[index].settlement_year || sourceNumberByIndex[index].yr) : 0), '0');
+      setFormula(inputSheet, row, 4, 'IF(A' + row + '="","",IF(C' + row + '="","",IFERROR(MONTH(C' + row + '),0)))', valueIfBlank(record ? Number(record.month) || 0 : 0), '0');
+      setFormula(inputSheet, row, 7, 'IF(A' + row + '="","",--(B' + row + '<A' + row + '))', valueIfBlank(carry), '0');
+      setFormula(inputSheet, row, 21, 'IF(A' + row + '="","",1)', valueIfBlank(1), '0');
+      setFormula(inputSheet, row, 22, 'IF(A' + row + '="","",--AND(K' + row + '<>1,J' + row + '<>"invalid",J' + row + '<>"estimate",OR(I' + row + '="",AND(ISNUMBER(I' + row + '),I' + row + '=0))))', valueIfBlank(negotiation), '0');
+      setFormula(inputSheet, row, 12, 'IF(A' + row + '="","",IF(AND(N(H' + row + ')=0,N(AK' + row + ')>0),N(AK' + row + '),N(H' + row + ')*N(M' + row + ')))', valueIfBlank(adminHours), '#,##0.00');
+      setFormula(inputSheet, row, 23, 'IF(A' + row + '="","",L' + row + '*\'단가 및 모델\'!$B$5)', valueIfBlank(adminHours * COST_UNIT.hourlyRate), '#,##0.00');
+      setFormula(inputSheet, row, 24, 'IF(A' + row + '="","",IF(OR(K' + row + '=1,N(I' + row + ')<=0),0,IF(AND(N(H' + row + ')>0,ABS(N(H' + row + ')-N(I' + row + '))<0.0001),N(L' + row + '),IF(N(H' + row + ')>N(I' + row + '),N(L' + row + ')*N(I' + row + ')/N(H' + row + '),N(I' + row + ')*IF(N(M' + row + ')>0,N(M' + row + '),8)))))', valueIfBlank(contractorHours), '#,##0.00');
+      setFormula(inputSheet, row, 25, 'IF(A' + row + '="","",N(N' + row + ')*\'단가 및 모델\'!$B$8+N(O' + row + ')*\'단가 및 모델\'!$B$9+N(P' + row + ')*\'단가 및 모델\'!$B$10+N(Q' + row + ')*\'단가 및 모델\'!$B$11+(N(R' + row + ')+N(S' + row + ')+N(T' + row + '))*\'단가 및 모델\'!$B$12)', valueIfBlank(materialCost), '#,##0.00');
+      setFormula(inputSheet, row, 26, 'IF(A' + row + '="","",U' + row + '*\'단가 및 모델\'!$B$7)', valueIfBlank(record ? COST_UNIT.matCost.etc : 0), '#,##0.00');
+      setFormula(inputSheet, row, 27, 'IF(A' + row + '="","",W' + row + '+U' + row + '*\'단가 및 모델\'!$B$6+Y' + row + '+Z' + row + ')', valueIfBlank(adminCost), '#,##0.00');
+      setFormula(inputSheet, row, 28, 'IF(A' + row + '="","",X' + row + '*\'단가 및 모델\'!$B$5+U' + row + '*\'단가 및 모델\'!$B$6+Y' + row + '+Z' + row + ')', valueIfBlank(contractorCost), '#,##0.00');
+      setFormula(inputSheet, row, 29, 'IF(A' + row + '="","",--AND(G' + row + '=0,B' + row + '=A' + row + ',OR(C' + row + '<>"",AJ' + row + '=A' + row + ',AJ' + row + '="")))', valueIfBlank(currentYearFlag), '0');
+    }
+    const colWidths = [12,14,13,7,12,9,11,15,15,14,11,17,17,13,13,13,13,13,16,14,12,12,18,19,18,18,18,18,16,36,24,12,15,40,45,22];
+    inputSheet.columns = colWidths.map(width => ({ width }));
+    inputSheet.getColumn(3).numFmt = 'yyyy-mm-dd';
+    inputSheet.autoFilter = { from: { row: 3, column: 1 }, to: { row: dataStart + capacityRows - 1, column: headers.length } };
+
+    const calcSheet = workbook.addWorksheet('산식 검증');
+    calcSheet.views = [{ state: 'frozen', ySplit: 4, xSplit: 1 }];
+    calcSheet.mergeCells('A1:P1');
+    calcSheet.getCell('A1').value = '정산 연도별 비용 산식 검증 · 연환산·이월·네고 후보';
+    calcSheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
+    calcSheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+    calcSheet.mergeCells('A2:P2');
+    calcSheet.getCell('A2').value = '원천 입력 표의 정산 연도 기준으로 원천 행을 다시 합산합니다. 당해연도 비용만 12/최대월로 연환산하고 전년도 이월 비용은 한 번 더합니다. 모든 금액은 원 단위 원천 합산 후 화면 표시 단계에서 만원으로 반올림합니다.';
+    calcSheet.getCell('A2').alignment = { wrapText: true };
+    const calcHeaders = ['정산 연도', '정산 행 수', '관리소 실제비용(원)', '시공사 환산비용(원)', '당해연도 작업수', '당해연도 최대월', '당해연도 관리소비용(원)', '이월 행 수', '이월 관리소비용(원)', '당해연도 시공사비용(원)', '이월 시공사비용(원)', '관리소 평균단가(원/건)', '연환산 관리소비용(원)', '연환산 시공사비용(원)', 'O열 공란·0 네고 후보', '연환산 작업수'];
+    calcHeaders.forEach((header, index) => {
+      const cell = calcSheet.getCell(4, index + 1);
+      cell.value = header;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF24476B' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    });
+    const summaryStart = 5;
+    const rowMap = {};
+    const latestMetricYearKey = key => (window.YR_KEYS || []).find(sourceKey => {
+      const digits = String(sourceKey).replace(/[^0-9]/g, '');
+      return (digits.length === 2 ? Number('20' + digits) : Number(digits)) === key;
+    });
+    sourceYears.forEach((year, offset) => {
+      const row = summaryStart + offset;
+      rowMap[year] = row;
+      const key = latestMetricYearKey(year);
+      const metric = key ? (window.annualMetrics?.[key] || {}) : {};
+      calcSheet.getCell(row, 1).value = year;
+      let maxMonthFormula = '0';
+      // Nest from low to high so the outermost match is the latest observed month.
+      // This stays compatible with Excel 2007 (no MAXIFS) and keeps partial-year
+      // annualization from incorrectly using the earliest month.
+      for (let month = 1; month <= 12; month++) {
+        maxMonthFormula = 'IF(COUNTIFS(\'원천 입력\'!$A:$A,A' + row
+          + ',\'원천 입력\'!$AC:$AC,1,\'원천 입력\'!$D:$D,' + month + ')>0,' + month + ',' + maxMonthFormula + ')';
+      }
+      const formulas = [
+        ['COUNTIF(\'원천 입력\'!$A:$A,A' + row + ')', Number(metric.cnt) || 0, '0'],
+        ['SUMIFS(\'원천 입력\'!$AA:$AA,\'원천 입력\'!$A:$A,A' + row + ')', Number(metric.adminCost) || 0, '#,##0'],
+        ['SUMIFS(\'원천 입력\'!$AB:$AB,\'원천 입력\'!$A:$A,A' + row + ')', Number(metric.contractorCost) || 0, '#,##0'],
+        ['COUNTIFS(\'원천 입력\'!$A:$A,A' + row + ',\'원천 입력\'!$AC:$AC,1)', Number(metric.currentYearCount) || 0, '0'],
+        [maxMonthFormula, Number(metric.maxMonth) || 0, '0'],
+        ['SUMIFS(\'원천 입력\'!$AA:$AA,\'원천 입력\'!$A:$A,A' + row + ',\'원천 입력\'!$AC:$AC,1)', Number(metric.currentYearAdminCost) || 0, '#,##0'],
+        ['COUNTIFS(\'원천 입력\'!$A:$A,A' + row + ',\'원천 입력\'!$G:$G,1)', Number(metric.carryoverCount) || 0, '0'],
+        ['SUMIFS(\'원천 입력\'!$AA:$AA,\'원천 입력\'!$A:$A,A' + row + ',\'원천 입력\'!$G:$G,1)', Number(metric.carryoverAdminCost) || 0, '#,##0'],
+        ['SUMIFS(\'원천 입력\'!$AB:$AB,\'원천 입력\'!$A:$A,A' + row + ',\'원천 입력\'!$AC:$AC,1)', Number(metric.currentYearContractorCost) || 0, '#,##0'],
+        ['SUMIFS(\'원천 입력\'!$AB:$AB,\'원천 입력\'!$A:$A,A' + row + ',\'원천 입력\'!$G:$G,1)', Number(metric.carryoverContractorCost) || 0, '#,##0'],
+        ['IFERROR(C' + row + '/B' + row + ',0)', Number(metric.cnt) ? Number(metric.adminCost) / Number(metric.cnt) : 0, '#,##0.00'],
+        ['IF(AND(F' + row + '>0,F' + row + '<12,E' + row + '>0),ROUND(G' + row + '*12/F' + row + '+I' + row + ',0),C' + row + ')', Number(metric.projectedAdminCost ?? metric.adminCost) || 0, '#,##0'],
+        ['IF(AND(F' + row + '>0,F' + row + '<12,E' + row + '>0),ROUND(J' + row + '*12/F' + row + '+K' + row + ',0),D' + row + ')', Number(metric.projectedContractorCost ?? metric.contractorCost) || 0, '#,##0'],
+        ['COUNTIFS(\'원천 입력\'!$A:$A,A' + row + ',\'원천 입력\'!$V:$V,1)', Number(metric.currentYearNegotiationCandidates || 0) + Number(metric.carryoverNegotiationCandidates || 0), '0'],
+        ['IF(AND(F' + row + '>0,F' + row + '<12,E' + row + '>0),ROUND(E' + row + '*12/F' + row + '+H' + row + ',0),B' + row + ')', Number(metric.projectedCnt ?? metric.cnt) || 0, '0']
+      ];
+      formulas.forEach((entry, formulaIndex) => {
+        const col = formulaIndex + 2;
+        const cell = calcSheet.getCell(row, col);
+        cell.value = { formula: entry[0], result: entry[1] };
+        cell.numFmt = entry[2];
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+        cell.alignment = { horizontal: 'right' };
+      });
+    });
+    calcSheet.columns = [13,12,20,20,15,13,22,12,21,22,21,23,22,22,22,16].map(width => ({ width }));
+    calcSheet.autoFilter = { from: { row: 4, column: 1 }, to: { row: summaryStart + sourceYears.length - 1, column: calcHeaders.length } };
+
+    return { inputSheet, rateSheet, calcSheet, rowMap, sourceYears, summaryStart };
+  },
+
+  addForecastWorkbookSheet: function(workbook, audit) {
+    const model = window.forecastModel27 || buildForecastModel2027();
+    const row = audit.rowMap[model.latestYear];
+    const ws = workbook.addWorksheet('2027 월별 예측');
+    ws.views = [{ state: 'frozen', ySplit: 19, xSplit: 1 }];
+    ws.mergeCells('A1:I1');
+    ws.getCell('A1').value = '2027년 작업 건수·비용 예측 산식 연결표';
+    ws.getCell('A1').font = { bold: true, size: 15, color: { argb: 'FFFFFFFF' } };
+    ws.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
+    ws.mergeCells('A2:I2');
+    ws.getCell('A2').value = '원천 입력 표와 단가 및 모델 시트의 값을 바꾸면 이 표가 자동 재계산됩니다. 최신 정산 연도 연환산 건수와 연환산 비용/건 단가를 2027년 예측의 기준으로 사용합니다. 실제·추정 월별 비중으로 건수를 배분하며 월별 작업수·비용 합계는 연간 예측값과 일치합니다.';
+    ws.getCell('A2').alignment = { wrapText: true };
+
+    const auditRow = row || audit.summaryStart;
+    const latestMetric = model.latestMetric || {};
+    const avgCost = model.costPerRecordWan * 10000;
+    const summaries = [
+      ['최신 정산 연도', "='산식 검증'!A" + auditRow, model.latestYear, '년'],
+      ['정산 시트 전체 건수', "='산식 검증'!B" + auditRow, Number(latestMetric.cnt) || 0, '건'],
+      ['당해연도 작업 건수', "='산식 검증'!E" + auditRow, model.currentYearCount, '건'],
+      ['전년도 이월 건수', "='산식 검증'!H" + auditRow, model.carryoverRows.length, '건'],
+      ['당해연도 최대 실적 월', "='산식 검증'!F" + auditRow, model.maxMonth, '월'],
+      ['월평균 추정 건수', '=IF(B9>0,ROUND(B7/B9,0),0)', model.averageMonthlyCount, '건/월'],
+      ['최신 연도 연환산 건수', "='산식 검증'!P" + auditRow, model.projectedCountLatest, '건'],
+      ['2027년 작업 증가율', "='단가 및 모델'!$B$14", model.countGrowthRate, '%'],
+      ['2027년 연간 예측 건수', '=MAX(1,ROUND(B11*(1+B12),0))', model.totalPred27, '건'],
+      ['최근 정산연도 연환산 비용/건', '=IFERROR(\'산식 검증\'!$M$' + auditRow + '/\'산식 검증\'!$P$' + auditRow + ',0)', avgCost, '원/건'],
+      ['물가 상승률', "='단가 및 모델'!$B$13", model.inflationRate, '%'],
+      ['2027년 연간 예측 비용', '=ROUND(B13*B14*(1+B15)/10000,0)', model.cost27TotalWan, '만원']
+    ];
+    const labels = ['계산 항목', '수식 결과', '단위', '산식 근거'];
+    labels.forEach((value, index) => {
+      const cell = ws.getCell(4, index + 1);
+      cell.value = value;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF24476B' } };
+      cell.alignment = { horizontal: 'center' };
+    });
+    summaries.forEach((item, index) => {
+      const r = 5 + index;
+      ws.getCell(r, 1).value = item[0];
+      ws.getCell(r, 2).value = { formula: item[1].replace(/^=/, ''), result: item[2] };
+      ws.getCell(r, 2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+      ws.getCell(r, 2).numFmt = item[3] === '%' ? '0.0%' : '#,##0.00';
+      ws.getCell(r, 3).value = item[3];
+      ws.getCell(r, 4).value = index === 11
+        ? '2027 예측 건수 × 최근 정산연도 연환산 비용/건 × (1+물가상승률)'
+        : index === 9 ? '최근 정산연도 연환산 비용 ÷ 연환산 건수 (이월 비용·건수는 각 1회 반영)'
+          : '원천 입력 및 정산 연도별 산식 검증 시트 연계';
+      ws.getCell(r, 4).alignment = { wrapText: true };
+    });
+
+    const tableHeaders = [
+      '월', '최신연도 실제 작업수', '최신연도 잔여월 추정', '연환산 월 기준건수',
+      '2027 배분 가중치', '2027 예측 작업수', '최신연도 실제 비용(원)',
+      '최신연도 잔여월 비용(원)', '2027 예측 비용(만원)'
+    ];
+    tableHeaders.forEach((header, index) => {
+      const cell = ws.getCell(19, index + 1);
+      cell.value = header;
+      cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF24476B' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+    });
+    const months = Array.from({ length: 12 }, (_, index) => [index + 1, null, null, null, null, null, null, null, null]);
+    ws.addTable({
+      name: 'tblForecast2027',
+      ref: 'A19',
+      headerRow: true,
+      totalsRow: false,
+      style: { theme: 'TableStyleMedium4', showRowStripes: true },
+      columns: tableHeaders.map(name => ({ name })),
+      rows: months
+    });
+    const monthStart = 20;
+    const calcStart = audit.summaryStart;
+    const weights = model.monthlyWeights || [];
+    const residualIndex = weights.reduce((best, value, index) => value > weights[best] ? index : best, 0);
+    const setFormula = (r, c, formula, result, format) => {
+      const cell = ws.getCell(r, c);
+      cell.value = { formula, result };
+      if (format) cell.numFmt = format;
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F5E9' } };
+      cell.alignment = { horizontal: 'right' };
+    };
+    for (let index = 0; index < 12; index++) {
+      const r = monthStart + index;
+      const month = index + 1;
+      ws.getCell(r, 1).value = month;
+      setFormula(r, 2, 'COUNTIFS(\'원천 입력\'!$A:$A,$B$5,\'원천 입력\'!$AC:$AC,1,\'원천 입력\'!$D:$D,A' + r + ')', model.actualCounts[index] || 0, '0');
+      setFormula(r, 3, 'IF(AND(A' + r + '>$B$9,$B$9>0),$B$10,0)', model.forecastCounts[index] || 0, '0');
+      setFormula(r, 4, 'B' + r + '+C' + r, model.monthlyBaseCounts[index] || 0, '0');
+      setFormula(r, 5, 'IF(SUM($D$20:$D$31)>0,D' + r + '*$B$11/SUM($D$20:$D$31),$B$11/12)', model.monthlyWeights[index] || 0, '#,##0.000');
+      let countFormula = 'ROUND(IF($B$11>0,E' + r + '/$B$11,1/12)*$B$13,0)';
+      if (index === residualIndex) {
+        const before = index > 0 ? 'SUM($F$20:$F$' + (r - 1) + ')' : '0';
+        const after = index < 11 ? 'SUM($F$' + (r + 1) + ':$F$31)' : '0';
+        countFormula = '$B$13-' + before + '-' + after;
+      }
+      setFormula(r, 6, countFormula, model.counts27Forecast[index] || 0, '0');
+      setFormula(r, 7, 'SUMIFS(\'원천 입력\'!$AA:$AA,\'원천 입력\'!$A:$A,$B$5,\'원천 입력\'!$AC:$AC,1,\'원천 입력\'!$D:$D,A' + r + ')',
+        index < model.maxMonth ? calculateXlsbCostContribution(model.currentYearRows.filter(record => Number(record.month) === month), false) : 0, '#,##0.00');
+      setFormula(r, 8, 'IF(A' + r + '>$B$9,IFERROR(\'산식 검증\'!$G$' + auditRow + '/MAX($B$9,1),0),0)',
+        index >= model.maxMonth ? model.currentYearAdminCost / model.maxMonth : 0, '#,##0.00');
+      const monthCost = index === 11
+        ? '$B$16-SUM($I$20:$I$30)'
+        : 'ROUND(F' + r + '*$B$14*(1+$B$15)/10000,0)';
+      setFormula(r, 9, monthCost, model.costs27Forecast[index] || 0, '#,##0');
+    }
+    ws.columns = [{ width: 16 }, { width: 20 }, { width: 20 }, { width: 20 }, { width: 20 }, { width: 18 }, { width: 22 }, { width: 24 }, { width: 23 }];
+    ws.getRow(19).height = 42;
+    ws.autoFilter = { from: { row: 19, column: 1 }, to: { row: 31, column: tableHeaders.length } };
+    return ws;
   },
 
   downloadBlob: function(data, filename) {
@@ -8081,6 +8491,8 @@ const dashboardExcelExporter = {
         const wb = new ExcelLib.Workbook();
         wb.creator = "021 건축 긴급대응 현황";
         wb.calcProperties.fullCalcOnLoad = true;
+        wb.calcProperties.forceFullCalc = true;
+        wb.calcProperties.calcMode = 'auto';
         const timestamp = this.getFileTimestamp();
 
         let title = "";
@@ -8570,7 +8982,7 @@ const dashboardExcelExporter = {
           const repTypes = window.repairData || [];
           const topRep = repTypes[0]?.type || '소모성 자재';
           const totPred = window.totalPred27 || 1;
-          const predCost = window.cost27TotalWan || 56;
+          const predCost = Number(window.cost27TotalWan) || 0;
           const budget = Math.round(predCost * 0.9);
 
           const roadmapItems = [
@@ -9226,17 +9638,19 @@ const dashboardExcelExporter = {
         } else if (type === "cost-basis") {
           title = customTitle || "시스템적 연도별 비용 집행 추정 및 정합성 리포트";
           filename = `[021_건축긴급대응]_${this.sanitizeFilename(title)}_${timestamp}.xlsx`;
+          const costAudit = this.addCostAuditSheets(wb);
+          this.addForecastWorkbookSheet(wb, costAudit);
 
           const chartSheet = wb.addWorksheet("차트");
           chartSheet.getCell("A1").value = "📊 " + title;
           chartSheet.getCell("A1").font = { bold: true, size: 14, color: { argb: "FF1E293B" } };
-          chartSheet.getCell("A2").value = "💡 안내: '차트 연계 데이터' 시트의 노란색 수치를 변경하면 이 차트의 막대 모양이 실시간으로 자동 갱신됩니다.";
+          chartSheet.getCell("A2").value = "💡 '원천 입력'의 노란 셀 또는 '단가 및 모델'을 수정하면 이 차트와 산식 검증이 Excel에서 재계산됩니다.";
           chartSheet.getCell("A2").font = { italic: true, size: 10, color: { argb: "FF64748B" } };
           chartSheet.columns = Array.from({ length: 16 }, () => ({ width: 11 }));
 
           const dataSheet = wb.addWorksheet("차트 연계 데이터");
           dataSheet.mergeCells("A1:E1");
-          dataSheet.getCell("A1").value = "💡 안내: 노란색 입력 셀을 수정하면 '차트' 시트의 네이티브 엑셀 차트가 자동 갱신됩니다.";
+          dataSheet.getCell("A1").value = "💡 '원천 입력'의 노란값을 수정하면 연도별 비용 수식과 차트가 갱신됩니다.";
           dataSheet.getCell("A1").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F2FF" } };
 
           dataSheet.mergeCells("A3:E3");
@@ -9260,11 +9674,9 @@ const dashboardExcelExporter = {
             const contractor = Math.round(Number(m.contractorCost || 0) / 10000);
             return [formatYearLabel(yr), admin, contractor, contractor - admin];
           });
-          if (typeof FORECAST_COST_DETAILS !== 'undefined') {
-            const _tAdmin = Object.values(window.annualMetrics || {}).reduce((s,m) => s + Number(m.adminCost || 0), 0);
-            const _tContr = Object.values(window.annualMetrics || {}).reduce((s,m) => s + Number(m.contractorCost || 0), 0);
-            const _cRatio = (_tAdmin > 0 && _tContr > 0) ? (_tContr / _tAdmin) : 1.0;
-            const forecastCost = Object.values(FORECAST_COST_DETAILS).reduce((sum, row) => sum + (row.cost || 0), 0);
+          {
+            const _cRatio = getLatestContractorCostRatio();
+            const forecastCost = Number(window.cost27TotalWan) || 0;
             const forecastContr = Math.round(forecastCost * _cRatio);
             costRows.push(['2027년(연간예측)', forecastCost, forecastContr, forecastContr - forecastCost]);
           }
@@ -9278,8 +9690,33 @@ const dashboardExcelExporter = {
 
             [row[1], row[2], row[3]].forEach((val, cIdx) => {
               const cell = dataSheet.getCell(rowNum, cIdx + 2);
-              cell.value = Number(val) || 0;
-              cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
+              let formula = '';
+              let result = Number(val) || 0;
+              if (rIdx < costExportYears.length) {
+                const yr = costExportYears[rIdx];
+                const digits = String(yr).replace(/[^0-9]/g, '');
+                const fullYear = digits.length === 2 ? Number('20' + digits) : Number(digits);
+                const auditRow = costAudit.rowMap[fullYear];
+                if (auditRow) {
+                  formula = cIdx === 0
+                    ? 'ROUND(\'산식 검증\'!$C$' + auditRow + '/10000,0)'
+                    : cIdx === 1
+                      ? 'ROUND(\'산식 검증\'!$D$' + auditRow + '/10000,0)'
+                      : 'C' + rowNum + '-B' + rowNum;
+                }
+              } else if (rIdx === costExportYears.length) {
+                if (cIdx === 0) {
+                  formula = "'2027 월별 예측'!$B$16";
+                } else if (cIdx === 1) {
+                  const firstAuditRow = costAudit.summaryStart;
+                  const lastAuditRow = costAudit.summaryStart + costAudit.sourceYears.length - 1;
+                  formula = 'ROUND(B' + rowNum + '*SUM(\'산식 검증\'!$D$' + firstAuditRow + ':$D$' + lastAuditRow + ')/SUM(\'산식 검증\'!$C$' + firstAuditRow + ':$C$' + lastAuditRow + '),0)';
+                } else {
+                  formula = 'C' + rowNum + '-B' + rowNum;
+                }
+              }
+              cell.value = formula ? { formula, result } : result;
+              cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: formula ? "FFE8F5E9" : "FFFFF4CC" } };
               cell.numFmt = '#,##0';
               cell.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
             });
@@ -9390,22 +9827,35 @@ const dashboardExcelExporter = {
           this.buildReadmeSheet(wb, title, list.length);
 
         // =========================================================================
+        // [2027년 예측 건수·비용 산식 연계 전용]
+        // =========================================================================
+        } else if (type === "forecast-2027") {
+          title = customTitle || "2027년 작업 예측 건수·비용 산식 검증";
+          filename = `[021_건축긴급대응]_${this.sanitizeFilename(title)}_${timestamp}.xlsx`;
+          const costAudit = this.addCostAuditSheets(wb);
+          this.addForecastWorkbookSheet(wb, costAudit);
+          const list = typeof RAW !== 'undefined' ? RAW : [];
+          this.addRawRecordsSheet(wb, "원천 상세 증빙", list);
+          this.buildReadmeSheet(wb, title, list.length);
+
+        // =========================================================================
         // [4대 KPI 요약표 전용]
         // =========================================================================
         } else {
           title = customTitle || "핵심 지표(KPI) 및 3개년 긴급보수 총괄";
           filename = `[021_건축긴급대응]_${this.sanitizeFilename(title)}_${timestamp}.xlsx`;
+          const costAudit = this.addCostAuditSheets(wb);
 
           const chartSheet = wb.addWorksheet("차트");
           chartSheet.getCell("A1").value = "📊 " + title;
           chartSheet.getCell("A1").font = { bold: true, size: 14, color: { argb: "FF1E293B" } };
-          chartSheet.getCell("A2").value = "💡 안내: '차트 연계 데이터' 시트의 노란색 수치를 변경하면 이 차트의 막대 모양이 실시간으로 자동 갱신됩니다.";
+          chartSheet.getCell("A2").value = "💡 '원천 입력'의 노란 셀 또는 '단가 및 모델'의 입력값을 수정하면 산식 검증과 이 차트가 Excel에서 자동 재계산됩니다.";
           chartSheet.getCell("A2").font = { italic: true, size: 10, color: { argb: "FF64748B" } };
           chartSheet.columns = Array.from({ length: 16 }, () => ({ width: 11 }));
 
           const dataSheet = wb.addWorksheet("차트 연계 데이터");
-          dataSheet.mergeCells("A1:C1");
-          dataSheet.getCell("A1").value = "💡 안내: 노란색 입력 셀을 수정하면 '차트' 시트의 네이티브 엑셀 차트가 자동 갱신됩니다.";
+          dataSheet.mergeCells("A1:E1");
+          dataSheet.getCell("A1").value = "💡 '원천 입력'의 노란 입력값 및 '단가 및 모델'을 수정하면 아래 KPI·차트가 재계산됩니다.";
           dataSheet.getCell("A1").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F2FF" } };
           dataSheet.mergeCells("A2:E2");
           dataSheet.getCell("A2").value = "부분 연도 비용은 당해연도 건만 12개월 환산하고 전년도 이월 정산액은 1회만 더합니다. 원천 상세에는 실제 정산액과 이월/네고 비고가 보존됩니다.";
@@ -9434,24 +9884,69 @@ const dashboardExcelExporter = {
             dataSheet.getCell(rowNum, 1).value = r[0];
             dataSheet.getCell(rowNum, 1).alignment = { horizontal: "left" };
 
-            [r[1], r[2], r[3], r[4]].forEach((val, cIdx) => {
-              const cell = dataSheet.getCell(rowNum, cIdx + 2);
-              cell.value = Number(val) || 0;
-              cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
+            const reversedYears = kpiYears.slice().reverse();
+            const yearCount = reversedYears.length;
+            const totalColumn = yearCount + 2;
+            reversedYears.forEach((yr, yearIndex) => {
+              const fullYearDigits = String(yr).replace(/[^0-9]/g, '');
+              const fullYear = fullYearDigits.length === 2 ? Number('20' + fullYearDigits) : Number(fullYearDigits);
+              const metric = window.annualMetrics?.[yr] || {};
+              const auditRow = costAudit.rowMap[fullYear];
+              let formula = '';
+              let cached = Number(r[yearIndex + 1]) || 0;
+              if (rIdx === 0) {
+                formula = 'COUNTIF(\'원천 입력\'!$A:$A,' + fullYear + ')';
+                cached = Number(metric.cnt) || 0;
+              } else if (rIdx === 1) {
+                formula = 'SUMIFS(\'원천 입력\'!$L:$L,\'원천 입력\'!$A:$A,' + fullYear + ')';
+                cached = Number(metric.hours) || 0;
+              } else if (rIdx === 2) {
+                formula = 'SUMIFS(\'원천 입력\'!$H:$H,\'원천 입력\'!$A:$A,' + fullYear + ')';
+                cached = Number(metric.adminWorkers) || 0;
+              } else if (auditRow) {
+                formula = 'ROUND(\'산식 검증\'!$M$' + auditRow + '/10000,0)';
+                cached = Math.round(kpiCostForYear(yr) / 10000);
+              }
+              const cell = dataSheet.getCell(rowNum, yearIndex + 2);
+              cell.value = formula ? { formula, result: cached } : cached;
+              cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: formula ? "FFE8F5E9" : "FFFFF4CC" } };
               cell.alignment = { horizontal: "right" };
-              cell.numFmt = '#,##0.0';
+              cell.numFmt = rIdx === 0 || rIdx === 3 ? '#,##0' : '#,##0.0';
               cell.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
             });
+            let totalFormula = '';
+            let totalValue = Number(r[yearCount + 1]) || 0;
+            if (rIdx === 0) {
+              totalFormula = 'COUNTIF(\'원천 입력\'!$A:$A,">0")';
+              totalValue = RAW.length;
+            } else if (rIdx === 1) {
+              totalFormula = 'SUM(\'원천 입력\'!$L:$L)';
+              totalValue = RAW.reduce((sum, record) => sum + (Number(record.total_h) || 0), 0);
+            } else if (rIdx === 2) {
+              totalFormula = 'SUM(\'원천 입력\'!$H:$H)';
+              totalValue = RAW.reduce((sum, record) => sum + (Number(record.workers_admin ?? record.workers) || 0), 0);
+            } else {
+              const firstAuditRow = costAudit.summaryStart;
+              const lastAuditRow = costAudit.summaryStart + costAudit.sourceYears.length - 1;
+              totalFormula = 'ROUND(SUM(\'산식 검증\'!$M$' + firstAuditRow + ':$M$' + lastAuditRow + ')/10000,0)';
+              totalValue = Math.round(kpiYears.reduce((sum, yr) => sum + kpiCostForYear(yr), 0) / 10000);
+            }
+            const totalCell = dataSheet.getCell(rowNum, totalColumn);
+            totalCell.value = { formula: totalFormula, result: totalValue };
+            totalCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F5E9" } };
+            totalCell.alignment = { horizontal: "right" };
+            totalCell.numFmt = rIdx === 0 || rIdx === 3 ? '#,##0' : '#,##0.0';
+            totalCell.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
           });
 
-          dataSheet.columns = [{ width: 25 }, { width: 16 }, { width: 16 }, { width: 16 }, { width: 18 }];
+          dataSheet.columns = [{ width: 25 }, ...Array.from({ length: kpiYears.length }, () => ({ width: 16 })), { width: 18 }];
 
           chartSpec = {
             title: "3개년 핵심 KPI 연도별 추이 대조",
             type: "bar",
             sheetName: "차트 연계 데이터",
             categoryCol: 1,
-            categoryValues: ["작업건수(건)", "투입시간(h/10)", "투입인원(명/10)", "연환산 집행비용(백만원)"],
+            categoryValues: ["작업건수(건)", "투입시간(h)", "투입인원(명·회)", "연환산 집행비용(만원)"],
             headerRow: 4,
             dataStartRow: 5,
             dataEndRow: 8,
@@ -9461,9 +9956,9 @@ const dashboardExcelExporter = {
               color: idx === 0 ? "4ECB71" : idx === 1 ? "F5A623" : "6C8EF5",
               values: [
                 Number(window.annualMetrics?.[yr]?.cnt || 0),
-                Math.round((Number(window.annualMetrics?.[yr]?.hours || 0) / 10) * 10) / 10,
-                Math.round((Number(window.annualMetrics?.[yr]?.adminWorkers || 0) / 10) * 10) / 10,
-                Math.round(Number((window.annualMetrics?.[yr]?.projectedAdminCost ?? window.annualMetrics?.[yr]?.adminCost) || 0) / 1000000)
+                Number(window.annualMetrics?.[yr]?.hours || 0),
+                Number(window.annualMetrics?.[yr]?.adminWorkers || 0),
+                Math.round(kpiCostForYear(yr) / 10000)
               ]
             }))
           };
@@ -9480,6 +9975,7 @@ const dashboardExcelExporter = {
         } else {
           finalData = baseBuffer;
         }
+        finalData = await this.patchWorkbookCalculation(finalData);
 
         this.downloadBlob(finalData, filename);
       } catch (err) {
