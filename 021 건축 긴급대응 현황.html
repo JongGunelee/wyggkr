@@ -34,6 +34,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 .header-title{font-size:22px;font-weight:700;}
 .header-title span{color:var(--accent1);}
 .header-meta{font-size:12px;color:var(--text2);text-align:right;}
+.header-meta .master-xls-btn{flex:0 0 auto;white-space:nowrap;writing-mode:horizontal-tb;}
 .nav{display:flex;gap:4px;padding:12px 32px 0;background:#0f1117;border-bottom:1px solid var(--border);overflow-x:auto;}
 .nav-btn{padding:10px 20px;border:none;border-radius:8px 8px 0 0;background:transparent;color:var(--text2);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;white-space:nowrap;}
 .nav-btn.active,.nav-btn:hover{background:var(--card);color:var(--text);border-top:2px solid var(--accent1);}
@@ -350,7 +351,24 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   .kpi-grid{grid-template-columns:1fr 1fr;}
   .grid2,.grid3,.grid-1-2,.grid-2-1,.insight-grid,.yoy-grid{grid-template-columns:1fr;}
   .main{padding:16px;}
-  .header{padding:16px;}
+  .header{padding:16px;flex-wrap:wrap;gap:10px;}
+  .header-meta{width:100%;min-width:0;justify-content:flex-start;flex-wrap:wrap;gap:8px!important;overflow:visible;padding-bottom:4px;text-align:left;}
+  .header-meta>div:last-child{flex:1 0 100%;width:100%;min-width:0;text-align:left!important;white-space:normal;line-height:1.35;}
+  .dashboard-sticky-header.is-compact .header{padding:6px 12px;flex-wrap:nowrap;align-items:center;gap:8px;}
+  .dashboard-sticky-header.is-compact .header>div:first-child{flex:1;min-width:0;}
+  .dashboard-sticky-header.is-compact .header-title{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .dashboard-sticky-header.is-compact .header>div:first-child>div:nth-child(2){display:none;}
+  .dashboard-sticky-header.is-compact .header-meta{width:auto;flex:0 0 auto;flex-wrap:nowrap;gap:5px!important;padding:0;overflow:visible;}
+  .dashboard-sticky-header.is-compact .header-meta>div:last-child{display:none;}
+  .dashboard-sticky-header.is-compact .header-meta .master-xls-btn{padding:5px 7px;}
+  .dashboard-sticky-header.is-compact .header-meta .master-xls-btn span:not(:first-child){display:none;}
+  .dashboard-sticky-header.is-compact .nav{padding:4px 8px 0;}
+  .dashboard-sticky-header.is-compact .nav-btn{padding:6px 9px;font-size:11px;}
+  #kpi-excel-export-btn{scroll-margin-top:100px;}
+}
+@media(max-width:600px){
+  .header-meta .master-xls-btn{padding:6px 9px;}
+  .header-meta .master-xls-btn span:not(:first-child){display:none;}
 }
 
 
@@ -990,6 +1008,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   transition: all 0.2s ease;
   box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   user-select: none;
+  white-space: nowrap;
 }
 .master-xls-btn:hover {
   border-color: #4ecb71;
@@ -998,6 +1017,10 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   box-shadow: 0 4px 14px rgba(78, 203, 113, 0.3);
   transform: translateY(-1px);
 }
+.kpi-section-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:12px;}
+.kpi-heading-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;flex:0 0 auto;white-space:nowrap;}
+.kpi-heading-actions .section-xls-btn{position:static;}
+#kpi-excel-export-btn{scroll-margin-top:170px;}
 .modal-xls-btn {
   display: inline-flex;
   align-items: center;
@@ -1059,6 +1082,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       <button class="modal-filter-btn" id="btn-wf-match" onclick="filterWorkerModal('match',this)" style="color:#4ecb71;">✓ 일치</button>
       <button class="modal-filter-btn" id="btn-wf-admin" onclick="filterWorkerModal('admin',this)" style="color:#6c8ef5;">📋 관리소 서명</button>
       <button class="modal-filter-btn" id="btn-wf-contractor" onclick="filterWorkerModal('contractor',this)" style="color:#f5a623;">📑 시공사 청구</button>
+      <button class="modal-filter-btn" id="btn-wf-negotiation" onclick="filterWorkerModal('negotiation',this)" style="color:#f5a623;" title="원천 XLSB O열 시공사 청구 품수가 공란 또는 숫자 0인 레코드만 표시">💬 O열 네고 후보</button>
       <button class="modal-filter-btn" id="btn-wf-corrections" onclick="filterWorkerModal('corrections',this)" style="color:#cbd5e1;">보정/연계행</button>
       <button class="modal-filter-btn" id="btn-wf-all" onclick="filterWorkerModal('all',this)">전체보기</button>
       <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
@@ -1345,13 +1369,15 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 
 <!-- ====== OVERVIEW ====== -->
 <div id="page-overview" class="page active">
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+  <div class="kpi-section-heading">
     <div style="font-size:13.5px;font-weight:700;color:var(--text2);display:flex;align-items:center;gap:6px;">
       <span>📌</span><span>3개년 건축 긴급대응 핵심 총괄 지표</span>
     </div>
-    <button type="button" class="section-xls-btn" onclick="window.dashboardExcelExporter.exportCard('kpi')" title="4대 핵심 KPI 총괄 요약표 및 원천 전수 증빙을 엑셀로 다운로드">
-      <span>📊</span><span>4대 KPI 엑셀 저장</span>
-    </button>
+    <div class="kpi-heading-actions">
+      <button type="button" class="section-xls-btn" id="kpi-excel-export-btn" onclick="window.dashboardExcelExporter.exportCard('kpi')" title="4대 핵심 KPI 총괄 요약표 및 원천 전수 증빙을 엑셀로 다운로드">
+        <span>📊</span><span>4대 KPI 엑셀 저장</span>
+      </button>
+    </div>
   </div>
   <div class="kpi-grid">
     <div class="kpi" style="--kpi-color:#6c8ef5" onclick="openModal('전체 긴급보수 작업 증빙 목록', r=>true)" id="kpi-overview-cnt-card" title="💡 [총 작업 건수 정의]: 원천 엑셀 긴급보수 작업일지 기준 총 발행 건수입니다. · 클릭 시 전체 증빙 조회">
@@ -2360,11 +2386,20 @@ function parseHoursCell(value) {
   return parseNumberCell(text);
 }
 
+function parseXlsbDurationCell(rawValue, formattedValue, cell) {
+  if (typeof rawValue === 'number' && Number.isFinite(rawValue)) {
+    const display = String(formattedValue == null ? (cell?.w || '') : formattedValue).trim();
+    const numFmt = String(cell?.z || '');
+    if (cell?.f || /[:시간분]/.test(display) || /\[h+\]/i.test(numFmt)) return rawValue * 24;
+  }
+  return parseHoursCell(formattedValue == null ? rawValue : formattedValue);
+}
+
 function parseMaterialCells(rawRow, formattedRow, materialHeaders) {
   const mats = {};
   const ambiguous = [];
   (materialHeaders || []).forEach((header, colIdx) => {
-    if (colIdx < 15 || !header) return;
+    if (!header) return;
     const def = MATERIAL_DEFINITIONS.find(d => d.match.test(String(header).replace(/\s+/g, ' ')));
     if (!def) return;
     const rawValue = rawRow?.[colIdx];
@@ -2402,46 +2437,108 @@ function buildMaterialData(records) {
 
 function validateRawIntegrity(wb, records) {
   const stats = window.lastXlsbParseStats || {};
+  const list = records || [];
   const seen = new Map();
-  (records || []).forEach(r => {
-    const key = [r.yr, r.no, r.date, r.building, r.room, r.content, r.workers_admin, r.hours].join('|');
+  list.forEach(r => {
+    const key = [r.settled_yr || r.yr, r.date, r.building, r.room, r.content, r.workers_admin, r.hours].join('|');
     seen.set(key, (seen.get(key) || 0) + 1);
   });
   const duplicateGroups = [...seen.values()].filter(count => count > 1).length;
   const duplicateRows = [...seen.values()].filter(count => count > 1).reduce((sum, count) => sum + count, 0);
-  const requiredMissing = (records || []).filter(r => !r.yr || !r.date || !r.content || !Number.isFinite(Number(r.hours))).length;
+  const requiredMissingRows = list.filter(r => !r.yr || !r.date || !r.content
+    || !Number.isFinite(Number(r.hours)) || !Number.isFinite(Number(r.total_h)))
+    .map(r => r.source_sheet + '!' + r.source_row + '행 ' + (!r.date ? '작업일 누락' : '') + (!r.content ? ' 보수내용 누락' : ''));
+  const requiredMissing = requiredMissingRows.length;
   const perYear = {};
-  (records || []).forEach(r => { perYear[r.yr] = (perYear[r.yr] || 0) + 1; });
-  const canonicalHours = (records || []).reduce((sum, r) => sum + (Number(r.total_h) || 0), 0);
-  const cachedHours = (records || []).reduce((sum, r) => sum + (Number(r.source_cached_total_h) || 0), 0);
+  list.forEach(r => {
+    const year = r.settled_yr || r.yr;
+    perYear[year] = (perYear[year] || 0) + 1;
+  });
+  const canonicalHours = list.reduce((sum, r) => sum + (Number(r.total_h) || 0), 0);
+  const cachedHours = list.reduce((sum, r) => sum + (Number(r.source_cached_total_h) || 0), 0);
+  const cachedHoursRecordCount = list.filter(r => r.source_cached_total_h != null && Number.isFinite(Number(r.source_cached_total_h))).length;
+  const calculatedHoursRecordCount = list.filter(r => r.source_cached_total_h == null).length;
+  const negotiationCandidates = list.filter(r => r.negotiation_candidate);
+  const signedNegotiationCandidates = negotiationCandidates.filter(r => (Number(r.workers_admin ?? r.workers) || 0) > 0);
+  const mergedContractorRecords = list.filter(r => r.contractor_source_state === 'merged');
+  const sheetParsedRows = Object.values(stats.sheets || {}).reduce((sum, sheet) => sum + (Number(sheet.parsedRows) || 0), 0);
+  const headerErrorCount = (stats.headerErrors || []).length;
+  const yearConflictCount = (stats.yearLabelConflictCount || 0) + (stats.futureSettlementDateCount || 0);
   const report = {
-    ok: duplicateGroups === 0 && requiredMissing === 0 && (stats.parsedRows || 0) === (records || []).length,
+    ok: duplicateGroups === 0 && requiredMissing === 0
+      && (stats.parsedRows || 0) === list.length && sheetParsedRows === list.length
+      && headerErrorCount === 0 && yearConflictCount === 0
+      && (stats.invalidContractorCellCount || 0) === 0
+      && (stats.formulaCacheMismatchCount || 0) === 0,
     source: window._rawXlsbSourceUrl || 'XLSB',
+    sourceSha256: window.lastXlsbSourceHash || '',
     sheets: wb?.SheetNames || [],
-    recordCount: records?.length || 0,
+    recordCount: list.length,
     perYear,
     parseStats: stats,
     duplicateGroups,
     duplicateRows,
     requiredMissing,
+    requiredMissingRows,
+    sheetParsedRows,
+    headerErrorCount,
+    yearConflictCount,
+    negotiationCandidateCount: negotiationCandidates.length,
+    signedNegotiationCandidateCount: signedNegotiationCandidates.length,
+    blankContractorCandidateCount: negotiationCandidates.filter(r => r.contractor_source_state === 'blank').length,
+    zeroContractorCandidateCount: negotiationCandidates.filter(r => r.contractor_source_state === 'zero').length,
+    mergedContractorCellCount: mergedContractorRecords.length,
+    mergedContractorCells: mergedContractorRecords.map(r => ({ sheet: r.source_sheet, row: r.source_row, anchor: r.contractor_source_merged_from, value: r.contractor_source_merged_value })),
+    carryoverCount: list.filter(r => r.is_carryover).length,
     canonicalHours: Math.round(canonicalHours * 100) / 100,
     cachedHours: Math.round(cachedHours * 100) / 100,
+    cachedHoursRecordCount,
+    calculatedHoursRecordCount,
     formulaCacheMismatchCount: stats.formulaCacheMismatchCount || 0,
+    formulaCheckCount: stats.formulaCheckCount || 0,
     ambiguousMaterialCells: stats.ambiguousMaterialCells || 0,
     warnings: [],
     notices: []
   };
+  if (headerErrorCount > 0) {
+    report.warnings.push('필수 머리글 매핑 실패: ' + (stats.headerErrors || []).map(item => item.sheet + ' (' + item.missing.join(', ') + ')').join('; '));
+  }
   if (report.formulaCacheMismatchCount > 0) {
-    report.warnings.push(`${report.formulaCacheMismatchCount}건의 J열 캐시값이 D×I 재계산값과 불일치합니다. 대시보드는 현재 D×I 값을 기준으로 표시합니다.`);
+    const details = (stats.formulaCacheMismatches || []).map(item =>
+      item.sheet + '!J' + item.row + ' (' + item.formula + ', 재계산 ' + item.computedHours + 'h / 캐시 ' + item.cachedHours + 'h)')
+      .join(', ');
+    report.warnings.push('총시간 수식 재계산과 캐시가 불일치·누락 또는 미지원인 셀 ' + report.formulaCacheMismatchCount + '건'
+      + (details ? ': ' + details : '') + '을 발견했습니다.');
+  }
+  if (yearConflictCount > 0) {
+    const details = (stats.yearLabelConflicts || []).map(item =>
+      item.sheet + '!' + item.row + '행(A=' + item.label + ', 날짜=' + item.date + ')').join(', ');
+    report.warnings.push('원천 연도 라벨과 작업일 또는 정산 시트 연도 불일치 ' + yearConflictCount + '건'
+      + (details ? ': ' + details : '') + '을 발견했습니다.');
+  }
+  if (stats.invalidContractorCellCount > 0) {
+    const details = (stats.invalidContractorCells || []).map(item =>
+      item.sheet + '!O' + item.row + ' (' + item.value + ')').join(', ');
+    report.warnings.push('O열 시공사 청구 품수를 숫자로 판독할 수 없는 셀 ' + stats.invalidContractorCellCount + '건'
+      + (details ? ': ' + details : '') + '을 발견했습니다.');
   }
   if (report.ambiguousMaterialCells > 0) {
-    report.notices.push(`자재 기재 셀 중 ${report.ambiguousMaterialCells}건에 복수 숫자(이월/병기)가 포함되어 실사용량 추출 후 원문 증빙을 온전히 보존했습니다.`);
+    report.notices.push('자재 기재 셀 중 ' + report.ambiguousMaterialCells + '건에 복수 숫자(이월/병기)가 포함되어 원문 증빙을 보존했습니다.');
   }
   if ((stats.skippedRequired || 0) > 0) {
-    report.notices.push(`원천 시트의 머리글/공란/설명 행 ${stats.skippedRequired}개는 증빙 레코드에서 안전하게 제외했습니다.`);
+    report.notices.push('원천 시트의 공란/설명 행 ' + stats.skippedRequired + '개는 증빙 레코드에서 제외했습니다.');
   }
-  if (duplicateGroups > 0) report.warnings.push(`완전 중복 레코드 ${duplicateGroups}그룹(${duplicateRows}행)을 발견했습니다.`);
-  if (requiredMissing > 0) report.warnings.push(`필수 필드 누락 레코드 ${requiredMissing}건을 발견했습니다.`);
+  if (duplicateGroups > 0) report.warnings.push('중복 작업 레코드 ' + duplicateGroups + '그룹(' + duplicateRows + '행)을 발견했습니다.');
+  if (requiredMissing > 0) report.warnings.push('필수 필드 누락 레코드 ' + requiredMissing + '건: ' + requiredMissingRows.join(', '));
+  if (report.carryoverCount > 0) {
+    report.notices.push('전년도 이월 ' + report.carryoverCount + '건은 정산 시트 연도에 귀속하고 연환산 시 1회만 반영합니다.');
+  }
+  report.notices.push('O열 공란 ' + report.blankContractorCandidateCount + '건, 숫자 0 ' + report.zeroContractorCandidateCount
+    + '건을 네고 후보로 표시했습니다. 합계 ' + report.negotiationCandidateCount + '건 (관리소 서명 인원 있음 ' + report.signedNegotiationCandidateCount + '건).');
+  if (report.mergedContractorCellCount > 0) {
+    report.notices.push('O열 병합 자식 셀 ' + report.mergedContractorCellCount + '건은 앵커 청구값을 증빙하고 개별 청구·네고 수량에는 중복 계산하지 않습니다: '
+      + report.mergedContractorCells.map(item => item.sheet + '!O' + item.row + ' ← O' + String(item.anchor || '').replace(/^O/, '') + ' (' + item.value + '품)').join(', ') + '.');
+  }
   window.rawIntegrityReport = report;
   return report;
 }
@@ -2458,15 +2555,26 @@ function updateRawIntegrityStatus(report) {
   if (!el || !report) return;
   const warningCount = (report.warnings || []).length;
   const sourceLabel = report.source === 'cache' ? '캐시' : 'GitHub XLSB';
-  el.textContent = `${sourceLabel} ${report.recordCount}건 전수대조 · ${warningCount ? `경고 ${warningCount}건` : '무결성 확인 (100% 일치)'}`;
-  el.style.color = report.source === 'cache' ? '#fb923c' : (warningCount ? '#fbbf24' : '#4ade80');
+  const yearCounts = Object.entries(report.perYear || {}).sort((a, b) => a[0].localeCompare(b[0], 'ko'))
+    .map(item => item[0] + ' ' + item[1] + '건').join(' · ');
+  const valid = Boolean(report.ok) && warningCount === 0;
+  el.textContent = sourceLabel + ' ' + report.recordCount + '건 전수대조 · ' + (valid ? '무결성 확인' : '경고 ' + warningCount + '건');
+  el.style.color = report.source === 'cache' ? '#fb923c' : (valid ? '#4ade80' : '#fbbf24');
+  const negotiationFilterBtn = document.getElementById('btn-wf-negotiation');
+  if (negotiationFilterBtn) negotiationFilterBtn.textContent = '💬 O열 네고 후보 ' + report.negotiationCandidateCount;
   const summaryNotes = [
-    `[원천 XLSB 전수 무결성 검증 리포트]`,
-    `• 전수 레코드: 총 ${report.recordCount}건 (26년 ${report.perYear?.['26년'] || 83}건 · 25년 ${report.perYear?.['25년'] || 86}건 · 24년 ${report.perYear?.['24년'] || 107}건)`,
-    `• D(인원)×I(작업시간)=J(총시간) 수식 일치율: 100% (오차 0건, IEEE 64비트 정밀도 완벽 검증)`,
-    `• 시간 계보: Day Fraction × 24h = Hour(시간) 환산 및 총 공수 3,107.4h 정합성 100% 입증`,
-    `• 자재 집계: 코킹·걸레받이·블라인드·이보드 4대 품목 전수 동적 집계 일원화`,
-    `• 중복 및 결측: 중복 0건 · 필수필드 누락 0건`,
+    '[원천 XLSB 전수 무결성 검증 리포트]',
+    '• 정산 시트별 레코드: ' + yearCounts + ' (총 ' + report.recordCount + '건)',
+    '• 머리글 매핑 오류: ' + report.headerErrorCount + '건 · 필수 필드 누락: ' + report.requiredMissing + '건',
+    '• 총시간 캐시 검증: ' + report.formulaCheckCount + '건 대조 · 불일치 ' + report.formulaCacheMismatchCount + '건',
+    '• 총시간 원천: 캐시 ' + report.cachedHoursRecordCount + '건 · 원천 캐시 없음 ' + report.calculatedHoursRecordCount + '건 (후자는 작업시간×인원으로 계산)',
+    '• XLSB 시간 계보: Excel day fraction × 24를 정밀도 손실 없이 사용하고 실제 수식 참조 셀과 캐시를 대조',
+    '• 원천 XLSB SHA-256: ' + (report.sourceSha256 || '계산 불가'),
+    '• 연도/정산 계보: 이월 ' + report.carryoverCount + '건 · 연도 충돌 ' + report.yearConflictCount + '건',
+    '• O열 네고 후보: 공란 ' + report.blankContractorCandidateCount + '건 · 숫자 0 ' + report.zeroContractorCandidateCount + '건 · 합계 ' + report.negotiationCandidateCount + '건',
+    '• O열 병합 공유: ' + report.mergedContractorCellCount + '건 (독립 공란 후보 및 수량 중복 산입 제외)',
+    '• 중복 작업: ' + report.duplicateGroups + '그룹 (' + report.duplicateRows + '행)',
+    '• 자재 집계: 시트별 자재 머리글을 기준으로 동적 집계',
     ...(report.warnings || []),
     ...(report.notices || [])
   ];
@@ -2482,14 +2590,58 @@ function hideLoader() {
   }
 }
 
+function normalizeXlsbHeaderText(value) {
+  return String(value == null ? '' : value).replace(/[\r\n\s]+/g, '').replace(/[()（）]/g, '').toLowerCase();
+}
+
+function resolveXlsbColumnMap(rowsFmt, headerRow) {
+  const main = rowsFmt[headerRow] || [];
+  const sub = rowsFmt[headerRow + 1] || [];
+  const width = Math.max(main.length, sub.length);
+  let inheritedParent = '';
+  const headers = Array.from({ length: width }, (_, col) => {
+    const mainText = String(main[col] == null ? '' : main[col]).trim();
+    const subText = String(sub[col] == null ? '' : sub[col]).trim();
+    if (mainText) inheritedParent = mainText;
+    const parent = !mainText && /^(시작|종료|자재내역)$/.test(normalizeXlsbHeaderText(inheritedParent))
+      ? inheritedParent : '';
+    return [parent, mainText, subText].filter(Boolean).join(' ');
+  });
+  const find = pattern => headers.findIndex(value => pattern.test(normalizeXlsbHeaderText(value)));
+  const columns = {
+    yearLabel: 0,
+    no: find(/^(건수|번호|no)$/i),
+    admin: find(/근로자.*직접서명|관리소.*(서명|인원)|직접서명/),
+    date: find(/시작.*일자|작업일자|접수일자|^일자$/),
+    startTime: find(/시작.*시간/),
+    endTime: find(/종료.*시간/),
+    hours: find(/작업시간.*인당|인당.*작업시간|^작업시간/),
+    totalHours: find(/전체시간|총시간|총공수|인원.*작업시간/),
+    building: find(/건물동/),
+    room: find(/호실|구역/),
+    manager: find(/작업지시|지시자|담당자/),
+    content: find(/보수내용|작업내용/),
+    contractor: find(/특별인부|시공사.*청구/)
+  };
+  const required = ['no', 'admin', 'date', 'hours', 'totalHours', 'building', 'room', 'content', 'contractor'];
+  return { columns, headers, missing: required.filter(key => columns[key] < 0) };
+}
+
+function parseXlsbQuantity(value) {
+  if (value == null || String(value).trim() === '') return null;
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  const match = String(value).replace(/,/g, '').match(/-?\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : null;
+}
+
 function parseXlsbWorkbook(wb) {
   const yearSheets = [];
-  wb.SheetNames.forEach(sname => {
-    const m = sname.match(/(\d{2,4})년?/);
+  (wb.SheetNames || []).forEach(sname => {
+    const m = String(sname).match(/(\d{2,4})년?/);
     if (m) {
       let yrNum = parseInt(m[1], 10);
       if (yrNum < 100) yrNum += 2000;
-      yearSheets.push({ yrNum, sname, normYr: `${yrNum % 100}년` });
+      yearSheets.push({ yrNum, sname, normYr: String(yrNum % 100) + '년' });
     }
   });
   yearSheets.sort((a, b) => a.yrNum - b.yrNum);
@@ -2497,125 +2649,208 @@ function parseXlsbWorkbook(wb) {
   const allRecords = [];
   const parseStats = {
     sheets: {}, parsedRows: 0, skippedRequired: 0,
-    formulaCacheMismatchCount: 0, ambiguousMaterialCells: 0
+    formulaCheckCount: 0, formulaCacheMismatchCount: 0, formulaCacheMismatches: [],
+    ambiguousMaterialCells: 0, headerErrors: [],
+    yearLabelConflicts: [], invalidContractorCells: [], mergedContractorCells: [],
+    yearLabelConflictCount: 0, futureSettlementDateCount: 0,
+    invalidContractorCellCount: 0, carryoverRecordCount: 0
   };
 
   for (const { yrNum, sname, normYr } of yearSheets) {
     const ws = wb.Sheets[sname];
-    if (!ws) continue;
+    if (!ws) {
+      parseStats.headerErrors.push({ sheet: sname, missing: ['worksheet'] });
+      continue;
+    }
     const rowsRaw = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true });
     const rowsFmt = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false });
-    const sourceHeaderRow = rowsFmt.findIndex((row, idx) => idx < 8 && (row || []).some(v => /작업시간/.test(String(v || ''))));
-    const materialHeaderRow = sourceHeaderRow >= 0 ? sourceHeaderRow + 1 : -1;
-    const materialHeaders = materialHeaderRow >= 0 ? rowsFmt[materialHeaderRow] : [];
-    parseStats.sheets[sname] = { rows: rowsRaw.length, materialHeaderRow, parsedRows: 0 };
+    const firstSheetRow = ws['!ref'] ? XLSX.utils.decode_range(ws['!ref']).s.r : 0;
+    const sourceHeaderIndex = rowsFmt.findIndex((row, idx) => idx < 12 && (row || []).some(v => /작업시간/.test(String(v || ''))));
+    const materialHeaderIndex = sourceHeaderIndex >= 0 ? sourceHeaderIndex + 1 : -1;
+    const sourceHeaderRow = sourceHeaderIndex >= 0 ? firstSheetRow + sourceHeaderIndex + 1 : -1;
+    const materialHeaderRow = materialHeaderIndex >= 0 ? firstSheetRow + materialHeaderIndex + 1 : -1;
+    const columnResult = sourceHeaderIndex >= 0 ? resolveXlsbColumnMap(rowsFmt, sourceHeaderIndex) : { columns: {}, missing: ['header row'] };
+    const col = columnResult.columns;
+    const materialHeaders = materialHeaderIndex >= 0 ? rowsFmt[materialHeaderIndex] : [];
+    parseStats.sheets[sname] = {
+      rows: rowsRaw.length, sourceHeaderRow, materialHeaderRow,
+      parsedRows: 0, columnMap: col, missingColumns: columnResult.missing
+    };
+    if (columnResult.missing.length) {
+      parseStats.headerErrors.push({ sheet: sname, missing: columnResult.missing });
+      continue;
+    }
 
+    let lastKnownDate = null;
     for (let r = 0; r < rowsRaw.length; r++) {
       const rRaw = rowsRaw[r];
       const rFmt = rowsFmt[r];
-      if (!rRaw || !rFmt) continue;
-
-      const col0 = rFmt[0];
-      const col1 = rFmt[1]; // No / 건수
-      const col2 = rFmt[2]; // 업체명
-      const col3 = rFmt[3]; // 관리소 서명 인원
-      const col4 = rFmt[4]; // 시작일자
-      const col5 = rFmt[5]; // 시작시간
-      const col7 = rFmt[7]; // 종료시간
-      const col8 = rFmt[8]; // 인당 작업시간
-      const col9 = rFmt[9]; // 전체 작업시간
-      const col10 = rFmt[10]; // 건물동
-      const col11 = rFmt[11]; // 호실
-      const col12 = rFmt[12]; // 지시자
-      const col13 = rFmt[13]; // 보수내용
-      const col14 = rFmt[14]; // 시공사 특별인부
-
-      // 요약 및 집계 행(합계, 소계, 총계 등) 자동 건너뛰기
-      const rowStr = [col0, col1, col2, col3, col4].join(' ');
+      if (!Array.isArray(rRaw) || !Array.isArray(rFmt)) continue;
+      if (r === sourceHeaderIndex || r === materialHeaderIndex) continue;
+      const sourceRowNumber = firstSheetRow + r + 1;
+      const rawAt = index => index >= 0 ? rRaw[index] : undefined;
+      const fmtAt = index => index >= 0 ? rFmt[index] : undefined;
+      const col0 = fmtAt(col.yearLabel);
+      const col1 = fmtAt(col.no);
+      const col3 = fmtAt(col.admin);
+      const col4 = fmtAt(col.date);
+      const col5 = fmtAt(col.startTime);
+      const col7 = fmtAt(col.endTime);
+      const col8 = fmtAt(col.hours);
+      const col9 = fmtAt(col.totalHours);
+      const col10 = fmtAt(col.building);
+      const col11 = fmtAt(col.room);
+      const col12 = fmtAt(col.manager);
+      const col13 = fmtAt(col.content);
+      const contractorRawValue = rawAt(col.contractor);
+      const contractorFormattedValue = fmtAt(col.contractor);
+      const contractorCellAddress = XLSX.utils.encode_cell({ r: firstSheetRow + r, c: col.contractor });
+      const contractorMerge = (ws['!merges'] || []).find(range => firstSheetRow + r >= range.s.r
+        && firstSheetRow + r <= range.e.r && col.contractor >= range.s.c && col.contractor <= range.e.c);
+      const contractorMergeAnchorAddress = contractorMerge ? XLSX.utils.encode_cell(contractorMerge.s) : '';
+      const contractorMergedFrom = contractorMerge && contractorMergeAnchorAddress !== contractorCellAddress
+        ? contractorMergeAnchorAddress : '';
+      const contractorMergedCell = contractorMergedFrom ? ws[contractorMergeAnchorAddress] : null;
+      const contractorMergedValue = contractorMergedCell && contractorMergedCell.v != null ? contractorMergedCell.v : null;
+      const contractorMergedText = contractorMergedCell
+        ? String(contractorMergedCell.w == null ? (contractorMergedCell.v == null ? '' : contractorMergedCell.v) : contractorMergedCell.w).trim() : '';
+      const rowStr = rFmt.map(value => String(value == null ? '' : value)).join(' ');
       if (/합\s*계|소\s*계|총\s*계|SUM/i.test(rowStr)) continue;
+      if (String(col1 || '').trim() === '샘플>' || String(col1 || '').trim() === '건수') continue;
 
-      // 헤더 및 서식 샘플 행 건너뛰기
-      if (col1 === '샘플>' || col1 === '건수' || col2 === '업체명' || col3 === '근로자') continue;
-      if (String(col3 || '').includes('직접 서명') || String(col1 || '').includes('시작')) continue;
-      if (col4 === '일자' || col4 === '시작' || col5 === '시간' || col5 === '시작') continue;
+      const hasPayload = [col0, col1, col3, col4, col10, col11, col13, contractorFormattedValue]
+        .some(value => value != null && String(value).trim() !== '');
+      if (!hasPayload) continue;
+      if (String(col1 || '').includes('시작') || String(col4 || '').trim() === '일자') continue;
 
-      // 최소 필수 조건: 작업일자 또는 보수내용 존재 필수
-      if (!col4 && !col13) {
-        parseStats.skippedRequired++;
-        continue;
+      let adminValue = parseXlsbQuantity(rawAt(col.admin));
+      if (adminValue == null) adminValue = parseXlsbQuantity(col3);
+      const wAdmin = adminValue == null ? 0 : adminValue;
+
+      const contractorText = contractorMergedFrom ? contractorMergedText
+        : String(contractorFormattedValue == null ? (contractorRawValue == null ? '' : contractorRawValue) : contractorFormattedValue).trim();
+      const contractorNumber = parseXlsbQuantity(contractorRawValue == null ? contractorFormattedValue : contractorRawValue);
+      const contractorSourceState = contractorMergedFrom ? 'merged'
+        : contractorText === '' ? 'blank'
+        : /견적/.test(contractorText) ? 'estimate'
+        : contractorNumber == null ? 'invalid'
+        : Math.abs(contractorNumber) < 1e-12 ? 'zero' : 'value';
+      const wCont = contractorSourceState === 'merged' || contractorNumber == null ? 0 : contractorNumber;
+      if (contractorMergedFrom) {
+        parseStats.mergedContractorCells.push({
+          sheet: sname, row: sourceRowNumber, cell: contractorCellAddress,
+          anchor: contractorMergeAnchorAddress, value: contractorMergedValue,
+          range: contractorMergeAnchorAddress + ':' + XLSX.utils.encode_cell(contractorMerge.e)
+        });
       }
-
-      // 관리소 직접 서명 인원 파싱
-      let wAdmin = 0;
-      if (col3 !== undefined && col3 !== null && String(col3).trim() !== '') {
-        const p = parseFloat(String(col3).replace(/[^0-9.]/g, ''));
-        if (!isNaN(p)) wAdmin = p;
+      if (contractorSourceState === 'invalid') {
+        parseStats.invalidContractorCellCount++;
+        parseStats.invalidContractorCells.push({ sheet: sname, row: sourceRowNumber, value: contractorText });
       }
+      const negotiationCandidate = contractorSourceState === 'blank' || contractorSourceState === 'zero';
 
-      // 시공사 특별인부 품수 파싱
-      let wCont = 0;
-      if (col14 !== undefined && col14 !== null && String(col14).trim() !== '') {
-        const p = parseFloat(String(col14).replace(/[^0-9.]/g, ''));
-        if (!isNaN(p)) wCont = p;
-      }
+      const yearLabelText = String(col0 == null ? '' : col0).trim();
+      const yearLabelMatch = yearLabelText.match(/(?:^|\D)((?:19|20)?\d{2})\s*년/);
+      let yearFromLabel = yearLabelMatch ? parseInt(yearLabelMatch[1], 10) : null;
+      if (yearFromLabel != null && yearFromLabel < 100) yearFromLabel += 2000;
 
-      // 날짜(YYYY-MM-DD) 및 월(month) 산출
+      const rawDate = rawAt(col.date);
+      const dateText = String(col4 == null ? (rawDate == null ? '' : rawDate) : col4).trim();
+      let dateYear = null;
+      let month = 0;
+      let day = 0;
       let dateStr = '';
-      let month = 1;
-      const rawDate = rRaw[4];
-      if (rawDate instanceof Date) {
-        const kst = new Date(rawDate.getTime() + (rawDate.getTimezoneOffset() === 0 ? 9 * 3600 * 1000 : 0));
-        const y = kst.getFullYear();
-        const m = String(kst.getMonth() + 1).padStart(2, '0');
-        const d = String(kst.getDate()).padStart(2, '0');
-        dateStr = `${y}-${m}-${d}`;
-        month = kst.getMonth() + 1;
-      } else if (typeof rawDate === 'number' && rawDate > 40000) {
-        const epoch = new Date(1899, 11, 30);
-        const js = new Date(epoch.getTime() + rawDate * 86400 * 1000);
-        const y = js.getFullYear();
-        const m = String(js.getMonth() + 1).padStart(2, '0');
-        const d = String(js.getDate()).padStart(2, '0');
-        dateStr = `${y}-${m}-${d}`;
-        month = js.getMonth() + 1;
-      } else if (col4) {
-        const dm = String(col4).match(/(\d{1,2})월\s*(\d{1,2})일/);
-        if (dm) {
-          const m = parseInt(dm[1], 10);
-          const d = parseInt(dm[2], 10);
-          month = m;
-          let y = yrNum;
-          if (normYr === '26년' && m === 12) y = 2025; // 25년 12월 이월건
-          dateStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (rawDate instanceof Date && Number.isFinite(rawDate.getTime())) {
+        const dateObject = new Date(rawDate.getTime() + (rawDate.getTimezoneOffset() === 0 ? 9 * 3600 * 1000 : 0));
+        dateYear = dateObject.getFullYear();
+        month = dateObject.getMonth() + 1;
+        day = dateObject.getDate();
+      } else if (typeof rawDate === 'number' && rawDate > 0) {
+        const serialDay = Math.floor(rawDate);
+        const dateObject = new Date(Date.UTC(1899, 11, 30) + serialDay * 86400 * 1000);
+        dateYear = dateObject.getUTCFullYear();
+        month = dateObject.getUTCMonth() + 1;
+        day = dateObject.getUTCDate();
+      } else {
+        const fullDate = dateText.match(/((?:19|20)\d{2})\s*[.\-/년]\s*(\d{1,2})\s*(?:월|[.\-/])\s*(\d{1,2})\s*일?/);
+        const monthDay = dateText.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/);
+        if (fullDate) {
+          dateYear = parseInt(fullDate[1], 10);
+          month = parseInt(fullDate[2], 10);
+          day = parseInt(fullDate[3], 10);
+        } else if (monthDay) {
+          month = parseInt(monthDay[1], 10);
+          day = parseInt(monthDay[2], 10);
         }
       }
-
-      if (!dateStr) {
-        dateStr = `${yrNum}-01-01`;
-        month = 1;
+      let inheritedDateFromRow = null;
+      if (!dateStr && !String(col1 == null ? '' : col1).trim() && !dateText && lastKnownDate) {
+        dateYear = lastKnownDate.year;
+        month = lastKnownDate.month;
+        day = lastKnownDate.day;
+        dateStr = lastKnownDate.date;
+        inheritedDateFromRow = lastKnownDate.row;
       }
+      const sourceYear = dateYear || yearFromLabel || yrNum;
+      if (dateYear && yearFromLabel && dateYear !== yearFromLabel) {
+        parseStats.yearLabelConflictCount++;
+        parseStats.yearLabelConflicts.push({ sheet: sname, row: sourceRowNumber, label: yearLabelText, date: dateText, sourceYear: dateYear });
+      }
+      if (sourceYear > yrNum) parseStats.futureSettlementDateCount++;
+      if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+        const dateObject = new Date(sourceYear, month - 1, day);
+        if (dateObject.getFullYear() === sourceYear && dateObject.getMonth() === month - 1 && dateObject.getDate() === day) {
+          dateStr = [sourceYear, String(month).padStart(2, '0'), String(day).padStart(2, '0')].join('-');
+        } else {
+          month = 0;
+        }
+      } else {
+        month = 0;
+      }
+      if (dateStr) lastKnownDate = { date: dateStr, year: sourceYear, month: month, day: day, row: sourceRowNumber };
+      const isCarryover = sourceYear < yrNum;
+      if (isCarryover) parseStats.carryoverRecordCount++;
 
-      // 이월 여부 판별 (작업일자 연도 < 정산 시트 연도)
-      const isCarryover = (!dateStr.startsWith(String(yrNum)));
-
-      // 시간 계산: 표시 문자열과 숫자/Date 캐시를 모두 지원하고 J열 캐시와 교차검증한다.
-      const rawDayI = (typeof rRaw[8] === 'number') ? rRaw[8] : null;
-      const rawDayJ = (typeof rRaw[9] === 'number') ? rRaw[9] : null;
-      const hours = parseHoursCell(col8 || rRaw[8]);
-      const totalH = Math.round(hours * wAdmin * 100) / 100;
-      const sourceCachedTotalH = parseHoursCell(col9 || rRaw[9]) * (String(col9 || '').includes('시간') ? 1 : 1);
+      const rawDayI = typeof rawAt(col.hours) === 'number' ? rawAt(col.hours) : null;
+      const rawDayJ = typeof rawAt(col.totalHours) === 'number' ? rawAt(col.totalHours) : null;
+      const hoursCellAddress = XLSX.utils.encode_cell({ r: sourceRowNumber - 1, c: col.hours });
+      const totalCellAddress = XLSX.utils.encode_cell({ r: sourceRowNumber - 1, c: col.totalHours });
+      const hoursCell = ws[hoursCellAddress];
+      const totalCell = ws[totalCellAddress];
+      const hours = parseXlsbDurationCell(rawAt(col.hours), col8, hoursCell);
+      const computedTotalHours = hours * wAdmin;
+      const sourceCachedTotalH = rawDayJ !== null
+        ? parseXlsbDurationCell(rawDayJ, col9, totalCell) : null;
+      const hasCachedTotal = rawDayJ !== null && Number.isFinite(sourceCachedTotalH);
+      const sourceFormula = totalCell && totalCell.f ? totalCell.f : '';
+      const formulaRefs = String(sourceFormula).match(/^\$?I\$?(\d+)\s*\*\s*\$?D\$?(\d+)$/i);
+      let formulaComputedTotalH = null;
+      if (formulaRefs) {
+        const formulaHoursCell = ws[XLSX.utils.encode_cell({ r: Number(formulaRefs[1]) - 1, c: col.hours })];
+        const formulaWorkersCell = ws[XLSX.utils.encode_cell({ r: Number(formulaRefs[2]) - 1, c: col.admin })];
+        const formulaHoursRaw = !formulaHoursCell ? 0
+          : typeof formulaHoursCell.v === 'number' ? formulaHoursCell.v : null;
+        const formulaWorkers = !formulaWorkersCell ? 0
+          : typeof formulaWorkersCell.v === 'number' ? formulaWorkersCell.v : null;
+        if (formulaHoursRaw !== null && formulaWorkers !== null) {
+          formulaComputedTotalH = parseXlsbDurationCell(formulaHoursRaw, formulaHoursCell.w, formulaHoursCell) * formulaWorkers;
+        }
+      }
+      const formulaCacheMatches = hasCachedTotal && formulaComputedTotalH !== null
+        && Math.abs(formulaComputedTotalH - sourceCachedTotalH) < 1e-7;
+      const totalH = sourceFormula
+        ? (formulaComputedTotalH !== null ? formulaComputedTotalH : (hasCachedTotal ? sourceCachedTotalH : computedTotalHours))
+        : (hasCachedTotal ? sourceCachedTotalH : computedTotalHours);
       const materialResult = parseMaterialCells(rRaw, rFmt, materialHeaders);
-      const sourceFormula = ws['J' + (r + 1)]?.f || '';
-      const hasCachedTotal = Number.isFinite(sourceCachedTotalH) && sourceCachedTotalH > 0;
-
-      // 원천 엑셀 실수(IEEE 64비트 Day Fraction) 기준 D×I == J 수식 일치 여부 정밀 검증
-      let isFormulaMatch = false;
-      if (rawDayI !== null && rawDayJ !== null && wAdmin > 0) {
-        isFormulaMatch = Math.abs(rawDayI * wAdmin - rawDayJ) < 1e-5;
-      }
-      // D×I 원천 수식이 완벽히 일치하면 통과, 불일치하고 시간 편차가 0.05h(3분) 초과일 때만 수식 오류로 계상
-      if (hasCachedTotal && !isFormulaMatch && Math.abs(sourceCachedTotalH - totalH) > 0.05 && wAdmin > 0) {
-        parseStats.formulaCacheMismatchCount++;
+      if (sourceFormula) {
+        parseStats.formulaCheckCount++;
+        if (!formulaRefs || formulaComputedTotalH === null || !hasCachedTotal || !formulaCacheMatches) {
+          parseStats.formulaCacheMismatchCount++;
+          parseStats.formulaCacheMismatches.push({
+            sheet: sname, row: sourceRowNumber, formula: sourceFormula,
+            computedHours: formulaComputedTotalH, cachedHours: sourceCachedTotalH
+          });
+        }
       }
       parseStats.ambiguousMaterialCells += materialResult.ambiguous.length;
 
@@ -2624,13 +2859,13 @@ function parseXlsbWorkbook(wb) {
       const baselineTypes = (typeof BASELINE_TYPES_MAP !== 'undefined' && (cleanContent in BASELINE_TYPES_MAP))
         ? [...BASELINE_TYPES_MAP[cleanContent]] : [];
       const types = baselineTypes.length > 0 ? baselineTypes : classifyTypesHelper(content);
-
-      // 관리소 서명 vs 시공사 청구 특별인부 정밀 교차 검증 및 괴리 카테고리 판별
       let diffCat = 'match';
-      const workerDiff = Math.round((wAdmin - wCont) * 10) / 10;
+      const workerDiff = contractorSourceState === 'merged' ? 0 : Math.round((wAdmin - wCont) * 10) / 10;
       let workerNote = '';
-
-      if (wAdmin === 0 && wCont === 0) {
+      if (contractorSourceState === 'merged') {
+        diffCat = 'merged_claim_shared';
+        workerNote = '시공사 청구 ' + contractorText + '품은 ' + contractorMergedFrom + ' 병합 공유값이며 개별 행 청구/네고로 중복 계산하지 않음';
+      } else if (wAdmin === 0 && wCont === 0) {
         diffCat = 'both_empty';
         workerNote = '관리소 및 시공사 인원 미기재';
       } else if (Math.abs(wAdmin - wCont) < 1e-4) {
@@ -2638,28 +2873,43 @@ function parseXlsbWorkbook(wb) {
         workerNote = '관리소 서명과 시공사 청구 인원 일치';
       } else if (wAdmin > 0 && wCont === 0) {
         diffCat = 'blank_contractor';
-        workerNote = `시공사 청구 미기재 (관리소 ${wAdmin}명 단독 서명)`;
+        workerNote = '시공사 청구 미기재 (관리소 ' + wAdmin + '명 단독 서명)';
       } else if (wAdmin === 0 && wCont > 0) {
         diffCat = 'blank_admin';
-        workerNote = `관리소 미서명 (시공사 ${wCont}품 청구)`;
+        workerNote = '관리소 미서명 (시공사 ' + wCont + '품 청구)';
       } else if (wAdmin > wCont) {
         diffCat = 'reduced_claim';
-        workerNote = `시공사 자발적 축소 청구 (서명 ${wAdmin}명 vs 청구 ${wCont}품, -${workerDiff}품 절감)`;
+        workerNote = '시공사 자발적 축소 청구 (서명 ' + wAdmin + '명 vs 청구 ' + wCont + '품, -' + workerDiff + '품 절감)';
       } else {
         diffCat = 'fractional_shift';
-        workerNote = `청구 품수 상회 (서명 ${wAdmin}명 vs 청구 ${wCont}품)`;
+        workerNote = '청구 품수 상회 (서명 ' + wAdmin + '명 vs 청구 ' + wCont + '품)';
       }
+      const contractorSourceNote = contractorSourceState === 'merged' ? 'O열 병합 공유값 ' + contractorText + '품'
+        : contractorSourceState === 'blank' ? 'O열 공란'
+        : contractorSourceState === 'zero' ? 'O열 숫자 0' : '';
+      const settlementNote = isCarryover ? '전년도 이월' : '';
+      if (negotiationCandidate) workerNote += ' · ' + contractorSourceNote + ' 네고 검토 후보';
+      if (isCarryover) workerNote += ' · 전년도 이월, ' + sourceYear + '년 작업을 ' + yrNum + '년 시트에서 1회 정산';
+      if (inheritedDateFromRow) workerNote += ' · 작업일은 원천 ' + inheritedDateFromRow + '행에서 이어받음';
 
       allRecords.push({
         yr: normYr,
-        no: String(col1 || '').trim(),
+        no: String(col1 == null ? '' : col1).trim(),
         workers: wAdmin,
         workers_admin: wAdmin,
         workers_contractor: wCont,
+        contractor_source_raw: contractorRawValue == null ? '' : contractorRawValue,
+        contractor_source_text: contractorText,
+        contractor_source_state: contractorSourceState,
+        contractor_source_merged_from: contractorMergedFrom,
+        contractor_source_merged_value: contractorMergedValue,
+        contractor_source_column: col.contractor,
+        negotiation_candidate: negotiationCandidate,
         diff_category: diffCat,
         worker_diff: workerDiff,
         worker_note: workerNote,
         date: dateStr,
+        date_inherited_from_row: inheritedDateFromRow,
         month: month,
         start_t: String(col5 || '').trim(),
         end_t: String(col7 || '').trim(),
@@ -2673,9 +2923,13 @@ function parseXlsbWorkbook(wb) {
         mats: materialResult.mats,
         material_notes: materialResult.ambiguous,
         source_sheet: sname,
-        source_row: r + 1,
+        source_row: sourceRowNumber,
         source_formula_total_h: sourceFormula,
         source_cached_total_h: hasCachedTotal ? sourceCachedTotalH : null,
+        source_year: sourceYear,
+        source_year_label: yearLabelText,
+        settlement_year: yrNum,
+        settlement_note: settlementNote,
         is_carryover: isCarryover,
         settled_yr: normYr
       });
@@ -2689,6 +2943,7 @@ function parseXlsbWorkbook(wb) {
 }
 
 async function fetchAndInitializeData(forceReload = false) {
+  window.lastXlsbSourceHash = '';
   const loader = document.getElementById('github-sync-loader');
   if (loader) {
     loader.style.display = 'flex';
@@ -2732,7 +2987,17 @@ async function fetchAndInitializeData(forceReload = false) {
   if (arrayBuffer && arrayBuffer.byteLength > 0) {
     try {
       updateLoaderStatus("XLSB 파일 파싱 및 매핑 진행 중...", "SheetJS 엔진을 통해 연도별 시트를 처리합니다.");
-      const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: true, cellStyles: false });
+      window.lastXlsbSourceHash = '';
+      try {
+        const digest = await crypto.subtle.digest('SHA-256', arrayBuffer);
+        window.lastXlsbSourceHash = Array.from(new Uint8Array(digest))
+          .map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase();
+      } catch (hashErr) {
+        console.warn('XLSB SHA-256 계산 실패:', hashErr);
+      }
+      // Keep XLSB serials numeric: duration cells are fractions of a day, while date cells are whole-day serials.
+      // cellDates:true coerces duration serials into Date objects and loses Excel's cached precision.
+      const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false, cellStyles: false });
       window._rawXlsbWorkbook = wb;
       window._rawXlsbArrayBuffer = arrayBuffer;
       const parsedRecords = parseXlsbWorkbook(wb);
@@ -2889,6 +3154,37 @@ function classifyTypesHelper(content) {
   if (/(?:보도블록|보도블럭|화단)/.test(c)) types.push('보도블록');
   if (types.length === 0) types.push('기타 보수');
   return types;
+}
+
+function calculateContractorHours(record) {
+  const wAdmin = Number(record.workers_admin ?? record.workers) || 0;
+  const wContractor = Number(record.workers_contractor) || 0;
+  if (wContractor <= 0) return 0;
+  if (wAdmin > 0 && Math.abs(wAdmin - wContractor) < 1e-4) return Number(record.total_h) || 0;
+  if (wAdmin > wContractor) {
+    return (Number(record.total_h) || 0) * (wContractor / wAdmin);
+  }
+  return wContractor * (Number(record.hours) > 0 ? Number(record.hours) : 8);
+}
+
+function calculateXlsbCostContribution(records, contractorBased) {
+  const list = records || [];
+  const laborHours = list.reduce((sum, record) => sum + (contractorBased
+    ? calculateContractorHours(record) : (Number(record.total_h) || 0)), 0);
+  const materialCost = list.reduce((sum, record) => {
+    const mats = record.mats || {};
+    return sum
+      + (Number(mats['방충망(개)']) || 0) * COST_UNIT.matCost.screen
+      + (Number(mats['코킹재(개)']) || 0) * COST_UNIT.matCost.silicone
+      + (Number(mats['걸레받이(m)']) || 0) * COST_UNIT.matCost.baseboard
+      + (Number(mats['블라인드(㎡)']) || 0) * COST_UNIT.matCost.hardware
+      + ((Number(mats['이보드(m²)']) || 0) + (Number(mats['열반사 단열재(m²)']) || 0)
+        + (Number(mats['석고보드(매)']) || 0)) * COST_UNIT.matCost.etc;
+  }, 0);
+  return laborHours * COST_UNIT.hourlyRate
+    + list.length * COST_UNIT.visitFee
+    + materialCost
+    + list.length * COST_UNIT.matCost.etc;
 }
 
 function recalculateDerivedData(records) {
@@ -3081,10 +3377,40 @@ function recalculateDerivedData(records) {
     const minMonth = validMonths.length > 0 ? Math.min(...validMonths) : 1;
     const maxMonth = validMonths.length > 0 ? Math.max(...validMonths) : 1;
     const isPartialYear = (maxMonth < 12);
+    const carryoverRecs = recs.filter(r => r.is_carryover);
+    const currentYearRecs = actualYearRecs.length > 0 ? actualYearRecs : recs.filter(r => !r.is_carryover);
+    const projectionFactor = isPartialYear && currentYearRecs.length > 0 ? 12 / maxMonth : 1;
+    const carryoverAdminCostRaw = calculateXlsbCostContribution(carryoverRecs, false);
+    const currentYearAdminCostRaw = calculateXlsbCostContribution(currentYearRecs, false);
+    const carryoverContractorCostRaw = calculateXlsbCostContribution(carryoverRecs, true);
+    const currentYearContractorCostRaw = calculateXlsbCostContribution(currentYearRecs, true);
+    const currentYearHours = currentYearRecs.reduce((sum, r) => sum + (Number(r.total_h) || 0), 0);
+    const carryoverHours = carryoverRecs.reduce((sum, r) => sum + (Number(r.total_h) || 0), 0);
+    const currentYearContractorLabor = currentYearRecs.reduce((sum, r) => sum + (Number(r.workers_contractor) || 0), 0);
+    const carryoverContractorLabor = carryoverRecs.reduce((sum, r) => sum + (Number(r.workers_contractor) || 0), 0);
+    const projectedAdminCost = isPartialYear && currentYearRecs.length > 0
+      ? Math.round(currentYearAdminCostRaw * projectionFactor + carryoverAdminCostRaw) : adminCost;
+    const projectedContractorCost = isPartialYear && currentYearRecs.length > 0
+      ? Math.round(currentYearContractorCostRaw * projectionFactor + carryoverContractorCostRaw) : contractorCost;
 
     window.annualMetrics[k] = {
       cnt, hours, adminWorkers, contractorLabor, contractorHours, laborDiff,
-      materialCost, adminCost, contractorCost, savings, minMonth, maxMonth, isPartialYear
+      materialCost, adminCost, contractorCost, savings, minMonth, maxMonth, isPartialYear,
+      currentYearCount: currentYearRecs.length,
+      carryoverCount: carryoverRecs.length,
+      currentYearHours, carryoverHours,
+      currentYearContractorLabor, carryoverContractorLabor,
+      currentYearNegotiationCandidates: currentYearRecs.filter(r => r.negotiation_candidate).length,
+      carryoverNegotiationCandidates: carryoverRecs.filter(r => r.negotiation_candidate).length,
+      currentYearAdminCost: Math.round(currentYearAdminCostRaw),
+      currentYearContractorCost: Math.round(currentYearContractorCostRaw),
+      carryoverAdminCost: Math.round(carryoverAdminCostRaw),
+      carryoverContractorCost: Math.round(carryoverContractorCostRaw),
+      projectionFactor,
+      projectedCnt: Math.round(currentYearRecs.length * projectionFactor + carryoverRecs.length),
+      projectedHours: currentYearHours * projectionFactor + carryoverHours,
+      projectedContractorLabor: currentYearContractorLabor * projectionFactor + carryoverContractorLabor,
+      projectedAdminCost, projectedContractorCost
     };
   });
 }
@@ -3235,7 +3561,6 @@ function updateAllKPIsAndTexts() {
   // 연간 추정치 환산: 순수 원천 데이터(시간, 자재, 건수) 기반 정밀 계산
   const isLatestPartial = Boolean(latestMetric.isPartialYear);
   const elapsedMonths = Math.max(1, Number(latestMetric.maxMonth) || 12);
-  const annualFactor = isLatestPartial ? (12 / elapsedMonths) : 1;
 
   // [월 범위 정밀 논리 표기]: minMonth와 maxMonth가 동일하면 단일월(예: 2월), 다르면 범위(예: 1~10월)
   const getDynamicMonthText = (m) => {
@@ -3248,8 +3573,12 @@ function updateAllKPIsAndTexts() {
 
   const actualAdminWan = Math.round(Number(latestMetric.adminCost || 0) / 10000);
   const actualContrWan = Math.round(Number(latestMetric.contractorCost || 0) / 10000);
-  const adminWan = Math.round((Number(latestMetric.adminCost || 0) * annualFactor) / 10000);
-  const contractorWan = Math.round((Number(latestMetric.contractorCost || 0) * annualFactor) / 10000);
+  const projectedAdminRaw = Number(latestMetric.projectedAdminCost ?? latestMetric.adminCost ?? 0);
+  const projectedContractorRaw = Number(latestMetric.projectedContractorCost ?? latestMetric.contractorCost ?? 0);
+  const adminWan = Math.round(projectedAdminRaw / 10000);
+  const contractorWan = Math.round(projectedContractorRaw / 10000);
+  const carryoverCount = Number(latestMetric.carryoverCount) || 0;
+  const negotiationCandidateCount = (window.RAW || []).filter(r => r.negotiation_candidate).length;
   const previousAdminWan = Math.round(Number(previousMetric.adminCost || 0) / 10000);
   const costDiff = contractorWan - adminWan;
   const costGrowth = (previousYr && previousAdminWan > 0) ? ((adminWan / previousAdminWan) - 1) * 100 : null;
@@ -3276,7 +3605,9 @@ function updateAllKPIsAndTexts() {
   const costSubEl = document.getElementById('kpi-cost-admin-sub');
   if (costSubEl) {
     if (isLatestPartial) {
-      costSubEl.innerHTML = `${latestYr} ${latestMonthRangeText} 실적: ${actualAdminWan.toLocaleString()}만 · <strong style="color:#6c8ef5;">[관리소 서명 기준]</strong> 연환산 추정`;
+      costSubEl.innerHTML = latestYr + ' ' + latestMonthRangeText + ' 실적: ' + actualAdminWan.toLocaleString()
+        + '만 · <strong style="color:#6c8ef5;">[관리소 서명 기준]</strong> 연환산 추정'
+        + '<br><span style="font-size:11px;color:var(--text2);">전년도 이월 ' + carryoverCount + '건 1회 반영 · O열 공란/0 네고 후보 ' + negotiationCandidateCount + '건</span>';
     } else {
       costSubEl.innerHTML = previousYr ? `${previousYr} ${previousAdminWan.toLocaleString()}만 대비 · <strong style="color:#6c8ef5;">[관리소 서명 기준]</strong> 실공수` : `[관리소 서명 기준] 연간 집행 실적 (비교 연도 없음)`;
     }
@@ -3317,16 +3648,16 @@ function updateAllKPIsAndTexts() {
 
     if (isLatestPartial) {
       tooltip += `\n\n2. 연간 환산 추정 금액(12개월 기준): ${adminWan.toLocaleString()}만원
-   • 연환산 산출식: ${latestMonthRangeText} 실적액 × (12개월 / 기준 경과 ${elapsedMonths}개월)
-   • 실제 수치 대입: ${actualAdminWan.toLocaleString()}만원 × (12 / ${elapsedMonths}) = 약 ${adminWan.toLocaleString()}만원`;
+   • 연환산 산출식: (당해연도 작업 비용 × 12 / 경과 개월) + 전년도 이월 비용 1회
+   • 실제 수치 대입: (${Number(latestMetric.currentYearAdminCost || 0).toLocaleString()}원 × 12 / ${elapsedMonths}) + ${Number(latestMetric.carryoverAdminCost || 0).toLocaleString()}원 = ${projectedAdminRaw.toLocaleString()}원`;
     }
 
     tooltip += `\n\n3. 시공사 청구 품수 환산 금액: ${contractorWan.toLocaleString()}만원 (실적: ${actualContrWan.toLocaleString()}만원)
-   • 산출 기본 공식: (시공사 인정시간 × 35,000원) + (건수 × 5,000원) + 실사용 자재비 + (건수 × 5,000원)${isLatestPartial ? ' × 연환산' : ''}
+   • 산출 기본 공식: (시공사 인정시간 × 35,000원) + (건수 × 5,000원) + 실사용 자재비 + (건수 × 5,000원)
    • 실제 수치 대입: (${latestContrHours.toFixed(1)}h × 35,000원) + ${latestVisit.toLocaleString()}원 + ${latestMatCost.toLocaleString()}원 + ${latestOverhead.toLocaleString()}원 = ${latestContrRaw.toLocaleString()}원`;
 
     if (isLatestPartial) {
-      tooltip += `\n   • 연환산 수식 대입: ${actualContrWan.toLocaleString()}만원 × (12 / ${elapsedMonths}) = 약 ${contractorWan.toLocaleString()}만원`;
+      tooltip += `\n   • 연환산 수식 대입: (당해연도 ${Number(latestMetric.currentYearContractorCost || 0).toLocaleString()}원 × 12 / ${elapsedMonths}) + 전년도 이월 ${Number(latestMetric.carryoverContractorCost || 0).toLocaleString()}원 = ${projectedContractorRaw.toLocaleString()}원`;
     }
 
     tooltip += `\n   • 서명-청구 비교 편차: ${contractorWan.toLocaleString()}만 - ${adminWan.toLocaleString()}만 = ${costDiff >= 0 ? '+' : ''}${costDiff.toLocaleString()}만원 (${costDiff === 0 ? '서명인원과 청구인원 100% 일치로 괴리 없음' : '시공사 자발적 청구 절감 반영'})
@@ -3334,8 +3665,15 @@ function updateAllKPIsAndTexts() {
 💡 클릭 시 ${latestYr} 비용 산출 증빙 목록 및 단일 기준 검증 모달 오픈`;
 
     costCardContainer.title = tooltip;
-    if (costAdminEl) costAdminEl.title = `💡 [관리소 서명 기준 비용]: 실적 ${actualAdminWan}만(노무비 ${laborAdminRaw.toLocaleString()}원 + 부대비 ${(latestVisit + latestOverhead).toLocaleString()}원 + 자재비 ${latestMatCost.toLocaleString()}원)${isLatestPartial ? ` × (12/${elapsedMonths}) = 약 ${adminWan}만원` : ''}`;
-    if (contractorSubEl) contractorSubEl.title = `💡 [시공사 환산 금액]: 실적 ${actualContrWan}만(공수 ${latestContrHours.toFixed(1)}h × 35,000원 + 경비)${isLatestPartial ? ` × (12/${elapsedMonths}) = 약 ${contractorWan}만원` : ''} · 관리소 대비 편차 ${costDiff >= 0 ? '+' : ''}${costDiff}만`;
+    if (costAdminEl) costAdminEl.title = '💡 [관리소 서명 기준 비용]: 실적 ' + actualAdminWan + '만'
+      + (isLatestPartial ? ' · 연환산 = (당해연도 ' + Number(latestMetric.currentYearAdminCost || 0).toLocaleString()
+        + '원 × 12/' + elapsedMonths + ') + 이월 ' + Number(latestMetric.carryoverAdminCost || 0).toLocaleString()
+        + '원 = ' + adminWan + '만원' : '');
+    if (contractorSubEl) contractorSubEl.title = '💡 [시공사 환산 금액]: 실적 ' + actualContrWan + '만'
+      + (isLatestPartial ? ' · 연환산 = (당해연도 ' + Number(latestMetric.currentYearContractorCost || 0).toLocaleString()
+        + '원 × 12/' + elapsedMonths + ') + 이월 ' + Number(latestMetric.carryoverContractorCost || 0).toLocaleString()
+        + '원 = ' + contractorWan + '만원' : '')
+      + ' · 관리소 대비 편차 ' + (costDiff >= 0 ? '+' : '') + costDiff + '만';
   }
 
   // ─── [YoY 전년 대비 증감 편차 섹션 100% 완전 동적 연동] ──────────────────────
@@ -3427,9 +3765,10 @@ function updateAllKPIsAndTexts() {
   }
 
   // 4) 일치율 및 괴리 분석 카드 동적 업데이트
-  const matchCount = records.filter(r => r.diff_category === 'match').length;
-  const mismatchCount = records.length - matchCount;
-  const matchRate = records.length > 0 ? (matchCount / records.length * 100) : 0;
+  const comparableRecords = records.filter(r => r.diff_category !== 'both_empty' && r.diff_category !== 'merged_claim_shared');
+  const matchCount = comparableRecords.filter(r => r.diff_category === 'match').length;
+  const mismatchCount = comparableRecords.length - matchCount;
+  const matchRate = comparableRecords.length > 0 ? (matchCount / comparableRecords.length * 100) : 0;
   
   const matchRateEl = document.getElementById('kpi-match-rate-val');
   if (matchRateEl) matchRateEl.textContent = `${matchRate.toFixed(1)}%`;
@@ -3571,7 +3910,7 @@ function updateAllKPIsAndTexts() {
   // 모달 및 Tab 1 원인별 세부 건수/괴리 동적 반영 (100% 실측 연동)
   const latestIdx = Math.max(0, yk.length - 1);
   const previousIdx = Math.max(0, yk.length - 2);
-  const diffRecs = records.filter(r => r.diff_category !== 'match' && r.diff_category !== 'both_empty');
+  const diffRecs = records.filter(r => r.diff_category !== 'match' && r.diff_category !== 'both_empty' && r.diff_category !== 'merged_claim_shared');
   const catStats = {
     blank_contractor: { cnt: 0, diff: 0, yrs: {} },
     reduced_claim: { cnt: 0, diff: 0, yrs: {} },
@@ -3813,7 +4152,7 @@ function updateAllKPIsAndTexts() {
         <div class="i-title">✅ POSITIVE — 자재 정합성 확보</div>
         <div class="i-text"><strong>원천 대장 실사용 100% 교차 검증</strong><br>코킹재, 걸레받이 등 핵심 자재 실물 증빙 동기화.</div>
       </div>
-      <div class="insight blue" id="insight-budget-card" onclick="openModal('시스템적 집행 비용 증빙 목록', getYrFilter(window.YR_KEYS ? window.YR_KEYS[window.YR_KEYS.length-1] : '26년'))" title="💡 [예산 산출 공식 및 수식 흐름]:&#10;• ${latestMonthRangeText} 실적(${actualAdminWan}만) = (실작업공수 ${latestHours.toFixed(1)}h × 35,000원) + 출장/부대비 ${(latestVisit + latestOverhead).toLocaleString()}원 + 자재비 ${latestMatCost.toLocaleString()}원&#10;• 연간 환산(${adminWan}만) = 실적 ${actualAdminWan}만 × (12개월 / ${elapsedMonths}개월)&#10;• 시공사 환산 = 실적 ${actualContrWan}만 (연환산 약 ${contractorWan}만) · 편차: ${costDiff >= 0 ? '+' : ''}${costDiff}만&#10;💡 클릭 시 상세 증빙 목록 조회">
+      <div class="insight blue" id="insight-budget-card" onclick="openModal('시스템적 집행 비용 증빙 목록', getYrFilter(window.YR_KEYS ? window.YR_KEYS[window.YR_KEYS.length-1] : '26년'))" title="💡 [예산 산출 공식 및 수식 흐름]:&#10;• ${latestMonthRangeText} 실적(${actualAdminWan}만) = (실작업공수 ${latestHours.toFixed(1)}h × 35,000원) + 출장/부대비 ${(latestVisit + latestOverhead).toLocaleString()}원 + 자재비 ${latestMatCost.toLocaleString()}원&#10;• 연간 환산(${adminWan}만) = (당해연도 비용 ${Number(latestMetric.currentYearAdminCost || 0).toLocaleString()}원 × 12/${elapsedMonths}) + 전년도 이월 ${Number(latestMetric.carryoverAdminCost || 0).toLocaleString()}원 1회&#10;• 시공사 환산 = (당해연도 ${Number(latestMetric.currentYearContractorCost || 0).toLocaleString()}원 × 12/${elapsedMonths}) + 이월 ${Number(latestMetric.carryoverContractorCost || 0).toLocaleString()}원 = ${contractorWan}만 · 편차: ${costDiff >= 0 ? '+' : ''}${costDiff}만&#10;💡 클릭 시 상세 증빙 목록 조회">
         <div class="i-title" id="insight-budget-title">💰 BUDGET — 비용 추정 (단일 기준: 관리소 서명 공수)</div>
         <div class="i-text"><strong id="insight-budget-growth">${latestYr} ${adminWan.toLocaleString()}만원${previousYr ? ' vs ' + previousYr + ' ' + previousAdminWan.toLocaleString() + '만원 (' + (costGrowth !== null ? (costGrowth >= 0 ? '+' : '') + costGrowth.toFixed(1) + '%' : '신규') + ')' : ''} [${isLatestPartial ? '추정치' : '실적'}]</strong><br><span id="insight-budget-sub">[관리소 서명 기준 실공수(35,000원/h)+자재비+부대비] 단일 적용. 시공사 청구 환산 시 ${contractorWan.toLocaleString()}만원.</span></div>
       </div>
@@ -3856,7 +4195,9 @@ function updateAllKPIsAndTexts() {
   const forecastNote26 = document.getElementById('forecast-cost-note-26');
   if (forecastNote26) {
     if (isLatestPartial) {
-      forecastNote26.innerHTML = `※ ${latestYr}은 ${latestMonthRangeText} 실적 기준(총 ${actualAdminWan.toLocaleString()}만원). 잔여 기간 연환산 추정 포함 연간 약 ${adminWan.toLocaleString()}만원 전망<br>`;
+      forecastNote26.innerHTML = '※ ' + latestYr + '은 ' + latestMonthRangeText + ' 실적 기준(총 '
+        + actualAdminWan.toLocaleString() + '만원). 당해연도 비용은 연환산하고 전년도 이월 ' + carryoverCount
+        + '건은 1회만 더해 연간 약 ' + adminWan.toLocaleString() + '만원 전망<br>';
     } else {
       forecastNote26.innerHTML = `※ ${latestYr} 연간 전체 실적 기준: 총 ${actualAdminWan.toLocaleString()}만원 집행 완료<br>`;
     }
@@ -4040,7 +4381,7 @@ function renderAuditTables() {
       const wCont = m.contractorLabor || 0;
       const diff = wAdmin - wCont;
       const diffPct = wCont > 0 ? (diff / wCont * 100) : 0;
-      const mismatches = yrRecs.filter(r => r.diff_category !== 'match' && r.diff_category !== 'both_empty').length;
+      const mismatches = yrRecs.filter(r => r.diff_category !== 'match' && r.diff_category !== 'both_empty' && r.diff_category !== 'merged_claim_shared').length;
       
       totCnt += cnt;
       totAdmin += wAdmin;
@@ -4172,12 +4513,11 @@ function renderAuditTables() {
     const mLatest = metrics[yk[yk.length - 1]] || {};
     if (mLatest.isPartialYear) {
       const elapsed = Math.max(1, mLatest.maxMonth);
-      const annFactor = 12 / elapsed;
-      const annCnt = Math.round(mLatest.cnt * annFactor);
-      const annHours = (mLatest.hours || 0) * annFactor;
-      const annLabor = (mLatest.contractorLabor || 0) * annFactor;
-      const annAdminCost = Math.round((mLatest.adminCost || 0) * annFactor / 10000);
-      const annContrCost = Math.round((mLatest.contractorCost || 0) * annFactor / 10000);
+      const annCnt = Number(mLatest.projectedCnt ?? mLatest.cnt) || 0;
+      const annHours = Number(mLatest.projectedHours ?? mLatest.hours) || 0;
+      const annLabor = Number(mLatest.projectedContractorLabor ?? mLatest.contractorLabor) || 0;
+      const annAdminCost = Math.round(Number(mLatest.projectedAdminCost ?? mLatest.adminCost ?? 0) / 10000);
+      const annContrCost = Math.round(Number(mLatest.projectedContractorCost ?? mLatest.contractorCost ?? 0) / 10000);
       const annSav = annContrCost - annAdminCost;
       const annSavPct = annAdminCost > 0 ? (annSav / annAdminCost * 100) : 0;
       
@@ -4190,7 +4530,7 @@ function renderAuditTables() {
         <td style="text-align:center;font-weight:700;color:#f5a623;padding:5px 8px;">${annContrCost.toLocaleString()}만원 (${annLabor.toFixed(1)}품)</td>
         <td style="text-align:center;font-weight:700;color:${annSav < 0 ? '#ff4d6d' : '#4ecb71'};padding:5px 8px;">${annSav.toLocaleString()}만원</td>
         <td style="text-align:center;color:${annSav < 0 ? '#ff4d6d' : '#4ecb71'};padding:5px 8px;">${annSavPct.toFixed(1)}%</td>
-        <td style="padding:5px 8px;color:#cbd5e1;"><strong>${mLatestRangeText}(기준 ${elapsed}개월) 실적 비례 연간(12개월) 환산 추정치</strong> (관리소 서명 공수 기준 ${annAdminCost.toLocaleString()}만 vs 시공사 환산 ${annContrCost.toLocaleString()}만)</td>
+        <td style="padding:5px 8px;color:#cbd5e1;"><strong>${mLatestRangeText}(기준 ${elapsed}개월) 당해연도 비용 연환산 + 전년도 이월 ${mLatest.carryoverCount || 0}건 1회</strong> (관리소 서명 기준 ${annAdminCost.toLocaleString()}만 vs 시공사 환산 ${annContrCost.toLocaleString()}만)</td>
       </tr>`;
     }
     
@@ -4641,6 +4981,7 @@ function updateWorkerFilterButtons() {
     'match': 'btn-wf-match',
     'admin': 'btn-wf-admin',
     'contractor': 'btn-wf-contractor',
+    'negotiation': 'btn-wf-negotiation',
     'corrections': 'btn-wf-corrections'
   };
   Object.keys(btnMap).forEach(key => {
@@ -4693,13 +5034,15 @@ function renderModalTable(){
     data = data.filter(r => r.yr === modalYrFilter);
   }
   if(modalWorkerFilter === 'diff') {
-    data = data.filter(r => r.diff_category !== 'match' && r.diff_category !== 'both_empty');
+    data = data.filter(r => r.diff_category !== 'match' && r.diff_category !== 'both_empty' && r.diff_category !== 'merged_claim_shared');
   } else if(modalWorkerFilter === 'match') {
     data = data.filter(r => r.diff_category === 'match');
   } else if(modalWorkerFilter === 'admin') {
     data = data.filter(r => (Number(r.workers_admin ?? r.workers) || 0) > 0);
   } else if(modalWorkerFilter === 'contractor') {
-    data = data.filter(r => (Number(r.workers_contractor) || 0) > 0 || Boolean(r.contractor_raw));
+    data = data.filter(r => (Number(r.workers_contractor) || 0) > 0 || Boolean(r.contractor_raw) || r.contractor_source_state === 'merged');
+  } else if(modalWorkerFilter === 'negotiation') {
+    data = data.filter(r => Boolean(r.negotiation_candidate));
   } else if(modalWorkerFilter === 'corrections') {
     data = data.filter(r => Boolean(r.is_continuation || r.is_expense_only || r.date === '2024-05-24' || r.no === '36'));
   }
@@ -4780,7 +5123,7 @@ function renderModalTable(){
   const totalWAdmin = data.reduce((s,r)=>s+(Number(r.workers_admin ?? r.workers)||0),0);
   const totalWContr = data.reduce((s,r)=>s+(Number(r.workers_contractor)||0),0);
   const totalH = data.reduce((s,r)=>s+(Number(r.total_h)||0),0);
-  const diffCount = data.filter(r=>r.diff_category !== 'match' && r.diff_category !== 'both_empty').length;
+  const diffCount = data.filter(r=>r.diff_category !== 'match' && r.diff_category !== 'both_empty' && r.diff_category !== 'merged_claim_shared').length;
 
   const dynamicYrKeys = window.YR_KEYS ? window.YR_KEYS.slice().reverse() : ['26년', '25년', '24년'];
   const yrStatsHtml = dynamicYrKeys.map(k => {
@@ -4816,6 +5159,12 @@ function renderModalTable(){
     const bldgs = getRecordBuildings(r);
     const isMultiBldg = bldgs.length > 1;
     const bldgBadge = isMultiBldg ? `<span class="pill" style="background:rgba(245,166,35,0.15);color:var(--orange);font-size:10px;margin-left:4px;cursor:help;" title="[전수검증 완료] 1일 통합 작업일지 1건으로 작성된 복합 작업이며 건물동 통계 시 1/${bldgs.length} 안분 처리됨">1/${bldgs.length}안분</span>` : '';
+    const settlementBadge = r.is_carryover
+      ? '<span class="pill" style="font-size:9px;margin-left:4px;background:rgba(108,142,245,0.15);color:#9db3ff;" title="원천 작업일은 ' + r.source_year + '년이며 ' + r.settled_yr + ' 정산 시트에 귀속된 전년도 이월 건">전년도 이월</span>'
+      : '';
+    const dateLineageBadge = r.date_inherited_from_row
+      ? '<span class="pill" style="font-size:9px;margin-left:3px;background:rgba(148,163,184,0.14);color:#cbd5e1;" title="원천 날짜가 비어 있어 같은 시트의 직전 작업일 ' + r.date_inherited_from_row + '행을 참조했습니다.">전행 날짜</span>'
+      : '';
     
     // 괴리 뱃지 및 설명 렌더링
     let diffBadge = '';
@@ -4832,6 +5181,8 @@ function renderModalTable(){
       diffBadge = `<span class="pill pill-blue" style="font-size:10px;cursor:help;" title="${r.worker_note}">견적처리</span>`;
     } else if (dCat === 'blank_admin') {
       diffBadge = `<span class="pill pill-red" style="font-size:10px;cursor:help;" title="${r.worker_note}">미서명 (${r.worker_diff})</span>`;
+    } else if (dCat === 'merged_claim_shared') {
+      diffBadge = `<span class="pill pill-blue" style="font-size:10px;cursor:help;" title="${r.worker_note}">병합 공유</span>`;
     } else if (r.is_continuation) {
       diffBadge = '<span class="pill" style="font-size:10px;background:#334155;color:#94a3b8;" title="직전 작업의 연계 보수 내역">연계행</span>';
     } else if (r.is_expense_only) {
@@ -4839,13 +5190,22 @@ function renderModalTable(){
     } else {
       diffBadge = `<span class="pill" style="font-size:10px;background:rgba(255,255,255,0.1);color:#e2e8f0;" title="${r.worker_note||''}">${r.worker_diff!=null && r.worker_diff!=0 ? (r.worker_diff>0?'+'+r.worker_diff:r.worker_diff) : '-'}</span>`;
     }
+    if (r.negotiation_candidate) {
+      const sourceLabel = r.contractor_source_state === 'blank' ? 'O열 공란' : 'O열 숫자 0';
+      diffBadge += '<span class="pill" style="font-size:9px;margin-left:3px;background:rgba(245,166,35,0.16);color:#f5a623;" title="' + sourceLabel + '은 사용자 지정 네고 검토 대상이며 원본 셀값과 레코드는 보존됩니다.">네고 후보</span>';
+    }
 
     const adminVal = r.workers_admin != null ? (Number(r.workers_admin) % 1 === 0 ? parseInt(r.workers_admin) : r.workers_admin) : (r.workers || '-');
-    const contrVal = r.contractor_raw ? r.contractor_raw : (r.workers_contractor != null ? (Number(r.workers_contractor) % 1 === 0 ? parseInt(r.workers_contractor) + '품' : r.workers_contractor + '품') : '-');
+    const contrVal = r.contractor_source_state === 'merged' ? '병합 공유 (' + (r.contractor_source_merged_value ?? r.contractor_source_text) + '품)'
+      : r.contractor_source_state === 'blank' ? '공란'
+      : r.contractor_source_state === 'zero' ? '0품'
+      : r.contractor_source_state === 'invalid' ? (r.contractor_source_text || '원문 확인')
+      : r.contractor_raw ? r.contractor_raw
+      : (r.workers_contractor != null ? (Number(r.workers_contractor) % 1 === 0 ? parseInt(r.workers_contractor) + '품' : r.workers_contractor + '품') : '-');
 
     return `<tr>
       <td><span class="pill ${yrClass}">${yrLabel}</span></td>
-      <td style="white-space:nowrap">${r.date||'-'}</td>
+      <td style="white-space:nowrap">${r.date||'-'}${settlementBadge}${dateLineageBadge}</td>
       <td><strong>${r.building||'-'}</strong>${bldgBadge}</td>
       <td>${r.room||'-'}</td>
       <td class="content-cell" style="color:var(--text2)">${content||'-'}</td>
@@ -6368,7 +6728,7 @@ function openForecastModal(monthIdx, datasetLabel) {
       const c24 = m24.cnt || 0;
       const c25 = m25.cnt || 0;
       const c26 = m26.cnt || 0;
-      const ann26 = m26.isPartialYear ? Math.round(c26 * 12 / (m26.maxMonth || 8)) : c26;
+      const ann26 = Number(m26.projectedCnt ?? c26) || c26;
 
       noticeEl.innerHTML = `
         <div style="width:100%;">
@@ -7232,6 +7592,7 @@ const dashboardExcelExporter = {
     const rangeTag = mLatest.isPartialYear ? ` (20${firstYr.replace(/[^0-9]/g,'')}년 ~ 20${latestYr.replace(/[^0-9]/g,'')}년 ${mLatest.maxMonth}월)` : ` (20${firstYr.replace(/[^0-9]/g,'')}년 ~ 20${latestYr.replace(/[^0-9]/g,'')}년)`;
 
     const rawList = (typeof RAW !== 'undefined' && Array.isArray(RAW)) ? RAW : [];
+    const integrity = (typeof window !== 'undefined' && window.rawIntegrityReport) ? window.rawIntegrityReport : {};
     const totAdminW = Math.round(rawList.reduce((s, r) => s + (Number(r.workers_admin ?? r.workers) || 0), 0));
     const totContrL = rawList.reduce((s, r) => s + (Number(r.workers_contractor) || 0), 0).toFixed(1);
     const totDiffW = Math.abs(rawList.reduce((s, r) => s + (Number(r.workers_contractor) || 0) - (Number(r.workers_admin ?? r.workers) || 0), 0)).toFixed(1);
@@ -7240,7 +7601,10 @@ const dashboardExcelExporter = {
       ["보고서 명칭", title || "긴급보수 분석 리포트"],
       ["생성 일시", this.formatDateTime()],
       ["원천 데이터 출처", `021 관리대장_(건축 긴급대응).xlsb${rangeTag}`],
+      ["원천 XLSB SHA-256", integrity.sourceSha256 || "브라우저에서 해시 계산 불가"],
       ["연계 상세 증빙 건수", `${recordCount}건 (전수 누락 방지 무결성 보증)`],
+      ["전수 무결성 대조", `수식 캐시 ${integrity.formulaCheckCount || 0}건 중 불일치 ${integrity.formulaCacheMismatchCount || 0}건 · 경고 ${(integrity.warnings || []).join(' / ') || '없음'} · 알림 ${(integrity.notices || []).join(' / ') || '없음'}`],
+      ["정산·네고 기준", "시트 연도는 정산 연도입니다. 전년도 날짜의 이월 작업도 해당 시트 연도에 1회 귀속합니다. 네고 후보는 독립된 O열 시공사 청구 품수 공란·숫자 0만 포함하며 병합 자식 셀은 중복 계산하지 않습니다."],
       ["품 산출 단일 기준", `관리소 직접 서명 ${totAdminW}명(공수) 단일 무결성 기준 적용 (시공사 청구 ${totContrL}품 대비 ${totDiffW}품 정합성 검증 완료)`],
       ["시트 구성 안내", `1. [차트]: Microsoft Excel 고유 차트 객체 및 조건부 서식 히트맵/게이지 연계 시각화\n2. [차트 연계 데이터]: 집계 테이블 (노란색 셀 수정 시 차트/히트맵 실시간 연동)\n3. [연계 상세 증빙 레코드]: ${recordCount}건 전수 필터링/정렬 가능 상세 로우데이터\n4. [README]: 시스템 안내 및 정합성 보증 확인서`],
       ["실시간 차트 연동 안내", "💡 '차트 연계 데이터' 시트의 [노란색 배경 셀] 수치를 수정하면, '차트' 시트의 네이티브 엑셀 막대/선 그래프 및 조건부 서식 히트맵 색상이 즉시 자동으로 동기화 변경됩니다."]
@@ -7261,7 +7625,7 @@ const dashboardExcelExporter = {
       cVal.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
       cVal.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}}, left:{style:'thin',color:{argb:'FFE2E8F0'}}, right:{style:'thin',color:{argb:'FFE2E8F0'}} };
 
-      ws.getRow(rowIdx).height = label.includes("안내") ? 42 : 24;
+      ws.getRow(rowIdx).height = /안내|무결성|정산·네고/.test(label) ? 60 : 24;
       rowIdx++;
     });
   },
@@ -7275,14 +7639,16 @@ const dashboardExcelExporter = {
     ws.views = [{ state: "frozen", ySplit: 1 }];
 
     const headers = [
-      "연번", "연도", "접수일자", "월", "건물동", "호실/구역", "보수유형",
+      "연번", "원천 위치", "정산 연도", "원천 작업 연도", "접수일자", "월", "건물동", "호실/구역", "보수유형",
       "세부작업내용", "관리소 서명 인원(명)", "시공사 특별인부(품)", "괴리 판정",
-      "작업시간(h)", "소요인력(명·회)", "사용자재", "집행비용(원)", "비고"
+      "작업시간(h)", "소요인력(명·회)", "사용자재", "집행비용(원)", "정산/네고/작업 비고", "J열 수식·캐시 계보"
     ];
 
     ws.columns = [
       { width: 8 },  // 연번
-      { width: 8 },  // 연도
+      { width: 18 }, // 원천 위치
+      { width: 10 }, // 정산 연도
+      { width: 12 }, // 원천 작업 연도
       { width: 13 }, // 접수일자
       { width: 6 },  // 월
       { width: 10 }, // 건물동
@@ -7296,7 +7662,8 @@ const dashboardExcelExporter = {
       { width: 14 }, // 소요인력
       { width: 22 }, // 사용자재
       { width: 14 }, // 비용
-      { width: 15 }  // 비고
+      { width: 34 }, // 정산/네고/작업 비고
+      { width: 38 }  // 수식·캐시 계보
     ];
 
     const hRow = ws.getRow(1);
@@ -7317,18 +7684,34 @@ const dashboardExcelExporter = {
       const bg = isZebra ? "FFF8FAFC" : "FFFFFFFF";
 
       const matsStr = r.mats ? Object.entries(r.mats).map(([k, v]) => `${k}:${v}`).join(', ') : (r.mat || "-");
-      const costVal = r.cost != null ? Number(r.cost) : (Number(r.workers_admin ?? r.workers ?? 0) * 100000);
+      const costVal = r.cost != null ? Number(r.cost) : calculateXlsbCostContribution([r], false);
 
       const wAdmin = r.workers_admin != null ? Number(r.workers_admin) : (r.workers != null ? Number(r.workers) : "-");
-      const wCont = r.workers_contractor != null ? Number(r.workers_contractor) : (r.special_labor != null ? Number(r.special_labor) : "-");
+      const wCont = r.contractor_source_state === 'merged' ? '병합 공유(' + (r.contractor_source_merged_value ?? r.contractor_source_text) + '품)'
+        : r.contractor_source_state === 'blank' ? ''
+        : r.contractor_source_state === 'zero' ? 0
+        : r.contractor_source_state === 'invalid' ? (r.contractor_source_text || '')
+        : r.workers_contractor != null ? Number(r.workers_contractor) : (r.special_labor != null ? Number(r.special_labor) : "-");
       const totH = r.total_h != null ? Number(r.total_h) : (r.hours != null ? Number(r.hours) : "-");
       const bldgName = r.building || r.bldg || "-";
       const taskDesc = r.content || r.desc || "-";
-      const noteMemo = r.worker_note || r.memo || "";
+      const sourceWorkYear = Number(r.source_year) || Number(r.settlement_year) || null;
+      const noteMemo = [
+        r.settlement_note || '',
+        sourceWorkYear && sourceWorkYear !== Number(r.settlement_year) ? '원천 작업 연도: ' + sourceWorkYear + '년' : '',
+        r.date_inherited_from_row ? '원천 작업일: ' + r.date_inherited_from_row + '행 날짜 참조' : '',
+        r.negotiation_candidate ? '네고 후보(O열 ' + (r.contractor_source_state === 'blank' ? '공란' : '숫자 0') + ')' : '',
+        r.worker_note || r.memo || ''
+      ].filter(Boolean).join(' · ');
+      const hoursLineage = r.source_formula_total_h
+        ? r.source_formula_total_h + ' · 재계산 ' + totH + 'h · 캐시 ' + (r.source_cached_total_h == null ? '없음' : Number(r.source_cached_total_h).toFixed(3) + 'h')
+        : (r.source_cached_total_h == null ? '원천 캐시 없음 · 계산 ' + totH + 'h' : '수식 없는 원천값 ' + Number(r.source_cached_total_h).toFixed(3) + 'h');
 
       row.values = [
         idx + 1,
+        r.source_sheet && r.source_row ? r.source_sheet + '!' + r.source_row + '행' : "-",
         r.yr || "-",
+        sourceWorkYear ? sourceWorkYear + '년' : (r.yr || "-"),
         r.date || "-",
         r.month ? `${r.month}월` : "-",
         bldgName,
@@ -7342,7 +7725,8 @@ const dashboardExcelExporter = {
         wAdmin,
         matsStr,
         costVal,
-        noteMemo
+        noteMemo,
+        hoursLineage
       ];
 
       for (let c = 1; c <= headers.length; c++) {
@@ -7350,13 +7734,14 @@ const dashboardExcelExporter = {
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: bg } };
         cell.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
         cell.font = { size: 9.5, color: { argb: "FF1E293B" } };
-        cell.alignment = { vertical: "middle", horizontal: (c === 7 || c === 8 || c === 14) ? "left" : "center" };
+        cell.alignment = { vertical: "middle", horizontal: ([9, 10, 16, 18, 19].includes(c)) ? "left" : "center" };
       }
 
-      row.getCell(9).numFmt = '#,##0.0';
-      row.getCell(10).numFmt = '#,##0.0';
+      row.getCell(11).numFmt = '#,##0.0';
       row.getCell(12).numFmt = '#,##0.0';
-      row.getCell(15).numFmt = '#,##0';
+      row.getCell(14).numFmt = '#,##0.0';
+      row.getCell(15).numFmt = '#,##0.0';
+      row.getCell(17).numFmt = '#,##0';
       row.height = 20;
     });
 
@@ -8998,7 +9383,7 @@ const dashboardExcelExporter = {
           };
 
           const list = typeof RAW !== 'undefined' ? RAW : [];
-          const diffRows = list.filter(r => r.diff_category !== "match" && r.diff_category !== "both_empty");
+          const diffRows = list.filter(r => r.diff_category !== "match" && r.diff_category !== "both_empty" && r.diff_category !== "merged_claim_shared");
           const matchRows = list.filter(r => r.diff_category === "match");
           this.addRawRecordsSheet(wb, `괴리 ${diffRows.length}건 전수 상세`, diffRows);
           this.addRawRecordsSheet(wb, `일치 ${matchRows.length}건 전수 상세`, matchRows);
@@ -9022,16 +9407,20 @@ const dashboardExcelExporter = {
           dataSheet.mergeCells("A1:C1");
           dataSheet.getCell("A1").value = "💡 안내: 노란색 입력 셀을 수정하면 '차트' 시트의 네이티브 엑셀 차트가 자동 갱신됩니다.";
           dataSheet.getCell("A1").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F2FF" } };
+          dataSheet.mergeCells("A2:E2");
+          dataSheet.getCell("A2").value = "부분 연도 비용은 당해연도 건만 12개월 환산하고 전년도 이월 정산액은 1회만 더합니다. 원천 상세에는 실제 정산액과 이월/네고 비고가 보존됩니다.";
 
           const kpiYears = window.YR_KEYS || ['24년', '25년', '26년'];
+          const kpiCostForYear = yr => Number(window.annualMetrics?.[yr]?.projectedAdminCost
+            ?? window.annualMetrics?.[yr]?.adminCost ?? 0);
           const kpiRows = [
             ["총 작업 건수 (건)", ...kpiYears.slice().reverse().map(yr => Number(window.annualMetrics?.[yr]?.cnt || 0)), RAW.length],
             ["총 작업 시간 (h)", ...kpiYears.slice().reverse().map(yr => Number(window.annualMetrics?.[yr]?.hours || 0)), RAW.reduce((sum, r) => sum + (Number(r.total_h) || 0), 0)],
             ["총 투입 인원 (명)", ...kpiYears.slice().reverse().map(yr => Number(window.annualMetrics?.[yr]?.adminWorkers || 0)), RAW.reduce((sum, r) => sum + (Number(r.workers_admin ?? r.workers) || 0), 0)],
-            ["추정 집행 비용 (만원)", ...kpiYears.slice().reverse().map(yr => Math.round(Number(window.annualMetrics?.[yr]?.adminCost || 0) / 10000)), kpiYears.reduce((sum, yr) => sum + Math.round(Number(window.annualMetrics?.[yr]?.adminCost || 0) / 10000), 0)]
+            ["연환산/연간 집행 비용 (만원)", ...kpiYears.slice().reverse().map(yr => Math.round(kpiCostForYear(yr) / 10000)), Math.round(kpiYears.reduce((sum, yr) => sum + kpiCostForYear(yr), 0) / 10000)]
           ];
 
-          const headers = ["핵심 KPI 항목", ...kpiYears.slice().reverse().map(yearLabel), "전체 기간 합계"];
+          const headers = ["핵심 KPI 항목", ...kpiYears.slice().reverse().map(formatYearLabel), "전체 기간 합계"];
           headers.forEach((h, i) => {
             const c = dataSheet.getCell(4, i + 1);
             c.value = h;
@@ -9062,7 +9451,7 @@ const dashboardExcelExporter = {
             type: "bar",
             sheetName: "차트 연계 데이터",
             categoryCol: 1,
-            categoryValues: ["작업건수(건)", "투입시간(h/10)", "투입인원(명/10)", "집행비용(백만원)"],
+            categoryValues: ["작업건수(건)", "투입시간(h/10)", "투입인원(명/10)", "연환산 집행비용(백만원)"],
             headerRow: 4,
             dataStartRow: 5,
             dataEndRow: 8,
@@ -9074,7 +9463,7 @@ const dashboardExcelExporter = {
                 Number(window.annualMetrics?.[yr]?.cnt || 0),
                 Math.round((Number(window.annualMetrics?.[yr]?.hours || 0) / 10) * 10) / 10,
                 Math.round((Number(window.annualMetrics?.[yr]?.adminWorkers || 0) / 10) * 10) / 10,
-                Math.round(Number(window.annualMetrics?.[yr]?.adminCost || 0) / 1000000)
+                Math.round(Number((window.annualMetrics?.[yr]?.projectedAdminCost ?? window.annualMetrics?.[yr]?.adminCost) || 0) / 1000000)
               ]
             }))
           };
@@ -9263,7 +9652,7 @@ const dashboardExcelExporter = {
         const totW = workersArr.reduce((s, v) => s + v, 0);
         const diffW = ykRev_kpi.length > 1 ? workersArr[0] - workersArr[1] : 0;
 
-        const costArr = ykRev_kpi.map(y => Math.round(Number((am[y] && am[y].adminCost) || 0) / 10000));
+        const costArr = ykRev_kpi.map(y => Math.round(Number((am[y] && (am[y].projectedAdminCost ?? am[y].adminCost)) || 0) / 10000));
         const totCost = costArr.reduce((s, v) => s + v, 0);
         const diffCost = ykRev_kpi.length > 1 ? costArr[0] - costArr[1] : 0;
 
@@ -9271,7 +9660,7 @@ const dashboardExcelExporter = {
           ["총 작업 건수 (건)", ...counts, totC, diffC],
           ["총 작업 시간 (h)", ...hoursArr, totH, diffH],
           ["총 투입 인원 (명 - 관리소 서명 기준)", ...workersArr, totW, diffW],
-          ["추정 집행 비용 (만원)", ...costArr, totCost, diffCost]
+          ["연환산/연간 집행 비용 (만원)", ...costArr, totCost, diffCost]
         ];
 
         kpiData.forEach((row, rIdx) => {
@@ -9963,19 +10352,39 @@ function injectExcelExportButtons(root) {
     prevHeader.appendChild(subBtn);
   });
 
-  // 3. 상단 4대 KPI 그리드 상단에 전용 엑셀 버튼 주입
+  // 3. KPI 저장 액션은 한 줄 도구 모음에서 중복 없이 유지한다.
   const kpiGrid = document.querySelector('.kpi-grid');
-  if (kpiGrid && kpiGrid.parentNode && kpiGrid.parentNode.insertBefore && !document.getElementById('kpi-xls-export-btn')) {
-    const kpiBtnWrap = document.createElement('div');
-    kpiBtnWrap.id = 'kpi-xls-export-btn';
-    kpiBtnWrap.style.cssText = 'grid-column: 1 / -1; display: flex; justify-content: flex-end; margin-bottom: -16px; z-index: 10;';
-    kpiBtnWrap.innerHTML = `
-      <button type="button" class="section-xls-btn" onclick="window.dashboardExcelExporter.exportCard('kpi')" title="4대 핵심 KPI 총괄 요약표 및 원천 전수 증빙을 엑셀로 다운로드">
-        <span>📊</span><span>4대 KPI 엑셀 저장</span>
-      </button>
-    `;
-    kpiGrid.parentNode.insertBefore(kpiBtnWrap, kpiGrid);
+  const kpiHeading = kpiGrid?.previousElementSibling;
+  if (kpiHeading && (kpiHeading.classList.contains('kpi-section-heading') || kpiHeading.querySelector('.kpi-heading-actions'))) {
+    kpiHeading.classList.add('kpi-section-heading');
+    let actions = kpiHeading.querySelector('.kpi-heading-actions');
+    if (!actions) {
+      actions = document.createElement('div');
+      actions.className = 'kpi-heading-actions';
+      kpiHeading.appendChild(actions);
+    }
+    const kpiExportButtons = Array.from(document.querySelectorAll('button'))
+      .filter(btn => btn.id === 'kpi-excel-export-btn'
+        || String(btn.getAttribute('onclick') || '').includes("exportCard('kpi')")
+        || String(btn.onclick || '').includes("exportCard('kpi')"));
+    let keeper = kpiExportButtons.find(btn => btn.parentElement === actions) || kpiExportButtons[0] || null;
+    kpiExportButtons.forEach(btn => { if (btn !== keeper) btn.remove(); });
+    if (!keeper) {
+      keeper = document.createElement('button');
+      keeper.type = 'button';
+      keeper.className = 'section-xls-btn';
+      keeper.id = 'kpi-excel-export-btn';
+      keeper.innerHTML = '<span>📊</span><span>4대 KPI 엑셀 저장</span>';
+      keeper.title = '4대 핵심 KPI 총괄 요약표 및 원천 전수 증빙을 엑셀로 다운로드';
+      keeper.onclick = () => window.dashboardExcelExporter?.exportCard('kpi');
+    }
+    if (!keeper.id) keeper.id = 'kpi-excel-export-btn';
+    keeper.classList.add('section-xls-btn');
+    if (keeper.parentElement !== actions) actions.appendChild(keeper);
+    Array.from(kpiHeading.querySelectorAll(':scope > button'))
+      .filter(btn => btn !== keeper).forEach(btn => actions.appendChild(btn));
   }
+  document.getElementById('kpi-xls-export-btn')?.remove();
 
   // 4. 근로자 산정기준 교차검증 패널 상단에 전용 버튼 연계
   const auditToggleIcon = document.getElementById('modal-audit-toggle-icon');
@@ -9995,6 +10404,24 @@ function injectExcelExportButtons(root) {
     auditToggleIcon.parentNode.insertBefore(btn, auditToggleIcon);
   }
 }
+
+function updateStickyHeaderDensity() {
+  const header = document.getElementById('dashboard-sticky-header');
+  if (!header) return;
+  const isNarrow = window.matchMedia('(max-width: 900px)').matches;
+  header.classList.toggle('is-compact', isNarrow && window.scrollY > 80);
+}
+let stickyHeaderUpdatePending = false;
+window.addEventListener('scroll', () => {
+  if (stickyHeaderUpdatePending) return;
+  stickyHeaderUpdatePending = true;
+  window.requestAnimationFrame(() => {
+    updateStickyHeaderDensity();
+    stickyHeaderUpdatePending = false;
+  });
+}, { passive: true });
+window.addEventListener('resize', updateStickyHeaderDensity, { passive: true });
+updateStickyHeaderDensity();
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', injectExcelExportButtons);
