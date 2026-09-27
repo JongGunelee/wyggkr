@@ -233,8 +233,36 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 .decision-evidence-btn{width:100%;border:1px solid rgba(108,142,245,.35);border-radius:7px;background:rgba(30,35,55,.7);color:#cbd5e1;font-size:10px;font-weight:700;padding:7px 9px;cursor:pointer;}
 .decision-evidence-btn:hover{color:#fff;border-color:#6c8ef5;background:rgba(108,142,245,.2);}
 .decision-source-note{font-size:10px;color:#71809c;text-align:right;margin-top:-5px;}
+.action-roadmap{margin-top:20px;border:1px solid var(--border);border-radius:15px;background:var(--card);overflow:hidden;}
+.roadmap-header{display:flex;align-items:flex-start;justify-content:space-between;gap:22px;padding:22px 24px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,rgba(18,25,43,.96),rgba(26,31,48,.92));}
+.roadmap-kicker{font-size:10px;font-weight:900;letter-spacing:.12em;color:#82d59c;margin-bottom:7px;}
+.roadmap-title{font-size:20px;line-height:1.4;color:#fff;margin:0 0 6px;}
+.roadmap-subtitle{font-size:12px;line-height:1.65;color:var(--text2);max-width:900px;word-break:keep-all;}
+.roadmap-decision-list{display:flex;flex-direction:column;}
+.roadmap-step{display:grid;grid-template-columns:70px minmax(0,1fr);gap:18px;padding:23px 24px 23px 18px;border-bottom:1px solid var(--border);}
+.roadmap-step:last-child{border-bottom:0;}
+.roadmap-step-rail{display:flex;flex-direction:column;align-items:center;min-height:100%;}
+.roadmap-step-num{display:flex;align-items:center;justify-content:center;width:42px;height:42px;border-radius:50%;font-size:12px;font-weight:900;color:#a7b9ff;border:1px solid rgba(108,142,245,.45);background:rgba(108,142,245,.1);}
+.roadmap-step-line{width:1px;flex:1;min-height:34px;margin-top:9px;background:linear-gradient(var(--border),transparent);}
+.roadmap-step:last-child .roadmap-step-line{display:none;}
+.roadmap-step-top{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:7px;}
+.roadmap-question{font-size:11px;font-weight:800;color:#91a9ff;}
+.roadmap-priority{font-size:10px;font-weight:900;border-radius:999px;padding:5px 9px;border:1px solid;white-space:nowrap;}
+.roadmap-priority.high{color:#ff98ab;border-color:rgba(255,77,109,.4);background:rgba(255,77,109,.08);}
+.roadmap-priority.medium{color:#ffd48f;border-color:rgba(245,166,35,.4);background:rgba(245,166,35,.08);}
+.roadmap-step-title{font-size:17px;line-height:1.45;color:#fff;margin:0 0 7px;}
+.roadmap-judgment{font-size:13px;line-height:1.7;color:var(--text2);margin-bottom:13px;word-break:keep-all;}
+.roadmap-step-grid{display:grid;grid-template-columns:1.35fr 1fr 170px;gap:9px;}
+.roadmap-block{padding:11px 12px;border-radius:8px;background:rgba(8,13,25,.3);border:1px solid rgba(148,163,184,.12);}
+.roadmap-block-label{font-size:10px;font-weight:900;color:#8fa0bd;margin-bottom:7px;}
+.roadmap-block ul{margin:0;padding-left:16px;color:#d5dceb;font-size:12px;line-height:1.65;}
+.roadmap-block p{margin:0;color:#d5dceb;font-size:12px;line-height:1.65;word-break:keep-all;}
+.roadmap-timing{font-size:15px!important;font-weight:800;color:#fff!important;margin-bottom:9px!important;}
+.roadmap-evidence-btn{width:100%;border:1px solid rgba(108,142,245,.35);border-radius:6px;background:rgba(108,142,245,.08);color:#cbd5e1;font-size:10px;font-weight:700;padding:6px 8px;cursor:pointer;}
+.roadmap-evidence-btn:hover{background:rgba(108,142,245,.2);color:#fff;}
 @media(max-width:980px){.executive-metrics{grid-template-columns:repeat(2,1fr)}.decision-insight{grid-template-columns:46px minmax(0,1fr)}.decision-action{grid-column:2}.decision-evidence{grid-template-columns:1fr}}
-@media(max-width:640px){.executive-head{flex-direction:column}.executive-metrics{grid-template-columns:1fr 1fr}.decision-insight{grid-template-columns:1fr;padding:18px}.decision-index{width:44px}.decision-action{grid-column:1}}
+@media(max-width:980px){.roadmap-step-grid{grid-template-columns:1fr 1fr}.roadmap-step-grid .roadmap-block:last-child{grid-column:1/-1}.roadmap-header{align-items:center}}
+@media(max-width:640px){.executive-head{flex-direction:column}.executive-metrics{grid-template-columns:1fr 1fr}.decision-insight{grid-template-columns:1fr;padding:18px}.decision-index{width:44px}.decision-action{grid-column:1}.roadmap-header{flex-direction:column}.roadmap-step{grid-template-columns:42px minmax(0,1fr);padding:18px 14px 18px 10px}.roadmap-step-grid{grid-template-columns:1fr}.roadmap-step-grid .roadmap-block:last-child{grid-column:auto}.roadmap-step-top{align-items:flex-start;flex-direction:column}}
 /* ── Table ── */
 .tbl{width:100%;border-collapse:collapse;font-size:12px;}
 .tbl th{padding:8px 12px;text-align:left;font-size:11px;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px;}
@@ -2078,22 +2106,21 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
     </div>
   </div>
 
-  <div class="card full" style="margin-top:20px">
-    <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;width:100%;">
-      <div style="display:flex;align-items:center;gap:8px;">
-        <span class="icon">✅</span> 권고사항 실행 로드맵
+  <section class="action-roadmap roadmap-table">
+    <div class="roadmap-header">
+      <div>
+        <div class="roadmap-kicker">COST OWNER ACTION GATES</div>
+        <h2 class="roadmap-title">권고사항 실행 로드맵</h2>
+        <div class="roadmap-subtitle">인사이트의 네 질문을 실제 결재 단계로 전환합니다. 각 단계의 현재 판단, 해야 할 일, 완료 기준을 확인한 뒤 승인 또는 보류를 결정하십시오.</div>
       </div>
       <button type="button" class="section-xls-btn" onclick="window.dashboardExcelExporter.exportCard('roadmap')" title="권고사항 실행 로드맵 및 3개년 상세 현황 엑셀(.xlsx) 다운로드">
         <span>📊</span><span>xls</span>
       </button>
     </div>
-    <table class="tbl" style="margin-top:8px">
-      <thead><tr><th>순위</th><th>항목</th><th>대상</th><th>권고 조치</th><th>시기</th><th>중요도</th></tr></thead>
-      <tbody id="roadmap-tbody">
-        <tr><td colspan="6" style="text-align:center;padding:15px;color:var(--text2);">원천 데이터 기반 실행 로드맵 생성 중...</td></tr>
-      </tbody>
-    </table>
-  </div>
+    <div class="roadmap-decision-list" id="roadmap-tbody">
+      <div style="text-align:center;padding:24px;color:var(--text2);">비용 의사결정 질문과 원천 데이터를 연결하는 중...</div>
+    </div>
+  </section>
 </div>
 
 </div><!-- /main -->
@@ -3568,13 +3595,44 @@ function buildEvidenceInsights() {
     simpleCard('원천 신뢰도',`${confidenceLabel} · 경고 ${warnings.length}개 · GitHub blob ${sourceProof}`,r=>r.yr===latest&&(!r.date||!r.content||r.contractor_source_state==='invalid'),confidenceTone,warnings.length)
   ];
 
-  const roadmap=rows.length ? [
-    ['1','연말 예산 확보',wan(remainingCost),`잔여월 가용예산을 확보하고 ${largestForecastMonth?largestForecastMonth.month+'월 '+largestForecastMonth.cost.toLocaleString()+'만원':'월별 집행'}을 집중 관리`,'즉시',budgetTone==='red'?'높음':'중간'],
-    ['2','증가 원인 관리',`물량 ${signed(samePeriodCountGrowth)} · 단가 ${signed(unitCostGrowth)}`,`상위 공종 ${topType?.type||'미상'}과 ${topBuilding?.name||'집중동 미상'}의 발생 원인을 작업량·단가로 분리`,'월간 보고','높음'],
-    ['3','반복·고공수 점검',topRoom?.key||'반복 구역 없음',`반복 구역 ${repeatedRooms.length}개와 고공수 ${highEffortRows.length}건의 원인·완결 증빙 점검`,'다음 현장점검',topRoom?'높음':'중간'],
-    ['4','정산 증빙 마감',`O열 ${currentNegotiationRows.length}건`,`공란 ${negotiationBlank}건·0 ${negotiationZero}건과 이월 ${carryoverRows.length}건을 결재 전 분류`,'결재 전',currentNegotiationRows.length?'높음':'모니터링'],
-    ['5','다음 연도 예산안',String(model.latestYear+1)+'년',`기준 ${model.cost27TotalWan.toLocaleString()}만원, 물량 ±10% ${lowScenario.toLocaleString()}~${highScenario.toLocaleString()}만원 시나리오 확정`,'예산 편성','중간']
+  const roadmapDetailed=rows.length ? [
+    {
+      step:'01',question:'질문 1 · 연말까지 얼마를 추가 확보해야 하는가?',title:'연말 가용예산 확정',
+      judgment:`누적 ${wan(actualCost)} 집행 후 잔여 필요액은 ${wan(remainingCost)}이며, ${largestForecastMonth?largestForecastMonth.month+'월 약 '+largestForecastMonth.cost.toLocaleString()+'만원이 잔여월 최고 구간입니다.':'잔여월 예측 구간이 없습니다.'}`,
+      tasks:[`잔여 필요액 ${wan(remainingCost)}을 월별 가용예산으로 배정`,largestForecastMonth?`${largestForecastMonth.month}월 ${largestForecastMonth.cost.toLocaleString()}만원을 최고 집행 구간으로 설정`:'잔여월 집행계획 종료 확인',`계절계수 ${Number(season.factor||1).toFixed(4)} 적용 근거를 예산 메모에 첨부`],
+      completion:`가용예산 합계가 ${wan(remainingCost)} 이상이며 월별 한도 합계가 연간 전망 ${wan(projectedCost)}과 일치하면 승인`,
+      timing:'즉시',priority:'높음',tone:budgetTone,filter:r=>r.yr===latest,evidenceCount:latestRows.length
+    },
+    {
+      step:'02',question:'질문 2 · 비용은 왜 늘었고 단가 문제인가 물량 문제인가?',title:'비용 증가 설명 승인',
+      judgment:`동일기간 비용은 ${signed(samePeriodCostGrowth)}, 건수는 ${signed(samePeriodCountGrowth)}, 건당 비용은 ${signed(unitCostGrowth)}입니다. 비용 차이 ${signedWan(costDelta)} 중 작업량 영향은 ${signedWan(volumeEffect)}, 단가·작업구성 영향은 ${signedWan(unitMixEffect)}입니다.`,
+      tasks:[`월간 보고에 물량 영향 ${signedWan(volumeEffect)}과 단가·구성 영향 ${signedWan(unitMixEffect)}을 분리`,`${topType?.type||'상위 공종'} ${topType?.count||0}건의 증가 원인 확인`,`${topBuilding?.name||'집중 건물동'} 발생 건을 작업량·단가 기준으로 표본 대조`],
+      completion:'두 영향의 합이 동일기간 총비용 차이와 일치하고 상위 공종·건물동 증가 원인이 원천 작업내역으로 설명되면 승인',
+      timing:'월간 보고 전',priority:'높음',tone:(samePeriodCostGrowth??0)>20?'red':'orange',filter:r=>[latest,previousKey].includes(r.yr)&&!r.is_carryover&&(!maxMonth||Number(r.month)<=maxMonth),evidenceCount:currentRows.length+previousComparableRows.length
+    },
+    {
+      step:'03',question:'질문 3 · 어디를 먼저 통제해야 비용이 반복되지 않는가?',title:'반복·고공수 개선 명령',
+      judgment:`반복 구역 ${repeatedRooms.length}개, 상위 10% 고공수 ${highEffortRows.length}건을 우선 점검해야 합니다.${topRoom?' 최다 반복은 '+topRoom.key+' '+topRoom.count+'회입니다.':''}`,
+      tasks:[topRoom?`${topRoom.key} ${topRoom.count}회 작업의 동일 원인·재시공·임시 보수 여부 확인`:'신규 반복 구역 발생 여부 월별 확인',`고공수 ${highEffortRows.length}건의 작업범위·완료 증빙 표본 점검`,topMaterial?`${topMaterial.def.label} ${topMaterial.quantity.toLocaleString()}${topMaterial.def.unit} 사용량과 약 ${wan(topMaterial.cost)} 자재비 검토`:'표준 자재 입력 품질 확인'],
+      completion:'반복·고공수 대상별 원인, 조치 책임, 완료일, 재발 방지 방법이 작업이력에 기록되면 완료',
+      timing:'다음 현장점검',priority:topRoom||highEffortRows.length?'높음':'중간',tone:topRoom||highEffortRows.length?'orange':'green',filter:r=>r.yr===latest&&!r.is_carryover&&costDriverRows.includes(r),evidenceCount:costDriverRows.length
+    },
+    {
+      step:'04',question:'질문 4 · 비용 결재 전에 어떤 증빙을 닫아야 하는가?',title:'정산 보류항목 마감',
+      judgment:`최신연도 O열 검토 ${currentNegotiationRows.length}건, 서명·청구 검토 ${currentMismatchRows.length}건, 이월 ${carryoverRows.length}건, 원천 경고 ${warnings.length}건이 결재 확인 대상입니다.`,
+      tasks:[`O열 공란 ${negotiationBlank}건·0 ${negotiationZero}건을 누락·무상·협의 완료로 분류`,`서명·청구 검토 ${currentMismatchRows.length}건의 작업·청구 증빙 대조`,`이월 ${carryoverRows.length}건과 원천 경고 ${warnings.length}건을 본 결재와 분리 표시`],
+      completion:'각 대상에 확인 상태와 근거가 입력되고 미확인 건이 결재 승인액에 포함되지 않으면 마감',
+      timing:'비용 결재 전',priority:settlementRows.length?'높음':'중간',tone:confidenceTone,filter:r=>r.yr===latest&&settlementRows.includes(r),evidenceCount:settlementRows.length
+    },
+    {
+      step:'05',question:'질문 1 후속 · 다음 연도에 얼마를 편성해야 하는가?',title:`${model.latestYear+1}년 예산 기준안 확정`,
+      judgment:`기준안은 ${model.cost27TotalWan.toLocaleString()}만원이며 작업량 ±10% 시 ${lowScenario.toLocaleString()}~${highScenario.toLocaleString()}만원입니다. 증가율 ${(model.countGrowthRate*100).toFixed(1)}%와 물가 ${(model.inflationRate*100).toFixed(1)}%는 원천 실적이 아닌 예산 가정입니다.`,
+      tasks:[`기준 ${model.cost27TotalWan.toLocaleString()}만원과 하한·상한 시나리오를 함께 상신`,`작업량 증가율 ${(model.countGrowthRate*100).toFixed(1)}%의 운영 근거 확인`,`물가율 ${(model.inflationRate*100).toFixed(1)}%의 적용 근거와 단가표 첨부`],
+      completion:'기준·하한·상한 중 승인 시나리오와 증가율·물가율 근거가 예산안에 명시되면 확정',
+      timing:'예산 편성 전',priority:'중간',tone:'blue',filter:r=>r.yr===latest,evidenceCount:latestRows.length
+    }
   ] : [];
+  const roadmap=roadmapDetailed.map(item=>[item.step,item.question,item.judgment,item.tasks.join(' / '),item.completion,item.timing,item.priority]);
 
   const executive={
     kicker:'비용 집행 담당자가 답해야 할 4가지 질문',
@@ -3590,7 +3648,7 @@ function buildEvidenceInsights() {
     ],
     source:`원천 blob ${sourceProof} · ${rows.length.toLocaleString()}건 · ${confidenceLabel}`
   };
-  return {executive,decisions,cards:decisions,riskCards,roadmap,generatedAt:new Date().toISOString(),sourceProof};
+  return {executive,decisions,cards:decisions,riskCards,roadmap,roadmapDetailed,generatedAt:new Date().toISOString(),sourceProof};
 }
 
 function renderEvidenceInsights() {
@@ -3635,7 +3693,26 @@ function renderEvidenceInsights() {
       insightCard.append(heading,content,evidence);insightCard.onclick=()=>openModal(insight.title+' 증빙',insight.filter||(()=>true));riskContainer.append(insightCard);
     }
   }
-  const tbody=document.getElementById('roadmap-tbody');if(tbody){tbody.replaceChildren();for(const row of model.roadmap){const tr=document.createElement('tr');for(const v of row){const td=document.createElement('td');td.textContent=v;tr.append(td);}tbody.append(tr);}}
+  const roadmapContainer=document.getElementById('roadmap-tbody');
+  if(roadmapContainer){
+    roadmapContainer.replaceChildren();
+    const el=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!=null)node.textContent=text;return node;};
+    for(const item of model.roadmapDetailed||[]){
+      const step=el('article','roadmap-step');
+      const rail=el('div','roadmap-step-rail');rail.append(el('div','roadmap-step-num',item.step),el('div','roadmap-step-line'));
+      const content=el('div','roadmap-step-content');
+      const top=el('div','roadmap-step-top');
+      top.append(el('div','roadmap-question',item.question),el('div','roadmap-priority '+(item.priority==='높음'?'high':'medium'),item.priority+' 우선순위'));
+      content.append(top,el('h3','roadmap-step-title',item.title),el('div','roadmap-judgment',item.judgment));
+      const grid=el('div','roadmap-step-grid');
+      const taskBlock=el('div','roadmap-block');taskBlock.append(el('div','roadmap-block-label','실행 항목'));
+      const taskList=el('ul');for(const task of item.tasks||[])taskList.append(el('li','',task));taskBlock.append(taskList);
+      const completionBlock=el('div','roadmap-block');completionBlock.append(el('div','roadmap-block-label','승인 가능한 완료 기준'),el('p','',item.completion));
+      const timingBlock=el('div','roadmap-block');timingBlock.append(el('div','roadmap-block-label','결재 시점'),el('p','roadmap-timing',item.timing));
+      const evidenceButton=el('button','roadmap-evidence-btn',`원천 증빙 ${Number(item.evidenceCount||0).toLocaleString()}건`);evidenceButton.type='button';evidenceButton.onclick=()=>openModal(item.title+' 증빙',item.filter||(()=>true));timingBlock.append(evidenceButton);
+      grid.append(taskBlock,completionBlock,timingBlock);content.append(grid);step.append(rail,content);roadmapContainer.append(step);
+    }
+  }
 }
 
 function recalculateDerivedData(records) {
@@ -9463,11 +9540,11 @@ const dashboardExcelExporter = {
           chartSheet.properties.showGridLines = true;
           chartSheet.views = [{ state: "frozen", ySplit: 3 }];
 
-          chartSheet.mergeCells("A1:F1");
-          chartSheet.getCell("A1").value = "✅ 긴급보수 최적화 및 노후화 선제 대응 권고사항 실행 로드맵";
+          chartSheet.mergeCells("A1:G1");
+          chartSheet.getCell("A1").value = "✅ 비용 집행 의사결정 질문 기반 실행 로드맵";
           chartSheet.getCell("A1").font = { bold: true, size: 14, color: { argb: "FF1E3A8A" } };
 
-          const roadmapHeaders = ["순위", "추진 과제", "대상", "검토 내용", "일정", "상태"];
+          const roadmapHeaders = ["단계", "연계 질문", "현재 판단", "실행 항목", "승인 가능한 완료 기준", "결재 시점", "우선순위"];
           roadmapHeaders.forEach((h, i) => {
             const c = chartSheet.getCell(3, i + 1);
             c.value = h;
@@ -9492,19 +9569,21 @@ const dashboardExcelExporter = {
             item.forEach((val, colIdx) => {
               const c = chartSheet.getCell(rowNum, colIdx + 1);
               c.value = val;
-              c.alignment = { vertical: "middle", horizontal: (colIdx === 2 || colIdx === 5) ? "left" : "center", wrapText: true };
+              c.alignment = { vertical: "middle", horizontal: [0,5,6].includes(colIdx) ? "center" : "left", wrapText: true };
               c.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
               if (colIdx === 0) {
                 c.font = { bold: true };
-                const stage=String(val||'');
-                c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: stage.includes("1단계") ? "FFFEE2E2" : stage.includes("2단계") ? "FFFEF3C7" : "FFE0F2FE" } };
+                c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: idx===0 ? "FFFEE2E2" : idx<4 ? "FFFEF3C7" : "FFE0F2FE" } };
+              }
+              if (colIdx === 6) {
+                c.font = { bold:true,color:{argb:String(val)==='높음'?"FFC62828":"FFE65100"} };
               }
             });
-            chartSheet.getRow(rowNum).height = 30;
+            chartSheet.getRow(rowNum).height = 66;
           });
 
           chartSheet.columns = [
-            { width: 18 }, { width: 28 }, { width: 45 }, { width: 18 }, { width: 20 }, { width: 28 }
+            { width: 9 }, { width: 38 }, { width: 58 }, { width: 72 }, { width: 58 }, { width: 18 }, { width: 14 }
           ];
 
           const insightModel=buildEvidenceInsights();
@@ -9514,12 +9593,12 @@ const dashboardExcelExporter = {
           insightSheet.getCell("A1").font={bold:true,size:14,color:{argb:"FF1E3A8A"}};
           insightSheet.getCell("A2").value="원천 blob/SHA";
           insightSheet.getCell("B2").value=insightModel.sourceProof;
-          ["분석 항목","현재 원천 분석 결과","연계 증빙 건수","판단 상태"].forEach((header,index)=>{
+          ["비용 담당자 질문","현재 판단·근거·권고","연계 증빙 건수","판단 상태"].forEach((header,index)=>{
             const cell=insightSheet.getCell(4,index+1);cell.value=header;cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF24476B"}};
           });
           insightModel.cards.forEach((insight,index)=>{
             const row=5+index;
-            insightSheet.getCell(row,1).value=insight.title;
+            insightSheet.getCell(row,1).value=insight.question||insight.title;
             insightSheet.getCell(row,2).value=insight.body;
             insightSheet.getCell(row,3).value=Number(insight.evidenceCount||0);
             insightSheet.getCell(row,4).value=insight.tone==='red'?'우선 확인':insight.tone==='orange'?'검토':'정상/참고';
@@ -11351,7 +11430,7 @@ const dashboardExcelExporter = {
         wsRoad.getCell("A1").value = "✅ 건축 긴급보수 대응 권고사항 실행 로드맵";
         wsRoad.getCell("A1").font = { bold: true, size: 13, color: { argb: "FF1E293B" } };
 
-        const roadHeaders = ["순위", "항목", "대상", "검토 내용", "일정", "상태"];
+        const roadHeaders = ["단계", "연계 질문", "현재 판단", "실행 항목", "승인 가능한 완료 기준", "결재 시점", "우선순위"];
         roadHeaders.forEach((h, i) => {
           const c = wsRoad.getCell(3, i + 1);
           c.value = h;
@@ -11367,18 +11446,19 @@ const dashboardExcelExporter = {
           row.forEach((v, cIdx) => {
             const cell = wsRoad.getCell(rowNum, cIdx + 1);
             cell.value = v;
-            if (cIdx === 0 || cIdx === 4 || cIdx === 5 || cIdx === 6) {
+            if (cIdx === 0 || cIdx === 5 || cIdx === 6) {
               cell.alignment = { horizontal: "center" };
             } else {
               cell.alignment = { horizontal: "left" };
             }
-            if (cIdx === 5) {
-              cell.font = { bold: true, color: { argb: v === "CRITICAL" ? "FFC62828" : v === "HIGH" ? "FFE65100" : "FF1565C0" } };
+            if (cIdx === 6) {
+              cell.font = { bold: true, color: { argb: v === "높음" ? "FFC62828" : "FFE65100" } };
             }
             cell.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
           });
+          wsRoad.getRow(rowNum).height = 66;
         });
-        wsRoad.columns = [{ width: 8 }, { width: 22 }, { width: 18 }, { width: 45 }, { width: 16 }, { width: 14 }, { width: 14 }];
+        wsRoad.columns = [{ width: 8 }, { width: 38 }, { width: 58 }, { width: 72 }, { width: 58 }, { width: 18 }, { width: 14 }];
 
         // 12. Sheet: 10. 전수 원천 상세 증빙 레코드
         const rawList = (typeof RAW !== 'undefined' && Array.isArray(RAW)) ? RAW : (typeof window !== 'undefined' && window.RAW ? window.RAW : []);
