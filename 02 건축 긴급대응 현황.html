@@ -3526,14 +3526,14 @@ function buildEvidenceInsights() {
     decision(
       '질문 1 · 연말까지 얼마를 추가 확보해야 하는가?',
       '연말 예산 확보',
-      `${latest} 연간 ${wan(projectedCost)} 전망, 현재 집행 후 ${wan(remainingCost)}가 남아 있습니다.`,
-      `현재 누적 집행은 ${wan(actualCost)}로 연간 전망의 ${executionRate.toFixed(1)}%입니다. 달력 진행률 ${calendarRate.toFixed(1)}%보다 ${Math.abs(executionRate-calendarRate).toFixed(1)}%p ${executionRate>=calendarRate?'빠릅니다':'낮습니다'}. ${formatSeasonalityDecision(season)}을 같은 산식으로 KPI와 잔여월 차트에 적용했습니다.`,
+      `${latest} 연간 ${wan(projectedCost)} 전망, 현재 집행 후 ${wan(remainingCost)}이 남아 있습니다.`,
+      `현재 누적 집행은 ${wan(actualCost)}으로 연간 전망의 ${executionRate.toFixed(1)}%입니다. 달력 진행률 ${calendarRate.toFixed(1)}%보다 ${Math.abs(executionRate-calendarRate).toFixed(1)}%p ${executionRate>=calendarRate?'빠릅니다':'낮습니다'}. ${formatSeasonalityDecision(season)}을 같은 산식으로 KPI와 잔여월 차트에 적용했습니다.`,
       [
         `당해 실적 ${wan(currentCost)} + 이월 ${wan(carryoverCost)}`,
         largestForecastMonth?`잔여월 최대 ${largestForecastMonth.month}월 약 ${largestForecastMonth.cost.toLocaleString()}만원`:'잔여월 예측 없음',
         `${model.latestYear+1}년 기준 ${model.cost27TotalWan.toLocaleString()}만원 · ±10% ${lowScenario.toLocaleString()}~${highScenario.toLocaleString()}만원`
       ],
-      `연말 가용예산으로 ${wan(remainingCost)}를 우선 확보하고, ${largestForecastMonth?largestForecastMonth.month+'월 '+largestForecastMonth.cost.toLocaleString()+'만원':'잔여월'}을 월별 자금계획의 최고 구간으로 관리하십시오.`,
+      `연말 가용예산으로 ${wan(remainingCost)}을 우선 확보하고, ${largestForecastMonth?largestForecastMonth.month+'월 '+largestForecastMonth.cost.toLocaleString()+'만원':'잔여월'}을 월별 자금계획의 최고 구간으로 관리하십시오.`,
       r=>r.yr===latest,
       budgetTone,
       latestRows.length
@@ -3542,7 +3542,7 @@ function buildEvidenceInsights() {
       '질문 2 · 비용은 왜 늘었고, 단가 문제인가 물량 문제인가?',
       '동일기간 비용 변화 원인',
       `${previousKey||'직전연도'} 동일기간 대비 비용 ${signed(samePeriodCostGrowth)}, 건수 ${signed(samePeriodCountGrowth)}입니다.`,
-      `동일기간 비용 차이 ${signedWan(costDelta)}를 분해하면 작업량 영향은 약 ${signedWan(volumeEffect)}, 건당 단가·작업구성 영향은 약 ${signedWan(unitMixEffect)}입니다. 건당 비용은 ${wan(previousUnitCost)}에서 ${wan(currentUnitCost)}로 ${signed(unitCostGrowth)} 변해, 현재 증가는 ${Math.abs(volumeEffect)>=Math.abs(unitMixEffect)?'단가보다 작업량 증가가 주원인':'작업량보다 단가·작업구성 변화가 주원인'}입니다.`,
+      `동일기간 비용 차이 ${signedWan(costDelta)}을 분해하면 작업량 영향은 약 ${signedWan(volumeEffect)}, 건당 단가·작업구성 영향은 약 ${signedWan(unitMixEffect)}입니다. 건당 비용은 ${wan(previousUnitCost)}에서 ${wan(currentUnitCost)}으로 ${signed(unitCostGrowth)} 변해, 현재 증가는 ${Math.abs(volumeEffect)>=Math.abs(unitMixEffect)?'단가보다 작업량 증가가 주원인':'작업량보다 단가·작업구성 변화가 주원인'}입니다.`,
       [
         topType?`${topType.type} ${topType.count}건 · 동일기간 ${previousTopTypeCount}건 대비 ${signed(pct(topType.count,previousTopTypeCount))}`:'주요 공종 자료 부족',
         topBuilding?`${topBuilding.name} ${topBuilding.count.toFixed(1)}환산건 · 식별 건의 ${share(topBuilding.count,buildingTotal).toFixed(1)}%`:'건물동 자료 부족',
