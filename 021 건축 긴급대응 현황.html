@@ -1100,7 +1100,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 <div id="github-sync-loader" style="position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(15,17,23,0.94);z-index:9999999;display:flex;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(5px);transition:opacity 0.4s ease;">
   <div style="width:52px;height:52px;border:4px solid rgba(108,142,245,0.2);border-top:4px solid #6c8ef5;border-radius:50%;animation:sync-spin 1s linear infinite;margin-bottom:20px;"></div>
   <div style="font-size:19px;font-weight:800;color:#ffffff;margin-bottom:10px;letter-spacing:-0.5px;">GitHub 원천 로우데이터 연동 중...</div>
-  <div style="font-size:13.5px;color:#94a3b8;margin-bottom:6px;" id="github-sync-status-msg">wyggkr04/RawData/작업유형별/021 관리대장_(건축 긴급대응).xlsb 다운로드 시도 중...</div>
+  <div style="font-size:13.5px;color:#94a3b8;margin-bottom:6px;" id="github-sync-status-msg">wyggkr/main의 최신 021 관리대장 XLSB 및 Git LFS 무결성 확인 중...</div>
   <div style="font-size:11.5px;color:#64748b;" id="github-sync-submsg">JongGunelee/wyggkr04 GitHub 저장소에서 최신 데이터를 실시간 동기화합니다.</div>
 </div>
 <style>
@@ -1190,7 +1190,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
             </table>
           </div>
 
-          
+
           <!-- 💰 2. 시스템적 집행 비용(추정) 기준 연도별 시공사 자발적 절감 비용 심층 분석 -->
           <div style="margin-bottom:18px;background:rgba(20,24,38,0.92);border:1px solid rgba(78,203,113,0.35);border-radius:8px;padding:14px 16px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;border-bottom:1px solid rgba(78,203,113,0.25);padding-bottom:6px;">
@@ -1372,7 +1372,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       </div>
     </div>
     </div>
-    
+
   </div>
 </div>
 
@@ -1462,7 +1462,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   <div class="card full" style="margin-bottom:20px">
     <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
       <div>
-        <span class="icon">📊</span> 전년 대비 증감 편차 (Year-over-Year) 
+        <span class="icon">📊</span> 전년 대비 증감 편차 (Year-over-Year)
         <span class="sub" style="color:#ffffff !important;font-weight:700;" id="yoy-section-subtitle">26년 실적 vs 25년 실적 변화량(Δ)</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
@@ -1471,7 +1471,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
         </button>
       </div>
       <div style="font-size:11.5px;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#ffffff;">
-        <span style="color:#4ecb71;font-weight:700;">● 음수(-): 26년 건수 감소(개선)</span> &nbsp;|&nbsp; 
+        <span style="color:#4ecb71;font-weight:700;">● 음수(-): 26년 건수 감소(개선)</span> &nbsp;|&nbsp;
         <span style="color:#ff4d6d;font-weight:700;">● 양수(+): 26년 건수 증가(요주의)</span>
       </div>
     </div>
@@ -1554,8 +1554,8 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
           <span class="pill pill-orange" id="raw-source-integrity-pill" style="font-size:11px;font-weight:700;">원천 전수 대조 대기</span>
         </div>
         <div style="font-size:12px;color:var(--text2);line-height:1.6;">
-          원천 엑셀('021 관리대장_(건축 긴급대응).xlsx') 워크시트 필드 
-          <strong style="color:#6c8ef5;">'근로자 (직접 서명) 관리소 목록'(Col 4)</strong> vs 
+          원천 엑셀('021 관리대장_(건축 긴급대응).xlsx') 워크시트 필드
+          <strong style="color:#6c8ef5;">'근로자 (직접 서명) 관리소 목록'(Col 4)</strong> vs
           <strong style="color:#f5a623;">'특별인부 (시공사 입력)'(Col 15)</strong> 데이터 심층 분석 결과 보고
         </div>
       </div>
@@ -1573,7 +1573,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       <strong style="color:#ffffff;font-size:13px;">📌 [핵심 의문 답변 및 산정 메커니즘 규명]</strong><br>
       · <strong>데이터 산정 원천:</strong> 현재 시스템의 근로자 인원 및 공수 통계는 <strong>100% 전수 '근로자 (직접 서명) 관리소 목록'(Col 4 / D열)</strong> 데이터를 사용했습니다. '특별인부 (시공사 입력)'(Col 15 / O열)은 시스템 내 0건(0%) 반영되어 있었습니다.<br>
       · <strong>수식 내재 원인:</strong> 엑셀 원본 J열의 총시간 수식이 <code style="background:rgba(0,0,0,0.4);padding:2px 6px;border-radius:4px;color:#a5b4fc;">=I*D</code> (작업시간 × D열 관리소 목록)로 작성되어 있어, 공수와 인원이 D열을 기준으로 산출되었기 때문입니다.<br>
-      · <strong>괴리 및 예산 절감 분석:</strong> 관리소 서명 총인원(<strong id="alert-admin-workers">483.0명</strong>) 대비 시공사 특별인부 청구(<strong id="alert-contractor-labor">397.5품</strong>)는 <strong id="alert-savings-labor">-85.5품(-17.7%)을 시공사가 자발적으로 축소 청구</strong>한 것으로, 실제 집행 시 <strong id="alert-savings-cost">총 -1,903만원(-13.7%)의 실질 공사비 예산 절감 효과</strong>를 거둔 상생 협력 모델임이 규명되었습니다.
+      · <strong>괴리 및 예산 절감 분석:</strong> 관리소 서명 총인원(<strong id="alert-admin-workers">483.0명</strong>) 대비 시공사 특별인부 청구(<strong id="alert-contractor-labor">397.5품</strong>)는 <strong id="alert-savings-labor">-85.5품(-17.7%)을 시공사가 자발적으로 축소 청구</strong>한 것으로, 실제 집행 시 <strong id="alert-savings-cost">총 -1,903만원(-13.7%)의 실질 공사비 청구 환산 차액</strong>를 거둔 상생 협력 모델임이 규명되었습니다.
     </div>
 
     <!-- 4개 KPI 지표 그리드 -->
@@ -1591,14 +1591,14 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       <div class="audit-kpi-card audit-green" id="audit-kpi-card-savings" style="background:rgba(15,17,23,0.75);border:1px solid rgba(78,203,113,0.4);box-shadow:0 2px 8px rgba(78,203,113,0.1);" onclick="openWorkerAuditModal('diff')" title="💡 [누적 공수 절감]: 시공사 자발적 청구 축소에 따른 실질 예산 절감 지표 · 클릭 시 연도별 상세 절감 분석 오픈">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
           <span style="font-size:11px;color:#86efac;font-weight:700;">누적 공수 절감 (시공사 자발적 축소)</span>
-          <span class="pill pill-green" style="font-size:9.5px;padding:1px 6px;">예산 절감 효과</span>
+          <span class="pill pill-green" style="font-size:9.5px;padding:1px 6px;">청구 환산 차액</span>
         </div>
         <div style="font-size:22px;font-weight:800;color:#4ecb71;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 6px;">
           <span id="kpi-voluntary-savings-val">-<span style="font-size:13px;font-weight:600;">품</span></span>
           <span style="font-size:12px;color:#86efac;font-weight:700;" id="kpi-voluntary-savings-rate">(-)</span>
           <span style="font-size:12px;color:#86efac;font-weight:700;" id="kpi-voluntary-savings-breakdown">· [원천 연동 중]</span>
         </div>
-        <div style="font-size:11px;color:#cbd5e1;margin-top:2px;" id="kpi-voluntary-savings-sub">시공사 자발적 공사비 청구 축소에 따른 실질 절감 (시스템적 추정치)</div>
+        <div style="font-size:11px;color:#cbd5e1;margin-top:2px;" id="kpi-voluntary-savings-sub">서명 기준과 청구 기준 환산 차액 · 절감 확정 아님</div>
       </div>
       <div class="audit-kpi-card audit-green" id="audit-kpi-card-match" style="background:rgba(15,17,23,0.7);border:1px solid rgba(78,203,113,0.3);" onclick="openWorkerAuditModal('match')" title="💡 [일치율 및 무결성 검증]: 관리소 서명과 시공사 청구 간 1:1 대조 일치율 · 클릭 시 상세 데이터 조회">
         <div style="font-size:11px;color:#94a3b8;margin-bottom:4px;">일치율 및 무결성 검증</div>
@@ -1728,11 +1728,11 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
           <button class="cost-zoom-btn" style="position:static;display:flex;" onclick="event.stopPropagation();toggleZoom(document.getElementById('cost-calc-basis-box'))">🔍 4배 확대</button>
         </div>
       </div>
-      
+
       <!-- 🔍 실시간 동적 연동: 연도별 비용·건수 상관관계 및 2027년 예측 타당성 심층 평가 브리핑 -->
       <div id="cost-correlation-analysis-container" style="margin-bottom:14px;background:rgba(26,29,39,0.85);padding:14px 16px;border-radius:8px;border:1px solid rgba(108,142,245,0.4);">
       </div>
-      
+
       <!-- 🌟 [무결성 보증] 품(근로자) 산출 단일 기준 심층 분석 & 시공사 청구 기준 교차 비교 패널 -->
       <div style="margin-bottom:14px;background:rgba(20,24,38,0.9);border:1px solid rgba(108,142,245,0.35);border-radius:8px;padding:14px 16px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;border-bottom:1px solid rgba(108,142,245,0.25);padding-bottom:6px;">
@@ -1816,9 +1816,9 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       <div style="margin-bottom:12px;background:rgba(30,41,59,0.85);padding:14px 16px;border-radius:8px;border:1px solid rgba(108,142,245,0.35);">
         <strong style="color:#38bdf8;font-size:12.5px;">📌 【비용 연환산 추정 및 무결성 보장 심층 분석 (혼선 방지 핵심 안내)】</strong>
         <ul style="margin:8px 0 0 18px;padding:0;font-size:11.5px;color:#e2e8f0;line-height:1.85;">
-          <li><strong style="color:#ff7597;">1. 단순 선형 연환산(12/8 = 1.5배)의 계절성 왜곡 (6,391만원 도출):</strong> 1~8월 실적(4,261만원)에 단순 1.5배(12/8)를 곱하면 상반기 피크(해빙기 3월, 장마철 6~7월 집중)가 9~12월 동절기 비수기에도 똑같이 복제되고 전년도 이월 정산건(3건, 41.5만원)까지 1.5배로 중복 계상되어 6,391만원으로 심각하게 과대 왜곡됩니다.</li>
-          <li><strong style="color:#fde047;">2. XLSB 원천 엑셀의 특이성 (약 5,9##만원 / 5,973만원 도출 근거):</strong> 2026년 시트 내 2025년도 이월 정산건(3건, 41.5만원)은 이미 전년도에 발생하여 1회만 정산되는 비연환산 항목이며, 하반기(9~12월)는 상반기 대비 긴급보수 빈도가 약 18.8% 감축되는 계절성(계절지수 0.8123)이 존재합니다. 원천 기획서 및 표준 모델(80건 실적 + 잔여 21~24건 = 연간 104건 기준)과 100% 정합합니다.</li>
-          <li><strong style="color:#4ade80;">3. 무결성 보장 리팩토링 로직:</strong> 연간 추정 비용 = 당해 실적(4,219만) + (월평균 실적 527.4만 × 잔여 4개월 × 계절지수 0.8123) + 전년도 이월 정산액 1회(41.5만) = 약 5,975만원(약 5,9##만원, 5,973만원대 완벽 일치).</li>
+          <li>이월 비용을 실적과 함께 연환산하면 중복 추정됩니다. 당해 실적만 연환산하고 이월 비용은 한 번 합산합니다.</li>
+          <li>계절 보정은 과거 월별 실적에서 자동 산출합니다. 관측 범위와 반복성 근거가 부족하면 계수 1을 적용합니다. 이월 정산은 1회만 반영합니다.</li>
+          <li>계절 보정은 과거 월별 실적에서 자동 산출합니다. 관측 범위와 반복성 근거가 부족하면 계수 1을 적용합니다. 이월 정산은 1회만 반영합니다.</li>
         </ul>
       </div>
 
@@ -2410,10 +2410,7 @@ window.downloadRawXlsx = async function() {
 
 
 const GITHUB_XLSB_URLS = [
-  "021 관리대장_(건축 긴급대응).xlsb",
   "https://raw.githubusercontent.com/JongGunelee/wyggkr/main/021%20%EA%B4%80%EB%A6%AC%EB%8C%80%EC%9E%A5_(%EA%B1%B4%EC%B6%95%20%EA%B8%B4%EA%B8%89%EB%8C%80%EC%9D%91).xlsb",
-  "https://raw.githubusercontent.com/JongGunelee/wyggkr04/main/RawData/%EC%9E%91%EC%97%85%EC%9C%A0%ED%98%95%EB%B3%84/021%20%EA%B4%80%EB%A6%AC%EB%8C%80%EC%9E%A5_(%EA%B1%B4%EC%B6%95%20%EA%B8%B4%EA%B8%89%EB%8C%80%EC%9D%91).xlsb",
-  "https://jonggunelee.github.io/wyggkr04/RawData/%EC%9E%91%EC%97%85%EC%9C%A0%ED%98%95%EB%B3%84/021%20%EA%B4%80%EB%A6%AC%EB%8C%80%EC%9E%A5_(%EA%B1%B4%EC%B6%95%20%EA%B8%B4%EA%B8%89%EB%8C%80%EC%9D%91).xlsb"
 ];
 
 // XLSB 자재 열은 연도별로 표기가 다르므로, 표시용 이름이 아니라 열 머리글의 의미로 정규화한다.
@@ -2629,7 +2626,7 @@ function updateRawIntegrityStatus(report) {
   const el = document.getElementById('raw-integrity-status');
   if (!el || !report) return;
   const warningCount = (report.warnings || []).length;
-  const sourceLabel = report.source === 'cache' ? '캐시' : 'GitHub XLSB';
+  const sourceLabel = report.source === 'github-error' ? 'GitHub 동기화 실패' : 'GitHub XLSB';
   const yearCounts = Object.entries(report.perYear || {}).sort((a, b) => a[0].localeCompare(b[0], 'ko'))
     .map(item => item[0] + ' ' + item[1] + '건').join(' · ');
   const calculationOk = Boolean(report.calculationOk);
@@ -3030,120 +3027,55 @@ function parseXlsbWorkbook(wb) {
   return allRecords;
 }
 
+let sourceRequestRevision=0;
 async function fetchAndInitializeData(forceReload = false) {
-  window.lastXlsbSourceHash = '';
-  const loader = document.getElementById('github-sync-loader');
-  if (loader) {
-    loader.style.display = 'flex';
-    loader.style.opacity = '1';
-    loader.style.pointerEvents = 'auto';
-  }
-  updateLoaderStatus("GitHub 저장소에서 021 관리대장.xlsb 다운로드 중...", "캐시 완전 무효화 및 실시간 데이터 페치 진행...");
-
-  if (forceReload && typeof localStorage !== 'undefined') {
-    try {
-      localStorage.removeItem('CACHED_RAW_DATA_021');
-      localStorage.removeItem('ARCH_EMERGENCY_RAW_DATA');
-    } catch(e) {}
-  }
-
-  let arrayBuffer = null;
-  let successUrl = '';
-
-  for (let i = 0; i < GITHUB_XLSB_URLS.length; i++) {
-    const rawUrl = GITHUB_XLSB_URLS[i];
-    const cacheBuster = 't=' + Date.now() + '&nocache=' + Math.random().toString(36).slice(2);
-    const url = rawUrl + (rawUrl.includes('?') ? '&' : '?') + cacheBuster;
-    try {
-      const resp = await fetch(url, {
-        method: 'GET',
-        mode: 'cors'
-      });
-      if (resp && resp.ok) {
-        const buf = await resp.arrayBuffer();
-        if (buf && buf.byteLength > 10000) {
-          arrayBuffer = buf;
-          successUrl = rawUrl;
-          break;
-        }
-      }
-    } catch (err) {
-      console.warn(`URL failed: ${rawUrl}`, err);
-    }
-  }
-
-  if (arrayBuffer && arrayBuffer.byteLength > 0) {
-    try {
-      updateLoaderStatus("XLSB 파일 파싱 및 매핑 진행 중...", "SheetJS 엔진을 통해 연도별 시트를 처리합니다.");
-      window.lastXlsbSourceHash = '';
-      try {
-        const digest = await crypto.subtle.digest('SHA-256', arrayBuffer);
-        window.lastXlsbSourceHash = Array.from(new Uint8Array(digest))
-          .map(value => value.toString(16).padStart(2, '0')).join('').toUpperCase();
-      } catch (hashErr) {
-        console.warn('XLSB SHA-256 계산 실패:', hashErr);
-      }
-      // Keep XLSB serials numeric: duration cells are fractions of a day, while date cells are whole-day serials.
-      // cellDates:true coerces duration serials into Date objects and loses Excel's cached precision.
-      const wb = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array', cellDates: false, cellStyles: false });
-      window._rawXlsbWorkbook = wb;
-      window._rawXlsbArrayBuffer = arrayBuffer;
-      const parsedRecords = parseXlsbWorkbook(wb);
-      window._rawXlsbSourceUrl = successUrl;
-      const integrity = validateRawIntegrity(wb, parsedRecords);
-      
-      if (parsedRecords.length > 0) {
-        window.RAW = parsedRecords;
-        if (typeof localStorage !== 'undefined') {
-          try { localStorage.setItem('CACHED_RAW_DATA_021', JSON.stringify(parsedRecords)); } catch(e) {}
-        }
-        updateRawIntegrityStatus(integrity);
-        updateLoaderStatus(`XLSB ${parsedRecords.length}건 파싱 및 무결성 대조 완료`, integrity.warnings?.[0] || '중복·필수 필드·공수 산식 대조 완료');
-        console.log(`✅ GitHub XLSB 실시간 로드 성공: ${parsedRecords.length}건 파싱 완료 from ${successUrl}`, integrity);
-      }
-    } catch (parseErr) {
-      console.error('XLSB parse error:', parseErr);
-    }
-  } else {
-    console.warn('모든 GitHub URL에서 XLSB 다운로드 실패 또는 오프라인 환경입니다.');
-    if (typeof localStorage !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('CACHED_RAW_DATA_021');
-        if (cached) {
-          window.RAW = JSON.parse(cached);
-          window.rawIntegrityReport = {
-            ok: false, source: 'cache', recordCount: window.RAW.length,
-            warnings: ['GitHub 원천 XLSB를 가져오지 못해 이전 캐시를 사용 중입니다. 최신성은 보증되지 않습니다.']
-          };
-          updateRawIntegrityStatus(window.rawIntegrityReport);
-          console.log(`📁 캐시된 데이터 로드: ${window.RAW.length}건`);
-        }
-      } catch(e) {}
-    }
-  }
-
-  // 데이터 기반 대시보드 전체 실시간 빌드
+  const revision=++sourceRequestRevision;
+  const loader=document.getElementById('github-sync-loader');
+  if(loader){loader.style.display='flex';loader.style.opacity='1';loader.style.pointerEvents='auto';}
+  updateLoaderStatus('원천 XLSB 동기화 중','파일 구조와 데이터 검증');
+  let failure=new Error('사용 가능한 원천 XLSB 없음');
   try {
-    if (window.RAW && window.RAW.length > 0) {
-      recalculateDerivedData(window.RAW);
-      updateAllKPIsAndTexts();
-      renderBldgTable();
-      if (typeof renderRepairTable === "function") {
-        renderRepairTable();
-      }
-      if (typeof renderAuditTables === "function") {
-        renderAuditTables();
-      }
-      renderAllCharts();
-      if (typeof renderCostCorrelationAnalysis === "function") {
-        renderCostCorrelationAnalysis();
-      }
+    for(const rawUrl of GITHUB_XLSB_URLS) {
+      try {
+        const response=await fetch(rawUrl+(rawUrl.includes('?')?'&':'?')+'t='+Date.now(),{cache:'no-store'});
+        if(!response.ok)throw Error('HTTP '+response.status);
+        let buffer=await response.arrayBuffer();
+        const pointer=buffer.byteLength<1024 ? new TextDecoder().decode(buffer) : '';
+        if(pointer.startsWith('version https://git-lfs.github.com/spec/v1')) {
+          const oid=pointer.match(/oid sha256:([a-f0-9]{64})/);
+          const expectedSize=Number(pointer.match(/size (\d+)/)?.[1]);
+          const mediaUrl=GITHUB_XLSB_URLS.find(url=>url.startsWith('https://raw.githubusercontent.com/')).replace('raw.githubusercontent.com/','media.githubusercontent.com/media/');
+          const media=await fetch(mediaUrl+'?t='+Date.now(),{cache:'no-store'});
+          if(!media.ok)throw Error('Git LFS 파일 HTTP '+media.status);
+          buffer=await media.arrayBuffer();
+          const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
+          if(!oid || digest!==oid[1] || buffer.byteLength!==expectedSize)throw Error('Git LFS SHA-256 또는 크기 불일치');
+        }
+        const wb=XLSX.read(new Uint8Array(buffer),{type:'array',cellDates:false,cellStyles:false});
+        if(!wb.SheetNames.some(name=>/\d{2,4}년?/.test(name.trim())))throw Error('정산 연도 시트 없음');
+        const records=parseXlsbWorkbook(wb);
+        const report=validateRawIntegrity(wb,records);
+        if(report.headerErrorCount)throw Error('필수 머리글 매핑 실패');
+        if(revision!==sourceRequestRevision)return false;
+        let hash='';
+        try {hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase();}catch(e){}
+        if(revision!==sourceRequestRevision)return false;
+        window._rawXlsbWorkbook=wb;window._rawXlsbArrayBuffer=buffer;
+        window._rawXlsbSourceUrl=rawUrl;window.lastXlsbSourceHash=hash;
+        window.rawIntegrityReport=report;window.sourceFresh=true;
+        rebuildDashboard(records);
+        updateRawIntegrityStatus(report);
+        return true;
+      }catch(err){failure=err;console.warn('원천 동기화 실패',rawUrl,err);}
     }
-  } catch (buildErr) {
-    console.error('Error rebuilding dashboard UI:', buildErr);
-  } finally {
-    hideLoader();
-  }
+    if(revision!==sourceRequestRevision)return false;
+    window.sourceFresh=false;
+    window._rawXlsbWorkbook=null;window._rawXlsbArrayBuffer=null;window.lastXlsbSourceHash='';
+    const records=[];
+    window.rawIntegrityReport={source:'github-error',ok:false,calculationOk:false,recordCount:0,warnings:['최신 GitHub XLSB 동기화 실패. 이전 수치는 표시하지 않습니다: '+failure.message]};
+    rebuildDashboard(records);updateRawIntegrityStatus(window.rawIntegrityReport);
+    return false;
+  }finally{if(revision===sourceRequestRevision)hideLoader();}
 }
 
 // ─── 깃허브 원본 강제 새로고침 전역 함수 ──────────────────────────────
@@ -3156,7 +3088,8 @@ window.forceRefreshGitHubData = async function() {
   }
   try {
     console.log('🔄 깃허브 원본 실시간 강제 동기화 시작...');
-    await fetchAndInitializeData(true);
+    const refreshed=await fetchAndInitializeData(true);
+    if(!refreshed)throw Error("최신 원천 동기화에 실패했습니다. 화면의 데이터 상태를 확인하세요.");
     alert(`✅ GitHub 원천 XLSB 실시간 동기화 완료!\n총 ${window.RAW ? window.RAW.length : 0}건의 최신 데이터로 대시보드가 완벽하게 갱신되었습니다.`);
   } catch (err) {
     console.error('동기화 오류:', err);
@@ -3172,7 +3105,7 @@ window.forceRefreshGitHubData = async function() {
 // 브라우저 로딩 완료 시 자동 실행
 if (typeof window !== 'undefined') {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', fetchAndInitializeData);
+    document.addEventListener('DOMContentLoaded', ()=>fetchAndInitializeData());
   } else {
     fetchAndInitializeData();
   }
@@ -3287,8 +3220,118 @@ function getLatestContractorCostRatio() {
     ? contractorCost / adminCost : 1;
 }
 
+
+// Seasonality is estimated only from earlier settlement years with all 12 months observed.
+// No record in a month is unknown coverage, not evidence of zero demand.
+function buildSeasonalityModel(records, year, cutoff) {
+  const years = new Map();
+  for (const r of records) {
+    const y = Number(String(r.yr || '').replace(/[^0-9]/g,''));
+    const fullYear = y < 100 ? 2000+y : y;
+    const month = Number(r.month);
+    if (r.is_carryover || fullYear >= year || !String(r.date || '').startsWith(String(fullYear)) || month < 1 || month > 12) continue;
+    if (!years.has(fullYear)) years.set(fullYear, Array.from({length:12},()=>[]));
+    years.get(fullYear)[month-1].push(r);
+  }
+  const samples = [];
+  if(cutoff > 0 && cutoff < 12) for(const [year, months] of years) {
+    if(months.some(rows=>!rows.length)) continue;
+    const costs=months.map(rows=>calculateXlsbCostContribution(rows,false));
+    const first=costs.slice(0,cutoff).reduce((a,b)=>a+b,0)/cutoff;
+    const remaining=costs.slice(cutoff).reduce((a,b)=>a+b,0)/(12-cutoff);
+    if(first>0) samples.push({year,costs,ratio:remaining/first});
+  }
+  const mean=samples.length ? samples.reduce((sum,x)=>sum+x.ratio,0)/samples.length : 1;
+  const variance=samples.length ? samples.reduce((sum,x)=>sum+(x.ratio-mean)**2,0)/samples.length : 0;
+  const cv=mean>0 ? Math.sqrt(variance)/mean : 0;
+  const consistent=samples.every(x=>mean<1 ? x.ratio<1 : x.ratio>1);
+  // These are explicit evidence gates, not estimated physical constants.
+  const applied=samples.length>=2 && consistent && Math.abs(mean-1)>=0.1 && cv<=0.25;
+  const reason=cutoff<=0 || cutoff>=12 ? '부분 연도 관측 기간 없음' : samples.length<2 ? '12개월 관측된 과거 연도 2개 미만' : !consistent ? '과거 연도별 증감 방향 불일치' : Math.abs(mean-1)<0.1 ? '월평균 차이 10% 미만' : cv>0.25 ? '연도별 비율 변동계수 25% 초과' : '과거 월별 비용의 잔여기간/관측기간 평균 비율 적용';
+  return {factor:applied?mean:1,applied,reason,samples,cutoff,year,mean,cv};
+}
+
+function rebuildDashboard(records) {
+  recalculateDerivedData(records);
+  window.forecastModel27=buildForecastModel2027();
+  window.totalPred27=window.forecastModel27.totalPred27;
+  window.cost27TotalWan=window.forecastModel27.cost27TotalWan;
+  updateAllKPIsAndTexts();
+  renderBldgTable();
+  if(typeof renderRepairTable === 'function')renderRepairTable();
+  if(typeof renderAuditTables === 'function')renderAuditTables();
+  renderAllCharts();
+  renderCostCorrelationAnalysis();
+  renderEvidenceInsights();
+  refreshForecastLabels();
+}
+
+
+function refreshForecastLabels() {
+  const model=window.forecastModel27;if(!model)return;
+  const next=model.latestYear+1;
+  for(const id of ['c-forecast','c-forecast-cost']){
+    const canvas=document.getElementById(id),card=canvas?.closest('.card');
+    if(card){for(const heading of card.querySelectorAll('h3,.card-title'))for(const node of heading.childNodes){if(node.nodeType===3 && /20\d{2}년 작업 예측/.test(node.textContent))node.textContent=node.textContent.replace(/20\d{2}년 작업 예측/,next+'년 작업 예측');}}
+  }
+  for(const chart of Object.values(window.dashboardCharts||{}))if(chart?.data?.datasets)for(const ds of chart.data.datasets)if(ds.label?.includes('2027')){ds.label=ds.label.replaceAll('2027',String(next));chart.update('none');}
+  const note=document.getElementById('forecast-cost-note-26');
+  if(note)note.textContent=model.latestYear+'년: 당해 실적 + 잔여월 추정(자동 계절계수 '+(model.latestMetric.seasonality?.factor||1).toFixed(4)+') + 이월 1회. 날짜 누락 비용은 월별 그래프에서 제외.';
+  const noteNext=document.getElementById('forecast-cost-note-27');
+  if(noteNext)noteNext.textContent=next+'년 '+model.totalPred27+'건 / '+model.cost27TotalWan.toLocaleString()+'만원 (작업 증가율 '+(model.countGrowthRate*100)+'%, 물가 '+(model.inflationRate*100)+'% 가정).';
+}
+
+function buildEvidenceInsights() {
+  const rows=window.RAW||[], keys=window.YR_KEYS||[], latest=keys[keys.length-1];
+  const metric=window.annualMetrics?.[latest]||{};
+  const model=window.forecastModel27||buildForecastModel2027();
+  const idx=keys.length-1;
+  const ranked=[...(window.buildingData||[])].sort((a,b)=>(b.cnt[idx]||0)-(a.cnt[idx]||0));
+  const top=ranked[0];
+  const current=rows.filter(r=>r.yr===latest);
+  const months=Array.from({length:12},(_,i)=>({month:i+1,rows:current.filter(r=>!r.is_carryover && Number(r.month)===i+1)})).sort((a,b)=>b.rows.length-a.rows.length);
+  const peak=months[0];
+  const season=metric.seasonality||{factor:1,reason:'분석 대상 없음',samples:[]};
+  const previous=idx>0 ? Number(top?.cnt[idx-1]||0):null;
+  const count=Number(top?.cnt[idx]||0);
+  const change=previous>0 ? ((count/previous-1)*100).toFixed(1)+'%' : '비교 기준 부족';
+  const warnings=window.rawIntegrityReport?.warnings||[];
+  const cards=[
+    ['최근 연도 발생 분포',top ? latest+' '+top.name+' '+count.toFixed(1)+'건 · 직전 연도 대비 '+change+' (기간 차이 유의)' : '등록된 작업 없음',top ? getBldgFilter(top.name):()=>false],
+    ['월별 관측 분포',peak?.rows.length ? latest+' '+peak.month+'월 '+peak.rows.length+'건 · 미관측 월은 0건으로 확정하지 않음' : '유효한 월별 실적 없음',r=>r.yr===latest&&!r.is_carryover&&Number(r.month)===peak.month],
+    ['계절 보정 판단','계수 '+season.factor.toFixed(4)+' · '+season.reason+' · 비교 연도 '+season.samples.map(x=>x.year).join(', '),r=>season.samples.some(x=>String(r.date||'').startsWith(String(x.year)))&&!r.is_carryover],
+    ['연간 비용 추정',(latest||'자료 없음')+' '+Number(metric.projectedAdminCost||0).toLocaleString()+'원 · 당해 실적 × 보정 연환산 배수 + 이월 1회',r=>r.yr===latest],
+    ['다음 연도 예측',rows.length ? (model.latestYear+1)+'년 '+model.totalPred27+'건 / '+model.cost27TotalWan.toLocaleString()+'만원 · 증가율 '+(model.countGrowthRate*100)+'%, 물가 '+(model.inflationRate*100)+'%는 가정' : '예측 근거 없음',r=>r.yr===latest],
+    ['O열 네고 검토 후보',rows.filter(r=>r.negotiation_candidate).length+'건 · 공란·0은 검토 대상이며 절감 확정 금액이 아님',r=>r.negotiation_candidate],
+    ['서명 대조',rows.filter(r=>r.diff_category==='match').length+' / '+rows.length+'건 일치 · 실물 확인 또는 합의 완료를 의미하지 않음',r=>r.diff_category==='match'],
+    ['원천 검증 상태',warnings.length ? warnings.join(' / ') : (rows.length?'현재 원천 검사에서 경고 없음':'원천 자료 없음'),()=>true],
+    ['해석 범위','작업 빈도만으로 구조적 위험·노후화·자재 실물 정합성을 확정하지 않습니다.',()=>true]
+  ];
+  const roadmap=rows.length ? [
+    [1,'발생 분포 확인',top?.name||'전체','관측 기간을 맞춘 이력 및 현장 원인 확인','다음 점검','검토'],
+    [2,'네고 후보 검토','O열 공란·0','청구 누락·무상 여부 확인 후 정산','다음 정산','검토'],
+    [3,'월별 자원 계획','전체',peak?.rows.length?peak.month+'월 관측 다발; 자료 범위 확인 후 준비':'월별 관측 범위 확보','다음 계획','검토'],
+    [4,'예산 시나리오',String(model.latestYear+1)+'년',model.totalPred27+'건 / '+model.cost27TotalWan.toLocaleString()+'만원 (가정 기반 예측)','예산 편성','검토']
+  ] : [];
+  return {cards,roadmap};
+}
+function renderEvidenceInsights() {
+  const model=buildEvidenceInsights(); window.insightModel=model;
+  for(const id of ['insights-top-cards-container','risk-top-cards-container']) {
+    const container=document.getElementById(id); if(!container)continue;
+    container.replaceChildren();
+    for(const [title,body,filter] of (id.startsWith('risk')?model.cards.slice(0,3):model.cards)) {
+      const card=document.createElement('div');card.className='insight blue';
+      const heading=document.createElement('div');heading.className='i-title';heading.textContent=title;
+      const content=document.createElement('div');content.className='i-text';content.textContent=body;
+      card.append(heading,content);card.onclick=()=>openModal(title+' 증빙',filter);container.append(card);
+    }
+  }
+  const tbody=document.getElementById('roadmap-tbody');if(tbody){tbody.replaceChildren();for(const row of model.roadmap){const tr=document.createElement('tr');for(const v of row){const td=document.createElement('td');td.textContent=v;tr.append(td);}tbody.append(tr);}}
+}
+
 function recalculateDerivedData(records) {
-  if (!records || records.length === 0) {
+  if (!Array.isArray(records)) {
     records = (window.RAW && window.RAW.length > 0) ? window.RAW : RAW;
   }
   RAW = records;
@@ -3325,16 +3368,16 @@ function recalculateDerivedData(records) {
   });
 
   window.YR_KEYS = getDynamicYearKeys(records);
-  if (window.YR_KEYS.length === 0) {
-    window.YR_KEYS = ['24년', '25년', '26년'];
-  }
   window.YEARS = window.YR_KEYS.map(k => (k.startsWith('20') ? k : '20' + k));
   window.YR_KEYS_REV = [...window.YR_KEYS].reverse();
   window.YEARS_REV = [...window.YEARS].reverse();
+  YR_KEYS = window.YR_KEYS;
+  YEARS = window.YEARS;
+  YR_KEYS_REV = window.YR_KEYS_REV;
+  YEARS_REV = window.YEARS_REV;
 
   // 1) 원천에 실제 등장한 건물동만 집계한다. 고정 목록 누락(예: 연구단지/어린이집/기숙사)을 방지한다.
   ALL_BLDG_NAMES = getDynamicBuildingNames(records);
-  if (ALL_BLDG_NAMES.length === 0) ALL_BLDG_NAMES = ['2동','8동','9동','5동','7동','A동','103동','102동','3동','101동','B동','1동'];
   window.ALL_BLDG_NAMES = ALL_BLDG_NAMES;
 
   // 1) Dynamic buildingData with one canonical pro-rata rule for mixed-building rows.
@@ -3466,8 +3509,8 @@ function recalculateDerivedData(records) {
       String(r.date || '').startsWith(yrPrefix)
       || (!r.date && Number(r.source_year || r.settlement_year || yrPrefix) === Number(yrPrefix))
     ));
-    const targetPool = actualYearRecs.length > 0 ? actualYearRecs : (recs.filter(r => !r.is_carryover).length > 0 ? recs.filter(r => !r.is_carryover) : recs);
-    
+    const targetPool = actualYearRecs;
+
     const validMonths = targetPool.map(r => {
       let m = Number(r.month);
       if (!m || isNaN(m)) {
@@ -3481,14 +3524,11 @@ function recalculateDerivedData(records) {
     const maxMonth = validMonths.length > 0 ? Math.max(...validMonths) : 0;
     const isPartialYear = maxMonth > 0 && maxMonth < 12;
     const carryoverRecs = recs.filter(r => r.is_carryover);
-    const currentYearRecs = actualYearRecs.length > 0 ? actualYearRecs : recs.filter(r => !r.is_carryover);
+    const currentYearRecs = actualYearRecs;
 
-    // [XLSB 원천 특이성 및 건축 긴급보수 계절성 보정 무결성 연환산 모델]:
-    // 1) 전년도 이월건은 이미 전년도에 발생한 일회성 정산이므로 연환산 승수에서 분리하여 1회만 반영(+ carryoverCost)
-    // 2) 1~8월(해빙기 3월, 장마철 6~7월)은 연중 피크 구간이며, 하반기(9~12월 동절기)는 계절적으로 작업 빈도가 완화(계절지수 0.8123 적용)
-    // 단순 1.5배(12/8) 곱셈 시 발생하는 6,391만원 과대추정 왜곡을 바로잡고, 원천 104건 기준 모델(~5,973만원)과의 정합성을 100% 보증.
-    const remainingMonths = isPartialYear ? (12 - maxMonth) : 0;
-    const seasonalWeight = (maxMonth >= 1 && maxMonth <= 10) ? 0.8123 : 1.0;
+    const remainingMonths = isPartialYear ? 12-maxMonth : 0;
+    const seasonality=buildSeasonalityModel(records,Number(yrPrefix),maxMonth);
+    const seasonalWeight=seasonality.factor;
     const projectionFactor = isPartialYear && currentYearRecs.length > 0 ? (1 + (remainingMonths / maxMonth) * seasonalWeight) : 1;
 
     const carryoverAdminCostRaw = calculateXlsbCostContribution(carryoverRecs, false);
@@ -3517,7 +3557,7 @@ function recalculateDerivedData(records) {
       currentYearContractorCost: Math.round(currentYearContractorCostRaw),
       carryoverAdminCost: Math.round(carryoverAdminCostRaw),
       carryoverContractorCost: Math.round(carryoverContractorCostRaw),
-      projectionFactor,
+      projectionFactor, seasonality,
       projectedCnt: Math.round(currentYearRecs.length * projectionFactor + carryoverRecs.length),
       projectedHours: currentYearHours * projectionFactor + carryoverHours,
       projectedContractorLabor: currentYearContractorLabor * projectionFactor + carryoverContractorLabor,
@@ -3658,7 +3698,7 @@ function updateAllKPIsAndTexts() {
   const alertSavLabor = document.getElementById('alert-savings-labor');
   if (alertSavLabor) alertSavLabor.textContent = `${totalVoluntaryLaborSavings.toFixed(1)}품(-${totalSavingsRate.toFixed(1)}%)을 시공사가 자발적으로 축소 청구`;
   const alertSavCost = document.getElementById('alert-savings-cost');
-  if (alertSavCost) alertSavCost.textContent = `총 -${Math.round(Math.abs(totalSavingsCost)/10000).toLocaleString()}만원(-${(Math.abs(totalSavingsCost)/Math.max(totalAdminCost,1)*100).toFixed(1)}%)의 실질 공사비 예산 절감 효과`;
+  if (alertSavCost) alertSavCost.textContent = `총 -${Math.round(Math.abs(totalSavingsCost)/10000).toLocaleString()}만원(-${(Math.abs(totalSavingsCost)/Math.max(totalAdminCost,1)*100).toFixed(1)}%)의 실질 공사비 청구 환산 차액`;
 
   // [시스템적 집행 비용 순수 원천 데이터 100% 동적 산정 모델]:
   const latestMetric = metrics[latestYr] || {};
@@ -3750,16 +3790,7 @@ function updateAllKPIsAndTexts() {
   const costCardContainer = document.getElementById('kpi-overview-cost-card');
   if (costCardContainer) {
 
-    let tooltip = `💡 [시스템적 집행 비용 상세 산출 산식 및 산술적 수식 흐름 — 투명성 100% 보증]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📌 【비용 연환산 추정 및 무결성 보장 심층 분석 (혼선 방지 핵심 안내)】
-1. 단순 선형 연환산(12/8 = 1.5배)의 계절성 왜곡 (6,391만원 도출):
-   • 1~8월 실적(약 4,261만원)에 단순 1.5배(12/8)를 곱하면 상반기 피크(해빙기 3월, 장마철 6~7월 집중)가 9~12월 동절기 비수기에도 똑같이 복제되고 전년도 이월 정산건(3건, 41.5만원)까지 1.5배로 중복 계상되어 6,391만원으로 심각하게 과대 왜곡됩니다.
-2. XLSB 원천 엑셀의 특이성 (약 5,9##만원 / 5,973만원 도출 근거):
-   • 2026년 시트 내 2025년도 이월 정산건(3건, 41.5만원)은 이미 전년도에 발생하여 1회만 정산되는 비연환산 항목이며, 하반기(9~12월)는 상반기 대비 긴급보수 빈도가 약 18.8% 감축되는 계절성(계절지수 0.8123)이 존재합니다. 원천 기획서 및 표준 모델(80건 실적 + 잔여 21~24건 = 연간 104건 기준)과 100% 정합합니다.
-3. 무결성 보장 리팩토링 로직:
-   • 연간 추정 비용 = 당해 실적(4,219만) + (월평균 실적 527.4만 × 잔여 4개월 × 계절지수 0.8123) + 전년도 이월 정산액 1회(41.5만) = 약 5,975만원(약 5,9##만원, 5,973만원대 완벽 일치).
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    let tooltip = `비용 추정: 월별 원천 실적과 이월 분리. 계절 보정 ${latestMetric.seasonality?.factor?.toFixed(4) || 1} (${latestMetric.seasonality?.reason || "근거 없음"})
 1. 관리소 서명 기준 ${latestMonthRangeText} 실적 비용: ${actualAdminWan.toLocaleString()}만원 (${latestAdminRaw.toLocaleString()}원)
    • 산출 기본 공식: (작업시간 × 35,000원) + (건수 × 출장비 5,000원) + 실사용 자재비 + (건수 × 부대비 5,000원)
    • 실제 수치 대입: (${latestHours.toFixed(1)}h × 35,000원) + (${cLatest}건 × 5,000원) + ${latestMatCost.toLocaleString()}원 + (${cLatest}건 × 5,000원)
@@ -3768,10 +3799,10 @@ function updateAllKPIsAndTexts() {
 
     if (isLatestPartial) {
       const remainingM = 12 - elapsedMonths;
-      tooltip += `\n\n2. 연간 환산 추정 금액(12개월 기준): ${adminWan.toLocaleString()}만원 (원천 104건 모델 정합성 100% 보증)
-   • 연환산 산출식: 당해 실적 + (월평균 실적 × 잔여 ${remainingM}개월 × 계절지수 0.8123) + 전년도 이월 정산액 1회
-   • 계절성 보정 사유: 1~8월 해빙기·장마철 집중 대비 하반기 동절기 보수 수요 완화(약 18.8% 감축) 현실성 반영
-   • 실제 수치 대입: ${Number(latestMetric.currentYearAdminCost || 0).toLocaleString()}원 + (${Math.round(Number(latestMetric.currentYearAdminCost || 0)/elapsedMonths).toLocaleString()}원 × ${remainingM}개월 × 0.8123) + ${Number(latestMetric.carryoverAdminCost || 0).toLocaleString()}원 = 약 ${projectedAdminRaw.toLocaleString()}원`;
+      tooltip += `\n\n2. 연간 환산 추정 금액(12개월 기준): ${adminWan.toLocaleString()}만원
+   • 연환산 산출식: 당해 실적 + (월평균 실적 × 잔여 ${remainingM}개월 × 자동 계절 보정 계수) + 전년도 이월 정산액 1회
+   • 계절 보정 근거: ${latestMetric.seasonality?.reason || "근거 부족"}
+   • 실제 수치 대입: ${Number(latestMetric.currentYearAdminCost || 0).toLocaleString()}원 + (${Math.round(Number(latestMetric.currentYearAdminCost || 0)/elapsedMonths).toLocaleString()}원 × ${remainingM}개월 × ${latestMetric.seasonality?.factor || 1}) + ${Number(latestMetric.carryoverAdminCost || 0).toLocaleString()}원 = 약 ${projectedAdminRaw.toLocaleString()}원`;
     }
 
     tooltip += `\n\n3. 시공사 청구 품수 환산 금액: ${contractorWan.toLocaleString()}만원 (실적: ${actualContrWan.toLocaleString()}만원)
@@ -3779,7 +3810,7 @@ function updateAllKPIsAndTexts() {
    • 실제 수치 대입: (${latestContrHours.toFixed(1)}h × 35,000원) + ${latestVisit.toLocaleString()}원 + ${latestMatCost.toLocaleString()}원 + ${latestOverhead.toLocaleString()}원 = ${latestContrRaw.toLocaleString()}원`;
 
     if (isLatestPartial) {
-      tooltip += `\n   • 연환산 수식 대입: (당해연도 ${Number(latestMetric.currentYearContractorCost || 0).toLocaleString()}원 × 12 / ${elapsedMonths}) + 전년도 이월 ${Number(latestMetric.carryoverContractorCost || 0).toLocaleString()}원 = ${projectedContractorRaw.toLocaleString()}원`;
+      tooltip += `\n   • 연환산 수식 대입: (당해연도 ${Number(latestMetric.currentYearContractorCost || 0).toLocaleString()}원 × ${latestMetric.projectionFactor} (계절계수 ${latestMetric.seasonality.factor})) + 전년도 이월 ${Number(latestMetric.carryoverContractorCost || 0).toLocaleString()}원 = ${projectedContractorRaw.toLocaleString()}원`;
     }
 
     tooltip += `\n   • 서명-청구 비교 편차: ${contractorWan.toLocaleString()}만 - ${adminWan.toLocaleString()}만 = ${costDiff >= 0 ? '+' : ''}${costDiff.toLocaleString()}만원 (${costDiff === 0 ? '서명인원과 청구인원 100% 일치로 괴리 없음' : '시공사 자발적 청구 절감 반영'})
@@ -3789,11 +3820,11 @@ function updateAllKPIsAndTexts() {
     costCardContainer.title = tooltip;
     if (costAdminEl) costAdminEl.title = '💡 [관리소 서명 기준 비용]: 실적 ' + actualAdminWan + '만'
       + (isLatestPartial ? ' · 연환산 = (당해연도 ' + Number(latestMetric.currentYearAdminCost || 0).toLocaleString()
-        + '원 × 12/' + elapsedMonths + ') + 이월 ' + Number(latestMetric.carryoverAdminCost || 0).toLocaleString()
+        + '원 × ' + latestMetric.projectionFactor + ' (계절계수 ' + latestMetric.seasonality.factor + ')' + ') + 이월 ' + Number(latestMetric.carryoverAdminCost || 0).toLocaleString()
         + '원 = ' + adminWan + '만원' : '');
     if (contractorSubEl) contractorSubEl.title = '💡 [시공사 환산 금액]: 실적 ' + actualContrWan + '만'
       + (isLatestPartial ? ' · 연환산 = (당해연도 ' + Number(latestMetric.currentYearContractorCost || 0).toLocaleString()
-        + '원 × 12/' + elapsedMonths + ') + 이월 ' + Number(latestMetric.carryoverContractorCost || 0).toLocaleString()
+        + '원 × ' + latestMetric.projectionFactor + ' (계절계수 ' + latestMetric.seasonality.factor + ')' + ') + 이월 ' + Number(latestMetric.carryoverContractorCost || 0).toLocaleString()
         + '원 = ' + contractorWan + '만원' : '')
       + ' · 관리소 대비 편차 ' + (costDiff >= 0 ? '+' : '') + costDiff + '만';
   }
@@ -3891,7 +3922,7 @@ function updateAllKPIsAndTexts() {
   const matchCount = comparableRecords.filter(r => r.diff_category === 'match').length;
   const mismatchCount = comparableRecords.length - matchCount;
   const matchRate = comparableRecords.length > 0 ? (matchCount / comparableRecords.length * 100) : 0;
-  
+
   const matchRateEl = document.getElementById('kpi-match-rate-val');
   if (matchRateEl) matchRateEl.textContent = `${matchRate.toFixed(1)}%`;
   const matchSubEl = document.getElementById('kpi-match-cnt-sub');
@@ -4021,7 +4052,7 @@ function updateAllKPIsAndTexts() {
 
   const conclusionText = document.getElementById('audit-conclusion-text');
   if (conclusionText) {
-    conclusionText.innerHTML = `관리소 서명부 기준(${Math.round(totalAdminWorkers)}명/${Math.round(totalHours).toLocaleString()}h) 산출 총비용인 ${Math.round(totalAdminCost/10000).toLocaleString()}만원 대비, 시공사의 특별인부 청구 기준(${totalContractorLabor.toFixed(1)}품) 총비용은 ${Math.round(totalContractorCost/10000).toLocaleString()}만원으로, 시공사의 자발적 청구 축소 및 현장 보조인력 무상 기여를 통해 <strong>${yk.length}년간 총 -${Math.round(Math.abs(totalSavingsCost)/10000).toLocaleString()}만원(-${(Math.abs(totalSavingsCost)/Math.max(totalAdminCost,1)*100).toFixed(1)}%)의 실질 예산 절감 효과</strong>가 발생했음을 정량적으로 확인하였습니다.`;
+    conclusionText.innerHTML = `관리소 서명부 기준(${Math.round(totalAdminWorkers)}명/${Math.round(totalHours).toLocaleString()}h) 산출 총비용인 ${Math.round(totalAdminCost/10000).toLocaleString()}만원 대비, 시공사의 특별인부 청구 기준(${totalContractorLabor.toFixed(1)}품) 총비용은 ${Math.round(totalContractorCost/10000).toLocaleString()}만원으로, 시공사의 자발적 청구 축소 및 현장 보조인력 무상 기여를 통해 <strong>${yk.length}년간 총 -${Math.round(Math.abs(totalSavingsCost)/10000).toLocaleString()}만원(-${(Math.abs(totalSavingsCost)/Math.max(totalAdminCost,1)*100).toFixed(1)}%)의 실질 청구 환산 차액</strong>가 발생했음을 정량적으로 확인하였습니다.`;
   }
 
   const causeHeader = document.getElementById('audit-cause-header');
@@ -4031,7 +4062,7 @@ function updateAllKPIsAndTexts() {
 
   // 모달 및 Tab 1 원인별 세부 건수/괴리 동적 반영 (100% 실측 연동)
   const latestIdx = Math.max(0, yk.length - 1);
-  const previousIdx = Math.max(0, yk.length - 2);
+  const previousIdx = yk.length>1 ? yk.length-2 : null;
   const diffRecs = records.filter(r => r.diff_category !== 'match' && r.diff_category !== 'both_empty' && r.diff_category !== 'merged_claim_shared');
   const catStats = {
     blank_contractor: { cnt: 0, diff: 0, yrs: {} },
@@ -4221,85 +4252,6 @@ function updateAllKPIsAndTexts() {
           <strong>품수 효율화</strong>: 관리소 서명 대비 정상 관리
         </div>
       </div>
-    `;
-  }
-
-  // 5) Tab 7 인사이트 상단 9개 카드 100% 동적 렌더링
-  const insightsCardsContainer = document.getElementById('insights-top-cards-container');
-  if (insightsCardsContainer) {
-    const bldgs = window.buildingData || [];
-    const sortedByLatest = [...bldgs].sort((a,b) => (b.cnt[latestIdx]||0) - (a.cnt[latestIdx]||0));
-    const sortedByAll = [...bldgs].sort((a,b) => (b.rawCnt.reduce((s,v)=>s+v,0)) - (a.rawCnt.reduce((s,v)=>s+v,0)));
-    const topLatest = sortedByLatest[0] || { name: '전체', cnt: [0,0,0], rawCnt: [0,0,0] };
-    const topAll = sortedByAll[0] || { name: '전체', cnt: [0,0,0], rawCnt: [0,0,0] };
-    const latestBldgCnt = (latestIdx >= 0 && topLatest.cnt) ? (topLatest.cnt[latestIdx] || 0) : 0;
-    const prevBldgCnt = (previousIdx !== null && topLatest.cnt) ? (topLatest.cnt[previousIdx] || 0) : null;
-    const bldgGrowth = (prevBldgCnt !== null && prevBldgCnt > 0) ? ((latestBldgCnt - prevBldgCnt) / prevBldgCnt * 100).toFixed(0) : null;
-    const growthText = bldgGrowth !== null ? ` (직전 ${prevBldgCnt.toFixed(1)}건 대비 ${bldgGrowth >= 0 ? '+' : ''}${bldgGrowth}%)` : ` (${latestBldgCnt.toFixed(1)}건)`;
-
-    const repTypes = window.repairData || [];
-    const topRep1 = repTypes[0] || { type: '방충망 교체', cnt: [0,0,0] };
-    const topRep2 = repTypes[1] || { type: '문보수/문교체', cnt: [0,0,0] };
-
-    insightsCardsContainer.innerHTML = `
-      <div class="insight red" onclick="openModal('${topLatest.name} 전체 증빙 목록', getBldgFilter('${topLatest.name}'))" title="클릭 시 ${topLatest.name} 증빙 조회">
-        <div class="i-title">🚨 CRITICAL — ${topLatest.name} 집중 관리</div>
-        <div class="i-text"><strong>${latestYr} ${growthText}</strong><br>${topLatest.name} 구조 점검 및 집중 대응 필요.</div>
-      </div>
-      <div class="insight red" onclick="openModal('${topAll.name} 전체 증빙 목록', getBldgFilter('${topAll.name}'))" title="클릭 시 ${topAll.name} 증빙 조회">
-        <div class="i-title">🚨 CRITICAL — ${topAll.name} ${yk.length}개년 누적 최다</div>
-        <div class="i-text"><strong>${yk.length}개년 누적 ${topAll.rawCnt.reduce((s,v)=>s+v,0)}건 발생</strong><br>노후화 가속 패턴에 따른 선제적 예방 보수 권고.</div>
-      </div>
-      <div class="insight orange" onclick="openModal('${topRep1.type} 전체 증빙 목록', getTypeFilter('${topRep1.type}'))" title="클릭 시 ${topRep1.type} 증빙 조회">
-        <div class="i-title">⚠️ WARNING — ${topRep1.type} 다발</div>
-        <div class="i-text"><strong>${yk.length}개년 총 ${topRep1.cnt.reduce((s,v)=>s+v,0)}건 (${topRep1.type})</strong><br>주요 소모성 자재 일괄 구매 및 사전 정비 계획 수립.</div>
-      </div>
-      <div class="insight orange" onclick="openModal('${topRep2.type} 전체 증빙 목록', getTypeFilter('${topRep2.type}'))" title="클릭 시 ${topRep2.type} 증빙 조회">
-        <div class="i-title">⚠️ WARNING — ${topRep2.type} 지속 발생</div>
-        <div class="i-text"><strong>${yk.length}개년 총 ${topRep2.cnt.reduce((s,v)=>s+v,0)}건 집계</strong><br>반복 발생하는 마감 부위 표준 시공 가이드 수립 필요.</div>
-      </div>
-      <div class="insight blue" onclick="openModal('반복 보수 세대 증빙 목록', r=>true)" title="클릭 시 반복 보수 세대 조회">
-        <div class="i-title">📋 ACTION — 반복 보수 세대 대수선</div>
-        <div class="i-text"><strong>다발 호실 집중 점검 권고</strong><br>누적 비용 분석 후 전면 보수 vs 지속 관리 판단 필요.</div>
-      </div>
-      <div class="insight blue" onclick="openModal('성수기 집중 증빙 목록', r=>true)" title="클릭 시 성수기 증빙 조회">
-        <div class="i-title">📅 ACTION — 계절별 성수기 사전 대비</div>
-        <div class="i-text"><strong>하절기 장마 및 동절기 한파 집중</strong><br>취약 시기 1개월 전 자재 선비축 및 인력 운영 계획 수립.</div>
-      </div>
-      <div class="insight green" onclick="openModal('무결성 교차 검증', r=>r.diff_category==='match')" title="클릭 시 일치 증빙 조회">
-        <div class="i-title">✅ POSITIVE — 서명 일치율 안정</div>
-        <div class="i-text"><strong>일치 ${matchCount}건 (${matchRate.toFixed(1)}%) 달성</strong><br>원천 데이터 기준 무결성 확보 및 투명성 입증.</div>
-      </div>
-      <div class="insight green" onclick="openModal('자재 증빙 목록', r=>true)" title="클릭 시 자재 증빙 조회">
-        <div class="i-title">✅ POSITIVE — 자재 정합성 확보</div>
-        <div class="i-text"><strong>원천 대장 실사용 100% 교차 검증</strong><br>코킹재, 걸레받이 등 핵심 자재 실물 증빙 동기화.</div>
-      </div>
-      <div class="insight blue" id="insight-budget-card" onclick="openModal('시스템적 집행 비용 증빙 목록', getYrFilter(window.YR_KEYS ? window.YR_KEYS[window.YR_KEYS.length-1] : '26년'))" title="💡 [예산 산출 공식 및 무결성 보장 심층 분석]:&#10;1. 단순 선형 연환산(12/8 = 1.5배)의 계절성 왜곡 (6,391만원 도출): 1~8월 실적 단순 1.5배 곱셈 시 상반기 피크가 동절기 비수기에도 똑같이 복제되고 이월정산건까지 뻥튀기되어 6,391만원으로 과대 왜곡됨&#10;2. XLSB 원천 엑셀의 특이성 (약 5,9##만원 / 5,973만원 도출 근거): 2026년 시트 내 이월 정산건(3건, 41.5만)은 비연환산 항목이며 하반기(9~12월)는 수요가 18.8% 감축되는 계절성(계절지수 0.8123) 반영, 원천 104건 기준 모델과 일치&#10;3. 무결성 보장 리팩토링 로직: 연간 추정 비용 = 당해 실적 + (월평균 × 잔여 4개월 × 계절지수 0.8123) + 이월 정산 1회 = 약 ${adminWan}만원 (약 5,9##만원, 5,973만원대 완벽 복원)&#10;💡 클릭 시 상세 증빙 목록 조회"">
-        <div class="i-title" id="insight-budget-title">💰 BUDGET — 비용 추정 (단일 기준: 관리소 서명 공수)</div>
-        <div class="i-text"><strong id="insight-budget-growth">${latestYr} ${adminWan.toLocaleString()}만원${previousYr ? ' vs ' + previousYr + ' ' + previousAdminWan.toLocaleString() + '만원 (' + (costGrowth !== null ? (costGrowth >= 0 ? '+' : '') + costGrowth.toFixed(1) + '%' : '신규') + ')' : ''} [${isLatestPartial ? '추정치' : '실적'}]</strong><br><span id="insight-budget-sub">[관리소 서명 기준 실공수(35,000원/h)+자재비+부대비] 단일 적용. 시공사 청구 환산 시 ${contractorWan.toLocaleString()}만원.</span></div>
-      </div>
-    `;
-  }
-
-  // 6) Tab 7 권고사항 로드맵 테이블 동적 렌더링
-  const roadmapTbody = document.getElementById('roadmap-tbody');
-  if (roadmapTbody) {
-    const bldgs = window.buildingData || [];
-    const sortedByLatest = [...bldgs].sort((a,b) => (b.cnt[latestIdx]||0) - (a.cnt[latestIdx]||0));
-    const top1 = sortedByLatest[0]?.name || '최다 발생동';
-    const top2 = sortedByLatest[1]?.name || '차순위 발생동';
-    const repTypes = window.repairData || [];
-    const topRep = repTypes[0]?.type || '소모성 자재';
-    const budgetWan = Math.max(1, Math.round(Number(window.cost27TotalWan) || 0));
-
-    roadmapTbody.innerHTML = `
-      <tr><td>1</td><td>${top1} 긴급 점검</td><td>${top1} 전 세대</td><td>구조·마감 점검, 2027년 예비비 증액 검토</td><td>2026년 10월</td><td><span class="pill pill-red">CRITICAL</span></td></tr>
-      <tr><td>2</td><td>${top2} 현장 점검</td><td>${top2} 공용부 및 세대</td><td>하자 원인 파악, 구조적 결함 여부 확인</td><td>2026년 10월</td><td><span class="pill pill-red">CRITICAL</span></td></tr>
-      <tr><td>3</td><td>반복 보수 세대 대수선 검토</td><td>${top1}, ${top2} 주요 세대</td><td>연간 누적비용 vs 전면 보수 비용 비교</td><td>2026년 11월</td><td><span class="pill pill-orange">HIGH</span></td></tr>
-      <tr><td>4</td><td>${topRep} 일괄 교체 계획</td><td>${top1} 우선</td><td>세대별 전수 조사 및 일괄 정비 계획 수립</td><td>2027년 1분기</td><td><span class="pill pill-orange">HIGH</span></td></tr>
-      <tr><td>5</td><td>성수기 사전 준비</td><td>전체</td><td>3월/6~7월 자재 선비축, 인력 증원 계획</td><td>매년 2월, 5월</td><td><span class="pill pill-blue">MEDIUM</span></td></tr>
-      <tr><td>6</td><td>2027년 예산 편성</td><td>전체</td><td>최소 ${budgetWan.toLocaleString()}만원 이상 편성 권고</td><td>2026년 12월</td><td><span class="pill pill-blue">MEDIUM</span></td></tr>
-      <tr><td>7</td><td>정기 유지보수 체계화</td><td>${top1}, ${top2}</td><td>긴급대응 → 정기계획 편입 (비용 효율화)</td><td>2027년</td><td><span class="pill pill-green">NORMAL</span></td></tr>
     `;
   }
 
@@ -4493,7 +4445,7 @@ function renderAuditTables() {
   if (qTbodies.length > 0) {
     let rowsHtml = '';
     let totCnt = 0, totAdmin = 0, totContr = 0, totMismatches = 0;
-    
+
     yk.forEach(k => {
       const m = metrics[k] || {};
       const yrRecs = records.filter(r => r.yr === k);
@@ -4503,15 +4455,15 @@ function renderAuditTables() {
       const diff = wAdmin - wCont;
       const diffPct = wCont > 0 ? (diff / wCont * 100) : 0;
       const mismatches = yrRecs.filter(r => r.diff_category !== 'match' && r.diff_category !== 'both_empty' && r.diff_category !== 'merged_claim_shared').length;
-      
+
       totCnt += cnt;
       totAdmin += wAdmin;
       totContr += wCont;
       totMismatches += mismatches;
-      
+
       const yrColor = k.includes('26') ? '#4ecb71' : k.includes('25') ? '#f5a623' : '#6c8ef5';
       const mRange = m.isPartialYear ? ` (${m.minMonth === m.maxMonth ? `${m.maxMonth}월` : `${m.minMonth}~${m.maxMonth}월`})` : '';
-      
+
       rowsHtml += `<tr>
         <td style="font-weight:700;color:${yrColor};text-align:center;padding:6px 8px;">20${k.replace(/[^0-9]/g,'')}년${mRange}</td>
         <td style="text-align:center;padding:6px 8px;">${cnt}건</td>
@@ -4523,10 +4475,10 @@ function renderAuditTables() {
         <td style="padding:6px 8px;color:#cbd5e1;">원천 엑셀 '${k}' 시트 전수 대조 완료 (일치 ${cnt - mismatches}건 / 불일치 ${mismatches}건)</td>
       </tr>`;
     });
-    
+
     const totDiff = totAdmin - totContr;
     const totDiffPct = totContr > 0 ? (totDiff / totContr * 100) : 0;
-    
+
     rowsHtml += `<tr style="background:rgba(108,142,245,0.15);font-weight:700;">
       <td style="text-align:center;color:#ffffff;padding:7px 8px;">${yk.length}개년 합계</td>
       <td style="text-align:center;color:#ffffff;padding:7px 8px;">${totCnt}건</td>
@@ -4537,7 +4489,7 @@ function renderAuditTables() {
       <td style="text-align:center;color:#ffffff;padding:7px 8px;">${totMismatches}건</td>
       <td style="padding:7px 8px;color:#ffffff;">원천 XLSB 전수 집계 데이터 100% 무결성 대조 완료</td>
     </tr>`;
-    
+
     qTbodies.forEach(tb => { tb.innerHTML = rowsHtml; });
   }
 
@@ -4546,7 +4498,7 @@ function renderAuditTables() {
   if (sTbody) {
     let rowsHtml = '';
     let totCnt = 0, totAdminCost = 0, totContrCost = 0, totLaborDiff = 0;
-    
+
     yk.forEach(k => {
       const m = metrics[k] || {};
       const yrRecs = records.filter(r => r.yr === k);
@@ -4556,18 +4508,18 @@ function renderAuditTables() {
       const savCost = cCost - aCost;
       const savPct = aCost > 0 ? (savCost / aCost * 100) : 0;
       const laborDiff = (m.contractorLabor || 0) - (m.adminWorkers || 0);
-      
+
       totCnt += cnt;
       totAdminCost += aCost;
       totContrCost += cCost;
       totLaborDiff += laborDiff;
-      
+
       const yrColor = k.includes('26') ? '#4ecb71' : k.includes('25') ? '#f5a623' : '#6c8ef5';
       const mRange = m.isPartialYear ? ` (${m.minMonth === m.maxMonth ? `${m.maxMonth}월` : `${m.minMonth}~${m.maxMonth}월`})` : '';
       const aWan = Math.round(aCost / 10000);
       const cWan = Math.round(cCost / 10000);
       const sWan = Math.round(savCost / 10000);
-      
+
       rowsHtml += `<tr>
         <td style="font-weight:700;color:${yrColor};text-align:center;padding:5px 8px;">20${k.replace(/[^0-9]/g,'')}년${mRange}</td>
         <td style="text-align:center;padding:5px 8px;">${cnt}건</td>
@@ -4579,13 +4531,13 @@ function renderAuditTables() {
         <td style="padding:5px 8px;color:#cbd5e1;">${k} 원천 시트 실집행 기준 (관리소 대비 시공사 청구 실질 절감액)</td>
       </tr>`;
     });
-    
+
     const totSavCost = totContrCost - totAdminCost;
     const totSavPct = totAdminCost > 0 ? (totSavCost / totAdminCost * 100) : 0;
     const totAWan = Math.round(totAdminCost / 10000);
     const totCWan = Math.round(totContrCost / 10000);
     const totSWan = Math.round(totSavCost / 10000);
-    
+
     rowsHtml += `<tr style="background:rgba(78,203,113,0.18);font-weight:700;">
       <td style="text-align:center;color:#ffffff;padding:6px 8px;">${yk.length}개년 총계</td>
       <td style="text-align:center;color:#ffffff;padding:6px 8px;">${totCnt}건</td>
@@ -4596,7 +4548,7 @@ function renderAuditTables() {
       <td style="text-align:center;color:#38bdf8;font-size:12px;padding:6px 8px;">${totLaborDiff >= 0 ? '+' : ''}${totLaborDiff.toFixed(1)}품</td>
       <td style="padding:6px 8px;color:#ffffff;">시공사 자발적 청구 축소 및 현장 무상 지원을 통한 관리단 공사비 절감 실적</td>
     </tr>`;
-    
+
     sTbody.innerHTML = rowsHtml;
   }
 
@@ -4612,13 +4564,13 @@ function renderAuditTables() {
       const cCost = m.contractorCost || 0;
       const savCost = cCost - aCost;
       const savPct = aCost > 0 ? (savCost / aCost * 100) : 0;
-      
+
       const yrColor = k.includes('26') ? '#4ecb71' : k.includes('25') ? '#f5a623' : '#6c8ef5';
       const mRange = m.isPartialYear ? ` (${m.minMonth === m.maxMonth ? `${m.maxMonth}월` : `${m.minMonth}~${m.maxMonth}월`})` : '';
       const aWan = Math.round(aCost / 10000);
       const cWan = Math.round(cCost / 10000);
       const sWan = Math.round(savCost / 10000);
-      
+
       rowsHtml += `<tr>
         <td style="font-weight:700;color:${yrColor};text-align:center;padding:5px 8px;">20${k.replace(/[^0-9]/g,'')}년${mRange}</td>
         <td style="text-align:center;padding:5px 8px;">${cnt}건</td>
@@ -4629,7 +4581,7 @@ function renderAuditTables() {
         <td style="padding:5px 8px;color:#cbd5e1;">${k} 실투입 공수 기준 집행액 vs 시공사 특별인부 청구 기준액 대조</td>
       </tr>`;
     });
-    
+
     // 2026년 연간 추정치 행 추가 (부분 연도일 경우)
     const mLatest = metrics[yk[yk.length - 1]] || {};
     if (mLatest.isPartialYear) {
@@ -4641,7 +4593,7 @@ function renderAuditTables() {
       const annContrCost = Math.round(Number(mLatest.projectedContractorCost ?? mLatest.contractorCost ?? 0) / 10000);
       const annSav = annContrCost - annAdminCost;
       const annSavPct = annAdminCost > 0 ? (annSav / annAdminCost * 100) : 0;
-      
+
       const latestYrFullLabel = formatYearLabel(yk[yk.length - 1]);
       const mLatestRangeText = (mLatest.minMonth === mLatest.maxMonth) ? `${mLatest.maxMonth}월` : `${mLatest.minMonth}~${mLatest.maxMonth}월`;
       rowsHtml += `<tr style="background:rgba(224,92,123,0.1);">
@@ -4654,17 +4606,16 @@ function renderAuditTables() {
         <td style="padding:5px 8px;color:#cbd5e1;"><strong>${mLatestRangeText}(기준 ${elapsed}개월) 당해연도 비용 연환산 + 전년도 이월 ${mLatest.carryoverCount || 0}건 1회</strong> (관리소 서명 기준 ${annAdminCost.toLocaleString()}만 vs 시공사 환산 ${annContrCost.toLocaleString()}만)</td>
       </tr>`;
     }
-    
+
     cTbody.innerHTML = rowsHtml;
   }
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
-let YEARS = ['2024년','2025년','2026년'];
-let YR_KEYS = ['24년','25년','26년'];
-// 최신 연도 우선 정렬 상수 (차트 좌측부터 2026년 배치)
-let YEARS_REV = ['2026년','2025년','2024년'];
-let YR_KEYS_REV = ['26년','25년','24년'];
+let YEARS = [];
+let YR_KEYS = [];
+let YEARS_REV = [];
+let YR_KEYS_REV = [];
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 
 // ─── 건물동 파싱 및 필터 헬퍼 (무결성 및 정합성 보증) ────────────────────────
@@ -4681,7 +4632,7 @@ function getRecordBuildings(r) {
   if (compact === '연구단지') return ['연구 단지'];
   if (compact === '어린이집') return ['어린이집'];
   if (compact === '기숙사B') return ['기숙사B'];
-  
+
   const parts = b.split(/[\/,\r\n]+/).map(p => p.trim()).filter(Boolean);
   const res = [];
   for (let part of parts) {
@@ -4906,14 +4857,11 @@ function toggleModalAuditReport() {
 function openModal(title, filter_fn, forcedYr = null) {
   modalBaseTitle = title;
   modalWorkerFilter = 'all';
-  
+
   // 1. 초기 연도 필터 감지
   let detectedYr = forcedYr;
   if (!detectedYr) {
-    if (title.includes('2026년') || title.includes('26년')) detectedYr = '26년';
-    else if (title.includes('2025년') || title.includes('25년')) detectedYr = '25년';
-    else if (title.includes('2024년') || title.includes('24년')) detectedYr = '24년';
-    else detectedYr = 'all';
+    detectedYr = (window.YR_KEYS || []).find(yr => title.includes(formatYearLabel(yr)) || title.includes(yr)) || 'all';
   }
 
   // 2. 컨텍스트 기반 3개년 기본 데이터 풀 스마트 복원
@@ -4935,10 +4883,10 @@ function openModal(title, filter_fn, forcedYr = null) {
   const rawTag = typeMatch ? typeMatch[1].trim() : '';
   const isMaterialTitle = /자재\s*(?:증빙|사용|상세|관련)/.test(title);
   const matDef = (rawTag && typeof MATERIAL_DEFINITIONS !== 'undefined')
-    ? MATERIAL_DEFINITIONS.find(d => 
-        d.label === rawTag || 
-        d.key === rawTag || 
-        d.storageKey === rawTag || 
+    ? MATERIAL_DEFINITIONS.find(d =>
+        d.label === rawTag ||
+        d.key === rawTag ||
+        d.storageKey === rawTag ||
         (isMaterialTitle && (rawTag.includes(d.label) || (d.match && d.match.test(rawTag))))
       )
     : (isMaterialTitle && typeof MATERIAL_DEFINITIONS !== 'undefined'
@@ -4994,7 +4942,7 @@ function openModal(title, filter_fn, forcedYr = null) {
   modalSearchQ = '';
   modalSortKey = '';
   modalSortAsc = true;
-  
+
   const searchInput = document.getElementById('modal-search');
   if (searchInput) searchInput.value = '';
 
@@ -5050,11 +4998,14 @@ function closeModal(){
 function updateModalTitle() {
   let displayTitle = modalBaseTitle;
   if (modalYrFilter !== 'all') {
-    const yrFull = modalYrFilter === '26년' ? '2026년' : modalYrFilter === '25년' ? '2025년' : '2024년';
-    if (displayTitle.includes('2026년') || displayTitle.includes('2025년') || displayTitle.includes('2024년')) {
-      displayTitle = displayTitle.replace(/202[456]년/g, yrFull);
-    } else if (displayTitle.includes('26년') || displayTitle.includes('25년') || displayTitle.includes('24년')) {
-      displayTitle = displayTitle.replace(/2[456]년/g, modalYrFilter);
+    const yrFull = formatYearLabel(modalYrFilter);
+    const knownYears = window.YR_KEYS || [];
+    const fullPattern = knownYears.map(formatYearLabel).join('|');
+    const shortPattern = knownYears.join('|');
+    if (fullPattern && new RegExp(fullPattern).test(displayTitle)) {
+      displayTitle = displayTitle.replace(new RegExp(fullPattern, 'g'), yrFull);
+    } else if (shortPattern && new RegExp(shortPattern).test(displayTitle)) {
+      displayTitle = displayTitle.replace(new RegExp(shortPattern, 'g'), modalYrFilter);
     } else {
       displayTitle = `${yrFull} ${displayTitle}`;
     }
@@ -5064,7 +5015,7 @@ function updateModalTitle() {
 
 function updateModalYearButtons(isForecast = false) {
   const wrap = document.getElementById('modal-yr-buttons-wrap');
-  const yk = window.YR_KEYS || ['24년', '25년', '26년'];
+  const yk = window.YR_KEYS || [];
   const ykRev = window.YR_KEYS_REV || [...yk].reverse();
 
   if (wrap) {
@@ -5234,12 +5185,12 @@ function renderModalTable(){
     workers_admin: '관리소 서명', workers_contractor: '시공사 청구',
     worker_diff: '괴리', total_h: '작업시간'
   };
-  const sortHint = modalSortKey 
+  const sortHint = modalSortKey
     ? ` · <strong style="color:var(--accent1)">정렬: ${sortColNameMap[modalSortKey]||modalSortKey} (${modalSortAsc ? '오름차순 ▲' : '내림차순 ▼'})</strong>`
     : ' · <span style="color:var(--text2)">💡 열제목(헤더)을 클릭하면 해당 항목 기준(▲/▼)으로 정렬됩니다</span>';
 
   document.getElementById('modal-count').innerHTML = `총 <strong>${data.length}건</strong> / 전체 ${modalCurrentData.length}건${sortHint}`;
-  
+
   // Stats (전체 3개년 통계 및 현재 선택 연도 통계 종합)
   const totalWAdmin = data.reduce((s,r)=>s+(Number(r.workers_admin ?? r.workers)||0),0);
   const totalWContr = data.reduce((s,r)=>s+(Number(r.workers_contractor)||0),0);
@@ -5272,7 +5223,7 @@ function renderModalTable(){
   }
 
   tbody.innerHTML = data.map(r=>{
-    const yrClass = r.yr==='27년'?'pill-red':r.yr==='24년'?'yr-badge-24':r.yr==='25년'?'yr-badge-25':'yr-badge-26'; 
+    const yrClass = r.yr==='27년'?'pill-red':r.yr==='24년'?'yr-badge-24':r.yr==='25년'?'yr-badge-25':'yr-badge-26';
     const yrLabel = r.yr==='27년'?'27년(예측)':r.yr;
     const typeTags = (r.types||[]).map(t=>`<span class="type-tag">${t}</span>`).join('');
     const matTags = Object.entries(r.mats||{}).map(([k,v])=>`<span class="mat-tag">${k.replace(/\(.*?\)/g,'').trim()} ${v}</span>`).join('');
@@ -5286,7 +5237,7 @@ function renderModalTable(){
     const dateLineageBadge = r.date_inherited_from_row
       ? '<span class="pill" style="font-size:9px;margin-left:3px;background:rgba(148,163,184,0.14);color:#cbd5e1;" title="원천 날짜가 비어 있어 같은 시트의 직전 작업일 ' + r.date_inherited_from_row + '행을 참조했습니다.">전행 날짜</span>'
       : '';
-    
+
     // 괴리 뱃지 및 설명 렌더링
     let diffBadge = '';
     const dCat = r.diff_category;
@@ -5462,8 +5413,8 @@ function buildChart(id, config, clickHandler){
 // ─── 4배 확대 호버 라이트박스 통합 엔진 ─────────────────────────────────────────
 function toggleZoom(target){
   if(!target) return;
-  const el = target.closest 
-    ? (target.closest('.chart-wrap') || target.closest('.cost-basis-box') || target.closest('.card')) 
+  const el = target.closest
+    ? (target.closest('.chart-wrap') || target.closest('.cost-basis-box') || target.closest('.card'))
     : target;
   if(!el) return;
 
@@ -5849,10 +5800,10 @@ function renderBldgTable() {
     const lastIdx = yk.length - 1;
     const trendVal = ((b.cnt[lastIdx] || 0) - (b.cnt[0] || 0)).toFixed(1);
     const trendNum = parseFloat(trendVal);
-    const ts = trendNum > 0 
-      ? `<span class="pill pill-red">↑${trendVal}건</span>` 
-      : trendNum < 0 
-        ? `<span class="pill pill-green">↓${Math.abs(trendNum).toFixed(1)}건</span>` 
+    const ts = trendNum > 0
+      ? `<span class="pill pill-red">↑${trendVal}건</span>`
+      : trendNum < 0
+        ? `<span class="pill pill-green">↓${Math.abs(trendNum).toFixed(1)}건</span>`
         : `<span class="pill" style="background:rgba(139,144,176,.15);color:var(--text2)">→유지</span>`;
     const isHigh = ((b.cnt[lastIdx] || 0) / Math.max(b.cnt[0] || 1, 1)) > 2 && (b.cnt[lastIdx] || 0) > 10;
     const isMid = ((b.cnt[lastIdx] || 0) / Math.max(b.cnt[0] || 1, 1)) > 1.5;
@@ -5898,16 +5849,17 @@ function allocateRoundedTotal(weights, targetTotal) {
   const normalized = weightSum > 0
     ? positiveWeights.map(value => value / weightSum * total)
     : positiveWeights.map(() => total / positiveWeights.length);
-  const allocated = normalized.map(Math.round);
-  const residualIndex = positiveWeights.reduce((best, value, index) => value > positiveWeights[best] ? index : best, 0);
-  allocated[residualIndex] += total - allocated.reduce((sum, value) => sum + value, 0);
+  const allocated = normalized.map(Math.floor);
+  const order=normalized.map((value,index)=>({index,fraction:value-Math.floor(value)})).sort((a,b)=>b.fraction-a.fraction||a.index-b.index);
+  const remainder=total-allocated.reduce((a,b)=>a+b,0);
+  for(let n=0;n<remainder;n++)allocated[order[n].index]++;
   return allocated;
 }
 
 function buildForecastModel2027(records = window.RAW || [], annualMetrics = window.annualMetrics || {}, yearKeys = window.YR_KEYS || []) {
-  const latestYearKey = yearKeys[yearKeys.length - 1] || '26년';
+  const latestYearKey = yearKeys[yearKeys.length - 1] || '';
   const yearDigits = String(latestYearKey).replace(/[^0-9]/g, '');
-  const latestYear = yearDigits.length === 2 ? Number('20' + yearDigits) : Number(yearDigits) || 2026;
+  const latestYear = yearDigits.length === 2 ? Number('20' + yearDigits) : Number(yearDigits) || new Date().getFullYear();
   const latestMetric = annualMetrics[latestYearKey] || {};
   const latestRows = records.filter(record => record.yr === latestYearKey);
   const carryoverRows = latestRows.filter(record => Boolean(record.is_carryover));
@@ -5930,26 +5882,27 @@ function buildForecastModel2027(records = window.RAW || [], annualMetrics = wind
   }
 
   const currentYearCount = Number(latestMetric.currentYearCount ?? currentYearRows.length) || 0;
-  const averageMonthlyCount = currentYearCount > 0 && maxMonth > 0 ? Math.max(0, Math.round(currentYearCount / maxMonth)) : 0;
+  const averageMonthlyCount = currentYearCount > 0 && maxMonth > 0 ? Math.max(0, Math.round(currentYearCount / maxMonth * (latestMetric.seasonality?.factor || 1))) : 0;
   const currentYearAdminCost = Number(latestMetric.currentYearAdminCost
     ?? calculateXlsbCostContribution(currentYearRows, false)) || 0;
   const averageMonthlyCostWan = currentYearAdminCost > 0 && maxMonth > 0 ? Math.max(0, Math.round(currentYearAdminCost / maxMonth / 10000)) : 0;
   if (maxMonth > 0) {
-    const actualTargetWan = Math.round(currentYearAdminCost / 10000);
+    const actualTargetWan = Math.round(monthlyActualCostRaw.reduce((a,b)=>a+b,0) / 10000);
     const allocatedActualWan = allocateRoundedTotal(monthlyActualCostRaw.slice(0, maxMonth), actualTargetWan);
     for (let index = 0; index < maxMonth; index++) monthlyActualCostWan[index] = allocatedActualWan[index] || 0;
-    const annualizedCurrentYearWan = Math.round(currentYearAdminCost * 12 / maxMonth / 10000);
-    const forecastTotalWan = Math.max(0, annualizedCurrentYearWan - actualTargetWan);
+    const annualizedCurrentYearWan = Math.round((Number(latestMetric.projectedAdminCost||0)-Number(latestMetric.carryoverAdminCost||0)) / 10000);
+    const forecastTotalWan = Math.max(0, annualizedCurrentYearWan - Math.round(currentYearAdminCost/10000));
     const remainingMonths = 12 - maxMonth;
     if (remainingMonths > 0) {
-      const perMonthWan = Math.round(forecastTotalWan / remainingMonths);
-      for (let month = maxMonth; month < 12; month++) monthlyForecastCostWan[month] = perMonthWan;
-      monthlyForecastCostWan[11] += forecastTotalWan - perMonthWan * remainingMonths;
+      const allocated=allocateRoundedTotal(new Array(remainingMonths).fill(1),forecastTotalWan);
+      for(let month=maxMonth;month<12;month++)monthlyForecastCostWan[month]=allocated[month-maxMonth];
     }
   }
-  for (let month = maxMonth + 1; month <= 12; month++) {
-    forecastCounts[month - 1] = averageMonthlyCount;
-    monthlyBaseCounts[month - 1] = averageMonthlyCount;
+  const residualCount=Math.max(0,Number(latestMetric.projectedCnt||0)-currentYearCount-carryoverRows.length);
+  const remainingCounts=allocateRoundedTotal(new Array(12-maxMonth).fill(1),residualCount);
+  for(let month=maxMonth+1;month<=12;month++) {
+    forecastCounts[month-1]=remainingCounts[month-maxMonth-1]||0;
+    monthlyBaseCounts[month-1]=forecastCounts[month-1];
   }
 
   const projectedCountLatest = Math.max(0, Number(latestMetric.projectedCnt
@@ -5959,16 +5912,15 @@ function buildForecastModel2027(records = window.RAW || [], annualMetrics = wind
     ? monthlyBaseCounts.map(value => value * projectedCountLatest / baseCountTotal)
     : new Array(12).fill(projectedCountLatest / 12);
   const countGrowthRate = Number(COST_UNIT.forecastCountGrowthRate ?? 0.05);
-  const totalPred27 = Math.max(1, Math.round(projectedCountLatest * (1 + countGrowthRate)));
+  const totalPred27 = Math.max(0, Math.round(projectedCountLatest * (1 + countGrowthRate)));
   const counts27Forecast = allocateRoundedTotal(monthlyWeights, totalPred27);
 
   const latestAnnualizedAdminCost = Math.max(0, Number(latestMetric.projectedAdminCost ?? latestMetric.adminCost) || 0);
   const costPerRecordWan = projectedCountLatest > 0
     ? latestAnnualizedAdminCost / projectedCountLatest / 10000 : 0;
   const inflationRate = Number(COST_UNIT.forecastInflationRate ?? 0.045);
-  const cost27TotalWan = Math.max(1, Math.round(totalPred27 * costPerRecordWan * (1 + inflationRate)));
-  const costs27Forecast = counts27Forecast.map(count => Math.round(count * costPerRecordWan * (1 + inflationRate)));
-  costs27Forecast[11] += cost27TotalWan - costs27Forecast.reduce((sum, value) => sum + value, 0);
+  const cost27TotalWan = Math.max(0, Math.round(totalPred27 * costPerRecordWan * (1 + inflationRate)));
+  const costs27Forecast = allocateRoundedTotal(counts27Forecast, cost27TotalWan);
 
   return {
     latestYearKey, latestYear, latestMetric, latestRows, currentYearRows, carryoverRows,
@@ -6248,15 +6200,7 @@ buildChart('c-repairBar',{
 
 
   // === PT VISUALIZATION RENDERER ===
-  // [무결성 보장 v4] 단가 기준 3원 통일 수정
-  //
-  // ◆ 기존 불일치 (v3까지의 오류):
-  //   A: 26년 KPI 표시 = projectedAdminCost(연환산) 기준 → 5,975만원
-  //   B: 27년 예측 단가 = projectedAdminCost ÷ 건수 = 51.95만원/건
-  //   C: 유형별 추정비용 = adminCost(실집행, 미연환산) 기준 → 4,261만원
-  //   A≠C: 26년에 1,714만원 차이 / B≠C: 단가 기준 불일치
-  //
-  // ◆ v4 수정: 모든 비용 계산을 projectedAdminCost로 통일
+  // 모든 추정 비용 계산은 해당 연도의 projectedAdminCost를 사용한다.
   //   - isPartialYear=false(완전연도): projectedAdminCost = adminCost (동일, 차이 없음)
   //   - isPartialYear=true(부분연도): projectedAdminCost = 계절보정 연환산값 사용
   //   - 결과: 유형섹션 연도별 합계 = 해당 연도 KPI 추정치와 일치
@@ -7048,7 +6992,7 @@ function openForecastModal(monthIdx, datasetLabel) {
   const latestActualMonthCount = model.currentYearRows.filter(r => Number(r.month) === monthNum).length;
   const isObservedMonth = monthNum <= model.maxMonth;
 
-  modalBaseTitle = '🗓️ [2027년 ' + monthNum + '월] 예측 ' + predictedCount + '건 · ' + (datasetLabel || '월별 산출') + ' 상세 산식 및 원천 증빙';
+  modalBaseTitle = '🗓️ [' + (model.latestYear+1) + '년 ' + monthNum + '월] 예측 ' + predictedCount + '건 · ' + (datasetLabel || '월별 산출') + ' 상세 산식 및 원천 증빙';
   modalCurrentData = monthEvidence;
   modalYrFilter = 'all';
   modalSearchQ = '';
@@ -7066,18 +7010,18 @@ function openForecastModal(monthIdx, datasetLabel) {
     const actualLine = isObservedMonth
       ? yearLabel + ' 월별 실적 ' + latestActualMonthCount + '건 (정산 시트 연도와 실제 작업 연도 일치)'
       : yearLabel + ' 최근 실적 월 이후 월평균 ' + model.averageMonthlyCount + '건 추정';
-    const forecastFormula = '2027년 월별 건수 ' + predictedCount + '건 · 월별 최신연도 기준 월 가중치에 2027년 연간 예측 ' + model.totalPred27 + '건을 비례 배분하고 반올림 잔차는 가장 큰 가중치 월에 조정';
-    const costFormula = '2027년 월별 비용 ' + predictedCost.toLocaleString() + '만원 · 월별 예측 건수 × 최근 정산연도 연환산 건당 비용 ' + model.costPerRecordWan.toFixed(2) + '만원 × 물가상승률 ' + (model.inflationRate * 100).toFixed(1) + '%';
+    const forecastFormula = '' + (model.latestYear+1) + '년 월별 건수 ' + predictedCount + '건 · 월별 최신연도 기준 월 가중치에 ' + (model.latestYear+1) + '년 연간 예측 ' + model.totalPred27 + '건을 비례 배분하고 내림 후 소수부가 큰 월부터 잔여 건수를 배분';
+    const costFormula = '' + (model.latestYear+1) + '년 월별 비용 ' + predictedCost.toLocaleString() + '만원 · 월별 예측 건수 × 최근 정산연도 연환산 건당 비용 ' + model.costPerRecordWan.toFixed(2) + '만원 × (1 + 물가상승률) ' + (model.inflationRate * 100).toFixed(1) + '%';
     noticeEl.innerHTML =
       '<div style="width:100%;">' +
         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;border-bottom:1px solid rgba(108,142,245,0.3);padding-bottom:4px;">' +
-          '<strong style="color:#ffffff;font-size:13px;">📐 2027년 ' + monthNum + '월 예측 산식 및 원천 증빙 대조</strong>' +
+          '<strong style="color:#ffffff;font-size:13px;">📐 ' + (model.latestYear+1) + '년 ' + monthNum + '월 예측 산식 및 원천 증빙 대조</strong>' +
           '<span class="pill pill-orange" style="font-size:11px;">예측 ' + predictedCount + '건 · ' + predictedCost.toLocaleString() + '만원</span>' +
         '</div>' +
         '<div style="font-size:11.5px;color:var(--text);line-height:1.8;">' +
           '· <strong>과거 동일월 정산 기록:</strong> ' + yearlyHistory + '<br>' +
           '· <strong>최신연도 입력:</strong> ' + actualLine + '<br>' +
-          '· <strong>연간 건수 연결:</strong> ' + model.latestYearKey + ' 연환산 ' + model.projectedCountLatest + '건 = (' + model.currentYearCount + '건 × 12 / ' + model.maxMonth + '개월) + 전년도 이월 ' + model.carryoverRows.length + '건 1회 → 2027년 ' + Math.round(model.countGrowthRate * 100) + '% 증가 적용, 월별 합계 ' + model.totalPred27 + '건<br>' +
+          '· <strong>연간 건수 연결:</strong> ' + model.latestYearKey + ' 연환산 ' + model.projectedCountLatest + '건 = (' + model.currentYearCount + '건 × ' + model.latestMetric.projectionFactor + ' (계절계수 ' + model.latestMetric.seasonality.factor + ')) + 전년도 이월 ' + model.carryoverRows.length + '건 1회 → ' + (model.latestYear+1) + '년 ' + Math.round(model.countGrowthRate * 100) + '% 증가 적용, 월별 합계 ' + model.totalPred27 + '건<br>' +
           '· <strong>월별 건수 산식:</strong> ' + forecastFormula + '<br>' +
           '· <strong>비용 산식:</strong> ' + costFormula + '<br>' +
           '· <strong>주의:</strong> 표에는 실재하는 원천 XLSB 기록만 표시합니다. 전년도 이월은 월별 차트에서 제외하고 연간 정산에는 한 번 반영하며, 월별 예측 레코드를 실제 작업 증빙처럼 만들지 않습니다.' +
@@ -7110,7 +7054,7 @@ if (fCntNotes) {
   const monthForecastTotal = forecastModel27.forecastCounts.reduce((sum, value) => sum + (value || 0), 0);
   fCntNotes.innerHTML =
     '※ ' + formatYearLabel(latestYrName) + ' 월별 실적은 정산 연도와 실제 작업 연도가 일치하는 ' + monthActualTotal + '건만 표시합니다. 최근 실적월(' + forecastModel27.maxMonth + '월) 이후는 월평균 ' + forecastModel27.averageMonthlyCount + '건을 적용합니다.<br>' +
-    '※ 연간 정산 건수 ' + projectedCnt26 + '건 = 당해연도 ' + forecastModel27.currentYearCount + '건 연환산 + 전년도 이월 ' + carryCount + '건 1회. 2027년은 연간 기준에 ' + Math.round(forecastModel27.countGrowthRate * 100) + '% 증가를 적용해 ' + totalPred27 + '건이며, 월별 예측 합계도 ' + totalPred27 + '건입니다. (' + monthForecastTotal + '건은 최신연도 잔여월 단순 평균 구간)';
+    '※ 연간 정산 건수 ' + projectedCnt26 + '건 = 당해연도 ' + forecastModel27.currentYearCount + '건 연환산 + 전년도 이월 ' + carryCount + '건 1회. ' + (forecastModel27.latestYear+1) + '년은 연간 기준에 ' + Math.round(forecastModel27.countGrowthRate * 100) + '% 증가를 적용해 ' + totalPred27 + '건이며, 월별 예측 합계도 ' + totalPred27 + '건입니다. (' + monthForecastTotal + '건은 최신연도 잔여월 단순 평균 구간)';
 }
 const fCostNote26 = document.getElementById('forecast-cost-note-26');
 if (fCostNote26) {
@@ -7119,7 +7063,7 @@ if (fCostNote26) {
 }
 const fCostNote27 = document.getElementById('forecast-cost-note-27');
 if (fCostNote27) {
-  fCostNote27.textContent = '※ 2027년 비용 예측: 최근 정산연도 연환산 비용 ÷ 연환산 건수 = 건당 평균 ' +
+  fCostNote27.textContent = '※ ' + (forecastModel27.latestYear+1) + '년 비용 예측: 최근 정산연도 연환산 비용 ÷ 연환산 건수 = 건당 평균 ' +
     costPerRecordWan.toFixed(2) + '만원, 월별 예측 건수와 물가상승률 ' +
     (forecastModel27.inflationRate * 100).toFixed(1) + '%를 적용한 연간 합계 ' +
     cost27TotalWan.toLocaleString() + '만원 (월별 금액 합계와 동일)';
@@ -7131,7 +7075,7 @@ buildChart('c-forecast',{
   data:{labels:MONTHS,datasets:[
     {label:latestYearLabel+' 실제 월별 실적',data:counts26Actual,borderColor:'#4ecb71',backgroundColor:alpha('#4ecb71',.2),pointRadius:5,pointHoverRadius:8,borderWidth:2,tension:0.3},
     {label:latestYearLabel+' 잔여월 예측',data:counts26Forecast,borderColor:'#f5a623',backgroundColor:alpha('#f5a623',.2),borderDash:[5,5],pointRadius:4,pointHoverRadius:7,borderWidth:1.5,tension:0.3},
-    {label:'2027년 월별 예측',data:counts27Forecast,borderColor:'#e05c7b',backgroundColor:alpha('#e05c7b',.2),borderDash:[8,4],pointRadius:5,pointHoverRadius:9,borderWidth:2,tension:0.3},
+    {label:'' + (forecastModel27.latestYear+1) + '년 월별 예측',data:counts27Forecast,borderColor:'#e05c7b',backgroundColor:alpha('#e05c7b',.2),borderDash:[8,4],pointRadius:5,pointHoverRadius:9,borderWidth:2,tension:0.3},
   ]},
   options:{
     ...BASE,
@@ -7150,7 +7094,7 @@ buildChart('c-forecast',{
     }
   }
 }, (dsIdx, idx) => {
-  const datasets = [latestYearLabel+' 실제 월별 실적', latestYearLabel+' 잔여월 예측', '2027년 월별 예측'];
+  const datasets = [latestYearLabel+' 실제 월별 실적', latestYearLabel+' 잔여월 예측', '' + (forecastModel27.latestYear+1) + '년 월별 예측'];
   openForecastModal(idx, datasets[dsIdx]);
 });
 
@@ -7158,7 +7102,7 @@ const forecastExportButton = document.querySelector('#c-forecast')?.closest('.ca
   ?.querySelector('.card-title .card-header-actions .section-xls-btn, .card-title .section-xls-btn');
 if (forecastExportButton) {
   forecastExportButton.innerHTML = '<span>📊</span><span>xls</span>';
-  forecastExportButton.title = '2027년 건수 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드';
+  forecastExportButton.title = '' + (forecastModel27.latestYear+1) + '년 건수 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드';
   forecastExportButton.setAttribute('onclick', "window.dashboardExcelExporter.exportCard('forecast-2027')");
   forecastExportButton.onclick = function(event) {
     event.preventDefault();
@@ -7171,7 +7115,7 @@ const forecastCostExportButton = document.querySelector('#c-forecast-cost')?.clo
   ?.querySelector('.card-title .card-header-actions .section-xls-btn, .card-title .section-xls-btn');
 if (forecastCostExportButton) {
   forecastCostExportButton.innerHTML = '<span>📊</span><span>xls</span>';
-  forecastCostExportButton.title = '2027년 비용 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드';
+  forecastCostExportButton.title = '' + (forecastModel27.latestYear+1) + '년 비용 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드';
   forecastCostExportButton.setAttribute('onclick', "window.dashboardExcelExporter.exportCard('forecast-cost-2027')");
   forecastCostExportButton.onclick = function(event) {
     event.preventDefault();
@@ -7185,7 +7129,7 @@ buildChart('c-forecast-cost',{
   data:{labels:MONTHS,datasets:[
     {label:latestYearLabel+' 실제 집행비용',data:costs26Actual,borderColor:'#4ecb71',backgroundColor:alpha('#4ecb71',.2),pointRadius:5,pointHoverRadius:8,borderWidth:2,tension:0.3},
     {label:latestYearLabel+' 잔여월 비용 예측',data:costs26Forecast,borderColor:'#f5a623',backgroundColor:alpha('#f5a623',.2),borderDash:[5,5],pointRadius:4,pointHoverRadius:7,borderWidth:1.5,tension:0.3},
-    {label:'2027년 월별 예측 비용',data:costs27Forecast,borderColor:'#38bdf8',backgroundColor:alpha('#38bdf8',.2),borderDash:[8,4],pointRadius:5,pointHoverRadius:9,borderWidth:2,tension:0.3},
+    {label:'' + (forecastModel27.latestYear+1) + '년 월별 예측 비용',data:costs27Forecast,borderColor:'#38bdf8',backgroundColor:alpha('#38bdf8',.2),borderDash:[8,4],pointRadius:5,pointHoverRadius:9,borderWidth:2,tension:0.3},
   ]},
   options:{
     ...BASE,
@@ -7206,140 +7150,19 @@ buildChart('c-forecast-cost',{
     }
   }
 }, (dsIdx, idx) => {
-  const datasets = [latestYearLabel+' 실제 집행비용', latestYearLabel+' 잔여월 비용 예측', '2027년 월별 예측 비용'];
+  const datasets = [latestYearLabel+' 실제 집행비용', latestYearLabel+' 잔여월 비용 예측', '' + (forecastModel27.latestYear+1) + '년 월별 예측 비용'];
   openForecastModal(idx, datasets[dsIdx]);
 });
 }
 
 // ─── 실시간 동적 연동: 연도별 비용-건수 상관관계 및 2027년 예측 타당성 브리핑 엔진 ────
 function renderCostCorrelationAnalysis() {
-  const container = document.getElementById('cost-correlation-analysis-container');
-  if (!container) return;
-
-  // 1. RAW 데이터 기반 연도별 집계 (변동성 자동 대응)
-  const sourceYears = window.YR_KEYS || ['24년', '25년', '26년'];
-  const stats = Object.fromEntries(sourceYears.map(yr => {
-    const m = window.annualMetrics?.[yr] || {};
-    return [yr, {
-      count: Number(m.cnt || 0), hours: Number(m.hours || 0), workers: Number(m.adminWorkers || 0),
-      cost: Math.round(Number(m.adminCost || 0) / 10000),
-      contractorCost: Math.round(Number(m.contractorCost || 0) / 10000),
-      costActual: Math.round(Number(m.adminCost || 0) / 10000),
-      countAnnual: Number(m.projectedCnt ?? m.cnt ?? 0),
-      costAnnual: Math.round(Number(m.projectedAdminCost ?? m.adminCost ?? 0) / 10000),
-      contractorCostAnnual: Math.round(Number(m.projectedContractorCost ?? m.contractorCost ?? 0) / 10000),
-      hoursAnnual: Number(m.projectedHours ?? m.hours ?? 0)
-    }];
-  }));
-
-  const latestYrName = sourceYears[sourceYears.length - 1] || '26년';
-  const latestStats = stats[latestYrName] || { count: 0, hours: 0, cost: 0, contractorCost: 0, countAnnual: 0, costAnnual: 0, hoursAnnual: 0 };
-  const uLatest = latestStats.countAnnual > 0 ? (latestStats.costAnnual / latestStats.countAnnual) : 0;
-  const hLatest = latestStats.countAnnual > 0 ? (latestStats.hoursAnnual / latestStats.countAnnual) : 0;
-
-  // 2. 2027년 예측 데이터 집계 (100% 동적 산출)
-  let n27 = (typeof window.totalPred27 !== 'undefined' && window.totalPred27 > 0) ? window.totalPred27 : Math.max(1, Math.round((latestStats.countAnnual || 1) * 1.05));
-  let cost27 = (typeof window.cost27TotalWan !== 'undefined' && window.cost27TotalWan > 0) ? window.cost27TotalWan : Math.max(1, Math.round(n27 * Math.max(uLatest, 1) * 1.045));
-  const contractorRatio = getLatestContractorCostRatio();
-  let contr27 = Math.round(cost27 * contractorRatio);
-  let budgetRec = Math.round(cost27 * 0.9);
-  let reserveRec = Math.max(1, Math.round(cost27 * 0.15));
-  let totalRec = budgetRec + reserveRec;
-
-  const u27 = n27 > 0 ? (cost27 / n27) : uLatest;
-  const h27 = hLatest > 0 ? hLatest : 10.0;
-
-  const growthCnt26_27 = latestStats.countAnnual > 0 ? ((n27 - latestStats.countAnnual) / latestStats.countAnnual * 100).toFixed(1) : '0.0';
-  const growthCost26_27 = latestStats.costAnnual > 0 ? ((cost27 - latestStats.costAnnual) / latestStats.costAnnual * 100).toFixed(1) : '0.0';
-  const diffUnit26_27 = uLatest > 0 ? ((u27 - uLatest) / uLatest * 100).toFixed(1) : '0.0';
-
-  let tableRowsHtml = '';
-  sourceYears.forEach((yr, yi) => {
-    const s = stats[yr];
-    const u = s.countAnnual > 0 ? (s.costAnnual / s.countAnnual) : 0;
-    const h = s.countAnnual > 0 ? (s.hoursAnnual / s.countAnnual) : 0;
-    const yrColor = yr.includes('26') ? '#e05c7b' : yr.includes('25') ? '#f5a623' : '#6c8ef5';
-    const m = window.annualMetrics?.[yr] || {};
-    const mRange = m.isPartialYear ? ` (${m.minMonth === m.maxMonth ? `${m.maxMonth}월` : `${m.minMonth}~${m.maxMonth}월`})` : '';
-    const note = yr === latestYrName
-      ? '실제 원천 합계 ' + s.cost.toLocaleString() + '만원 · 연환산 비교 기준 ' + s.costAnnual.toLocaleString() + '만원'
-      : `${formatYearLabel(yr)} 정산연도 원천 비용 합계`;
-
-    tableRowsHtml += `<tr>
-      <td style="font-weight:700;color:${yrColor};padding:6px 8px;">${formatYearLabel(yr)}${mRange}</td>
-      <td style="text-align:center;color:#ffffff;padding:6px 8px;">${s.count}건${m.isPartialYear ? '<br><span style="font-size:10px;color:#94a3b8;">연환산 ' + s.countAnnual + '건</span>' : ''}</td>
-      <td style="text-align:center;color:#ffffff;padding:6px 8px;">${s.hours.toFixed(1)}h</td>
-      <td style="text-align:center;color:#ffffff;padding:6px 8px;">${h.toFixed(2)}h/건</td>
-      <td style="text-align:center;color:#6c8ef5;font-weight:700;padding:6px 8px;">${s.cost.toLocaleString()}만원</td>
-      <td style="text-align:center;color:#f5a623;font-weight:600;padding:6px 8px;">${s.contractorCost.toLocaleString()}만원</td>
-      <td style="text-align:center;color:#ffffff;padding:6px 8px;">${u.toFixed(2)}만원</td>
-      <td style="color:#ffffff;padding:6px 8px;">${note}</td>
-    </tr>`;
-  });
-
-  tableRowsHtml += `<tr style="background:rgba(56,189,248,0.12);border-top:1px solid rgba(56,189,248,0.3);">
-    <td style="font-weight:700;color:#38bdf8;padding:6px 8px;">2027년(예측)</td>
-    <td style="text-align:center;color:#ffffff;font-weight:700;padding:6px 8px;">${n27}건</td>
-    <td style="text-align:center;color:#ffffff;padding:6px 8px;">${(n27 * h27).toFixed(1)}h</td>
-    <td style="text-align:center;color:#ffffff;padding:6px 8px;">${h27.toFixed(2)}h/건</td>
-    <td style="text-align:center;color:#38bdf8;font-weight:700;padding:6px 8px;">${cost27.toLocaleString()}만원</td>
-    <td style="text-align:center;color:#f5a623;font-weight:600;padding:6px 8px;">${contr27.toLocaleString()}만원</td>
-    <td style="text-align:center;color:#ffffff;font-weight:700;padding:6px 8px;">${u27.toFixed(2)}만원</td>
-      <td style="color:#ffffff;padding:6px 8px;">최신연도 연환산 비용/건 단가 × 2027 예측 건수 × 물가상승률 4.5%</td>
-  </tr>`;
-
-  // 전 연도 합계 및 추이 체인 계산 (완전 동적 연동)
-  const totalWorkersAll = Object.values(stats).reduce((s, v) => s + v.workers, 0);
-  const totalHoursAll = Object.values(stats).reduce((s, v) => s + v.hours, 0);
-  const hoursChain = sourceYears.map(yr => {
-    const s = stats[yr];
-    return s.count > 0 ? (s.hours / s.count).toFixed(1) + 'h' : '0.0h';
-  }).join(' → ') + ' → ' + h27.toFixed(1) + 'h';
-
-  container.innerHTML = `
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;border-bottom:1px solid rgba(108,142,245,0.3);padding-bottom:6px;">
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:15px;color:var(--accent1);">📊</span>
-        <strong style="color:#ffffff;font-size:13px;">연도별 비용·건수 상관관계 및 2027년 예측 타당성 심층 평가 브리핑</strong>
-      </div>
-      <span class="pill pill-green" style="font-size:10px;">실시간 데이터 연동 활성</span>
-    </div>
-
-    <!-- ${sourceYears.length + 1}개년 정량 비교 테이블 -->
-    <table class="tbl" style="margin-bottom:12px;font-size:11.5px;background:rgba(15,17,23,0.6);border-radius:6px;overflow:hidden;">
-      <thead>
-        <tr style="background:rgba(46,51,80,0.5);">
-          <th style="color:#ffffff;padding:6px 8px;">구분</th>
-          <th style="color:#ffffff;padding:6px 8px;text-align:center;">작업 건수</th>
-          <th style="color:#ffffff;padding:6px 8px;text-align:center;">총 공수(시간)</th>
-          <th style="color:#ffffff;padding:6px 8px;text-align:center;">건당 공수(연환산)</th>
-          <th style="color:#6c8ef5;padding:6px 8px;text-align:center;">[공식 단일] 관리소 기준 비용</th>
-          <th style="color:#f5a623;padding:6px 8px;text-align:center;">[비교] 시공사 환산액</th>
-          <th style="color:#ffffff;padding:6px 8px;text-align:center;">건당 평균단가(연환산)</th>
-          <th style="color:#ffffff;padding:6px 8px;">주요 공종 및 비용 특성</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${tableRowsHtml}
-      </tbody>
-    </table>
-
-    <!-- 상관관계 및 타당성 평가 3대 핵심 결론 요약 -->
-    <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:10px;font-size:11.5px;color:#ffffff;line-height:1.75;">
-      <div style="background:rgba(15,17,23,0.5);padding:8px 12px;border-radius:6px;border:1px solid rgba(46,51,80,0.8);">
-        <strong style="color:var(--accent1);font-size:12px;">【상관관계 및 타당성 평가 결론 (품 산출 단일 기준: 관리소 서명부)】</strong><br>
-        · <strong>품 산출 단일 기준 확립:</strong> 전 연도 비용은 원천 엑셀 D열 관리소 직접 서명부(${Math.round(totalWorkersAll)}명) 실투입 공수(${totalHoursAll.toFixed(1)}h)를 100% 공식 단일 기준으로 산출하였으며, 시공사 청구 품수 적용 환산액과의 편차를 전수 교차 검증함.<br>
-        · <strong>건수 변동(${Number(growthCnt26_27) >= 0 ? '+' : ''}${growthCnt26_27}%) vs 비용 변동(${Number(growthCost26_27) >= 0 ? '+' : ''}${growthCost26_27}%):</strong> 원천 작업 이력 및 노후화 누적 패턴을 반영하여, <strong>건당 단가가 ${uLatest.toFixed(1)}만원 → ${u27.toFixed(1)}만원으로 조정</strong>되는 합리적 예측 모형이 반영됨.<br>
-        · <strong>투입 공수 추이 정합성:</strong> 건당 작업시간(${hoursChain})의 원천 현장 실적 곡선과 100% 일치함.
-      </div>
-      <div style="background:rgba(15,17,23,0.5);padding:8px 12px;border-radius:6px;border:1px solid rgba(46,51,80,0.8);">
-        <strong style="color:var(--green);font-size:12px;">【2027년 예산 편성 권고 가이드라인】</strong><br>
-        · <strong>본예산 편성:</strong> 2027년도 긴급보수 본예산 <strong>${budgetRec.toLocaleString()}만원</strong> 편성 권고<br>
-        · <strong>예비비 확보:</strong> 하절기 장마 및 동절기 한파 돌발 파손 대비 <strong>${reserveRec.toLocaleString()}만원</strong> 예비비 편성 (총 <strong>${totalRec.toLocaleString()}만원</strong> 운영 체계)<br>
-        · <strong>비용 절감 핵심 조치:</strong> 주요 소모성 마감재 사전 일괄 정비 시 추가 절감 가능.
-      </div>
-    </div>
-  `;
+  const container=document.getElementById('cost-correlation-analysis-container');if(!container)return;
+  container.replaceChildren();
+  const model=window.forecastModel27||buildForecastModel2027();
+  const title=document.createElement('h3');title.textContent='연도별 비용 및 '+(model.latestYear+1)+'년 예측 근거';container.append(title);
+  for(const year of window.YR_KEYS||[]){const m=window.annualMetrics[year],p=document.createElement('p');p.textContent=year+' 실적 '+m.cnt+'건 / '+m.adminCost.toLocaleString()+'원 · 연간 추정 '+m.projectedCnt+'건 / '+m.projectedAdminCost.toLocaleString()+'원 · 계절계수 '+m.seasonality.factor.toFixed(4)+' ('+m.seasonality.reason+')';container.append(p);}
+  const p=document.createElement('p');p.textContent='다음 연도 '+model.totalPred27+'건 / '+model.cost27TotalWan.toLocaleString()+'만원. 증가율 '+(model.countGrowthRate*100)+'%, 물가 '+(model.inflationRate*100)+'%는 가정이며 실적 또는 검증된 인과관계가 아닙니다.';container.append(p);
 }
 
 
@@ -8073,7 +7896,7 @@ const dashboardExcelExporter = {
       ['기타 지정 자재', COST_UNIT.matCost.etc, '원/단위', '이보드·열반사 단열재·석고보드'],
       ['2027년 물가 상승률', COST_UNIT.forecastInflationRate, '%', '2027년 예측 금액에 적용'],
       ['2027년 작업 건수 증가율', COST_UNIT.forecastCountGrowthRate, '%', '최신 연도 연환산 건수에 적용'],
-      ['하반기 계절성 보정 계수', 0.8123, '배', '1~8월 피크(해빙기·장마철) 대비 9~12월 동절기 비수기 보수 수요 완화 계수 (약 18.8% 감축)']
+      ['자동 계절 보정 계수', 1, '배', '계절 보정 시트의 최신 연도 계수. 연도별 계수는 산식 검증에서 각각 참조']
     ];
     rateRows.forEach((row, rowIndex) => {
       row.forEach((value, colIndex) => {
@@ -8117,7 +7940,7 @@ const dashboardExcelExporter = {
     };
     const excelDate = value => {
       const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
-      return match ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3])) : null;
+      return match ? new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))) : null;
     };
     const sourceRows = records.map(record => {
       const state = record.contractor_source_state || 'numeric';
@@ -8218,10 +8041,7 @@ const dashboardExcelExporter = {
     calcSheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
     calcSheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
     calcSheet.mergeCells('A2:P3');
-    calcSheet.getCell('A2').value = '【정산 연도별 비용 산식 검증 및 무결성 연환산 가이드】\r\n'
-      + '1. 단순 선형 연환산(12/8 = 1.5배)의 계절성 왜곡 (6,391만원 도출): 1~8월 실적(4,261만원)에 단순 1.5배를 곱하면 상반기 피크가 동절기 비수기에도 똑같이 복제되고 전년도 이월건(41.5만원)까지 중복 뻥튀기되어 6,391만원으로 과대 왜곡됨.\r\n'
-      + '2. XLSB 원천 엑셀의 특이성 (약 5,9##만원 / 5,973만원 도출 근거): 2026년 시트 내 2025년도 이월 정산건(3건, 41.5만원)은 이미 전년도에 발생한 비연환산 항목이며, 하반기(9~12월)는 상반기 대비 긴급보수 빈도가 약 18.8% 감축되는 계절성(계절지수 0.8123)이 존재함. 원천 104건 기준 모델과 100% 정합.\r\n'
-      + '3. 무결성 보장 리팩토링 로직: 연환산비용 = 당해실적 + (월평균실적 × 잔여월 × \'단가 및 모델\'!$B$16) + 이월정산액 1회 = 약 5,975만원(약 5,9##만원, 5,973만원대 완벽 일치).';
+    calcSheet.getCell('A2').value = '당해 실적 × (1 + 잔여월/관측월 × 자동 계절계수) + 이월 1회. 계절계수 산출 근거는 계절 보정 시트를 참조하세요. 단가·증가율·물가율은 모델 가정입니다.';
     calcSheet.getCell('A2').alignment = { wrapText: true, vertical: 'top' };
     calcSheet.getRow(2).height = 42;
     calcSheet.getRow(3).height = 42;
@@ -8239,6 +8059,49 @@ const dashboardExcelExporter = {
       const digits = String(sourceKey).replace(/[^0-9]/g, '');
       return (digits.length === 2 ? Number('20' + digits) : Number(digits)) === key;
     });
+    const seasonSheet=workbook.addWorksheet('계절 보정');
+    seasonSheet.addRow(['자동 계절 보정 · 월별 원천 비용 · 이월 제외']);
+    seasonSheet.addRow(['적용 기준: 과거 12개월 모두 관측된 2개년 이상, 증감 방향 일치, 중립값 대비 10% 이상, 비율 변동계수 25% 이하. 기준은 모델 정책이며 통계적 유의성 보증이 아님.']);
+    seasonSheet.addRow(['대상 연도','관측 최대월','비교 연도','관측 월수','전반 월평균 비용','잔여 월평균 비용','비율','비율 제곱']);
+    const seasonRanges={};
+    let seasonRow=4;
+    for(const targetYear of sourceYears){
+      const start=seasonRow;
+      const targetSummary=summaryStart+sourceYears.indexOf(targetYear);
+      const cutoff=Number(window.annualMetrics?.[latestMetricYearKey(targetYear)]?.maxMonth)||0;
+      const evidence=buildSeasonalityModel(records,targetYear,cutoff);
+      for(const comparisonYear of sourceYears.filter(y=>y<targetYear)){
+        const r=seasonRow++;
+        seasonSheet.getCell(r,1).value=targetYear;
+        seasonSheet.getCell(r,2).value={formula:"'산식 검증'!F"+targetSummary,result:cutoff};
+        seasonSheet.getCell(r,3).value=comparisonYear;
+        const terms=[];
+        for(let m=1;m<=12;m++)terms.push('IF(COUNTIFS(\'원천 입력\'!$A:$A,C'+r+',\'원천 입력\'!$AC:$AC,1,\'원천 입력\'!$D:$D,'+m+')>0,1,0)');
+        const sample=evidence.samples.find(x=>x.year===comparisonYear);
+        seasonSheet.getCell(r,4).value={formula:terms.join('+'),result:sample?12:0};
+        const base='SUMIFS(\'원천 입력\'!$AA:$AA,\'원천 입력\'!$A:$A,C'+r+',\'원천 입력\'!$AC:$AC,1,\'원천 입력\'!$D:$D,';
+        seasonSheet.getCell(r,5).value={formula:'IFERROR('+base+'">0",\'원천 입력\'!$D:$D,"<="&B'+r+')/B'+r+',0)',result:sample?sample.costs.slice(0,cutoff).reduce((a,b)=>a+b,0)/cutoff:0};
+        seasonSheet.getCell(r,6).value={formula:'IFERROR('+base+'">"&B'+r+')/(12-B'+r+'),0)',result:sample?sample.costs.slice(cutoff).reduce((a,b)=>a+b,0)/(12-cutoff):0};
+        seasonSheet.getCell(r,7).value={formula:'IF(AND(D'+r+'=12,B'+r+'>0,B'+r+'<12,E'+r+'>0),F'+r+'/E'+r+',"")',result:sample?sample.ratio:''};
+        seasonSheet.getCell(r,8).value={formula:'IF(ISNUMBER(G'+r+'),G'+r+'^2,"")',result:sample?sample.ratio**2:''};
+      }
+      if(start===seasonRow){seasonSheet.getCell(seasonRow++,1).value=targetYear;}
+      const end=seasonRow-1, resultRow=seasonRow++;
+      const gr='G'+start+':G'+end, hr='H'+start+':H'+end;
+      seasonSheet.getCell(resultRow,1).value=targetYear+'년 적용계수';
+      seasonSheet.getCell(resultRow,4).value={formula:'COUNT('+gr+')',result:evidence.samples.length};
+      seasonSheet.getCell(resultRow,5).value={formula:'IFERROR(AVERAGE('+gr+'),1)',result:evidence.mean};
+      seasonSheet.getCell(resultRow,6).value={formula:'IFERROR(SQRT(MAX(0,AVERAGE('+hr+')-E'+resultRow+'^2))/E'+resultRow+',0)',result:evidence.cv};
+      seasonSheet.getCell(resultRow,7).value={formula:'IF(AND(D'+resultRow+'>=2,ABS(E'+resultRow+'-1)>=0.1,F'+resultRow+'<=0.25,OR(COUNTIF('+gr+',"<1")=D'+resultRow+',COUNTIF('+gr+',">1")=D'+resultRow+')),E'+resultRow+',1)',result:evidence.factor};
+      seasonRanges[targetYear]=resultRow;
+    }
+    seasonSheet.columns=[24,18,16,16,24,24,20,20].map(width=>({width}));
+    seasonSheet.views=[{state:'frozen',ySplit:3}];
+    sourceYears.forEach((year,i)=>{seasonSheet.getCell(i+4,10).value=year;seasonSheet.getCell(i+4,11).value={formula:'G'+seasonRanges[year],result:window.annualMetrics?.[latestMetricYearKey(year)]?.seasonality?.factor||1};});
+    seasonSheet.getCell('J3').value='대상 연도';seasonSheet.getCell('K3').value='적용계수';
+    const currentYear=years[years.length-1];
+    rateSheet.getCell('B15').value={formula:"IFERROR(INDEX('계절 보정'!$K$4:$K$"+(sourceYears.length+3)+",MATCH(MAX('원천 입력'!$A:$A),'계절 보정'!$J$4:$J$"+(sourceYears.length+3)+",0)),1)",result:window.annualMetrics?.[latestMetricYearKey(currentYear)]?.seasonality?.factor||1};
+
     sourceYears.forEach((year, offset) => {
       const row = summaryStart + offset;
       rowMap[year] = row;
@@ -8265,10 +8128,10 @@ const dashboardExcelExporter = {
         ['SUMIFS(\'원천 입력\'!$AB:$AB,\'원천 입력\'!$A:$A,A' + row + ',\'원천 입력\'!$AC:$AC,1)', Number(metric.currentYearContractorCost) || 0, '#,##0'],
         ['SUMIFS(\'원천 입력\'!$AB:$AB,\'원천 입력\'!$A:$A,A' + row + ',\'원천 입력\'!$G:$G,1)', Number(metric.carryoverContractorCost) || 0, '#,##0'],
         ['IFERROR(C' + row + '/B' + row + ',0)', Number(metric.cnt) ? Number(metric.adminCost) / Number(metric.cnt) : 0, '#,##0.00'],
-        ['IF(AND(F' + row + '>0,F' + row + '<12,E' + row + '>0),ROUND(G' + row + '+(G' + row + '/F' + row + '*(12-F' + row + ')*\'단가 및 모델\'!$B$15)+I' + row + ',0),C' + row + ')', Number(metric.projectedAdminCost ?? metric.adminCost) || 0, '#,##0'],
-        ['IF(AND(F' + row + '>0,F' + row + '<12,E' + row + '>0),ROUND(J' + row + '+(J' + row + '/F' + row + '*(12-F' + row + ')*\'단가 및 모델\'!$B$15)+K' + row + ',0),D' + row + ')', Number(metric.projectedContractorCost ?? metric.contractorCost) || 0, '#,##0'],
+        ['IF(AND(F' + row + '>0,F' + row + '<12,E' + row + '>0),ROUND(G' + row + '+(G' + row + '/F' + row + '*(12-F' + row + ')*\'계절 보정\'!$G$' + seasonRanges[year] + ')+I' + row + ',0),C' + row + ')', Number(metric.projectedAdminCost ?? metric.adminCost) || 0, '#,##0'],
+        ['IF(AND(F' + row + '>0,F' + row + '<12,E' + row + '>0),ROUND(J' + row + '+(J' + row + '/F' + row + '*(12-F' + row + ')*\'계절 보정\'!$G$' + seasonRanges[year] + ')+K' + row + ',0),D' + row + ')', Number(metric.projectedContractorCost ?? metric.contractorCost) || 0, '#,##0'],
         ['COUNTIFS(\'원천 입력\'!$A:$A,A' + row + ',\'원천 입력\'!$V:$V,1)', Number(metric.currentYearNegotiationCandidates || 0) + Number(metric.carryoverNegotiationCandidates || 0), '0'],
-        ['IF(AND(F' + row + '>0,F' + row + '<12,E' + row + '>0),ROUND(E' + row + '+(E' + row + '/F' + row + '*(12-F' + row + ')*\'단가 및 모델\'!$B$15)+H' + row + ',0),B' + row + ')', Number(metric.projectedCnt ?? metric.cnt) || 0, '0']
+        ['IF(AND(F' + row + '>0,F' + row + '<12,E' + row + '>0),ROUND(E' + row + '+(E' + row + '/F' + row + '*(12-F' + row + ')*\'계절 보정\'!$G$' + seasonRanges[year] + ')+H' + row + ',0),B' + row + ')', Number(metric.projectedCnt ?? metric.cnt) || 0, '0']
       ];
       formulas.forEach((entry, formulaIndex) => {
         const col = formulaIndex + 2;
@@ -8302,16 +8165,16 @@ const dashboardExcelExporter = {
     const latestMetric = model.latestMetric || {};
     const avgCost = model.costPerRecordWan * 10000;
     const summaries = [
-      ['최신 정산 연도', "='산식 검증'!A" + auditRow, model.latestYear, '년'],
-      ['정산 시트 전체 건수', "='산식 검증'!B" + auditRow, Number(latestMetric.cnt) || 0, '건'],
-      ['당해연도 작업 건수', "='산식 검증'!E" + auditRow, model.currentYearCount, '건'],
-      ['전년도 이월 건수', "='산식 검증'!H" + auditRow, model.carryoverRows.length, '건'],
-      ['당해연도 최대 실적 월', "='산식 검증'!F" + auditRow, model.maxMonth, '월'],
-      ['월평균 추정 건수', '=IF(B9>0,ROUND(B7/B9,0),0)', model.averageMonthlyCount, '건/월'],
-      ['최신 연도 연환산 건수', "='산식 검증'!P" + auditRow, model.projectedCountLatest, '건'],
+      ['최신 정산 연도', "=MAX('원천 입력'!$A:$A)", model.latestYear, '년'],
+      ['정산 시트 전체 건수', "=INDEX('산식 검증'!$B:$B,MATCH(B5,'산식 검증'!$A:$A,0))", Number(latestMetric.cnt) || 0, '건'],
+      ['당해연도 작업 건수', "=INDEX('산식 검증'!$E:$E,MATCH(B5,'산식 검증'!$A:$A,0))", model.currentYearCount, '건'],
+      ['전년도 이월 건수', "=INDEX('산식 검증'!$H:$H,MATCH(B5,'산식 검증'!$A:$A,0))", model.carryoverRows.length, '건'],
+      ['당해연도 최대 실적 월', "=INDEX('산식 검증'!$F:$F,MATCH(B5,'산식 검증'!$A:$A,0))", model.maxMonth, '월'],
+      ['월평균 추정 건수', '=IF(B9>0,ROUND(B7/B9*\'단가 및 모델\'!$B$15,0),0)', model.averageMonthlyCount, '건/월'],
+      ['최신 연도 연환산 건수', "=INDEX('산식 검증'!$P:$P,MATCH(B5,'산식 검증'!$A:$A,0))", model.projectedCountLatest, '건'],
       ['2027년 작업 증가율', "='단가 및 모델'!$B$14", model.countGrowthRate, '%'],
-      ['2027년 연간 예측 건수', '=MAX(1,ROUND(B11*(1+B12),0))', model.totalPred27, '건'],
-      ['최근 정산연도 연환산 비용/건', '=IFERROR(\'산식 검증\'!$M$' + auditRow + '/\'산식 검증\'!$P$' + auditRow + ',0)', avgCost, '원/건'],
+      ['2027년 연간 예측 건수', '=MAX(0,ROUND(B11*(1+B12),0))', model.totalPred27, '건'],
+      ['최근 정산연도 연환산 비용/건', "=IFERROR(INDEX('산식 검증'!$M:$M,MATCH(B5,'산식 검증'!$A:$A,0))/B11,0)", avgCost, '원/건'],
       ['물가 상승률', "='단가 및 모델'!$B$13", model.inflationRate, '%'],
       ['2027년 연간 예측 비용', '=ROUND(B13*B14*(1+B15)/10000,0)', model.cost27TotalWan, '만원']
     ];
@@ -8375,26 +8238,37 @@ const dashboardExcelExporter = {
       const month = index + 1;
       ws.getCell(r, 1).value = month;
       setFormula(r, 2, 'COUNTIFS(\'원천 입력\'!$A:$A,$B$5,\'원천 입력\'!$AC:$AC,1,\'원천 입력\'!$D:$D,A' + r + ')', model.actualCounts[index] || 0, '0');
-      setFormula(r, 3, 'IF(AND(A' + r + '>$B$9,$B$9>0),$B$10,0)', model.forecastCounts[index] || 0, '0');
+      setFormula(r, 3, 'IF(AND(A'+r+'>$B$9,$B$9>0,$B$9<12),INT(MAX(0,$B$11-$B$7-$B$8)/(12-$B$9))+IF(A'+r+'-$B$9<=MOD(MAX(0,$B$11-$B$7-$B$8),12-$B$9),1,0),0)', model.forecastCounts[index] || 0, '0');
       setFormula(r, 4, 'B' + r + '+C' + r, model.monthlyBaseCounts[index] || 0, '0');
       setFormula(r, 5, 'IF(SUM($D$20:$D$31)>0,D' + r + '*$B$11/SUM($D$20:$D$31),$B$11/12)', model.monthlyWeights[index] || 0, '#,##0.000');
-      let countFormula = 'ROUND(IF($B$11>0,E' + r + '/$B$11,1/12)*$B$13,0)';
-      if (index === residualIndex) {
-        const before = index > 0 ? 'SUM($F$20:$F$' + (r - 1) + ')' : '0';
-        const after = index < 11 ? 'SUM($F$' + (r + 1) + ':$F$31)' : '0';
-        countFormula = '$B$13-' + before + '-' + after;
-      }
+      const quota='IF(SUM($E$20:$E$31)>0,E'+r+'/SUM($E$20:$E$31)*$B$13,$B$13/12)';
+      setFormula(r,10,'INT('+quota+')',0,'0');
+      setFormula(r,11,quota+'-J'+r,0,'0.00000');
+      setFormula(r,12,'COUNTIF($K$20:$K$31,">"&K'+r+')+COUNTIF($K$20:K'+r+',K'+r+')',0,'0');
+      const countFormula='J'+r+'+IF(L'+r+'<=$B$13-SUM($J$20:$J$31),1,0)';
       setFormula(r, 6, countFormula, model.counts27Forecast[index] || 0, '0');
       setFormula(r, 7, 'SUMIFS(\'원천 입력\'!$AA:$AA,\'원천 입력\'!$A:$A,$B$5,\'원천 입력\'!$AC:$AC,1,\'원천 입력\'!$D:$D,A' + r + ')',
         index < model.maxMonth ? calculateXlsbCostContribution(model.currentYearRows.filter(record => Number(record.month) === month), false) : 0, '#,##0.00');
-      setFormula(r, 8, 'IF(A' + r + '>$B$9,IFERROR(\'산식 검증\'!$G$' + auditRow + '/MAX($B$9,1),0),0)',
-        index >= model.maxMonth ? model.currentYearAdminCost / model.maxMonth : 0, '#,##0.00');
-      const monthCost = index === 11
-        ? '$B$16-SUM($I$20:$I$30)'
-        : 'ROUND(F' + r + '*$B$14*(1+$B$15)/10000,0)';
+      setFormula(r, 8, 'IF(AND(A'+r+'>$B$9,$B$9>0),IFERROR(INDEX(\'산식 검증\'!$G:$G,MATCH($B$5,\'산식 검증\'!$A:$A,0))/$B$9*\'단가 및 모델\'!$B$15,0),0)',
+        model.maxMonth>0 && index >= model.maxMonth ? model.currentYearAdminCost / model.maxMonth * (model.latestMetric.seasonality?.factor||1) : 0, '#,##0.00');
+      const costQuota='IF($B$13>0,F'+r+'/$B$13*$B$16,0)';
+      setFormula(r,13,'INT('+costQuota+')',0,'0');
+      setFormula(r,14,costQuota+'-M'+r,0,'0.00000');
+      setFormula(r,15,'COUNTIF($N$20:$N$31,">"&N'+r+')+COUNTIF($N$20:N'+r+',N'+r+')',0,'0');
+      const monthCost='M'+r+'+IF(O'+r+'<=$B$16-SUM($M$20:$M$31),1,0)';
       setFormula(r, 9, monthCost, model.costs27Forecast[index] || 0, '#,##0');
+      const aq='IF(SUM($G$20:$G$31)>0,G'+r+'/SUM($G$20:$G$31)*ROUND(SUM($G$20:$G$31)/10000,0),0)';
+      setFormula(r,16,'INT('+aq+')',0,'0');
+      setFormula(r,17,aq+'-P'+r,0,'0.00000');
+      setFormula(r,18,'COUNTIF($Q$20:$Q$31,">"&Q'+r+')+COUNTIF($Q$20:Q'+r+',Q'+r+')',0,'0');
+      setFormula(r,19,'P'+r+'+IF(R'+r+'<=ROUND(SUM($G$20:$G$31)/10000,0)-SUM($P$20:$P$31),1,0)',model.monthlyActualCostWan[index]||0,'0');
+      const lookup=col=>'INDEX(\'산식 검증\'!$'+col+':$'+col+',MATCH($B$5,\'산식 검증\'!$A:$A,0))';
+      const remainingTotal='MAX(0,ROUND(('+lookup('M')+'-'+lookup('I')+')/10000,0)-ROUND('+lookup('G')+'/10000,0))';
+      setFormula(r,20,'IF(AND(A'+r+'>$B$9,$B$9>0,$B$9<12),INT('+remainingTotal+'/(12-$B$9))+IF(A'+r+'-$B$9<=MOD('+remainingTotal+',12-$B$9),1,0),0)',model.monthlyForecastCostWan[index]||0,'0');
+
     }
     ws.columns = [{ width: 16 }, { width: 20 }, { width: 20 }, { width: 20 }, { width: 20 }, { width: 18 }, { width: 22 }, { width: 24 }, { width: 23 }];
+    ['건수 내림','건수 소수부','건수 순위','비용 내림','비용 소수부','비용 순위','실적 내림','실적 소수부','실적 순위','실적 비용(만원)','잔여 비용(만원)'].forEach((v,i)=>{ws.getCell(19,10+i).value=v;ws.getColumn(10+i).width=16;});
     ws.getRow(19).height = 42;
     ws.autoFilter = { from: { row: 19, column: 1 }, to: { row: 31, column: tableHeaders.length } };
     return ws;
@@ -9212,7 +9086,7 @@ const dashboardExcelExporter = {
           chartSheet.getCell("A1").value = "✅ 긴급보수 최적화 및 노후화 선제 대응 권고사항 실행 로드맵";
           chartSheet.getCell("A1").font = { bold: true, size: 14, color: { argb: "FF1E3A8A" } };
 
-          const roadmapHeaders = ["단계 구분", "추진 과제", "주요 실행 내용", "목표 일정", "예상 소요 예산", "기대 효과"];
+          const roadmapHeaders = ["순위", "추진 과제", "대상", "검토 내용", "일정", "상태"];
           roadmapHeaders.forEach((h, i) => {
             const c = chartSheet.getCell(3, i + 1);
             c.value = h;
@@ -9230,14 +9104,7 @@ const dashboardExcelExporter = {
           const predCost = Number(window.cost27TotalWan) || 0;
           const budget = Math.round(predCost * 0.9);
 
-          const roadmapItems = [
-            ["1단계 (즉시 실행)", `${topBldg1} 노후화 긴급 점검 및 안전 진단`, "최다 발생에 따른 배관, 외벽 균열 전수 점검", "2026.09 ~ 2026.10", "긴급예비비 편성 검토", "구조적 대형 하자 사전 예방"],
-            ["1단계 (즉시 실행)", `${topBldg2} 이상 징후 원인 분석 및 긴급 방수`, "호실 누수 및 코킹 불량 전수 보수", "2026.09 ~ 2026.10", "긴급 점검비", "입주자 불만 및 2차 누수 차단"],
-            ["2단계 (단기 과제)", `${topRep} 자재 통합 단가계약 전환`, "사용량 변동에 따른 대량 구매 체계 구축", "2026.10 ~ 2026.12", "예산 절감 효과", "자재비 절감 및 수급 안정"],
-            ["2단계 (단기 과제)", "근로자 산정 기준 단일화 (관리소 서명 일원화)", "시공사 청구와의 괴리 해소를 위한 모바일 실시간 서명 시스템 도입", "2026.11 ~ 2026.12", "시스템 연동", "정산 분쟁 원천 차단 및 무결성 보증"],
-            ["3단계 (중장기 과제)", `2027년 긴급보수 예산 ${predCost.toLocaleString()}만원 증액 편성`, `노후화 가속에 따른 2027년 작업 예측(${totPred}건, ${predCost.toLocaleString()}만원) 반영`, "2026.12 ~ 2027.01", `본예산 약 ${budget.toLocaleString()}만원`, "예산 부족으로 인한 공사 중단 방지"],
-            ["3단계 (중장기 과제)", `고위험군(${topBldg1}·${topBldg2}) 정기 예방점검 제도화`, "사후 땜질식 긴급보수에서 분기별 정기 예방점검 체계로 전환", "2027.01 ~ 지속", "정기 유지보수비", "긴급 출동 빈도 감축"]
-          ];
+          const roadmapItems = buildEvidenceInsights().roadmap;
 
           roadmapItems.forEach((item, idx) => {
             const rowNum = 4 + idx;
@@ -9518,7 +9385,7 @@ const dashboardExcelExporter = {
             const cLatest = (b.cnt && latestIdx >= 0) ? Number(b.cnt[latestIdx] || 0) : 0;
             const cFirst = (b.cnt && firstIdx >= 0) ? Number(b.cnt[firstIdx] || 0) : 0;
             const trendDiff = yk_bldg.length > 1 ? Math.round((cLatest - cFirst) * 10) / 10 : 0;
-            
+
             let trendSymbol = yk_bldg.length > 1 ? "→ 유지" : "-";
             let trendFontColor = "FF64748B";
             let trendBgColor = "FFF1F5F9";
@@ -9554,7 +9421,7 @@ const dashboardExcelExporter = {
               const yIdx = yk_bldg.indexOf(y);
               const cVal = (yIdx >= 0 && b.cnt) ? Number(b.cnt[yIdx] || 0) : 0;
               const hVal = (yIdx >= 0 && b.hours) ? Math.round(Number(b.hours[yIdx] || 0) * 10) / 10 : 0;
-              
+
               yrSums[y].cnt += cVal;
               yrSums[y].hours += hVal;
 
@@ -10117,21 +9984,17 @@ const dashboardExcelExporter = {
 
             if (isCost) {
               const actualCell = dataSheet.getCell(r, 2);
-              if (m <= model.maxMonth) {
-                actualCell.value = { formula: "IF('2027 월별 예측'!G" + rF + ">0,ROUND('2027 월별 예측'!G" + rF + "/10000,0),0)", result: Math.round((calculateXlsbCostContribution(model.currentYearRows.filter(x => Number(x.month) === m), false) || 0) / 10000) };
-              } else {
-                actualCell.value = null;
-              }
+
+                actualCell.value = { formula: "'2027 월별 예측'!S" + rF, result: Math.round((calculateXlsbCostContribution(model.currentYearRows.filter(x => Number(x.month) === m), false) || 0) / 10000) };
+
               actualCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
               actualCell.numFmt = '#,##0"만원"';
               actualCell.alignment = { horizontal: "center" };
 
               const remainCell = dataSheet.getCell(r, 3);
-              if (m > model.maxMonth) {
-                remainCell.value = { formula: "IF('2027 월별 예측'!H" + rF + ">0,ROUND('2027 월별 예측'!H" + rF + "/10000,0),0)", result: Math.round((model.currentYearAdminCost / model.maxMonth) / 10000) };
-              } else {
-                remainCell.value = null;
-              }
+
+                remainCell.value = { formula: "'2027 월별 예측'!T" + rF, result: model.monthlyForecastCostWan[m-1]||0 };
+
               remainCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
               remainCell.numFmt = '#,##0"만원"';
               remainCell.alignment = { horizontal: "center" };
@@ -10143,21 +10006,17 @@ const dashboardExcelExporter = {
               predCell.alignment = { horizontal: "center" };
             } else {
               const actualCell = dataSheet.getCell(r, 2);
-              if (m <= model.maxMonth) {
+
                 actualCell.value = { formula: "'2027 월별 예측'!B" + rF, result: model.actualCounts[m - 1] || 0 };
-              } else {
-                actualCell.value = null;
-              }
+
               actualCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
               actualCell.numFmt = '#,##0"건"';
               actualCell.alignment = { horizontal: "center" };
 
               const remainCell = dataSheet.getCell(r, 3);
-              if (m > model.maxMonth) {
+
                 remainCell.value = { formula: "'2027 월별 예측'!C" + rF, result: model.forecastCounts[m - 1] || 0 };
-              } else {
-                remainCell.value = null;
-              }
+
               remainCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
               remainCell.numFmt = '#,##0"건"';
               remainCell.alignment = { horizontal: "center" };
@@ -10835,7 +10694,7 @@ const dashboardExcelExporter = {
           const status = cPrev === null
             ? "비교 연도 없음 (단일 연도)"
             : (diff < 0 ? "하향(-) 건수 감소 (개선)" : diff > 0 ? "상향(+) 건수 증가 (요주의)" : "변동 없음 (동일)");
-          
+
           wsYoY.getCell(rowNum, 1).value = b.name;
           wsYoY.getCell(rowNum, 1).alignment = { horizontal: "center" };
           wsYoY.getCell(rowNum, 1).font = { bold: true };
@@ -11015,9 +10874,9 @@ const dashboardExcelExporter = {
         wsCost.getCell(`A${noteRowStart}`).font = { bold: true, size: 11, color: { argb: "FF1E3A8A" } };
 
         const costNotes = [
-          ["1. 단순 선형 연환산(12/8 = 1.5배)의 계절성 왜곡 (6,391만원 도출):", "1~8월 실적(4,261만원)에 단순 1.5배(12/8)를 곱하면 상반기 피크(해빙기·장마철)가 9~12월 동절기 비수기에도 똑같이 복제되고 전년도 이월 정산건(3건, 41.5만원)까지 1.5배로 중복 계상되어 6,391만원으로 심각하게 과대 왜곡됩니다."],
-          ["2. XLSB 원천 엑셀의 특이성 (약 5,9##만원 / 5,973만원 도출 근거):", "2026년 시트 내 2025년도 이월 정산건(3건, 41.5만원)은 이미 전년도에 발생하여 1회만 정산되는 비연환산 항목이며, 하반기(9~12월)는 상반기 대비 긴급보수 빈도가 약 18.8% 감축되는 계절성(계절지수 0.8123)이 존재합니다. 원천 기획서 및 표준 모델(80건 실적 + 잔여 21~24건 = 연간 104건 기준)과 100% 정합합니다."],
-          ["3. 무결성 보장 리팩토링 로직:", "연간 추정 비용 = 당해 실적(4,219만) + (월평균 실적 527.4만 × 잔여 4개월 × 계절지수 0.8123) + 전년도 이월 정산액 1회(41.5만) = 약 5,975만원(약 5,9##만원, 5,973만원대 완벽 일치)."]
+          ["이월 분리", "당해연도 작업만 연환산하고 전년도 이월 정산은 한 번만 합산합니다."],
+          ["계절 보정 판단", "원천 월별 관측 자료의 비교 가능성·반복성에 따라 자동 산출합니다. 적용 계수와 근거는 계절 보정 시트를 참조하세요."],
+          ["예측 가정", "작업 증가율과 물가상승률은 원천 실적이 아니라 편집 가능한 모델 가정입니다."],
         ];
         costNotes.forEach((n, idx) => {
           const r = noteRowStart + 1 + idx;
@@ -11089,7 +10948,7 @@ const dashboardExcelExporter = {
         wsRoad.getCell("A1").value = "✅ 건축 긴급보수 대응 권고사항 실행 로드맵";
         wsRoad.getCell("A1").font = { bold: true, size: 13, color: { argb: "FF1E293B" } };
 
-        const roadHeaders = ["순위", "항목", "대상", "권고 조치", "추진 시기", "중요도", "진행 상태"];
+        const roadHeaders = ["순위", "항목", "대상", "검토 내용", "일정", "상태"];
         roadHeaders.forEach((h, i) => {
           const c = wsRoad.getCell(3, i + 1);
           c.value = h;
@@ -11098,14 +10957,7 @@ const dashboardExcelExporter = {
           c.alignment = { horizontal: "center", vertical: "middle" };
         });
 
-        const roadmapItems = [
-          [1, "103동 긴급 점검", "103동 전 세대", "구조·마감 점검, 2027년 예비비 증액", "2026년 10월", "CRITICAL", "진행중"],
-          [2, "창호·방충망 예방보수", "전 동", "연 1회 정기점검 및 일괄교체 계약 체결", "2026년 11월", "HIGH", "계획"],
-          [3, "걸레받이·마감재 개선", "습기 취약 세대", "내수성 자재(PVC 등) 변경 스펙 표준화", "2026년 12월", "HIGH", "계획"],
-          [4, "반복 호실 특별 관리", "TOP10 세대", "호실별 누적 이력카드 작성 및 전담제", "2026년 10월~", "MEDIUM", "진행중"],
-          [5, "자재 표준화·통합구매", "자재 창고", "다빈도 5대 자재 단가계약 및 재고 관리", "2027년 1월", "MEDIUM", "계획"],
-          [6, "단열·결로 조사", "2동, 5동", "동절기 전 외벽·창호 단열 성능 점검", "2026년 11월", "HIGH", "계획"]
-        ];
+        const roadmapItems = buildEvidenceInsights().roadmap;
 
         roadmapItems.forEach((row, rIdx) => {
           const rowNum = 4 + rIdx;
