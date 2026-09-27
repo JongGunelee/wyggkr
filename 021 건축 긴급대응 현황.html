@@ -200,6 +200,41 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 .insight.blue .i-title{color:var(--blue);}
 .insight .i-text{font-size:12px;color:var(--text2);line-height:1.6;}
 .insight .i-text strong{color:var(--text);}
+.decision-brief{display:flex;flex-direction:column;gap:16px;margin-bottom:20px;}
+.executive-briefing{position:relative;overflow:hidden;border:1px solid rgba(108,142,245,.35);border-radius:16px;padding:26px;background:linear-gradient(135deg,rgba(19,27,48,.98),rgba(26,33,53,.96));box-shadow:0 14px 40px rgba(0,0,0,.22);}
+.executive-briefing::after{content:"";position:absolute;right:-90px;top:-130px;width:330px;height:330px;border-radius:50%;background:radial-gradient(circle,rgba(108,142,245,.18),transparent 68%);pointer-events:none;}
+.executive-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;position:relative;z-index:1;}
+.executive-kicker{font-size:11px;font-weight:800;letter-spacing:.12em;color:#91a9ff;text-transform:uppercase;margin-bottom:9px;}
+.executive-title{font-size:24px;line-height:1.35;margin:0 0 9px;color:#fff;letter-spacing:-.02em;}
+.executive-summary{font-size:13.5px;line-height:1.75;color:var(--text2);max-width:920px;word-break:keep-all;}
+.executive-status{flex:0 0 auto;border:1px solid;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:800;white-space:nowrap;}
+.executive-status.red{color:#ff8ba2;border-color:rgba(255,77,109,.45);background:rgba(255,77,109,.1);}
+.executive-status.orange{color:#ffd28b;border-color:rgba(245,166,35,.45);background:rgba(245,166,35,.1);}
+.executive-status.green{color:#8ae5a6;border-color:rgba(78,203,113,.45);background:rgba(78,203,113,.1);}
+.executive-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:22px;position:relative;z-index:1;}
+.executive-metric{padding:13px 14px;border:1px solid rgba(148,163,184,.16);border-radius:10px;background:rgba(8,13,25,.35);}
+.executive-metric span{display:block;font-size:10px;color:#8fa0bd;margin-bottom:6px;}
+.executive-metric strong{display:block;font-size:19px;color:#fff;letter-spacing:-.02em;}
+.executive-metric small{display:block;font-size:10px;color:var(--text2);margin-top:5px;line-height:1.45;}
+.decision-list{display:flex;flex-direction:column;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--card);}
+.decision-insight{display:grid;grid-template-columns:58px minmax(0,1fr) minmax(230px,300px);gap:22px;padding:23px 24px;border-bottom:1px solid var(--border);align-items:start;}
+.decision-insight:last-child{border-bottom:0;}
+.decision-index{font-size:12px;font-weight:900;color:#7894f8;border:1px solid rgba(108,142,245,.35);border-radius:8px;text-align:center;padding:7px 0;background:rgba(108,142,245,.08);}
+.decision-question{font-size:12px;font-weight:800;color:#91a9ff;margin-bottom:7px;}
+.decision-headline{font-size:18px;line-height:1.45;color:#fff;margin:0 0 8px;word-break:keep-all;}
+.decision-body{font-size:13px;line-height:1.75;color:var(--text2);word-break:keep-all;}
+.decision-evidence{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:13px;}
+.decision-evidence div{font-size:11px;line-height:1.5;color:#b8c3d9;padding:9px 10px;border-radius:7px;background:rgba(8,13,25,.32);border:1px solid rgba(148,163,184,.12);}
+.decision-action{border-left:3px solid var(--blue);padding:12px 14px;background:rgba(108,142,245,.07);border-radius:0 9px 9px 0;}
+.decision-insight.red .decision-action{border-color:var(--red);background:rgba(255,77,109,.06);}
+.decision-insight.orange .decision-action{border-color:var(--orange);background:rgba(245,166,35,.06);}
+.decision-action-label{font-size:10px;font-weight:900;letter-spacing:.08em;color:#91a9ff;margin-bottom:7px;}
+.decision-action p{font-size:13px;line-height:1.65;color:#e4e9f3;margin:0 0 11px;word-break:keep-all;}
+.decision-evidence-btn{width:100%;border:1px solid rgba(108,142,245,.35);border-radius:7px;background:rgba(30,35,55,.7);color:#cbd5e1;font-size:10px;font-weight:700;padding:7px 9px;cursor:pointer;}
+.decision-evidence-btn:hover{color:#fff;border-color:#6c8ef5;background:rgba(108,142,245,.2);}
+.decision-source-note{font-size:10px;color:#71809c;text-align:right;margin-top:-5px;}
+@media(max-width:980px){.executive-metrics{grid-template-columns:repeat(2,1fr)}.decision-insight{grid-template-columns:46px minmax(0,1fr)}.decision-action{grid-column:2}.decision-evidence{grid-template-columns:1fr}}
+@media(max-width:640px){.executive-head{flex-direction:column}.executive-metrics{grid-template-columns:1fr 1fr}.decision-insight{grid-template-columns:1fr;padding:18px}.decision-index{width:44px}.decision-action{grid-column:1}}
 /* ── Table ── */
 .tbl{width:100%;border-collapse:collapse;font-size:12px;}
 .tbl th{padding:8px 12px;text-align:left;font-size:11px;color:var(--text2);font-weight:600;border-bottom:1px solid var(--border);text-transform:uppercase;letter-spacing:.5px;}
@@ -2035,10 +2070,11 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 
 <!-- ====== INSIGHTS ====== -->
 <div id="page-insights" class="page">
-  <div class="insight-grid" id="insights-top-cards-container">
-    <div class="insight blue" style="text-align:center;padding:20px;grid-column:1/-1;">
-      <div class="i-title">💡 핵심 인사이트 데이터 분석 중...</div>
-      <div class="i-text">GitHub XLSB 원천 대장의 3개년 추세 및 공종별 특성을 분석하여 실시간 렌더링합니다.</div>
+  <div class="decision-brief" id="insights-top-cards-container">
+    <div class="executive-briefing" style="text-align:center;padding:24px;">
+      <div class="executive-kicker">COST OWNER BRIEFING</div>
+      <div class="executive-title">비용 의사결정 인사이트 분석 중...</div>
+      <div class="executive-summary" style="margin:0 auto;">예산 전망, 비용 증가 원인, 통제 가능한 지출, 결재 전 확인사항을 현재 GitHub XLSB에서 계산합니다.</div>
     </div>
   </div>
 
@@ -3348,22 +3384,38 @@ function refreshForecastLabels() {
 
 function buildEvidenceInsights() {
   const rows=window.RAW||[], keys=window.YR_KEYS||[], latest=keys[keys.length-1], previousKey=keys[keys.length-2];
-  const metric=window.annualMetrics?.[latest]||{};
+  const metric=window.annualMetrics?.[latest]||{}, previousMetric=window.annualMetrics?.[previousKey]||{};
   const model=window.forecastModel27||buildForecastModel2027();
   const maxMonth=Math.max(0,Number(metric.maxMonth)||0);
   const currentRows=rows.filter(r=>r.yr===latest&&!r.is_carryover);
-  const carryoverRows=rows.filter(r=>r.yr===latest&&r.is_carryover);
+  const latestRows=rows.filter(r=>r.yr===latest);
+  const carryoverRows=latestRows.filter(r=>r.is_carryover);
   const previousComparableRows=rows.filter(r=>r.yr===previousKey&&!r.is_carryover&&Number(r.month)>=1&&(!maxMonth||Number(r.month)<=maxMonth));
   const pct=(value,base)=>base>0?(value/base-1)*100:null;
   const signed=value=>value==null?'비교 기준 없음':(value>=0?'+':'')+value.toFixed(1)+'%';
   const wan=value=>Math.round(Number(value||0)/10000).toLocaleString()+'만원';
+  const signedWan=value=>(Number(value||0)>=0?'+':'')+Math.round(Number(value||0)/10000).toLocaleString()+'만원';
   const share=(value,total)=>total>0?value/total*100:0;
   const currentCost=calculateXlsbCostContribution(currentRows,false);
+  const carryoverCost=calculateXlsbCostContribution(carryoverRows,false);
+  const actualCost=currentCost+carryoverCost;
+  const projectedCost=Number(metric.projectedAdminCost||actualCost);
+  const remainingCost=Math.max(0,projectedCost-actualCost);
   const previousComparableCost=calculateXlsbCostContribution(previousComparableRows,false);
+  const previousAnnualCost=Number(previousMetric.adminCost||0);
   const currentHours=currentRows.reduce((sum,r)=>sum+(Number(r.total_h)||0),0);
   const previousComparableHours=previousComparableRows.reduce((sum,r)=>sum+(Number(r.total_h)||0),0);
   const report=window.rawIntegrityReport||{};
   const warnings=report.warnings||[], notices=report.notices||[];
+  const samePeriodCountGrowth=pct(currentRows.length,previousComparableRows.length);
+  const samePeriodCostGrowth=pct(currentCost,previousComparableCost);
+  const annualForecastGrowth=pct(projectedCost,previousAnnualCost);
+  const currentUnitCost=currentRows.length?currentCost/currentRows.length:0;
+  const previousUnitCost=previousComparableRows.length?previousComparableCost/previousComparableRows.length:0;
+  const unitCostGrowth=pct(currentUnitCost,previousUnitCost);
+  const costDelta=currentCost-previousComparableCost;
+  const volumeEffect=(currentRows.length-previousComparableRows.length)*previousUnitCost;
+  const unitMixEffect=currentRows.length*(currentUnitCost-previousUnitCost);
 
   const buildingMap=new Map();
   for(const row of currentRows){
@@ -3417,63 +3469,170 @@ function buildEvidenceInsights() {
   }).filter(x=>x.quantity>0).sort((a,b)=>b.cost-a.cost);
   const topMaterial=materialStats[0];
 
-  const negotiationRows=rows.filter(r=>r.negotiation_candidate);
-  const negotiationBlank=negotiationRows.filter(r=>r.contractor_source_state==='blank').length;
-  const negotiationZero=negotiationRows.filter(r=>r.contractor_source_state==='zero').length;
-  const matchRows=rows.filter(r=>r.diff_category==='match');
-  const mismatchRows=rows.filter(r=>!['match','merged_claim_shared'].includes(r.diff_category));
-  const latestGap=Number(metric.projectedContractorCost??metric.contractorCost??0)-Number(metric.projectedAdminCost??metric.adminCost??0);
+  const currentNegotiationRows=currentRows.filter(r=>r.negotiation_candidate);
+  const negotiationBlank=currentNegotiationRows.filter(r=>r.contractor_source_state==='blank').length;
+  const negotiationZero=currentNegotiationRows.filter(r=>r.contractor_source_state==='zero').length;
+  const currentMismatchRows=currentRows.filter(r=>!['match','merged_claim_shared'].includes(r.diff_category));
+  const currentMatchRows=currentRows.filter(r=>r.diff_category==='match');
+  const latestGap=Number(metric.projectedContractorCost??metric.contractorCost??0)-projectedCost;
+  const reviewCost=calculateXlsbCostContribution(currentNegotiationRows,false);
+  const reviewHours=currentNegotiationRows.reduce((sum,r)=>sum+(Number(r.total_h)||0),0);
   const season=metric.seasonality||{factor:1,reason:'분석 대상 없음',samples:[],monthlyFactors:new Array(12).fill(1)};
   const remainingFactors=(season.monthlyFactors||[]).map((factor,index)=>({month:index+1,factor:Number(factor)||1})).filter(x=>x.month>maxMonth);
   const seasonalPeak=[...remainingFactors].sort((a,b)=>b.factor-a.factor)[0];
+  const forecastMonthCosts=(model.monthlyForecastCostWan||[]).map((cost,index)=>({month:index+1,cost:Number(cost)||0})).filter(x=>x.month>maxMonth);
+  const largestForecastMonth=[...forecastMonthCosts].sort((a,b)=>b.cost-a.cost)[0];
   const lowScenario=Math.round(model.cost27TotalWan*.9), highScenario=Math.round(model.cost27TotalWan*1.1);
-  const yearCounts=keys.map(key=>key+' '+rows.filter(r=>r.yr===key).length+'건').join(' · ');
   const sourceProof=String(report.sourceGitBlobSha||report.sourceSha256||'확인 불가').slice(0,12);
-  const card=(title,body,filter,tone='blue',evidenceCount=0)=>({title,body,filter,tone,evidenceCount});
+  const executionRate=projectedCost>0?actualCost/projectedCost*100:0;
+  const calendarRate=maxMonth>0?maxMonth/12*100:0;
+  const confidenceTone=!report.calculationOk||warnings.length>3?'red':warnings.length?'orange':'green';
+  const confidenceLabel=confidenceTone==='green'?'원천 검증 양호':confidenceTone==='orange'?'조건부 신뢰 · 예외 확인 필요':'결재 전 원천 보완 필요';
+  const budgetTone=(annualForecastGrowth??samePeriodCostGrowth??0)>20?'red':(annualForecastGrowth??samePeriodCostGrowth??0)>5?'orange':'green';
+  const budgetLabel=budgetTone==='red'?'예산 증액 압력 높음':budgetTone==='orange'?'예산 증액 검토':'현 예산 수준 점검';
 
-  const cards=[
-    card('원천 데이터 최신성',`GitHub blob ${sourceProof} · ${rows.length}건 · ${yearCounts} · ${report.sheets?.length||keys.length}개 정산 시트 전수 파싱`,()=>true,'green',rows.length),
-    card('동일기간 추세',`${latest} 1~${maxMonth||'?'}월 ${currentRows.length}건 / ${wan(currentCost)} · ${previousKey||'직전연도'} 동일기간 ${previousComparableRows.length}건 / ${wan(previousComparableCost)} · 건수 ${signed(pct(currentRows.length,previousComparableRows.length))}, 비용 ${signed(pct(currentCost,previousComparableCost))}`,r=>[latest,previousKey].includes(r.yr)&&!r.is_carryover&&(!maxMonth||Number(r.month)<=maxMonth),pct(currentRows.length,previousComparableRows.length)>10?'red':'green',currentRows.length+previousComparableRows.length),
-    card('건물동 집중도',topBuilding?`${latest} ${topBuilding.name} ${topBuilding.count.toFixed(1)}환산건 · 건물동 식별 실적의 ${share(topBuilding.count,buildingTotal).toFixed(1)}% · 복수동 행은 동수로 안분`:'건물동 정보 없음',r=>r.yr===latest&&!r.is_carryover&&Boolean(topBuilding)&&getBldgFilter(topBuilding.name)(r),'orange',topBuilding?currentRows.filter(getBldgFilter(topBuilding.name)).length:0),
-    card('보수유형 집중도',topType?`${latest} ${topType.type} ${topType.count}건 · 당해 실적의 ${share(topType.count,currentRows.length).toFixed(1)}% · ${previousKey||'직전연도'} 동일기간 ${previousTopTypeCount}건 대비 ${signed(pct(topType.count,previousTopTypeCount))}`:'분류 가능한 보수유형 없음',r=>r.yr===latest&&!r.is_carryover&&Boolean(topType)&&(r.types||[]).includes(topType.type),'orange',topType?.count||0),
-    card('반복 보수 호실·구역',topRoom?`${latest} 반복 2회 이상 ${repeatedRooms.length}개 호실·구역 · 최다 ${topRoom.key} ${topRoom.count}회 · 동일 원인인지 현장 이력 대조 필요`:'동일 호실·구역 2회 이상 반복 기록 없음',r=>r.yr===latest&&!r.is_carryover&&repeatedRoomKeys.has(roomLocationKey(r)),topRoom?'red':'green',repeatedRooms.reduce((sum,x)=>sum+x.count,0)),
-    card('월별 수요·비용 피크',peakMonth?`${latest} 건수 피크 ${peakMonth.month}월 ${peakMonth.count}건 · 비용 피크 ${peakCostMonth.month}월 ${wan(peakCostMonth.cost)} · 건수와 비용 피크 ${peakMonth.month===peakCostMonth.month?'일치':'불일치'}`:'유효한 월별 실적 없음',r=>r.yr===latest&&!r.is_carryover&&[peakMonth?.month,peakCostMonth?.month].includes(Number(r.month)),'blue',(peakMonth?.count||0)+(peakCostMonth?.month===peakMonth?.month?0:peakCostMonth?.count||0)),
-    card('작업 공수 강도',`${latest} 건당 평균 ${avgHours.toFixed(1)}시간 · ${previousKey||'직전연도'} 동일기간 ${prevAvgHours.toFixed(1)}시간 대비 ${signed(pct(avgHours,prevAvgHours))} · 상위 10% 기준 ${highEffortThreshold.toFixed(1)}시간 이상 ${highEffortRows.length}건`,r=>r.yr===latest&&!r.is_carryover&&(Number(r.total_h)||0)>=highEffortThreshold,'orange',highEffortRows.length),
-    card('비용 구조',`${latest} 당해 실적 ${wan(currentCost)} 중 노무 ${wan(laborCost)}(${share(laborCost,currentCost).toFixed(1)}%) · 자재 ${wan(materialCost)}(${share(materialCost,currentCost).toFixed(1)}%) · 출장·부대 ${wan(fixedCost)}(${share(fixedCost,currentCost).toFixed(1)}%)`,r=>r.yr===latest&&!r.is_carryover,'blue',currentRows.length),
-    card('자재 비용 동인',topMaterial?`${latest} 추정 자재비 최대 항목 ${topMaterial.def.label} ${topMaterial.quantity.toLocaleString()}${topMaterial.def.unit} · 약 ${wan(topMaterial.cost)} · 원천 수량×모델 단가 기준`:'수량이 입력된 표준 자재 없음',r=>r.yr===latest&&!r.is_carryover&&Boolean(topMaterial)&&(Number(r.mats?.[topMaterial.def.storageKey])||0)>0,'blue',topMaterial?currentRows.filter(r=>(Number(r.mats?.[topMaterial.def.storageKey])||0)>0).length:0),
-    card('전년도 이월 정산',`${latest} 이월 ${carryoverRows.length}건 / ${wan(calculateXlsbCostContribution(carryoverRows,false))} · 월별 추세에서 제외하고 연간 정산에 1회만 반영`,r=>r.yr===latest&&r.is_carryover,carryoverRows.length?'orange':'green',carryoverRows.length),
-    card('O열 네고 검토',`전체 ${negotiationRows.length}건 · 공란 ${negotiationBlank}건 · 숫자 0 ${negotiationZero}건 · 청구 누락·무상·협의 여부 확인 전에는 절감액으로 확정하지 않음`,r=>r.negotiation_candidate,negotiationRows.length?'orange':'green',negotiationRows.length),
-    card('서명·청구 교차검증',`일치 ${matchRows.length}/${rows.length}건(${share(matchRows.length,rows.length).toFixed(1)}%) · 검토 대상 ${mismatchRows.length}건 · ${latest} 연환산 환산액 차이 ${latestGap>=0?'+':''}${wan(latestGap)}(시공사-관리소)`,r=>!['match','merged_claim_shared'].includes(r.diff_category),mismatchRows.length?'orange':'green',mismatchRows.length),
-    card('계절성·연간 추정',`${latest} ${formatSeasonalityDecision(season)} · 연간 ${Number(metric.projectedCnt||0)}건 / ${wan(metric.projectedAdminCost)}${seasonalPeak?' · 잔여월 최대 가중 '+seasonalPeak.month+'월 '+seasonalPeak.factor.toFixed(4):''}`,r=>r.yr===latest,'blue',currentRows.length+carryoverRows.length),
-    card('다음 연도 예산 범위',`${model.latestYear+1}년 기준 ${model.totalPred27}건 / ${model.cost27TotalWan.toLocaleString()}만원 · 건수 시나리오 ±10% 시 ${lowScenario.toLocaleString()}~${highScenario.toLocaleString()}만원 · 증가율 ${(model.countGrowthRate*100).toFixed(1)}%, 물가 ${(model.inflationRate*100).toFixed(1)}%는 가정`,r=>r.yr===latest,'blue',currentRows.length+carryoverRows.length),
-    card('원천 품질·해석 한계',`${warnings.length}개 경고 · ${notices.length}개 알림 · ${warnings.length?warnings.join(' / '):'필수 구조 오류 없음'} · 빈 월은 0수요로 확정하지 않고 빈도만으로 구조적 위험을 단정하지 않음`,r=>!r.date||!r.content||r.contractor_source_state==='invalid','red',warnings.length)
+  const decision=(question,title,headline,body,points,action,filter,tone='blue',evidenceCount=0)=>({
+    question,title,headline,body:[headline,body,'근거: '+points.join(' / '),'권고: '+action].join(' · '),detail:body,points,action,filter,tone,evidenceCount
+  });
+
+  const costDriverRows=currentRows.filter(r=>(topType&&(r.types||[]).includes(topType.type))||(topBuilding&&getBldgFilter(topBuilding.name)(r))||repeatedRoomKeys.has(roomLocationKey(r))||((Number(r.total_h)||0)>=highEffortThreshold&&highEffortThreshold>0));
+  const settlementRows=latestRows.filter(r=>r.is_carryover||r.negotiation_candidate||!['match','merged_claim_shared'].includes(r.diff_category)||!r.date||!r.content||r.contractor_source_state==='invalid');
+  const decisions=[
+    decision(
+      '질문 1 · 연말까지 얼마를 추가 확보해야 하는가?',
+      '연말 예산 확보',
+      `${latest} 연간 ${wan(projectedCost)} 전망, 현재 집행 후 ${wan(remainingCost)}가 남아 있습니다.`,
+      `현재 누적 집행은 ${wan(actualCost)}로 연간 전망의 ${executionRate.toFixed(1)}%입니다. 달력 진행률 ${calendarRate.toFixed(1)}%보다 ${Math.abs(executionRate-calendarRate).toFixed(1)}%p ${executionRate>=calendarRate?'빠릅니다':'낮습니다'}. ${formatSeasonalityDecision(season)}을 같은 산식으로 KPI와 잔여월 차트에 적용했습니다.`,
+      [
+        `당해 실적 ${wan(currentCost)} + 이월 ${wan(carryoverCost)}`,
+        largestForecastMonth?`잔여월 최대 ${largestForecastMonth.month}월 약 ${largestForecastMonth.cost.toLocaleString()}만원`:'잔여월 예측 없음',
+        `${model.latestYear+1}년 기준 ${model.cost27TotalWan.toLocaleString()}만원 · ±10% ${lowScenario.toLocaleString()}~${highScenario.toLocaleString()}만원`
+      ],
+      `연말 가용예산으로 ${wan(remainingCost)}를 우선 확보하고, ${largestForecastMonth?largestForecastMonth.month+'월 '+largestForecastMonth.cost.toLocaleString()+'만원':'잔여월'}을 월별 자금계획의 최고 구간으로 관리하십시오.`,
+      r=>r.yr===latest,
+      budgetTone,
+      latestRows.length
+    ),
+    decision(
+      '질문 2 · 비용은 왜 늘었고, 단가 문제인가 물량 문제인가?',
+      '비용 증가 원인',
+      `${previousKey||'직전연도'} 동일기간 대비 비용 ${signed(samePeriodCostGrowth)}, 건수 ${signed(samePeriodCountGrowth)}입니다.`,
+      `동일기간 비용 차이 ${signedWan(costDelta)}를 분해하면 작업량 영향은 약 ${signedWan(volumeEffect)}, 건당 단가·작업구성 영향은 약 ${signedWan(unitMixEffect)}입니다. 건당 비용은 ${wan(previousUnitCost)}에서 ${wan(currentUnitCost)}로 ${signed(unitCostGrowth)} 변해, 현재 증가는 ${Math.abs(volumeEffect)>=Math.abs(unitMixEffect)?'단가보다 작업량 증가가 주원인':'작업량보다 단가·작업구성 변화가 주원인'}입니다.`,
+      [
+        topType?`${topType.type} ${topType.count}건 · 동일기간 ${previousTopTypeCount}건 대비 ${signed(pct(topType.count,previousTopTypeCount))}`:'주요 공종 자료 부족',
+        topBuilding?`${topBuilding.name} ${topBuilding.count.toFixed(1)}환산건 · 식별 건의 ${share(topBuilding.count,buildingTotal).toFixed(1)}%`:'건물동 자료 부족',
+        `비용 구성: 노무 ${share(laborCost,currentCost).toFixed(1)}% · 자재 ${share(materialCost,currentCost).toFixed(1)}% · 부대 ${share(fixedCost,currentCost).toFixed(1)}%`
+      ],
+      `${Math.abs(volumeEffect)>=Math.abs(unitMixEffect)?'예산 설명의 중심을 단가 인상보다 작업 발생량과 반복 수요에 두고':'고비용 작업의 공수·자재·작업범위를 우선 대조하고'} 상위 공종과 집중 건물동의 원인을 분리해 관리하십시오.`,
+      r=>[latest,previousKey].includes(r.yr)&&!r.is_carryover&&(!maxMonth||Number(r.month)<=maxMonth),
+      (samePeriodCostGrowth??0)>20?'red':'orange',
+      currentRows.length+previousComparableRows.length
+    ),
+    decision(
+      '질문 3 · 어디를 먼저 통제해야 비용이 반복되지 않는가?',
+      '통제 우선순위',
+      topRoom?`반복 보수 ${repeatedRooms.length}개 구역 중 ${topRoom.key}가 ${topRoom.count}회로 가장 많습니다.`:'동일 위치 반복 보수는 확인되지 않았습니다.',
+      `건당 평균 공수는 ${avgHours.toFixed(1)}시간으로 직전 동일기간 ${prevAvgHours.toFixed(1)}시간 대비 ${signed(pct(avgHours,prevAvgHours))}입니다. 상위 10% 고공수 작업 ${highEffortRows.length}건은 개별 작업범위와 완결 여부를 확인해야 합니다. 빈도만으로 노후나 구조 결함을 단정하지 않고 반복 원인과 임시 보수 여부를 현장 이력으로 대조합니다.`,
+      [
+        topRoom?`최다 반복 ${topRoom.key} ${topRoom.count}회`:'반복 구역 없음',
+        `고공수 기준 ${highEffortThreshold.toFixed(1)}시간 이상 ${highEffortRows.length}건`,
+        topMaterial?`최대 자재비 동인 ${topMaterial.def.label} ${topMaterial.quantity.toLocaleString()}${topMaterial.def.unit} · 약 ${wan(topMaterial.cost)}`:'표준 자재 수량 없음'
+      ],
+      `반복 구역과 상위 공종을 묶어 원인·재시공·임시 보수 여부를 확인하고, 고공수 ${highEffortRows.length}건은 작업지시와 완료 증빙을 표본 점검하십시오.`,
+      r=>r.yr===latest&&!r.is_carryover&&costDriverRows.includes(r),
+      topRoom||highEffortRows.length?'orange':'green',
+      costDriverRows.length
+    ),
+    decision(
+      '질문 4 · 비용 결재 전에 어떤 증빙을 닫아야 하는가?',
+      '정산·데이터 신뢰도',
+      `${latest} O열 네고 검토 ${currentNegotiationRows.length}건, 서명·청구 검토 ${currentMismatchRows.length}건, 이월 ${carryoverRows.length}건입니다.`,
+      `O열 공란·0은 절감 확정액이 아니라 청구 누락·무상·협의 완료 여부를 확인할 대상입니다. 해당 기록은 관리소 기준 ${reviewHours.toFixed(1)}시간, 산식 비용 ${wan(reviewCost)} 규모입니다. 이월은 월별 추세에서 제외하고 연간 정산에 한 번만 포함했습니다. 원천 검증은 ${warnings.length}개 경고와 ${notices.length}개 알림이 있어 “${confidenceLabel}” 상태입니다.`,
+      [
+        `O열 공란 ${negotiationBlank}건 · 숫자 0 ${negotiationZero}건`,
+        `서명·청구 일치 ${currentMatchRows.length}/${currentRows.length}건 · 연환산 차이 ${signedWan(latestGap)}`,
+        `GitHub blob ${sourceProof} · 경고 ${warnings.length}개 · 알림 ${notices.length}개`
+      ],
+      `결재 전에 O열 ${currentNegotiationRows.length}건을 누락·무상·협의 완료로 구분하고, 이월 ${carryoverRows.length}건과 원천 경고 ${warnings.length}건의 증빙을 별도 확인하십시오.`,
+      r=>r.yr===latest&&settlementRows.includes(r),
+      confidenceTone,
+      settlementRows.length
+    )
   ];
 
-  const riskCards=[cards[2],cards[4],cards[3],cards[10],cards[11],cards[14]];
+  const simpleCard=(title,body,filter,tone,evidenceCount)=>({title,body,filter,tone,evidenceCount});
+  const riskCards=[
+    simpleCard('반복 보수 위험',decisions[2].headline,r=>r.yr===latest&&!r.is_carryover&&repeatedRoomKeys.has(roomLocationKey(r)),topRoom?'red':'green',repeatedRooms.reduce((sum,x)=>sum+x.count,0)),
+    simpleCard('집중 건물동',topBuilding?`${topBuilding.name} ${topBuilding.count.toFixed(1)}환산건 · 식별 실적의 ${share(topBuilding.count,buildingTotal).toFixed(1)}%`:'건물동 자료 부족',r=>r.yr===latest&&!r.is_carryover&&Boolean(topBuilding)&&getBldgFilter(topBuilding.name)(r),'orange',topBuilding?currentRows.filter(getBldgFilter(topBuilding.name)).length:0),
+    simpleCard('정산 확인 대상',`O열 ${currentNegotiationRows.length}건 · 서명·청구 검토 ${currentMismatchRows.length}건 · 확정 절감액 아님`,r=>r.yr===latest&&(r.negotiation_candidate||!['match','merged_claim_shared'].includes(r.diff_category)),'orange',settlementRows.length),
+    simpleCard('원천 신뢰도',`${confidenceLabel} · 경고 ${warnings.length}개 · GitHub blob ${sourceProof}`,r=>r.yr===latest&&(!r.date||!r.content||r.contractor_source_state==='invalid'),confidenceTone,warnings.length)
+  ];
+
   const roadmap=rows.length ? [
-    ['1단계','원천 예외 정리',warnings.length?warnings.length+'개 경고':'전체 원천','작업일·O열 비수치·필수값을 원본에서 확인하고 정정 이력을 남김','다음 원본 갱신 전',warnings.length?'높음':'모니터링'],
-    ['2단계','집중 건물동 현장점검',topBuilding?.name||'건물동 미상',topBuilding?`${topBuilding.count.toFixed(1)}환산건의 공종·호실·재발 원인을 묶어 점검`:'건물동 표준 표기 보완','다음 정기점검',topBuilding?'높음':'중간'],
-    ['3단계','반복 호실 원인분석',topRoom?.key||'반복 호실 없음',topRoom?`${topRoom.count}회 기록의 동일 원인·임시보수 여부와 완결 상태 확인`:'신규 반복 발생을 월별 감시','다음 현장점검',topRoom?'높음':'모니터링'],
-    ['4단계','상위 공종 예방계획',topType?.type||'분류자료 부족',topType?`${latest} ${topType.count}건의 자재·작업 표준과 예방 교체 주기 검토`:'작업내용 분류 품질 보완','분기 계획',topType?'중간':'모니터링'],
-    ['5단계','네고 후보 정산대조','O열 공란·0 '+negotiationRows.length+'건',`공란 ${negotiationBlank}건·0 ${negotiationZero}건을 청구 누락/무상/협의 완료로 구분`,'다음 정산',negotiationRows.length?'높음':'모니터링'],
-    ['6단계','피크월 자원배치',peakMonth?peakMonth.month+'월':'관측자료 부족',peakMonth?`${peakMonth.count}건과 비용 ${wan(peakMonth.cost)} 기준으로 인력·자재 선확보`:'월별 관측범위 확보','차기 운영계획',peakMonth?'중간':'모니터링'],
-    ['7단계','이월 분리정산',carryoverRows.length+'건',`${wan(calculateXlsbCostContribution(carryoverRows,false))}을 당해 실적 연환산과 분리하여 1회만 정산`,'연말 결산',carryoverRows.length?'중간':'모니터링'],
-    ['8단계','예산 시나리오 확정',String(model.latestYear+1)+'년',`기준 ${model.cost27TotalWan.toLocaleString()}만원, 건수 ±10% ${lowScenario.toLocaleString()}~${highScenario.toLocaleString()}만원 범위 검토`,'예산 편성','중간']
+    ['1','연말 예산 확보',wan(remainingCost),`잔여월 가용예산을 확보하고 ${largestForecastMonth?largestForecastMonth.month+'월 '+largestForecastMonth.cost.toLocaleString()+'만원':'월별 집행'}을 집중 관리`,'즉시',budgetTone==='red'?'높음':'중간'],
+    ['2','증가 원인 관리',`물량 ${signed(samePeriodCountGrowth)} · 단가 ${signed(unitCostGrowth)}`,`상위 공종 ${topType?.type||'미상'}과 ${topBuilding?.name||'집중동 미상'}의 발생 원인을 작업량·단가로 분리`,'월간 보고','높음'],
+    ['3','반복·고공수 점검',topRoom?.key||'반복 구역 없음',`반복 구역 ${repeatedRooms.length}개와 고공수 ${highEffortRows.length}건의 원인·완결 증빙 점검`,'다음 현장점검',topRoom?'높음':'중간'],
+    ['4','정산 증빙 마감',`O열 ${currentNegotiationRows.length}건`,`공란 ${negotiationBlank}건·0 ${negotiationZero}건과 이월 ${carryoverRows.length}건을 결재 전 분류`,'결재 전',currentNegotiationRows.length?'높음':'모니터링'],
+    ['5','다음 연도 예산안',String(model.latestYear+1)+'년',`기준 ${model.cost27TotalWan.toLocaleString()}만원, 물량 ±10% ${lowScenario.toLocaleString()}~${highScenario.toLocaleString()}만원 시나리오 확정`,'예산 편성','중간']
   ] : [];
-  return {cards,riskCards,roadmap,generatedAt:new Date().toISOString(),sourceProof};
+
+  const executive={
+    kicker:'비용 집행 담당자가 답해야 할 4가지 질문',
+    title:`${latest} 연간 집행비 ${wan(projectedCost)} 전망 · ${budgetLabel}`,
+    summary:`현재 ${maxMonth||'?'}월까지 ${wan(actualCost)}를 집행했습니다. 동일기간 비용은 ${signed(samePeriodCostGrowth)}지만 건당 비용은 ${signed(unitCostGrowth)}여서, 증가의 핵심은 ${Math.abs(volumeEffect)>=Math.abs(unitMixEffect)?'단가보다 작업량':'작업량보다 단가·작업구성'}입니다. 아래 네 질문의 결론과 조치만 우선 확인하십시오.`,
+    status:budgetLabel,
+    tone:budgetTone,
+    metrics:[
+      {label:'누적 집행',value:wan(actualCost),note:`연간 전망의 ${executionRate.toFixed(1)}%`},
+      {label:'연간 전망',value:wan(projectedCost),note:`${previousKey||'직전연도'} 연간 대비 ${signed(annualForecastGrowth)}`},
+      {label:'잔여 필요액',value:wan(remainingCost),note:largestForecastMonth?`최대 ${largestForecastMonth.month}월 ${largestForecastMonth.cost.toLocaleString()}만원`:'잔여월 없음'},
+      {label:`${model.latestYear+1}년 기준안`,value:model.cost27TotalWan.toLocaleString()+'만원',note:`물량 ±10% ${lowScenario.toLocaleString()}~${highScenario.toLocaleString()}만원`}
+    ],
+    source:`원천 blob ${sourceProof} · ${rows.length.toLocaleString()}건 · ${confidenceLabel}`
+  };
+  return {executive,decisions,cards:decisions,riskCards,roadmap,generatedAt:new Date().toISOString(),sourceProof};
 }
 
 function renderEvidenceInsights() {
   const model=buildEvidenceInsights(); window.insightModel=model;
-  for(const id of ['insights-top-cards-container','risk-top-cards-container']) {
-    const container=document.getElementById(id); if(!container)continue;
-    container.replaceChildren();
-    for(const insight of (id.startsWith('risk')?model.riskCards:model.cards)) {
+  const container=document.getElementById('insights-top-cards-container');
+  if(container){
+    container.replaceChildren();container.className='decision-brief';
+    const el=(tag,className,text)=>{const node=document.createElement(tag);if(className)node.className=className;if(text!=null)node.textContent=text;return node;};
+    const hero=el('section','executive-briefing');
+    const heroHead=el('div','executive-head');
+    const heroCopy=el('div');
+    heroCopy.append(el('div','executive-kicker',model.executive.kicker),el('h2','executive-title',model.executive.title),el('div','executive-summary',model.executive.summary));
+    heroHead.append(heroCopy,el('div','executive-status '+model.executive.tone,model.executive.status));
+    const metricGrid=el('div','executive-metrics');
+    for(const metric of model.executive.metrics){const item=el('div','executive-metric');item.append(el('span','',metric.label),el('strong','',metric.value),el('small','',metric.note));metricGrid.append(item);}
+    hero.append(heroHead,metricGrid);
+    const list=el('div','decision-list');
+    model.decisions.forEach((insight,index)=>{
+      const section=el('section','decision-insight '+(insight.tone||'blue'));
+      const number=el('div','decision-index',String(index+1).padStart(2,'0'));
+      const copy=el('div','decision-copy');
+      copy.append(el('div','decision-question',insight.question),el('h3','decision-headline',insight.headline),el('div','decision-body',insight.detail));
+      const evidence=el('div','decision-evidence');
+      for(const point of insight.points)evidence.append(el('div','',point));
+      copy.append(evidence);
+      const action=el('aside','decision-action');
+      action.append(el('div','decision-action-label','이 질문에 대한 권고'),el('p','',insight.action));
+      const button=el('button','decision-evidence-btn',`원천 증빙 ${Number(insight.evidenceCount||0).toLocaleString()}건 확인`);
+      button.type='button';button.onclick=()=>openModal(insight.title+' 증빙',insight.filter||(()=>true));action.append(button);
+      section.append(number,copy,action);list.append(section);
+    });
+    container.append(hero,list,el('div','decision-source-note',model.executive.source));
+  }
+  const riskContainer=document.getElementById('risk-top-cards-container');
+  if(riskContainer){
+    riskContainer.replaceChildren();
+    for(const insight of model.riskCards){
       const insightCard=document.createElement('div');insightCard.className='insight '+(insight.tone||'blue');
       const heading=document.createElement('div');heading.className='i-title';heading.textContent=insight.title;
       const content=document.createElement('div');content.className='i-text';content.textContent=insight.body;
       const evidence=document.createElement('div');evidence.style.cssText='font-size:10px;color:#64748b;margin-top:8px;';evidence.textContent='연계 증빙 '+Number(insight.evidenceCount||0).toLocaleString()+'건 · 클릭하여 원천 확인';
-      insightCard.append(heading,content,evidence);insightCard.onclick=()=>openModal(insight.title+' 증빙',insight.filter||(()=>true));container.append(insightCard);
+      insightCard.append(heading,content,evidence);insightCard.onclick=()=>openModal(insight.title+' 증빙',insight.filter||(()=>true));riskContainer.append(insightCard);
     }
   }
   const tbody=document.getElementById('roadmap-tbody');if(tbody){tbody.replaceChildren();for(const row of model.roadmap){const tr=document.createElement('tr');for(const v of row){const td=document.createElement('td');td.textContent=v;tr.append(td);}tbody.append(tr);}}
