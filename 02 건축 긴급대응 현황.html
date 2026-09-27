@@ -2348,9 +2348,53 @@ window.downloadRawXlsx = async function() {
 };
 
 
-const GITHUB_XLSB_URLS = [
-  "https://raw.githubusercontent.com/JongGunelee/wyggkr04/main/RawData/%EC%9E%91%EC%97%85%EC%9C%A0%ED%98%95%EB%B3%84/021%20%EA%B4%80%EB%A6%AC%EB%8C%80%EC%9E%A5_(%EA%B1%B4%EC%B6%95%20%EA%B8%B4%EA%B8%89%EB%8C%80%EC%9D%91).xlsb",
-];
+const GITHUB_XLSB_SOURCE = Object.freeze({
+  owner: 'JongGunelee',
+  repo: 'wyggkr04',
+  branch: 'main',
+  directory: 'RawData/작업유형별',
+  preferredFilename: '021 관리대장_(건축 긴급대응).xlsb'
+});
+
+function encodeGitHubPath(path) {
+  return String(path).split('/').map(segment => encodeURIComponent(segment)).join('/');
+}
+
+function buildRawGithubUrl(filename = GITHUB_XLSB_SOURCE.preferredFilename) {
+  const source = GITHUB_XLSB_SOURCE;
+  return `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${source.branch}/${encodeGitHubPath(source.directory + '/' + filename)}`;
+}
+
+const GITHUB_XLSB_URLS = [buildRawGithubUrl()];
+
+async function resolveLatestGithubXlsbSource() {
+  const source = GITHUB_XLSB_SOURCE;
+  const apiUrl = `https://api.github.com/repos/${source.owner}/${source.repo}/contents/${encodeGitHubPath(source.directory)}?ref=${encodeURIComponent(source.branch)}`;
+  try {
+    const response = await fetch(apiUrl + '&t=' + Date.now(), {
+      cache: 'no-store',
+      headers: { Accept: 'application/vnd.github+json' }
+    });
+    if (!response.ok) throw Error('GitHub Contents API HTTP ' + response.status);
+    const entries = await response.json();
+    if (!Array.isArray(entries)) throw Error('GitHub 폴더 응답 형식 오류');
+    const xlsbFiles = entries.filter(item => item?.type === 'file' && /\.xlsb$/i.test(item.name || ''));
+    const exact = xlsbFiles.find(item => String(item.name).normalize('NFC') === source.preferredFilename.normalize('NFC'));
+    const aliases = xlsbFiles.filter(item => /^021\s+.*건축\s*긴급대응/i.test(String(item.name).normalize('NFC')));
+    const selected = exact || (aliases.length === 1 ? aliases[0] : null);
+    if (!selected) throw Error(aliases.length > 1 ? '021 건축 긴급대응 XLSB 후보가 여러 개입니다.' : '021 건축 긴급대응 XLSB를 찾지 못했습니다.');
+    return {
+      rawUrl: selected.download_url || buildRawGithubUrl(selected.name),
+      gitSha: String(selected.sha || ''),
+      path: String(selected.path || source.directory + '/' + selected.name),
+      size: Number(selected.size || 0),
+      resolvedAt: new Date().toISOString()
+    };
+  } catch (error) {
+    console.warn('GitHub 최신 blob 확인 실패, 고정 원본 경로로 직접 검증합니다.', error);
+    return { rawUrl: GITHUB_XLSB_URLS[0], gitSha: '', path: source.directory + '/' + source.preferredFilename, size: 0, resolvedAt: new Date().toISOString(), metadataError: error.message };
+  }
+}
 
 // XLSB 자재 열은 연도별로 표기가 다르므로, 표시용 이름이 아니라 열 머리글의 의미로 정규화한다.
 const MATERIAL_DEFINITIONS = [
@@ -2568,9 +2612,10 @@ function updateRawIntegrityStatus(report) {
   const yearCounts = Object.entries(report.perYear || {}).sort((a, b) => a[0].localeCompare(b[0], 'ko'))
     .map(item => item[0] + ' ' + item[1] + '건').join(' · ');
   const calculationOk = Boolean(report.calculationOk);
+  const sourceProof=report.sourceGitBlobSha ? ' · blob '+String(report.sourceGitBlobSha).slice(0,8) : (report.sourceSha256 ? ' · SHA '+String(report.sourceSha256).slice(0,8) : '');
   el.textContent = sourceLabel + ' ' + report.recordCount + '건 전수대조 · '
     + (calculationOk ? '비용 산식 통과' : '비용 계산 점검 필요')
-    + (warningCount ? ' · 원천 주의 ' + warningCount + '건' : ' · 원천 오류 없음');
+    + (warningCount ? ' · 원천 주의 ' + warningCount + '건' : ' · 원천 오류 없음') + sourceProof;
   el.style.color = report.source === 'cache' ? '#fb923c' : (calculationOk ? (warningCount ? '#fbbf24' : '#4ade80') : '#f87171');
   const costPill = document.getElementById('raw-cost-integrity-pill');
   if (costPill) {
@@ -2963,29 +3008,38 @@ function parseXlsbWorkbook(wb) {
 }
 
 let sourceRequestRevision=0;
-async function fetchAndInitializeData(forceReload = false) {
+async function fetchAndInitializeData(forceReload = false, descriptorOverride = null) {
   const revision=++sourceRequestRevision;
   const loader=document.getElementById('github-sync-loader');
   if(loader){loader.style.display='flex';loader.style.opacity='1';loader.style.pointerEvents='auto';}
-  updateLoaderStatus('원천 XLSB 동기화 중','파일 구조와 데이터 검증');
+  updateLoaderStatus('원천 XLSB 동기화 중','GitHub 최신 blob 확인 · 파일 구조와 데이터 검증');
   let failure=new Error('사용 가능한 원천 XLSB 없음');
   try {
-    for(const rawUrl of GITHUB_XLSB_URLS) {
+    const resolved=descriptorOverride || await resolveLatestGithubXlsbSource();
+    const candidates=[resolved,...GITHUB_XLSB_URLS.map(rawUrl=>({rawUrl,gitSha:'',path:rawUrl,size:0}))]
+      .filter((item,index,list)=>item?.rawUrl && list.findIndex(other=>other.rawUrl===item.rawUrl)===index);
+    for(const source of candidates) {
+      const rawUrl=source.rawUrl;
       try {
-        const response=await fetch(rawUrl+(rawUrl.includes('?')?'&':'?')+'t='+Date.now(),{cache:'no-store'});
+        const separator=rawUrl.includes('?')?'&':'?';
+        const cacheToken=source.gitSha ? 'source_sha='+encodeURIComponent(source.gitSha) : 't='+Date.now();
+        const response=await fetch(rawUrl+separator+cacheToken,{cache:'no-store'});
         if(!response.ok)throw Error('HTTP '+response.status);
         let buffer=await response.arrayBuffer();
         const pointer=buffer.byteLength<1024 ? new TextDecoder().decode(buffer) : '';
+        let wasLfs=false;
         if(pointer.startsWith('version https://git-lfs.github.com/spec/v1')) {
+          wasLfs=true;
           const oid=pointer.match(/oid sha256:([a-f0-9]{64})/);
           const expectedSize=Number(pointer.match(/size (\d+)/)?.[1]);
-          const mediaUrl=GITHUB_XLSB_URLS.find(url=>url.startsWith('https://raw.githubusercontent.com/')).replace('raw.githubusercontent.com/','media.githubusercontent.com/media/');
-          const media=await fetch(mediaUrl+'?t='+Date.now(),{cache:'no-store'});
+          const mediaUrl=rawUrl.replace('raw.githubusercontent.com/','media.githubusercontent.com/media/');
+          const media=await fetch(mediaUrl+(mediaUrl.includes('?')?'&':'?')+cacheToken,{cache:'no-store'});
           if(!media.ok)throw Error('Git LFS 파일 HTTP '+media.status);
           buffer=await media.arrayBuffer();
           const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('');
           if(!oid || digest!==oid[1] || buffer.byteLength!==expectedSize)throw Error('Git LFS SHA-256 또는 크기 불일치');
         }
+        if(source.size && !wasLfs && buffer.byteLength!==source.size)throw Error(`GitHub blob 크기 불일치: ${buffer.byteLength} / ${source.size}`);
         const wb=XLSX.read(new Uint8Array(buffer),{type:'array',cellDates:false,cellStyles:false});
         if(!wb.SheetNames.some(name=>/\d{2,4}년?/.test(name.trim())))throw Error('정산 연도 시트 없음');
         const records=parseXlsbWorkbook(wb);
@@ -2995,10 +3049,14 @@ async function fetchAndInitializeData(forceReload = false) {
         let hash='';
         try {hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',buffer))).map(x=>x.toString(16).padStart(2,'0')).join('').toUpperCase();}catch(e){}
         if(revision!==sourceRequestRevision)return false;
-        report.source=rawUrl;
+        report.source=source.path || rawUrl;
+        report.sourceUrl=rawUrl;
+        report.sourceGitBlobSha=source.gitSha || '';
         report.sourceSha256=hash;
+        report.sourceResolvedAt=source.resolvedAt || new Date().toISOString();
         window._rawXlsbWorkbook=wb;window._rawXlsbArrayBuffer=buffer;
-        window._rawXlsbSourceUrl=rawUrl;window.lastXlsbSourceHash=hash;
+        window._rawXlsbSourceUrl=rawUrl;window._rawXlsbSourcePath=report.source;
+        window._rawXlsbGitBlobSha=report.sourceGitBlobSha;window.lastXlsbSourceHash=hash;
         window.rawIntegrityReport=report;window.sourceFresh=true;
         rebuildDashboard(records);
         updateRawIntegrityStatus(report);
@@ -3007,7 +3065,7 @@ async function fetchAndInitializeData(forceReload = false) {
     }
     if(revision!==sourceRequestRevision)return false;
     window.sourceFresh=false;
-    window._rawXlsbWorkbook=null;window._rawXlsbArrayBuffer=null;window.lastXlsbSourceHash='';
+    window._rawXlsbWorkbook=null;window._rawXlsbArrayBuffer=null;window.lastXlsbSourceHash='';window._rawXlsbGitBlobSha='';
     const records=[];
     window.rawIntegrityReport={source:'github-error',ok:false,calculationOk:false,recordCount:0,warnings:['최신 GitHub XLSB 동기화 실패. 이전 수치는 표시하지 않습니다: '+failure.message]};
     rebuildDashboard(records);updateRawIntegrityStatus(window.rawIntegrityReport);
@@ -3039,12 +3097,47 @@ window.forceRefreshGitHubData = async function() {
   }
 };
 
-// 브라우저 로딩 완료 시 자동 실행
+let sourceRefreshCheckInFlight=false;
+let lastSourceRefreshCheckAt=0;
+async function checkForGithubSourceUpdate(forceCheck=false) {
+  const now=Date.now();
+  if(sourceRefreshCheckInFlight || (!forceCheck && now-lastSourceRefreshCheckAt<60000))return false;
+  sourceRefreshCheckInFlight=true;lastSourceRefreshCheckAt=now;
+  try {
+    const latest=await resolveLatestGithubXlsbSource();
+    if(!latest.gitSha)return false;
+    const current=String(window._rawXlsbGitBlobSha||'');
+    if(current===latest.gitSha && window.sourceFresh)return false;
+    console.info('GitHub XLSB 변경 감지', {previous:current||'없음',latest:latest.gitSha,path:latest.path});
+    return await fetchAndInitializeData(true,latest);
+  } catch(error) {
+    console.warn('GitHub XLSB 변경 확인 실패',error);
+    return false;
+  } finally {
+    sourceRefreshCheckInFlight=false;
+  }
+}
+window.checkForGithubSourceUpdate=checkForGithubSourceUpdate;
+
+function startGithubSourceWatcher() {
+  if(window._githubSourceWatcherStarted)return;
+  window._githubSourceWatcherStarted=true;
+  window.setInterval(()=>checkForGithubSourceUpdate(false),300000);
+  window.addEventListener('focus',()=>checkForGithubSourceUpdate(false),{passive:true});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkForGithubSourceUpdate(false);},{passive:true});
+}
+
+async function initializeGithubSourceData() {
+  await fetchAndInitializeData();
+  startGithubSourceWatcher();
+}
+
+// 최초 로드 후 5분 주기와 탭 복귀 시 GitHub blob SHA를 비교하여 열린 화면도 자동 갱신한다.
 if (typeof window !== 'undefined') {
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', ()=>fetchAndInitializeData());
+    document.addEventListener('DOMContentLoaded', initializeGithubSourceData);
   } else {
-    fetchAndInitializeData();
+    initializeGithubSourceData();
   }
 }
 
@@ -3203,8 +3296,24 @@ function buildSeasonalityModel(records, year, cutoff) {
       monthlyFactors[cutoff+index]=value/rawMean*factor;
     });
   }
-  const reason=!hasRemainder ? '완결 연도 또는 관측월 없음' : dataDriven ? '완결 과거 연도들의 월별 비용 비율 자동 적용' : useLegacy ? `비교 가능한 완결 연도 부족: 기준계수 ${factor.toFixed(4)} 적용${samples.length ? ', 월별 모양은 관측 연도에서 산출' : ''}` : !consistent ? '과거 연도별 증감 방향 불일치: 중립계수 적용' : Math.abs(mean-1)<0.1 ? '월평균 차이 10% 미만: 중립계수 적용' : cv>0.25 ? '연도별 비율 변동계수 25% 초과: 중립계수 적용' : '중립계수 적용';
-  return {factor,applied:hasRemainder && factor!==1,mode:dataDriven?'data':useLegacy?'legacy-fallback':'neutral',reason,samples,cutoff,year,mean,cv,monthlyFactors,rawMonthlyFactors};
+  const observedMonths=[...new Set(records.filter(r=>{
+    const y=Number(String(r.yr||'').replace(/[^0-9]/g,''));
+    const fullYear=y<100?2000+y:y;
+    const month=Number(r.month);
+    return !r.is_carryover && fullYear===year && String(r.date||'').startsWith(String(year)) && month>=1 && month<=12;
+  }).map(r=>Number(r.month)))].sort((a,b)=>a-b);
+  const completeYear=cutoff>=12;
+  const noObservation=cutoff<=0;
+  const reason=noObservation ? '관측월 없음: 연환산 및 계절 보정 불가' : completeYear ? `1~12월 관측 완료(${observedMonths.length}개 월 실적 존재): 잔여월 없음 · 연간 실적 그대로 사용` : dataDriven ? '완결 과거 연도들의 월별 비용 비율 자동 적용' : useLegacy ? `비교 가능한 완결 연도 부족: 기준계수 ${factor.toFixed(4)} 적용${samples.length ? ', 월별 모양은 관측 연도에서 산출' : ''}` : !consistent ? '과거 연도별 증감 방향 불일치: 중립계수 적용' : Math.abs(mean-1)<0.1 ? '월평균 차이 10% 미만: 중립계수 적용' : cv>0.25 ? '연도별 비율 변동계수 25% 초과: 중립계수 적용' : '중립계수 적용';
+  const mode=completeYear?'complete':noObservation?'no-observation':dataDriven?'data':useLegacy?'legacy-fallback':'neutral';
+  return {factor,applied:hasRemainder && factor!==1,mode,reason,samples,cutoff,year,observedMonths,mean,cv,monthlyFactors,rawMonthlyFactors};
+}
+
+function formatSeasonalityDecision(seasonality) {
+  const model=seasonality||{factor:1,applied:false,mode:'no-observation',reason:'근거 없음'};
+  if(model.mode==='complete')return '계절 보정 미적용 ('+model.reason+')';
+  if(model.mode==='no-observation')return model.reason;
+  return '계절계수 '+Number(model.factor||1).toFixed(4)+' '+(model.applied?'적용':'미적용')+' ('+model.reason+')';
 }
 
 function rebuildDashboard(records) {
@@ -4582,10 +4691,11 @@ function renderAuditTables() {
     const report = window.rawIntegrityReport || {};
     const parseStats = report.parseStats || {};
     const latestMetric = metrics[latestYr] || {};
-    const sourcePath = String(window._rawXlsbSourceUrl || report.source || 'GitHub XLSB');
+    const sourcePath = String(window._rawXlsbSourcePath || window._rawXlsbSourceUrl || report.source || 'GitHub XLSB');
     const shortHash = report.sourceSha256 ? String(report.sourceSha256).slice(0, 16) + '…' : '계산 중';
+    const shortBlob = report.sourceGitBlobSha ? String(report.sourceGitBlobSha).slice(0, 12) + '…' : '확인 불가';
     const findings = [
-      ['원천 고정', 'GitHub 최신 XLSB', `${sourcePath}<br>SHA-256 ${shortHash}`,
+      ['원천 고정', 'GitHub 최신 XLSB', `${sourcePath}<br>Git blob ${shortBlob}<br>SHA-256 ${shortHash}`,
         `${report.recordCount || records.length}개 원천 행과 ${(report.sheets || []).join(', ')} 시트를 직접 파싱`, '다른 저장소·내장 과거 행·브라우저 캐시로 대체하지 않음'],
       ['행 대조', '파서 ↔ 집계', `파싱 ${parseStats.parsedRows || 0}행 / 시트합계 ${report.sheetParsedRows || 0}행`,
         `중복 그룹 ${report.duplicateGroups || 0}건 · 필수값 누락 ${report.requiredMissing || 0}건`, report.calculationOk ? '비용 계산 입력과 집계 행 수 정합' : '검증 경고 확인 필요'],
@@ -7166,7 +7276,7 @@ function renderCostCorrelationAnalysis() {
   container.replaceChildren();
   const model=window.forecastModel27||buildForecastModel2027();
   const title=document.createElement('h3');title.textContent='연도별 비용 및 '+(model.latestYear+1)+'년 예측 근거';container.append(title);
-  for(const year of window.YR_KEYS||[]){const m=window.annualMetrics[year],p=document.createElement('p');p.textContent=year+' 실적 '+m.cnt+'건 / '+m.adminCost.toLocaleString()+'원 · 연간 추정 '+m.projectedCnt+'건 / '+m.projectedAdminCost.toLocaleString()+'원 · 계절계수 '+m.seasonality.factor.toFixed(4)+' ('+m.seasonality.reason+')';container.append(p);}
+  for(const year of window.YR_KEYS||[]){const m=window.annualMetrics[year],p=document.createElement('p');p.textContent=year+' 실적 '+m.cnt+'건 / '+m.adminCost.toLocaleString()+'원 · 연간 추정 '+m.projectedCnt+'건 / '+m.projectedAdminCost.toLocaleString()+'원 · '+formatSeasonalityDecision(m.seasonality);container.append(p);}
   const p=document.createElement('p');p.textContent='다음 연도 '+model.totalPred27+'건 / '+model.cost27TotalWan.toLocaleString()+'만원. 증가율 '+(model.countGrowthRate*100)+'%, 물가 '+(model.inflationRate*100)+'%는 가정이며 실적 또는 검증된 인과관계가 아닙니다.';container.append(p);
 }
 
@@ -7719,6 +7829,7 @@ const dashboardExcelExporter = {
       ["보고서 명칭", title || "긴급보수 분석 리포트"],
       ["생성 일시", this.formatDateTime()],
       ["원천 데이터 출처", `021 관리대장_(건축 긴급대응).xlsb${rangeTag}`],
+      ["Git 원본 blob SHA", integrity.sourceGitBlobSha || "GitHub API에서 확인 불가"],
       ["원천 XLSB SHA-256", integrity.sourceSha256 || "브라우저에서 해시 계산 불가"],
       ["연계 상세 증빙 건수", `${recordCount}건 (전수 누락 방지 무결성 보증)`],
       ["전수 무결성 대조", `수식 캐시 ${integrity.formulaCheckCount || 0}건 중 불일치 ${integrity.formulaCacheMismatchCount || 0}건 · 경고 ${(integrity.warnings || []).join(' / ') || '없음'} · 알림 ${(integrity.notices || []).join(' / ') || '없음'}`],
@@ -8107,10 +8218,10 @@ const dashboardExcelExporter = {
       seasonSheet.getCell(resultRow,7).value={formula:'IF(OR(B'+resultRow+'<=0,B'+resultRow+'>=12),1,IF(D'+resultRow+'<2,IF(B'+resultRow+'<=10,'+Number(COST_UNIT.legacySeasonalityFactor)+',1),IF(AND(ABS(E'+resultRow+'-1)>=0.1,F'+resultRow+'<=0.25,OR(COUNTIF('+gr+',"<1")=D'+resultRow+',COUNTIF('+gr+',">1")=D'+resultRow+')),E'+resultRow+',1)))',result:evidence.factor};
       seasonRanges[targetYear]=resultRow;
     }
-    seasonSheet.columns=[24,18,16,16,24,24,20,20,...new Array(12).fill(14),4,15,15].map(width=>({width}));
+    seasonSheet.columns=[24,18,16,16,24,24,20,20,...new Array(12).fill(14),4,15,15,58].map(width=>({width}));
     seasonSheet.views=[{state:'frozen',ySplit:3}];
-    sourceYears.forEach((year,i)=>{seasonSheet.getCell(i+4,22).value=year;seasonSheet.getCell(i+4,23).value={formula:'G'+seasonRanges[year],result:window.annualMetrics?.[latestMetricYearKey(year)]?.seasonality?.factor||1};});
-    seasonSheet.getCell('V3').value='대상 연도';seasonSheet.getCell('W3').value='적용계수';
+    sourceYears.forEach((year,i)=>{const model=window.annualMetrics?.[latestMetricYearKey(year)]?.seasonality;seasonSheet.getCell(i+4,22).value=year;seasonSheet.getCell(i+4,23).value={formula:'G'+seasonRanges[year],result:model?.factor||1};seasonSheet.getCell(i+4,24).value=formatSeasonalityDecision(model);});
+    seasonSheet.getCell('V3').value='대상 연도';seasonSheet.getCell('W3').value='계산 항등값/적용계수';seasonSheet.getCell('X3').value='적용 판단 및 근거';
     const currentYear=years[years.length-1];
     rateSheet.getCell('B15').value={formula:"IFERROR(INDEX('계절 보정'!$W$4:$W$"+(sourceYears.length+3)+",MATCH(MAX('원천 입력'!$A:$A),'계절 보정'!$V$4:$V$"+(sourceYears.length+3)+",0)),1)",result:window.annualMetrics?.[latestMetricYearKey(currentYear)]?.seasonality?.factor||1};
 
@@ -10068,8 +10179,8 @@ const dashboardExcelExporter = {
             dataStartRow: 5,
             dataEndRow: 16,
             series: isCost ? [
-              { name: latestYrStr + " 실제 집행비용", col: 2, color: "4ECB71", values: model.actualCostsWan || [] },
-              { name: latestYrStr + " 잔여월 비용 예측", col: 3, color: "F5A623", values: Array.from({length:12}, (_, i) => i >= model.maxMonth ? Math.round(model.currentYearAdminCost/model.maxMonth/10000) : null) },
+              { name: latestYrStr + " 실제 집행비용", col: 2, color: "4ECB71", values: model.monthlyActualCostWan || [] },
+              { name: latestYrStr + " 잔여월 비용 예측", col: 3, color: "F5A623", values: model.monthlyForecastCostWan || [] },
               { name: "2027년 월별 예측 비용", col: 4, color: "38BDF8", values: model.costs27Forecast || [] }
             ] : [
               { name: latestYrStr + " 실제 월별 실적", col: 2, color: "4ECB71", values: model.actualCounts || [] },
