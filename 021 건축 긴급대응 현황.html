@@ -211,6 +211,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 .executive-status.red{color:#ff8ba2;border-color:rgba(255,77,109,.45);background:rgba(255,77,109,.1);}
 .executive-status.orange{color:#ffd28b;border-color:rgba(245,166,35,.45);background:rgba(245,166,35,.1);}
 .executive-status.green{color:#8ae5a6;border-color:rgba(78,203,113,.45);background:rgba(78,203,113,.1);}
+.executive-status.blue{color:#a9bbff;border-color:rgba(108,142,245,.45);background:rgba(108,142,245,.1);}
 .executive-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:22px;position:relative;z-index:1;}
 .executive-metric{padding:13px 14px;border:1px solid rgba(148,163,184,.16);border-radius:10px;background:rgba(8,13,25,.35);}
 .executive-metric span{display:block;font-size:10px;color:#8fa0bd;margin-bottom:6px;}
@@ -1187,10 +1188,8 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
       <span style="font-size:11px;color:var(--text2);font-weight:600">연도:</span>
       <span id="modal-yr-buttons-wrap" style="display:inline-flex;gap:4px;align-items:center;">
         <button class="modal-filter-btn active" id="modal-yr-all" onclick="filterModal('yr','all',this)">전체</button>
-        <button class="modal-filter-btn" id="modal-yr-26" onclick="filterModal('yr','26년',this)">2026년</button>
-        <button class="modal-filter-btn" id="modal-yr-25" onclick="filterModal('yr','25년',this)">2025년</button>
-        <button class="modal-filter-btn" id="modal-yr-24" onclick="filterModal('yr','24년',this)">2024년</button>
       </span>
+      <span id="modal-year-scope-note" style="font-size:10.5px;color:#71809c;"></span>
       <span style="font-size:11px;color:var(--text2);font-weight:600;margin-left:8px;">근로자 산정기준:</span>
       <button class="modal-filter-btn" id="btn-wf-diff" onclick="filterWorkerModal('diff',this)" style="color:#ff7597;font-weight:700;">⚠️ 불일치</button>
       <button class="modal-filter-btn" id="btn-wf-match" onclick="filterWorkerModal('match',this)" style="color:#4ecb71;">✓ 일치</button>
@@ -3516,7 +3515,6 @@ function buildEvidenceInsights() {
   const confidenceTone=!report.calculationOk||warnings.length>3?'red':warnings.length?'orange':'green';
   const confidenceLabel=confidenceTone==='green'?'원천 검증 양호':confidenceTone==='orange'?'조건부 신뢰 · 예외 확인 필요':'결재 전 원천 보완 필요';
   const budgetTone=(annualForecastGrowth??samePeriodCostGrowth??0)>20?'red':(annualForecastGrowth??samePeriodCostGrowth??0)>5?'orange':'green';
-  const budgetLabel=budgetTone==='red'?'예산 증액 압력 높음':budgetTone==='orange'?'예산 증액 검토':'현 예산 수준 점검';
 
   const decision=(question,title,headline,body,points,action,filter,tone='blue',evidenceCount=0)=>({
     question,title,headline,body:[headline,body,'근거: '+points.join(' / '),'권고: '+action].join(' · '),detail:body,points,action,filter,tone,evidenceCount
@@ -3542,7 +3540,7 @@ function buildEvidenceInsights() {
     ),
     decision(
       '질문 2 · 비용은 왜 늘었고, 단가 문제인가 물량 문제인가?',
-      '비용 증가 원인',
+      '동일기간 비용 변화 원인',
       `${previousKey||'직전연도'} 동일기간 대비 비용 ${signed(samePeriodCostGrowth)}, 건수 ${signed(samePeriodCountGrowth)}입니다.`,
       `동일기간 비용 차이 ${signedWan(costDelta)}를 분해하면 작업량 영향은 약 ${signedWan(volumeEffect)}, 건당 단가·작업구성 영향은 약 ${signedWan(unitMixEffect)}입니다. 건당 비용은 ${wan(previousUnitCost)}에서 ${wan(currentUnitCost)}로 ${signed(unitCostGrowth)} 변해, 현재 증가는 ${Math.abs(volumeEffect)>=Math.abs(unitMixEffect)?'단가보다 작업량 증가가 주원인':'작업량보다 단가·작업구성 변화가 주원인'}입니다.`,
       [
@@ -3604,7 +3602,7 @@ function buildEvidenceInsights() {
       timing:'즉시',priority:'높음',tone:budgetTone,filter:r=>r.yr===latest,evidenceCount:latestRows.length
     },
     {
-      step:'02',question:'질문 2 · 비용은 왜 늘었고 단가 문제인가 물량 문제인가?',title:'비용 증가 설명 승인',
+      step:'02',question:'질문 2 · 비용은 왜 늘었고 단가 문제인가 물량 문제인가?',title:'동일기간 비용 변화 설명 승인',
       judgment:`동일기간 비용은 ${signed(samePeriodCostGrowth)}, 건수는 ${signed(samePeriodCountGrowth)}, 건당 비용은 ${signed(unitCostGrowth)}입니다. 비용 차이 ${signedWan(costDelta)} 중 작업량 영향은 ${signedWan(volumeEffect)}, 단가·작업구성 영향은 ${signedWan(unitMixEffect)}입니다.`,
       tasks:[`월간 보고에 물량 영향 ${signedWan(volumeEffect)}과 단가·구성 영향 ${signedWan(unitMixEffect)}을 분리`,`${topType?.type||'상위 공종'} ${topType?.count||0}건의 증가 원인 확인`,`${topBuilding?.name||'집중 건물동'} 발생 건을 작업량·단가 기준으로 표본 대조`],
       completion:'두 영향의 합이 동일기간 총비용 차이와 일치하고 상위 공종·건물동 증가 원인이 원천 작업내역으로 설명되면 승인',
@@ -3635,11 +3633,11 @@ function buildEvidenceInsights() {
   const roadmap=roadmapDetailed.map(item=>[item.step,item.question,item.judgment,item.tasks.join(' / '),item.completion,item.timing,item.priority]);
 
   const executive={
-    kicker:'비용 집행 담당자가 답해야 할 4가지 질문',
-    title:`${latest} 연간 집행비 ${wan(projectedCost)} 전망 · ${budgetLabel}`,
-    summary:`현재 ${maxMonth||'?'}월까지 ${wan(actualCost)}를 집행했습니다. 동일기간 비용은 ${signed(samePeriodCostGrowth)}지만 건당 비용은 ${signed(unitCostGrowth)}여서, 증가의 핵심은 ${Math.abs(volumeEffect)>=Math.abs(unitMixEffect)?'단가보다 작업량':'작업량보다 단가·작업구성'}입니다. 아래 네 질문의 결론과 조치만 우선 확인하십시오.`,
-    status:budgetLabel,
-    tone:budgetTone,
+    kicker:'예산·정산 의사결정 요약',
+    title:`${latest} 누적 집행 ${wan(actualCost)} · 연말 예상 ${wan(projectedCost)}`,
+    summary:`현재 집행과 연말 예상의 차이, ${previousKey||'직전연도'} 동일기간 비용 변화 원인, 반복 지출 통제 대상과 결재 전 증빙을 원천 XLSB에서 함께 확인합니다. 비용 변화는 ${Math.abs(volumeEffect)>=Math.abs(unitMixEffect)?'작업량 영향':'단가·작업구성 영향'}이 더 큽니다.`,
+    status:maxMonth<12?'연말 소요 점검':'연간 집행 확정',
+    tone:'blue',
     metrics:[
       {label:'누적 집행',value:wan(actualCost),note:`연간 전망의 ${executionRate.toFixed(1)}%`},
       {label:'연간 전망',value:wan(projectedCost),note:`${previousKey||'직전연도'} 연간 대비 ${signed(annualForecastGrowth)}`},
@@ -5254,8 +5252,8 @@ function showPage(id,btn){
 
 // ─── 스마트 모달 시스템 (무결성 및 연도·근로자 듀얼 연동 보증) ─────────────────
 let modalBaseTitle = '';       // 기본 모달 제목 템플릿
-let modalCurrentData = [];     // 현재 기본 조건(동/유형/월 등)에 해당하는 3개년 전체 데이터
-let modalYrFilter = 'all';      // 현재 선택된 연도 필터 ('all', '26년', '25년', '24년')
+let modalCurrentData = [];     // 현재 증빙 조건에 실제로 해당하는 원천 데이터
+let modalYrFilter = 'all';      // 현재 증빙 범위 안에서 선택된 연도 필터
 let modalWorkerFilter = 'all';  // 근로자 산정기준 필터 ('all', 'diff', 'match', 'admin', 'contractor', 'corrections')
 let modalSearchQ = '';         // 검색어
 let modalSortKey = '';         // 정렬 기준 열
@@ -5351,18 +5349,10 @@ function openModal(title, filter_fn, forcedYr = null) {
     modalCurrentData = RAW.filter(r => (r.room||'').includes(rm));
   } else if (typeof filter_fn === 'function') {
     const directData = RAW.filter(filter_fn);
-    if (directData.length > 0 && directData.every(r => r.yr === detectedYr) && detectedYr !== 'all') {
-      modalCurrentData = RAW.filter(filter_fn);
-    } else {
-      modalCurrentData = directData.length > 0 ? directData : RAW;
-    }
+    // 조건 결과가 0건이어도 전체 RAW로 대체하지 않는다. 0건 자체가 증빙 결과다.
+    modalCurrentData = directData;
   } else {
     modalCurrentData = RAW;
-  }
-
-  if (modalCurrentData.length === 0 && typeof filter_fn === 'function') {
-    const directData = RAW.filter(filter_fn);
-    if (directData.length > 0) modalCurrentData = directData;
   }
 
   modalYrFilter = detectedYr || 'all';
@@ -5440,23 +5430,39 @@ function updateModalTitle() {
   document.getElementById('modal-title').textContent = displayTitle;
 }
 
+function getModalAvailableYears() {
+  const available = new Set((modalCurrentData || []).map(r => String(r.yr || '')).filter(Boolean));
+  const configured = window.YR_KEYS_REV || [...(window.YR_KEYS || [])].reverse();
+  const ordered = configured.filter(yr => available.has(yr));
+  available.forEach(yr => { if (!ordered.includes(yr)) ordered.push(yr); });
+  return ordered;
+}
+
 function updateModalYearButtons(isForecast = false) {
   const wrap = document.getElementById('modal-yr-buttons-wrap');
-  const yk = window.YR_KEYS || [];
-  const ykRev = window.YR_KEYS_REV || [...yk].reverse();
+  const scopeNote = document.getElementById('modal-year-scope-note');
+  const availableYears = getModalAvailableYears();
+  const requestedFilter = modalYrFilter;
+  if (modalYrFilter !== 'all' && !availableYears.includes(modalYrFilter)) modalYrFilter = 'all';
+  if (requestedFilter !== modalYrFilter) updateModalTitle();
 
   if (wrap) {
-    let html = `<button class="modal-filter-btn ${modalYrFilter === 'all' ? 'active' : ''}" id="modal-yr-all" onclick="filterModal('yr','all',this)">전체</button>`;
-    if (isForecast) {
-      html += ` <button class="modal-filter-btn ${modalYrFilter === '27년' ? 'active' : ''}" id="modal-yr-27" onclick="filterModal('yr','27년',this)" style="color:#e05c7b;font-weight:700;">🔮 2027년 예측</button>`;
-    }
-    ykRev.forEach(yr => {
-      const yrNum = yr.replace(/[^0-9]/g, '');
-      const fullYr = formatYearLabel(yr);
-      const isActive = (modalYrFilter === yr);
-      html += ` <button class="modal-filter-btn ${isActive ? 'active' : ''}" id="modal-yr-${yrNum}" onclick="filterModal('yr','${yr}',this)">${fullYr}</button>`;
+    wrap.replaceChildren();
+    const addButton = (value, label, extraStyle = '') => {
+      const button = document.createElement('button');
+      button.className = `modal-filter-btn ${modalYrFilter === value ? 'active' : ''}`;
+      button.id = value === 'all' ? 'modal-yr-all' : `modal-yr-${value.replace(/[^0-9]/g, '')}`;
+      button.textContent = label;
+      if (extraStyle) button.style.cssText = extraStyle;
+      button.addEventListener('click', () => filterModal('yr', value, button));
+      wrap.appendChild(button);
+    };
+    addButton('all', `전체 ${modalCurrentData.length}건`);
+    availableYears.forEach(yr => {
+      const count = modalCurrentData.filter(r => r.yr === yr).length;
+      const forecastStyle = isForecast && yr === '27년' ? 'color:#e05c7b;font-weight:700;' : '';
+      addButton(yr, `${isForecast && yr === '27년' ? '🔮 ' : ''}${formatYearLabel(yr)} ${count}건`, forecastStyle);
     });
-    wrap.innerHTML = html;
   } else {
     const btns = document.querySelectorAll('.modal-filters .modal-filter-btn');
     btns.forEach(btn => {
@@ -5470,6 +5476,17 @@ function updateModalYearButtons(isForecast = false) {
         }
       }
     });
+  }
+  if (scopeNote) {
+    const configuredYears = window.YR_KEYS_REV || [...(window.YR_KEYS || [])].reverse();
+    const excludedYears = configuredYears.filter(yr => !availableYears.includes(yr) && RAW.some(r => r.yr === yr));
+    const excludedText = excludedYears.length
+      ? ` · 비교/필터 범위 밖: ${excludedYears.map(yr => `${formatYearLabel(yr)} 원본 ${RAW.filter(r => r.yr === yr).length}건`).join(' · ')}`
+      : '';
+    scopeNote.textContent = availableYears.length
+      ? `현재 증빙 범위: ${availableYears.map(yr => `${formatYearLabel(yr)} ${modalCurrentData.filter(r => r.yr === yr).length}건`).join(' · ')}${excludedText}`
+      : `현재 조건에 해당하는 증빙이 없습니다. 원본 전체 ${RAW.length}건은 보존되어 있습니다.`;
+    scopeNote.title = '연도 버튼은 현재 증빙 조건에 실제로 포함된 연도만 표시합니다. 범위 밖 원본은 전체 증빙 목록에서 확인할 수 있습니다.';
   }
 }
 
@@ -5494,12 +5511,10 @@ function updateWorkerFilterButtons() {
 
 function filterModal(type, val, btn){
   if(type === 'yr'){
+    const availableYears = getModalAvailableYears();
+    if (val !== 'all' && !availableYears.includes(val)) val = 'all';
     modalYrFilter = val;
-    document.querySelectorAll('.modal-filters .modal-filter-btn').forEach(b => {
-      const oc = b.getAttribute('onclick') || '';
-      if(oc.includes("'yr'")) b.classList.remove('active');
-    });
-    if(btn) btn.classList.add('active');
+    updateModalYearButtons();
     updateModalTitle();
   }
   renderModalTable();
@@ -5618,13 +5633,13 @@ function renderModalTable(){
 
   document.getElementById('modal-count').innerHTML = `총 <strong>${data.length}건</strong> / 전체 ${modalCurrentData.length}건${sortHint}`;
 
-  // Stats (전체 3개년 통계 및 현재 선택 연도 통계 종합)
+  // Stats (현재 증빙 범위에 실제로 포함된 연도만 표시)
   const totalWAdmin = data.reduce((s,r)=>s+(Number(r.workers_admin ?? r.workers)||0),0);
   const totalWContr = data.reduce((s,r)=>s+(Number(r.workers_contractor)||0),0);
   const totalH = data.reduce((s,r)=>s+(Number(r.total_h)||0),0);
   const diffCount = data.filter(r=>r.diff_category !== 'match' && r.diff_category !== 'both_empty' && r.diff_category !== 'merged_claim_shared').length;
 
-  const dynamicYrKeys = window.YR_KEYS ? window.YR_KEYS.slice().reverse() : ['26년', '25년', '24년'];
+  const dynamicYrKeys = getModalAvailableYears();
   const yrStatsHtml = dynamicYrKeys.map(k => {
     const cnt = modalCurrentData.filter(r => r.yr === k).length;
     const isAct = (modalYrFilter === k);
