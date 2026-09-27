@@ -3347,49 +3347,133 @@ function refreshForecastLabels() {
 }
 
 function buildEvidenceInsights() {
-  const rows=window.RAW||[], keys=window.YR_KEYS||[], latest=keys[keys.length-1];
+  const rows=window.RAW||[], keys=window.YR_KEYS||[], latest=keys[keys.length-1], previousKey=keys[keys.length-2];
   const metric=window.annualMetrics?.[latest]||{};
   const model=window.forecastModel27||buildForecastModel2027();
-  const idx=keys.length-1;
-  const ranked=[...(window.buildingData||[])].sort((a,b)=>(b.cnt[idx]||0)-(a.cnt[idx]||0));
-  const top=ranked[0];
-  const current=rows.filter(r=>r.yr===latest);
-  const months=Array.from({length:12},(_,i)=>({month:i+1,rows:current.filter(r=>!r.is_carryover && Number(r.month)===i+1)})).sort((a,b)=>b.rows.length-a.rows.length);
-  const peak=months[0];
-  const season=metric.seasonality||{factor:1,reason:'분석 대상 없음',samples:[]};
-  const previous=idx>0 ? Number(top?.cnt[idx-1]||0):null;
-  const count=Number(top?.cnt[idx]||0);
-  const change=previous>0 ? ((count/previous-1)*100).toFixed(1)+'%' : '비교 기준 부족';
-  const warnings=window.rawIntegrityReport?.warnings||[];
+  const maxMonth=Math.max(0,Number(metric.maxMonth)||0);
+  const currentRows=rows.filter(r=>r.yr===latest&&!r.is_carryover);
+  const carryoverRows=rows.filter(r=>r.yr===latest&&r.is_carryover);
+  const previousComparableRows=rows.filter(r=>r.yr===previousKey&&!r.is_carryover&&Number(r.month)>=1&&(!maxMonth||Number(r.month)<=maxMonth));
+  const pct=(value,base)=>base>0?(value/base-1)*100:null;
+  const signed=value=>value==null?'비교 기준 없음':(value>=0?'+':'')+value.toFixed(1)+'%';
+  const wan=value=>Math.round(Number(value||0)/10000).toLocaleString()+'만원';
+  const share=(value,total)=>total>0?value/total*100:0;
+  const currentCost=calculateXlsbCostContribution(currentRows,false);
+  const previousComparableCost=calculateXlsbCostContribution(previousComparableRows,false);
+  const currentHours=currentRows.reduce((sum,r)=>sum+(Number(r.total_h)||0),0);
+  const previousComparableHours=previousComparableRows.reduce((sum,r)=>sum+(Number(r.total_h)||0),0);
+  const report=window.rawIntegrityReport||{};
+  const warnings=report.warnings||[], notices=report.notices||[];
+
+  const buildingMap=new Map();
+  for(const row of currentRows){
+    const buildings=getRecordBuildings(row), divisor=buildings.length||1;
+    for(const name of buildings)buildingMap.set(name,(buildingMap.get(name)||0)+1/divisor);
+  }
+  const buildings=[...buildingMap].map(([name,count])=>({name,count})).sort((a,b)=>b.count-a.count);
+  const topBuilding=buildings[0];
+  const buildingTotal=buildings.reduce((sum,item)=>sum+item.count,0);
+
+  const typeMap=new Map();
+  for(const row of currentRows)for(const type of row.types||[])typeMap.set(type,(typeMap.get(type)||0)+1);
+  const types=[...typeMap].map(([type,count])=>({type,count})).sort((a,b)=>b.count-a.count);
+  const topType=types[0];
+  const previousTopTypeCount=previousComparableRows.filter(r=>(r.types||[]).includes(topType?.type)).length;
+
+  const roomLocationKey=row=>(getRecordBuildings(row).join('/')||String(row.building||'미상'))+' '+String(row.room||'').trim();
+  const roomGroups=new Map();
+  for(const row of currentRows){
+    const room=String(row.room||'').trim();
+    if(!room||room==='-'||room==='0')continue;
+    const key=roomLocationKey(row);
+    if(!roomGroups.has(key))roomGroups.set(key,[]);
+    roomGroups.get(key).push(row);
+  }
+  const repeatedRooms=[...roomGroups].map(([key,items])=>({key,items,count:items.length})).filter(x=>x.count>=2).sort((a,b)=>b.count-a.count);
+  const topRoom=repeatedRooms[0];
+  const repeatedRoomKeys=new Set(repeatedRooms.map(x=>x.key));
+
+  const monthStats=Array.from({length:12},(_,index)=>{
+    const month=index+1, monthRows=currentRows.filter(r=>Number(r.month)===month);
+    return {month,rows:monthRows,count:monthRows.length,cost:calculateXlsbCostContribution(monthRows,false)};
+  });
+  const observedMonthStats=monthStats.filter(item=>item.month<=maxMonth&&item.count>0);
+  const peakMonth=[...observedMonthStats].sort((a,b)=>b.count-a.count||b.cost-a.cost)[0];
+  const peakCostMonth=[...observedMonthStats].sort((a,b)=>b.cost-a.cost||b.count-a.count)[0];
+
+  const avgHours=currentRows.length?currentHours/currentRows.length:0;
+  const prevAvgHours=previousComparableRows.length?previousComparableHours/previousComparableRows.length:0;
+  const sortedHours=currentRows.map(r=>Number(r.total_h)||0).sort((a,b)=>a-b);
+  const highEffortThreshold=sortedHours.length?sortedHours[Math.max(0,Math.ceil(sortedHours.length*.9)-1)]:0;
+  const highEffortRows=currentRows.filter(r=>(Number(r.total_h)||0)>=highEffortThreshold&&highEffortThreshold>0);
+
+  const laborCost=Math.round(currentHours*Number(COST_UNIT.hourlyRate||0));
+  const fixedCost=currentRows.length*(Number(COST_UNIT.visitFee||0)+Number(COST_UNIT.matCost?.etc||0));
+  const materialCost=Math.max(0,currentCost-laborCost-fixedCost);
+  const materialUnitCost={screen:COST_UNIT.matCost.screen,caulk:COST_UNIT.matCost.silicone,baseboard:COST_UNIT.matCost.baseboard,blind:COST_UNIT.matCost.hardware,eboard:COST_UNIT.matCost.etc,reflectiveInsulation:COST_UNIT.matCost.etc,gypsum:COST_UNIT.matCost.etc};
+  const materialStats=MATERIAL_DEFINITIONS.map(def=>{
+    const quantity=currentRows.reduce((sum,row)=>sum+(Number(row.mats?.[def.storageKey])||0),0);
+    return {def,quantity,cost:quantity*Number(materialUnitCost[def.key]||0)};
+  }).filter(x=>x.quantity>0).sort((a,b)=>b.cost-a.cost);
+  const topMaterial=materialStats[0];
+
+  const negotiationRows=rows.filter(r=>r.negotiation_candidate);
+  const negotiationBlank=negotiationRows.filter(r=>r.contractor_source_state==='blank').length;
+  const negotiationZero=negotiationRows.filter(r=>r.contractor_source_state==='zero').length;
+  const matchRows=rows.filter(r=>r.diff_category==='match');
+  const mismatchRows=rows.filter(r=>!['match','merged_claim_shared'].includes(r.diff_category));
+  const latestGap=Number(metric.projectedContractorCost??metric.contractorCost??0)-Number(metric.projectedAdminCost??metric.adminCost??0);
+  const season=metric.seasonality||{factor:1,reason:'분석 대상 없음',samples:[],monthlyFactors:new Array(12).fill(1)};
+  const remainingFactors=(season.monthlyFactors||[]).map((factor,index)=>({month:index+1,factor:Number(factor)||1})).filter(x=>x.month>maxMonth);
+  const seasonalPeak=[...remainingFactors].sort((a,b)=>b.factor-a.factor)[0];
+  const lowScenario=Math.round(model.cost27TotalWan*.9), highScenario=Math.round(model.cost27TotalWan*1.1);
+  const yearCounts=keys.map(key=>key+' '+rows.filter(r=>r.yr===key).length+'건').join(' · ');
+  const sourceProof=String(report.sourceGitBlobSha||report.sourceSha256||'확인 불가').slice(0,12);
+  const card=(title,body,filter,tone='blue',evidenceCount=0)=>({title,body,filter,tone,evidenceCount});
+
   const cards=[
-    ['최근 연도 발생 분포',top ? latest+' '+top.name+' '+count.toFixed(1)+'건 · 직전 연도 대비 '+change+' (기간 차이 유의)' : '등록된 작업 없음',top ? getBldgFilter(top.name):()=>false],
-    ['월별 관측 분포',peak?.rows.length ? latest+' '+peak.month+'월 '+peak.rows.length+'건 · 미관측 월은 0건으로 확정하지 않음' : '유효한 월별 실적 없음',r=>r.yr===latest&&!r.is_carryover&&Number(r.month)===peak.month],
-    ['계절 보정 판단','계수 '+season.factor.toFixed(4)+' · '+season.reason+' · 비교 연도 '+season.samples.map(x=>x.year).join(', '),r=>season.samples.some(x=>String(r.date||'').startsWith(String(x.year)))&&!r.is_carryover],
-    ['연간 비용 추정',(latest||'자료 없음')+' '+Number(metric.projectedAdminCost||0).toLocaleString()+'원 · 당해 실적 × 보정 연환산 배수 + 이월 1회',r=>r.yr===latest],
-    ['다음 연도 예측',rows.length ? (model.latestYear+1)+'년 '+model.totalPred27+'건 / '+model.cost27TotalWan.toLocaleString()+'만원 · 증가율 '+(model.countGrowthRate*100)+'%, 물가 '+(model.inflationRate*100)+'%는 가정' : '예측 근거 없음',r=>r.yr===latest],
-    ['O열 네고 검토 후보',rows.filter(r=>r.negotiation_candidate).length+'건 · 공란·0은 검토 대상이며 절감 확정 금액이 아님',r=>r.negotiation_candidate],
-    ['서명 대조',rows.filter(r=>r.diff_category==='match').length+' / '+rows.length+'건 일치 · 실물 확인 또는 합의 완료를 의미하지 않음',r=>r.diff_category==='match'],
-    ['원천 검증 상태',warnings.length ? warnings.join(' / ') : (rows.length?'현재 원천 검사에서 경고 없음':'원천 자료 없음'),()=>true],
-    ['해석 범위','작업 빈도만으로 구조적 위험·노후화·자재 실물 정합성을 확정하지 않습니다.',()=>true]
+    card('원천 데이터 최신성',`GitHub blob ${sourceProof} · ${rows.length}건 · ${yearCounts} · ${report.sheets?.length||keys.length}개 정산 시트 전수 파싱`,()=>true,'green',rows.length),
+    card('동일기간 추세',`${latest} 1~${maxMonth||'?'}월 ${currentRows.length}건 / ${wan(currentCost)} · ${previousKey||'직전연도'} 동일기간 ${previousComparableRows.length}건 / ${wan(previousComparableCost)} · 건수 ${signed(pct(currentRows.length,previousComparableRows.length))}, 비용 ${signed(pct(currentCost,previousComparableCost))}`,r=>[latest,previousKey].includes(r.yr)&&!r.is_carryover&&(!maxMonth||Number(r.month)<=maxMonth),pct(currentRows.length,previousComparableRows.length)>10?'red':'green',currentRows.length+previousComparableRows.length),
+    card('건물동 집중도',topBuilding?`${latest} ${topBuilding.name} ${topBuilding.count.toFixed(1)}환산건 · 건물동 식별 실적의 ${share(topBuilding.count,buildingTotal).toFixed(1)}% · 복수동 행은 동수로 안분`:'건물동 정보 없음',r=>r.yr===latest&&!r.is_carryover&&Boolean(topBuilding)&&getBldgFilter(topBuilding.name)(r),'orange',topBuilding?currentRows.filter(getBldgFilter(topBuilding.name)).length:0),
+    card('보수유형 집중도',topType?`${latest} ${topType.type} ${topType.count}건 · 당해 실적의 ${share(topType.count,currentRows.length).toFixed(1)}% · ${previousKey||'직전연도'} 동일기간 ${previousTopTypeCount}건 대비 ${signed(pct(topType.count,previousTopTypeCount))}`:'분류 가능한 보수유형 없음',r=>r.yr===latest&&!r.is_carryover&&Boolean(topType)&&(r.types||[]).includes(topType.type),'orange',topType?.count||0),
+    card('반복 보수 호실·구역',topRoom?`${latest} 반복 2회 이상 ${repeatedRooms.length}개 호실·구역 · 최다 ${topRoom.key} ${topRoom.count}회 · 동일 원인인지 현장 이력 대조 필요`:'동일 호실·구역 2회 이상 반복 기록 없음',r=>r.yr===latest&&!r.is_carryover&&repeatedRoomKeys.has(roomLocationKey(r)),topRoom?'red':'green',repeatedRooms.reduce((sum,x)=>sum+x.count,0)),
+    card('월별 수요·비용 피크',peakMonth?`${latest} 건수 피크 ${peakMonth.month}월 ${peakMonth.count}건 · 비용 피크 ${peakCostMonth.month}월 ${wan(peakCostMonth.cost)} · 건수와 비용 피크 ${peakMonth.month===peakCostMonth.month?'일치':'불일치'}`:'유효한 월별 실적 없음',r=>r.yr===latest&&!r.is_carryover&&[peakMonth?.month,peakCostMonth?.month].includes(Number(r.month)),'blue',(peakMonth?.count||0)+(peakCostMonth?.month===peakMonth?.month?0:peakCostMonth?.count||0)),
+    card('작업 공수 강도',`${latest} 건당 평균 ${avgHours.toFixed(1)}시간 · ${previousKey||'직전연도'} 동일기간 ${prevAvgHours.toFixed(1)}시간 대비 ${signed(pct(avgHours,prevAvgHours))} · 상위 10% 기준 ${highEffortThreshold.toFixed(1)}시간 이상 ${highEffortRows.length}건`,r=>r.yr===latest&&!r.is_carryover&&(Number(r.total_h)||0)>=highEffortThreshold,'orange',highEffortRows.length),
+    card('비용 구조',`${latest} 당해 실적 ${wan(currentCost)} 중 노무 ${wan(laborCost)}(${share(laborCost,currentCost).toFixed(1)}%) · 자재 ${wan(materialCost)}(${share(materialCost,currentCost).toFixed(1)}%) · 출장·부대 ${wan(fixedCost)}(${share(fixedCost,currentCost).toFixed(1)}%)`,r=>r.yr===latest&&!r.is_carryover,'blue',currentRows.length),
+    card('자재 비용 동인',topMaterial?`${latest} 추정 자재비 최대 항목 ${topMaterial.def.label} ${topMaterial.quantity.toLocaleString()}${topMaterial.def.unit} · 약 ${wan(topMaterial.cost)} · 원천 수량×모델 단가 기준`:'수량이 입력된 표준 자재 없음',r=>r.yr===latest&&!r.is_carryover&&Boolean(topMaterial)&&(Number(r.mats?.[topMaterial.def.storageKey])||0)>0,'blue',topMaterial?currentRows.filter(r=>(Number(r.mats?.[topMaterial.def.storageKey])||0)>0).length:0),
+    card('전년도 이월 정산',`${latest} 이월 ${carryoverRows.length}건 / ${wan(calculateXlsbCostContribution(carryoverRows,false))} · 월별 추세에서 제외하고 연간 정산에 1회만 반영`,r=>r.yr===latest&&r.is_carryover,carryoverRows.length?'orange':'green',carryoverRows.length),
+    card('O열 네고 검토',`전체 ${negotiationRows.length}건 · 공란 ${negotiationBlank}건 · 숫자 0 ${negotiationZero}건 · 청구 누락·무상·협의 여부 확인 전에는 절감액으로 확정하지 않음`,r=>r.negotiation_candidate,negotiationRows.length?'orange':'green',negotiationRows.length),
+    card('서명·청구 교차검증',`일치 ${matchRows.length}/${rows.length}건(${share(matchRows.length,rows.length).toFixed(1)}%) · 검토 대상 ${mismatchRows.length}건 · ${latest} 연환산 환산액 차이 ${latestGap>=0?'+':''}${wan(latestGap)}(시공사-관리소)`,r=>!['match','merged_claim_shared'].includes(r.diff_category),mismatchRows.length?'orange':'green',mismatchRows.length),
+    card('계절성·연간 추정',`${latest} ${formatSeasonalityDecision(season)} · 연간 ${Number(metric.projectedCnt||0)}건 / ${wan(metric.projectedAdminCost)}${seasonalPeak?' · 잔여월 최대 가중 '+seasonalPeak.month+'월 '+seasonalPeak.factor.toFixed(4):''}`,r=>r.yr===latest,'blue',currentRows.length+carryoverRows.length),
+    card('다음 연도 예산 범위',`${model.latestYear+1}년 기준 ${model.totalPred27}건 / ${model.cost27TotalWan.toLocaleString()}만원 · 건수 시나리오 ±10% 시 ${lowScenario.toLocaleString()}~${highScenario.toLocaleString()}만원 · 증가율 ${(model.countGrowthRate*100).toFixed(1)}%, 물가 ${(model.inflationRate*100).toFixed(1)}%는 가정`,r=>r.yr===latest,'blue',currentRows.length+carryoverRows.length),
+    card('원천 품질·해석 한계',`${warnings.length}개 경고 · ${notices.length}개 알림 · ${warnings.length?warnings.join(' / '):'필수 구조 오류 없음'} · 빈 월은 0수요로 확정하지 않고 빈도만으로 구조적 위험을 단정하지 않음`,r=>!r.date||!r.content||r.contractor_source_state==='invalid','red',warnings.length)
   ];
+
+  const riskCards=[cards[2],cards[4],cards[3],cards[10],cards[11],cards[14]];
   const roadmap=rows.length ? [
-    [1,'발생 분포 확인',top?.name||'전체','관측 기간을 맞춘 이력 및 현장 원인 확인','다음 점검','검토'],
-    [2,'네고 후보 검토','O열 공란·0','청구 누락·무상 여부 확인 후 정산','다음 정산','검토'],
-    [3,'월별 자원 계획','전체',peak?.rows.length?peak.month+'월 관측 다발; 자료 범위 확인 후 준비':'월별 관측 범위 확보','다음 계획','검토'],
-    [4,'예산 시나리오',String(model.latestYear+1)+'년',model.totalPred27+'건 / '+model.cost27TotalWan.toLocaleString()+'만원 (가정 기반 예측)','예산 편성','검토']
+    ['1단계','원천 예외 정리',warnings.length?warnings.length+'개 경고':'전체 원천','작업일·O열 비수치·필수값을 원본에서 확인하고 정정 이력을 남김','다음 원본 갱신 전',warnings.length?'높음':'모니터링'],
+    ['2단계','집중 건물동 현장점검',topBuilding?.name||'건물동 미상',topBuilding?`${topBuilding.count.toFixed(1)}환산건의 공종·호실·재발 원인을 묶어 점검`:'건물동 표준 표기 보완','다음 정기점검',topBuilding?'높음':'중간'],
+    ['3단계','반복 호실 원인분석',topRoom?.key||'반복 호실 없음',topRoom?`${topRoom.count}회 기록의 동일 원인·임시보수 여부와 완결 상태 확인`:'신규 반복 발생을 월별 감시','다음 현장점검',topRoom?'높음':'모니터링'],
+    ['4단계','상위 공종 예방계획',topType?.type||'분류자료 부족',topType?`${latest} ${topType.count}건의 자재·작업 표준과 예방 교체 주기 검토`:'작업내용 분류 품질 보완','분기 계획',topType?'중간':'모니터링'],
+    ['5단계','네고 후보 정산대조','O열 공란·0 '+negotiationRows.length+'건',`공란 ${negotiationBlank}건·0 ${negotiationZero}건을 청구 누락/무상/협의 완료로 구분`,'다음 정산',negotiationRows.length?'높음':'모니터링'],
+    ['6단계','피크월 자원배치',peakMonth?peakMonth.month+'월':'관측자료 부족',peakMonth?`${peakMonth.count}건과 비용 ${wan(peakMonth.cost)} 기준으로 인력·자재 선확보`:'월별 관측범위 확보','차기 운영계획',peakMonth?'중간':'모니터링'],
+    ['7단계','이월 분리정산',carryoverRows.length+'건',`${wan(calculateXlsbCostContribution(carryoverRows,false))}을 당해 실적 연환산과 분리하여 1회만 정산`,'연말 결산',carryoverRows.length?'중간':'모니터링'],
+    ['8단계','예산 시나리오 확정',String(model.latestYear+1)+'년',`기준 ${model.cost27TotalWan.toLocaleString()}만원, 건수 ±10% ${lowScenario.toLocaleString()}~${highScenario.toLocaleString()}만원 범위 검토`,'예산 편성','중간']
   ] : [];
-  return {cards,roadmap};
+  return {cards,riskCards,roadmap,generatedAt:new Date().toISOString(),sourceProof};
 }
+
 function renderEvidenceInsights() {
   const model=buildEvidenceInsights(); window.insightModel=model;
   for(const id of ['insights-top-cards-container','risk-top-cards-container']) {
     const container=document.getElementById(id); if(!container)continue;
     container.replaceChildren();
-    for(const [title,body,filter] of (id.startsWith('risk')?model.cards.slice(0,3):model.cards)) {
-      const card=document.createElement('div');card.className='insight blue';
-      const heading=document.createElement('div');heading.className='i-title';heading.textContent=title;
-      const content=document.createElement('div');content.className='i-text';content.textContent=body;
-      card.append(heading,content);card.onclick=()=>openModal(title+' 증빙',filter);container.append(card);
+    for(const insight of (id.startsWith('risk')?model.riskCards:model.cards)) {
+      const insightCard=document.createElement('div');insightCard.className='insight '+(insight.tone||'blue');
+      const heading=document.createElement('div');heading.className='i-title';heading.textContent=insight.title;
+      const content=document.createElement('div');content.className='i-text';content.textContent=insight.body;
+      const evidence=document.createElement('div');evidence.style.cssText='font-size:10px;color:#64748b;margin-top:8px;';evidence.textContent='연계 증빙 '+Number(insight.evidenceCount||0).toLocaleString()+'건 · 클릭하여 원천 확인';
+      insightCard.append(heading,content,evidence);insightCard.onclick=()=>openModal(insight.title+' 증빙',insight.filter||(()=>true));container.append(insightCard);
     }
   }
   const tbody=document.getElementById('roadmap-tbody');if(tbody){tbody.replaceChildren();for(const row of model.roadmap){const tr=document.createElement('tr');for(const v of row){const td=document.createElement('td');td.textContent=v;tr.append(td);}tbody.append(tr);}}
@@ -9253,7 +9337,8 @@ const dashboardExcelExporter = {
               c.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
               if (colIdx === 0) {
                 c.font = { bold: true };
-                c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: val.includes("1단계") ? "FFFEE2E2" : val.includes("2단계") ? "FFFEF3C7" : "FFE0F2FE" } };
+                const stage=String(val||'');
+                c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: stage.includes("1단계") ? "FFFEE2E2" : stage.includes("2단계") ? "FFFEF3C7" : "FFE0F2FE" } };
               }
             });
             chartSheet.getRow(rowNum).height = 30;
@@ -9262,6 +9347,27 @@ const dashboardExcelExporter = {
           chartSheet.columns = [
             { width: 18 }, { width: 28 }, { width: 45 }, { width: 18 }, { width: 20 }, { width: 28 }
           ];
+
+          const insightModel=buildEvidenceInsights();
+          const insightSheet=wb.addWorksheet("동적 인사이트 분석");
+          insightSheet.mergeCells("A1:D1");
+          insightSheet.getCell("A1").value="💡 현재 GitHub XLSB 기반 동적 인사이트 분석";
+          insightSheet.getCell("A1").font={bold:true,size:14,color:{argb:"FF1E3A8A"}};
+          insightSheet.getCell("A2").value="원천 blob/SHA";
+          insightSheet.getCell("B2").value=insightModel.sourceProof;
+          ["분석 항목","현재 원천 분석 결과","연계 증빙 건수","판단 상태"].forEach((header,index)=>{
+            const cell=insightSheet.getCell(4,index+1);cell.value=header;cell.font={bold:true,color:{argb:"FFFFFFFF"}};cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF24476B"}};
+          });
+          insightModel.cards.forEach((insight,index)=>{
+            const row=5+index;
+            insightSheet.getCell(row,1).value=insight.title;
+            insightSheet.getCell(row,2).value=insight.body;
+            insightSheet.getCell(row,3).value=Number(insight.evidenceCount||0);
+            insightSheet.getCell(row,4).value=insight.tone==='red'?'우선 확인':insight.tone==='orange'?'검토':'정상/참고';
+            for(let col=1;col<=4;col++)insightSheet.getCell(row,col).alignment={vertical:"top",wrapText:true};
+          });
+          insightSheet.columns=[{width:26},{width:95},{width:18},{width:16}];
+          insightSheet.views=[{state:"frozen",ySplit:4}];
 
           const list = typeof RAW !== 'undefined' ? RAW : [];
           this.addRawRecordsSheet(wb, "연계 상세 증빙 레코드", list);
