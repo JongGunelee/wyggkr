@@ -1103,6 +1103,41 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 .pt-ic-stat-value { display: block; color: var(--text); font-size: 13px; font-weight: 800; overflow-wrap: anywhere; }
 .pt-ic-action { margin-top: auto; padding: 9px 11px; border-radius: 7px; background: color-mix(in srgb,var(--pt-tone) 9%,transparent); border: 1px solid color-mix(in srgb,var(--pt-tone) 23%,transparent); color: var(--text2); font-size: 11.5px; line-height: 1.45; word-break: keep-all; }
 .pt-ic-action strong { color: var(--pt-tone); margin-right: 5px; }
+.pt-insight-card { cursor: zoom-in; }
+.pt-insight-card:focus-visible { outline: 2px solid var(--pt-tone); outline-offset: 3px; }
+.pt-insight-card.zoomed-4x {
+  width: min(92vw, 980px) !important;
+  height: min(76vh, 620px) !important;
+  max-height: 76vh !important;
+  padding: 26px 30px 28px !important;
+  flex: none !important;
+  justify-content: flex-start !important;
+  cursor: zoom-out !important;
+  overflow-y: auto !important;
+}
+.pt-insight-card.zoomed-4x .chart-zoom-header { width: 100%; margin-bottom: 18px; }
+.pt-insight-card.zoomed-4x .chart-zoom-xls-btn { display: none !important; }
+.pt-insight-card.zoomed-4x::after { font-size: 150px; right: 34px; top: 78px; }
+.pt-insight-card.zoomed-4x .pt-ic-header { margin-bottom: 18px; }
+.pt-insight-card.zoomed-4x .pt-ic-icon { width: 48px; height: 48px; font-size: 25px; border-radius: 13px; }
+.pt-insight-card.zoomed-4x .pt-ic-eyebrow { font-size: 13px; }
+.pt-insight-card.zoomed-4x .pt-ic-title { font-size: 28px; }
+.pt-insight-card.zoomed-4x .pt-ic-hero { grid-template-columns: minmax(190px,.7fr) minmax(0,1.8fr); gap: 34px; margin: 10px 0 22px; }
+.pt-insight-card.zoomed-4x .pt-ic-metric-value { font-size: 64px; }
+.pt-insight-card.zoomed-4x .pt-ic-metric-label { font-size: 14px; margin-top: 10px; }
+.pt-insight-card.zoomed-4x .pt-ic-meter { height: 14px; }
+.pt-insight-card.zoomed-4x .pt-ic-meter-caption { font-size: 13px; }
+.pt-insight-card.zoomed-4x .pt-ic-chip { font-size: 12px; padding: 7px 10px; }
+.pt-insight-card.zoomed-4x .pt-ic-trend { min-height: 142px; gap: 14px; }
+.pt-insight-card.zoomed-4x .pt-ic-trend-item { grid-template-rows: 22px 92px 20px; }
+.pt-insight-card.zoomed-4x .pt-ic-trend-value { font-size: 15px; }
+.pt-insight-card.zoomed-4x .pt-ic-trend-track { height: 92px; }
+.pt-insight-card.zoomed-4x .pt-ic-trend-year { font-size: 12px; }
+.pt-insight-card.zoomed-4x .pt-ic-stats { gap: 12px; margin: 4px 0 18px; }
+.pt-insight-card.zoomed-4x .pt-ic-stat { padding: 13px 15px; }
+.pt-insight-card.zoomed-4x .pt-ic-stat-label { font-size: 12px; }
+.pt-insight-card.zoomed-4x .pt-ic-stat-value { font-size: 18px; }
+.pt-insight-card.zoomed-4x .pt-ic-action { padding: 13px 15px; font-size: 14px; }
 
 @media (max-width: 1180px) {
   .pt-layout { flex-direction: column; }
@@ -6101,7 +6136,7 @@ function buildChart(id, config, clickHandler){
 function toggleZoom(target){
   if(!target) return;
   const el = target.closest
-    ? (target.closest('.chart-wrap') || target.closest('.cost-basis-box') || target.closest('.card'))
+    ? (target.closest('.pt-insight-card') || target.closest('.chart-wrap') || target.closest('.cost-basis-box') || target.closest('.card'))
     : target;
   if(!el) return;
 
@@ -6141,7 +6176,7 @@ function toggleZoom(target){
 
   // 제목 가져오기
   let titleText = '정밀 분석';
-  const cardTitleEl = el.querySelector('.card-title') || el.closest('.card')?.querySelector('.card-title') || el.querySelector('strong');
+  const cardTitleEl = el.querySelector('.pt-ic-title') || el.querySelector('.card-title') || el.closest('.card')?.querySelector('.card-title') || el.querySelector('strong');
   if(cardTitleEl){
     titleText = cardTitleEl.innerText.split('\n').join(' ').trim();
   }
@@ -6149,13 +6184,14 @@ function toggleZoom(target){
   // 4배 확대 팝업 헤더 바 생성
   let header = el.querySelector('.chart-zoom-header');
   if(!header){
+    const zoomModeLabel = el.classList.contains('pt-insight-card') ? '개별 카드 확대' : '4배 정밀 확대';
     header = document.createElement('div');
     header.className = 'chart-zoom-header';
     header.innerHTML = `
       <div class="chart-zoom-title">
         <span style="color:var(--accent1);font-size:20px;">🔍</span>
         <span>${titleText}</span>
-        <span style="font-size:11px;background:rgba(108,142,245,0.18);color:var(--accent1);padding:3px 10px;border-radius:12px;font-weight:700;">4배 정밀 확대</span>
+        <span style="font-size:11px;background:rgba(108,142,245,0.18);color:var(--accent1);padding:3px 10px;border-radius:12px;font-weight:700;">${zoomModeLabel}</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
         <span style="font-size:12px;color:var(--text2);">💡 ESC 키 또는 우측 닫기 클릭 시 복귀</span>
@@ -6367,6 +6403,13 @@ function initCardZoomButtons(){
       // actions 내 중복 xls 버튼 정리
       const xlsBtns = actions.querySelectorAll('.section-xls-btn, .card-xls-btn, .chart-wrap-xls-btn');
       for (let i = 1; i < xlsBtns.length; i++) xlsBtns[i].remove();
+    }
+
+    // PT 시각화 그룹은 내부 카드·증빙 행이 각자 동작하므로 상위 그룹 확대를 금지한다.
+    if (card.querySelector(':scope > #pt-viz-wrapper')) {
+      card.style.cursor = 'default';
+      card.onclick = null;
+      return;
     }
 
     // 카드 바탕화면 클릭 시에도 4배 확대 토글
@@ -7279,7 +7322,25 @@ buildChart('c-repairBar',{
     </div>
     `;
 
-    document.getElementById('pt-viz-wrapper').innerHTML = html;
+    const ptWrapper = document.getElementById('pt-viz-wrapper');
+    ptWrapper.innerHTML = html;
+    ptWrapper.querySelectorAll('.pt-insight-card').forEach(card => {
+      const cardTitle = card.querySelector('.pt-ic-title')?.textContent?.trim() || '분석 카드';
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.setAttribute('aria-label', `${cardTitle} 개별 확대`);
+      card.title = `${cardTitle}만 개별 확대합니다. 다시 클릭하거나 ESC를 누르면 닫힙니다.`;
+      const openCardZoom = event => {
+        if (event.target.closest('button, a, input, select, textarea')) return;
+        event.preventDefault();
+        event.stopPropagation();
+        toggleZoom(card);
+      };
+      card.addEventListener('click', openCardZoom);
+      card.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') openCardZoom(event);
+      });
+    });
   }
 
   window.renderPTViz = renderPTViz;
