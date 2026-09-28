@@ -35,6 +35,14 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 .header-title span{color:var(--accent1);}
 .header-meta{font-size:12px;color:var(--text2);text-align:right;}
 .header-meta .master-xls-btn{flex:0 0 auto;white-space:nowrap;writing-mode:horizontal-tb;}
+.seasonality-control{display:grid;grid-template-columns:auto 78px auto auto;align-items:center;gap:6px;padding:6px 8px;border:1px solid rgba(108,142,245,.45);border-radius:8px;background:rgba(20,26,43,.9);white-space:nowrap;text-align:left;}
+.seasonality-control label{font-size:11px;font-weight:700;color:#dbeafe;}
+.seasonality-control input{width:78px;border:1px solid #52648f;border-radius:6px;background:#0f172a;color:#fff;padding:5px 6px;font:700 11px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;text-align:right;}
+.seasonality-control input:focus{outline:2px solid rgba(108,142,245,.5);outline-offset:1px;}
+.seasonality-status{font-size:10px;font-weight:700;color:#86efac;}
+.seasonality-help{display:inline-grid;place-items:center;width:18px;height:18px;border:1px solid #52648f;border-radius:50%;color:#bfdbfe;cursor:help;font-weight:800;}
+.seasonality-reference{grid-column:1/-1;max-width:330px;overflow:hidden;text-overflow:ellipsis;font-size:9.5px;color:#94a3b8;}
+.source-error-panel{margin:24px 32px;padding:18px 20px;border:1px solid rgba(255,77,109,.55);border-radius:10px;background:rgba(127,29,29,.24);color:#fecaca;font-size:13px;line-height:1.7;}
 .nav{display:flex;gap:4px;padding:12px 32px 0;background:#0f1117;border-bottom:1px solid var(--border);overflow-x:auto;}
 .nav-btn{padding:10px 20px;border:none;border-radius:8px 8px 0 0;background:transparent;color:var(--text2);cursor:pointer;font-size:13px;font-weight:600;transition:all .2s;white-space:nowrap;}
 .nav-btn.active,.nav-btn:hover{background:var(--card);color:var(--text);border-top:2px solid var(--accent1);}
@@ -411,6 +419,16 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 ::-webkit-scrollbar-track{background:var(--bg);}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
 .chart-wrap canvas{cursor:pointer;}
+@media(max-width:1500px){
+  .header{flex-wrap:wrap;gap:10px;}
+  .header>div:first-child{flex:1 0 100%;min-width:0;}
+  .header-title{white-space:nowrap;}
+  .header-meta{width:100%;justify-content:flex-start!important;flex-wrap:nowrap;min-width:0;}
+  .header-meta>div:last-child{margin-left:auto;min-width:150px;flex:0 0 150px;line-height:1.35;}
+  .dashboard-sticky-header.is-compact .header{padding:6px 16px;}
+  .dashboard-sticky-header.is-compact .header>div:first-child{display:none;}
+  .dashboard-sticky-header.is-compact .seasonality-reference{display:none;}
+}
 @media(max-width:900px){
   .kpi-grid{grid-template-columns:1fr 1fr;}
   .grid2,.grid3,.grid-1-2,.grid-2-1,.insight-grid,.yoy-grid{grid-template-columns:1fr;}
@@ -426,6 +444,9 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   .dashboard-sticky-header.is-compact .header-meta>div:last-child{display:none;}
   .dashboard-sticky-header.is-compact .header-meta .master-xls-btn{padding:5px 7px;}
   .dashboard-sticky-header.is-compact .header-meta .master-xls-btn span:not(:first-child){display:none;}
+  .dashboard-sticky-header.is-compact .seasonality-control{grid-template-columns:auto 62px auto;padding:4px 5px;}
+  .dashboard-sticky-header.is-compact .seasonality-control input{width:62px;padding:3px 4px;}
+  .dashboard-sticky-header.is-compact .seasonality-reference,.dashboard-sticky-header.is-compact .seasonality-help{display:none;}
   .dashboard-sticky-header.is-compact .nav{padding:4px 8px 0;}
   .dashboard-sticky-header.is-compact .nav-btn{padding:6px 9px;font-size:11px;}
   #kpi-excel-export-btn{scroll-margin-top:100px;}
@@ -433,6 +454,8 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 @media(max-width:600px){
   .header-meta .master-xls-btn{padding:6px 9px;}
   .header-meta .master-xls-btn span:not(:first-child){display:none;}
+  .seasonality-control{order:-1;flex:1 0 100%;grid-template-columns:auto 84px auto auto;}
+  .seasonality-reference{max-width:none;}
 }
 
 
@@ -1406,6 +1429,14 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
     </div>
     <div class="header-meta" style="display:flex;align-items:center;gap:12px;">
 
+      <div class="seasonality-control" id="seasonality-control">
+        <label for="seasonality-factor-input">계절 옵션</label>
+        <input id="seasonality-factor-input" type="number" min="0" max="3" step="0.0001" value="1.0000" inputmode="decimal" aria-describedby="seasonality-factor-help seasonality-reference" oninput="window.scheduleSeasonalityFactorUpdate(this.value)" onchange="window.applySeasonalityFactor(this.value)">
+        <span class="seasonality-status" id="seasonality-factor-status" aria-live="polite">1.0000 · 미적용</span>
+        <span class="seasonality-help" id="seasonality-factor-help" tabindex="0" aria-label="계절 옵션 도움말">?</span>
+        <span class="seasonality-reference" id="seasonality-reference">XLSB 계절성 참고값 계산 대기</span>
+      </div>
+
       <button type="button" class="master-xls-btn" id="btn-force-refresh-github" onclick="window.forceRefreshGitHubData()" style="background:linear-gradient(135deg,#059669,#10b981);border:1px solid #34d399;" title="GitHub 원본 XLSB 파일의 수정/추가/삭제를 브라우저 캐시 없이 즉시 새로고침하여 대시보드 전체를 재빌드합니다.">
         <span>🔄</span>
         <span>깃허브 원본 실시간 동기화</span>
@@ -1838,8 +1869,8 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
         <strong style="color:#38bdf8;font-size:12.5px;">📌 【비용 연환산 추정 및 무결성 보장 심층 분석 (혼선 방지 핵심 안내)】</strong>
         <ul style="margin:8px 0 0 18px;padding:0;font-size:11.5px;color:#e2e8f0;line-height:1.85;">
           <li>이월 비용을 실적과 함께 연환산하면 중복 추정됩니다. 당해 실적만 연환산하고 이월 비용은 한 번 합산합니다.</li>
-          <li>계절 보정은 과거 완결연도의 월별 비용에서 자동 산출합니다. 비교 가능한 완결연도가 2개 미만이면 2024년 비용 정합성 검증에서 도출한 기준계수 0.8123을 사용하고, 충분한 반복 자료가 쌓이면 원천 데이터 계수로 자동 전환합니다.</li>
-          <li>연간 추정 총액과 잔여월 차트는 같은 계절계수와 월별 계절 가중치를 사용합니다. 이월 정산은 월별 차트에서 제외하고 연간 정산에 1회만 반영합니다.</li>
+          <li>계절 옵션은 사용자가 상단 입력란에서 검토·결정합니다. 초기값 1.0000은 계절 보정 미적용이며, XLSB 완결연도의 월별 비용으로 계산한 참고계수는 입력 판단 근거로만 표시됩니다.</li>
+          <li>사용자가 선택한 하나의 계절 옵션을 연간 추정 총액, 잔여월 차트, 인사이트, 툴팁과 다운로드 엑셀 수식에 함께 적용합니다. 이월 정산은 월별 차트에서 제외하고 연간 정산에 1회만 반영합니다.</li>
         </ul>
       </div>
 
@@ -2181,11 +2212,16 @@ window.downloadRawXlsx = async function() {
 
     // 3. live 데이터(window._rawXlsbWorkbook)와의 동적 동기화 및 수식 오류(1048580 버그) 완전 정규화
     const liveWb = window._rawXlsbWorkbook;
-    const yearConfigs = [
-      { name: '26년', dataStart: 4, sumColStart: 15, sumColEnd: 22 },
-      { name: '25년', dataStart: 5, sumColStart: 15, sumColEnd: 22 },
-      { name: '24년', dataStart: 6, sumColStart: 15, sumColEnd: 38 }
-    ];
+    const yearConfigs = (liveWb?.SheetNames || []).map(name => {
+      const match = String(name).match(/(\d{2,4})년?/);
+      if (!match) return null;
+      const liveSheet = liveWb.Sheets[name];
+      const rows = XLSX.utils.sheet_to_json(liveSheet, { header: 1, raw: false });
+      const headerIndex = rows.findIndex((row, index) => index < 12 && (row || []).some(value => /작업시간/.test(String(value || ''))));
+      if (headerIndex < 0) return null;
+      const range = XLSX.utils.decode_range(liveSheet['!ref'] || 'A1:Z100');
+      return { name, dataStart: range.s.r + headerIndex + 3, sumColStart: 15, sumColEnd: range.e.c + 1 };
+    }).filter(Boolean).sort((a, b) => Number(String(a.name).replace(/\D/g, '')) - Number(String(b.name).replace(/\D/g, '')));
 
     function getColLetter(colIdx) {
       let temp = colIdx;
@@ -2209,9 +2245,24 @@ window.downloadRawXlsx = async function() {
 
     if (liveWb && typeof XLSX !== 'undefined') {
       yearConfigs.forEach(cfg => {
-        const wsT = wbOut.getWorksheet(cfg.name);
+        let wsT = wbOut.getWorksheet(cfg.name);
         const wsL = liveWb.Sheets[cfg.name];
-        if (!wsT || !wsL) return;
+        if (!wsL) return;
+        if (!wsT) {
+          wsT = wbOut.addWorksheet(cfg.name);
+          Object.keys(wsL).filter(address => !address.startsWith('!')).forEach(address => {
+            const sourceCell = wsL[address];
+            const decoded = XLSX.utils.decode_cell(address);
+            const targetCell = wsT.getCell(decoded.r + 1, decoded.c + 1);
+            targetCell.value = sourceCell.f
+              ? { formula: cleanFormula(sourceCell.f), result: sourceCell.v }
+              : sourceCell.v;
+            if (sourceCell.z) targetCell.numFmt = sourceCell.z;
+          });
+          (wsL['!merges'] || []).forEach(range => {
+            try { wsT.mergeCells(range.s.r + 1, range.s.c + 1, range.e.r + 1, range.e.c + 1); } catch (_) {}
+          });
+        }
 
         const range = XLSX.utils.decode_range(wsL['!ref'] || 'A1:Z100');
 
@@ -2720,6 +2771,23 @@ function hideLoader() {
   }
 }
 
+function setDashboardDataAvailability(available, message = '') {
+  const main = document.querySelector('.main');
+  if (main) {
+    main.hidden = !available;
+    main.setAttribute('aria-hidden', available ? 'false' : 'true');
+  }
+  let panel = document.getElementById('source-error-panel');
+  if (!panel) {
+    panel = document.createElement('div');
+    panel.id = 'source-error-panel';
+    panel.className = 'source-error-panel';
+    document.querySelector('.dashboard-sticky-header')?.after(panel);
+  }
+  panel.hidden = available;
+  panel.textContent = available ? '' : 'GitHub 최신 XLSB를 확인하지 못해 대시보드 결과를 표시하지 않습니다. ' + message;
+}
+
 function normalizeXlsbHeaderText(value) {
   return String(value == null ? '' : value).replace(/[\r\n\s]+/g, '').replace(/[()（）]/g, '').toLowerCase();
 }
@@ -3120,6 +3188,7 @@ async function fetchAndInitializeData(forceReload = false, descriptorOverride = 
         window._rawXlsbSourceUrl=rawUrl;window._rawXlsbSourcePath=report.source;
         window._rawXlsbGitBlobSha=report.sourceGitBlobSha;window.lastXlsbSourceHash=hash;
         window.rawIntegrityReport=report;window.sourceFresh=true;
+        setDashboardDataAvailability(true);
         rebuildDashboard(records);
         updateRawIntegrityStatus(report);
         return true;
@@ -3130,7 +3199,7 @@ async function fetchAndInitializeData(forceReload = false, descriptorOverride = 
     window._rawXlsbWorkbook=null;window._rawXlsbArrayBuffer=null;window.lastXlsbSourceHash='';window._rawXlsbGitBlobSha='';
     const records=[];
     window.rawIntegrityReport={source:'github-error',ok:false,calculationOk:false,recordCount:0,warnings:['최신 GitHub XLSB 동기화 실패. 이전 수치는 표시하지 않습니다: '+failure.message]};
-    rebuildDashboard(records);updateRawIntegrityStatus(window.rawIntegrityReport);
+    rebuildDashboard(records);updateRawIntegrityStatus(window.rawIntegrityReport);setDashboardDataAvailability(false,failure.message);
     return false;
   }finally{if(revision===sourceRequestRevision)hideLoader();}
 }
@@ -3216,7 +3285,6 @@ window.dashboardCharts = window.dashboardCharts || {};
 const COST_UNIT = {
   forecastInflationRate: 0.045,
   forecastCountGrowthRate: 0.05,
-  legacySeasonalityFactor: 0.8123,
   hourlyRate: 35000, // 기능직 평균 시급 (대한건설협회 시중노임단가 및 긴급출동 프리미엄 준용)
   visitFee: 5000,    // 건당 출장/부대경비
   matCost: {
@@ -3228,6 +3296,59 @@ const COST_UNIT = {
     etc: 5000
   }
 };
+
+// 사용자 선택값이 계절 보정의 유일한 적용값이다. 새로고침할 때마다 1.0000에서 시작한다.
+const SEASONALITY_CONTROL = Object.seal({ defaultFactor: 1, min: 0, max: 3, factor: 1, debounceId: 0 });
+window.SEASONALITY_CONTROL = SEASONALITY_CONTROL;
+
+function getUserSeasonalityFactor() {
+  const value = Number(SEASONALITY_CONTROL.factor);
+  return Number.isFinite(value) ? Math.min(SEASONALITY_CONTROL.max, Math.max(SEASONALITY_CONTROL.min, value)) : 1;
+}
+
+function updateSeasonalityControlUI() {
+  const factor = getUserSeasonalityFactor();
+  const input = document.getElementById('seasonality-factor-input');
+  if (input && document.activeElement !== input) input.value = factor.toFixed(4);
+  const status = document.getElementById('seasonality-factor-status');
+  if (status) {
+    status.textContent = factor.toFixed(4) + (Math.abs(factor - 1) < 1e-9 ? ' · 미적용' : ' · 적용');
+    status.style.color = Math.abs(factor - 1) < 1e-9 ? '#86efac' : '#fbbf24';
+  }
+  const keys = window.YR_KEYS || [];
+  const latest = keys[keys.length - 1];
+  const model = latest ? window.annualMetrics?.[latest]?.seasonality : null;
+  const reference = document.getElementById('seasonality-reference');
+  if (reference) reference.textContent = model?.suggestionText || 'XLSB 비교 표본 없음 · 참고값 1.0000';
+  const help = document.getElementById('seasonality-factor-help');
+  if (help) {
+    const referenceText = model?.suggestionText || '현재 XLSB에서 비교 가능한 완결연도 표본을 찾지 못했습니다.';
+    const explanation = '1.0000은 계절 보정 미적용입니다. 0.8000은 부분연도의 잔여월 월평균을 20% 낮추고, 1.2000은 20% 높입니다. 부분연도의 잔여월 추정에만 적용하며 이미 발생한 실적과 전년도 이월 정산액은 바꾸지 않습니다. 값을 바꾸면 KPI·차트·툴팁·인사이트·모달·다운로드 엑셀이 같은 값으로 다시 계산됩니다.\n\n' + referenceText;
+    help.title = explanation;
+    help.setAttribute('aria-label', explanation);
+    document.getElementById('seasonality-control')?.setAttribute('title', explanation);
+  }
+}
+
+function applySeasonalityFactor(rawValue) {
+  if (SEASONALITY_CONTROL.debounceId) clearTimeout(SEASONALITY_CONTROL.debounceId);
+  const parsed = Number(String(rawValue).replace(',', '.'));
+  const normalized = Number.isFinite(parsed)
+    ? Math.min(SEASONALITY_CONTROL.max, Math.max(SEASONALITY_CONTROL.min, parsed)) : 1;
+  SEASONALITY_CONTROL.factor = normalized;
+  const input = document.getElementById('seasonality-factor-input');
+  if (input) input.value = normalized.toFixed(4);
+  if (Array.isArray(window.RAW) && window.RAW.length) rebuildDashboard(window.RAW);
+  else updateSeasonalityControlUI();
+}
+
+function scheduleSeasonalityFactorUpdate(rawValue) {
+  if (SEASONALITY_CONTROL.debounceId) clearTimeout(SEASONALITY_CONTROL.debounceId);
+  SEASONALITY_CONTROL.debounceId = setTimeout(() => applySeasonalityFactor(rawValue), 350);
+}
+window.getUserSeasonalityFactor = getUserSeasonalityFactor;
+window.applySeasonalityFactor = applySeasonalityFactor;
+window.scheduleSeasonalityFactorUpdate = scheduleSeasonalityFactorUpdate;
 
 function getDynamicYearKeys(records) {
   const set = new Set();
@@ -3313,8 +3434,8 @@ function getLatestContractorCostRatio() {
 }
 
 
-// Seasonality is estimated only from earlier settlement years with all 12 months observed.
-// No record in a month is unknown coverage, not evidence of zero demand.
+// XLSB 완결연도는 참고계수와 월별 모양의 근거다. 실제 적용계수는 사용자가 선택한 단일 값이다.
+// 월별 레코드가 없다는 사실은 0건 수요의 증거가 아니므로 12개월이 모두 관측된 비교연도만 사용한다.
 function buildSeasonalityModel(records, year, cutoff) {
   const years = new Map();
   for (const r of records) {
@@ -3337,10 +3458,11 @@ function buildSeasonalityModel(records, year, cutoff) {
   const variance=samples.length ? samples.reduce((sum,x)=>sum+(x.ratio-mean)**2,0)/samples.length : 0;
   const cv=mean>0 ? Math.sqrt(variance)/mean : 0;
   const consistent=samples.every(x=>mean<1 ? x.ratio<1 : x.ratio>1);
-  const dataDriven=samples.length>=2 && consistent && Math.abs(mean-1)>=0.1 && cv<=0.25;
+  const suggestionStable=samples.length>=2 && consistent && cv<=0.25;
   const hasRemainder=cutoff>0 && cutoff<12;
-  const useLegacy=hasRemainder && cutoff<=10 && samples.length<2;
-  const factor=!hasRemainder ? 1 : dataDriven ? mean : useLegacy ? Number(COST_UNIT.legacySeasonalityFactor) : 1;
+  const userFactor=getUserSeasonalityFactor();
+  const factor=hasRemainder ? userFactor : 1;
+  const suggestedFactor=samples.length ? mean : 1;
   const monthlyFactors=new Array(12).fill(1);
   const rawMonthlyFactors=new Array(12).fill(1);
   if(hasRemainder) {
@@ -3350,12 +3472,12 @@ function buildSeasonalityModel(records, year, cutoff) {
         const observedAvg=sample.costs.slice(0,cutoff).reduce((a,b)=>a+b,0)/cutoff;
         return observedAvg>0 ? sample.costs[month]/observedAvg : 0;
       }).filter(value=>value>0);
-      rawRemaining.push(normalized.length ? normalized.reduce((a,b)=>a+b,0)/normalized.length : factor);
+      rawRemaining.push(normalized.length ? normalized.reduce((a,b)=>a+b,0)/normalized.length : 1);
     }
     const rawMean=rawRemaining.reduce((a,b)=>a+b,0)/rawRemaining.length || 1;
     rawRemaining.forEach((value,index)=>{
       rawMonthlyFactors[cutoff+index]=value;
-      monthlyFactors[cutoff+index]=value/rawMean*factor;
+      monthlyFactors[cutoff+index]=Math.abs(factor-1)<1e-9 ? 1 : value/rawMean*factor;
     });
   }
   const observedMonths=[...new Set(records.filter(r=>{
@@ -3366,16 +3488,25 @@ function buildSeasonalityModel(records, year, cutoff) {
   }).map(r=>Number(r.month)))].sort((a,b)=>a-b);
   const completeYear=cutoff>=12;
   const noObservation=cutoff<=0;
-  const reason=noObservation ? '관측월 없음: 연환산 및 계절 보정 불가' : completeYear ? `1~12월 관측 완료(${observedMonths.length}개 월 실적 존재): 잔여월 없음 · 연간 실적 그대로 사용` : dataDriven ? '완결 과거 연도들의 월별 비용 비율 자동 적용' : useLegacy ? `비교 가능한 완결 연도 부족: 기준계수 ${factor.toFixed(4)} 적용${samples.length ? ', 월별 모양은 관측 연도에서 산출' : ''}` : !consistent ? '과거 연도별 증감 방향 불일치: 중립계수 적용' : Math.abs(mean-1)<0.1 ? '월평균 차이 10% 미만: 중립계수 적용' : cv>0.25 ? '연도별 비율 변동계수 25% 초과: 중립계수 적용' : '중립계수 적용';
-  const mode=completeYear?'complete':noObservation?'no-observation':dataDriven?'data':useLegacy?'legacy-fallback':'neutral';
-  return {factor,applied:hasRemainder && factor!==1,mode,reason,samples,cutoff,year,observedMonths,mean,cv,monthlyFactors,rawMonthlyFactors};
+  const suggestionText=samples.length
+    ? `XLSB 참고 ${suggestedFactor.toFixed(4)} · 완결 ${samples.length}개년 · CV ${(cv*100).toFixed(1)}%${suggestionStable?' · 비교 안정':' · 변동 주의'}`
+    : 'XLSB 비교 표본 없음 · 참고값 1.0000';
+  const reason=noObservation
+    ? '관측월 없음: 연환산 및 계절 옵션 적용 불가'
+    : completeYear
+      ? `1~12월 관측 완료(${observedMonths.length}개 월 실적 존재): 잔여월 없음 · 연간 실적 그대로 사용`
+      : Math.abs(factor-1)<1e-9
+        ? `사용자 계절 옵션 1.0000: 보정 미적용 · ${suggestionText}`
+        : `사용자 계절 옵션 ${factor.toFixed(4)} 적용 · ${samples.length?'월별 모양은 완결연도 XLSB 실적에서 산출':'비교 표본이 없어 잔여월에 동일 계수 적용'} · ${suggestionText}`;
+  const mode=completeYear?'complete':noObservation?'no-observation':Math.abs(factor-1)<1e-9?'user-neutral':'user';
+  return {factor,applied:hasRemainder && Math.abs(factor-1)>=1e-9,mode,reason,samples,cutoff,year,observedMonths,mean,cv,consistent,suggestionStable,suggestedFactor,suggestionText,monthlyFactors,rawMonthlyFactors};
 }
 
 function formatSeasonalityDecision(seasonality) {
   const model=seasonality||{factor:1,applied:false,mode:'no-observation',reason:'근거 없음'};
   if(model.mode==='complete')return '계절 보정 미적용 ('+model.reason+')';
   if(model.mode==='no-observation')return model.reason;
-  return '계절계수 '+Number(model.factor||1).toFixed(4)+' '+(model.applied?'적용':'미적용')+' ('+model.reason+')';
+  return '사용자 계절 옵션 '+Number(model.factor??1).toFixed(4)+' '+(model.applied?'적용':'미적용')+' ('+model.reason+')';
 }
 
 function rebuildDashboard(records) {
@@ -3391,6 +3522,7 @@ function rebuildDashboard(records) {
   renderCostCorrelationAnalysis();
   renderEvidenceInsights();
   refreshForecastLabels();
+  updateSeasonalityControlUI();
 }
 
 
@@ -3399,11 +3531,15 @@ function refreshForecastLabels() {
   const next=model.latestYear+1;
   for(const id of ['c-forecast','c-forecast-cost']){
     const canvas=document.getElementById(id),card=canvas?.closest('.card');
-    if(card){for(const heading of card.querySelectorAll('h3,.card-title'))for(const node of heading.childNodes){if(node.nodeType===3 && /20\d{2}년 작업 예측/.test(node.textContent))node.textContent=node.textContent.replace(/20\d{2}년 작업 예측/,next+'년 작업 예측');}}
+    if(card){
+      for(const heading of card.querySelectorAll('h3,.card-title'))for(const node of heading.childNodes){if(node.nodeType===3 && /20\d{2}년 작업 예측/.test(node.textContent))node.textContent=node.textContent.replace(/20\d{2}년 작업 예측/,next+'년 작업 예측');}
+      const button=card.querySelector('.section-xls-btn');
+      if(button)button.title=next+'년 월별 작업 '+(id==='c-forecast-cost'?'비용':'건수')+' 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드';
+    }
   }
   for(const chart of Object.values(window.dashboardCharts||{}))if(chart?.data?.datasets)for(const ds of chart.data.datasets)if(ds.label?.includes('2027')){ds.label=ds.label.replaceAll('2027',String(next));chart.update('none');}
   const note=document.getElementById('forecast-cost-note-26');
-  if(note)note.textContent=model.latestYear+'년: 당해 실적 + 잔여월 추정(자동 계절계수 '+(model.latestMetric.seasonality?.factor||1).toFixed(4)+') + 이월 1회. 날짜 누락 비용은 월별 그래프에서 제외.';
+  if(note)note.textContent=model.latestYear+'년: 당해 실적 + 잔여월 추정(사용자 계절 옵션 '+Number(model.latestMetric.seasonality?.factor??1).toFixed(4)+') + 이월 1회. 날짜 누락 비용은 월별 그래프에서 제외.';
   const noteNext=document.getElementById('forecast-cost-note-27');
   if(noteNext)noteNext.textContent=next+'년 '+model.totalPred27+'건 / '+model.cost27TotalWan.toLocaleString()+'만원 (작업 증가율 '+(model.countGrowthRate*100)+'%, 물가 '+(model.inflationRate*100)+'% 가정).';
 }
@@ -3597,7 +3733,7 @@ function buildEvidenceInsights() {
     {
       step:'01',question:'질문 1 · 연말까지 얼마를 추가 확보해야 하는가?',title:'연말 가용예산 확정',
       judgment:`누적 ${wan(actualCost)} 집행 후 잔여 필요액은 ${wan(remainingCost)}이며, ${largestForecastMonth?largestForecastMonth.month+'월 약 '+largestForecastMonth.cost.toLocaleString()+'만원이 잔여월 최고 구간입니다.':'잔여월 예측 구간이 없습니다.'}`,
-      tasks:[`잔여 필요액 ${wan(remainingCost)}을 월별 가용예산으로 배정`,largestForecastMonth?`${largestForecastMonth.month}월 ${largestForecastMonth.cost.toLocaleString()}만원을 최고 집행 구간으로 설정`:'잔여월 집행계획 종료 확인',`계절계수 ${Number(season.factor||1).toFixed(4)} 적용 근거를 예산 메모에 첨부`],
+      tasks:[`잔여 필요액 ${wan(remainingCost)}을 월별 가용예산으로 배정`,largestForecastMonth?`${largestForecastMonth.month}월 ${largestForecastMonth.cost.toLocaleString()}만원을 최고 집행 구간으로 설정`:'잔여월 집행계획 종료 확인',`사용자 계절 옵션 ${Number(season.factor??1).toFixed(4)}과 XLSB 참고값을 예산 메모에 함께 첨부`],
       completion:`가용예산 합계가 ${wan(remainingCost)} 이상이며 월별 한도 합계가 연간 전망 ${wan(projectedCost)}과 일치하면 승인`,
       timing:'즉시',priority:'높음',tone:budgetTone,filter:r=>r.yr===latest,evidenceCount:latestRows.length
     },
@@ -3953,8 +4089,8 @@ function updateAllKPIsAndTexts() {
   const metrics = window.annualMetrics;
   const yk = window.YR_KEYS;
   const ykRev = window.YR_KEYS_REV;
-  const latestYr = yk[yk.length - 1] || '26년';
-  const firstYr = yk[0] || '24년';
+  const latestYr = yk[yk.length - 1] || '';
+  const firstYr = yk[0] || '';
 
   const yearsRangeEl = document.getElementById('header-years-range');
   if (yearsRangeEl) {
@@ -4203,9 +4339,9 @@ function updateAllKPIsAndTexts() {
     if (isLatestPartial) {
       const remainingM = 12 - elapsedMonths;
       tooltip += `\n\n2. 연간 환산 추정 금액(12개월 기준): ${adminWan.toLocaleString()}만원
-   • 연환산 산출식: 당해 실적 + (월평균 실적 × 잔여 ${remainingM}개월 × 자동 계절 보정 계수) + 전년도 이월 정산액 1회
+   • 연환산 산출식: 당해 실적 + (월평균 실적 × 잔여 ${remainingM}개월 × 사용자 계절 옵션) + 전년도 이월 정산액 1회
    • 계절 보정 근거: ${latestMetric.seasonality?.reason || "근거 부족"}
-   • 실제 수치 대입: ${Number(latestMetric.currentYearAdminCost || 0).toLocaleString()}원 + (${Math.round(Number(latestMetric.currentYearAdminCost || 0)/elapsedMonths).toLocaleString()}원 × ${remainingM}개월 × ${latestMetric.seasonality?.factor || 1}) + ${Number(latestMetric.carryoverAdminCost || 0).toLocaleString()}원 = 약 ${projectedAdminRaw.toLocaleString()}원`;
+   • 실제 수치 대입: ${Number(latestMetric.currentYearAdminCost || 0).toLocaleString()}원 + (${Math.round(Number(latestMetric.currentYearAdminCost || 0)/elapsedMonths).toLocaleString()}원 × ${remainingM}개월 × ${Number(latestMetric.seasonality?.factor??1).toFixed(4)}) + ${Number(latestMetric.carryoverAdminCost || 0).toLocaleString()}원 = 약 ${projectedAdminRaw.toLocaleString()}원`;
     }
 
     tooltip += `\n\n3. 시공사 청구 품수 환산 금액: ${contractorWan.toLocaleString()}만원 (실적: ${actualContrWan.toLocaleString()}만원)
@@ -4480,7 +4616,7 @@ function updateAllKPIsAndTexts() {
     const c = catStats[r.diff_category] || catStats.other;
     c.cnt++;
     c.diff += Number(r.worker_diff || 0);
-    const yr = r.yr || '26년';
+    const yr = r.yr || '연도 미상';
     c.yrs[yr] = (c.yrs[yr] || 0) + 1;
   });
 
@@ -4667,7 +4803,8 @@ function updateAllKPIsAndTexts() {
   }
   const insightSub = document.getElementById('insight-budget-sub');
   if (insightSub) {
-    insightSub.textContent = `[관리소 서명 기준 실공수(35,000원/h)+자재비+부대비] 단일 적용. 시공사 청구 환산 시 ${contractorWan.toLocaleString()}만원. 2027년 본예산 편성 시 참고 권고.`;
+    const nextBudgetYear = (window.forecastModel27?.latestYear || (2000 + Number(String(latestYr).replace(/\D/g,'')))) + 1;
+    insightSub.textContent = `[관리소 서명 기준 실공수(${COST_UNIT.hourlyRate.toLocaleString()}원/h)+자재비+부대비] 단일 적용. 시공사 청구 환산 시 ${contractorWan.toLocaleString()}만원. ${nextBudgetYear}년 본예산 편성 시 참고 권고.`;
   }
 
   const forecastNote26 = document.getElementById('forecast-cost-note-26');
@@ -4829,9 +4966,9 @@ function updateAllKPIsAndTexts() {
 function renderAuditTables() {
   const records = window.RAW || [];
   const metrics = window.annualMetrics || {};
-  const yk = window.YR_KEYS || ['24년','25년','26년'];
-  const firstYr = yk[0] || '24년';
-  const latestYr = yk[yk.length - 1] || '26년';
+  const yk = window.YR_KEYS || [];
+  const firstYr = yk[0] || '';
+  const latestYr = yk[yk.length - 1] || '';
 
   // 1. Table A: 3개년 정량 대조표 (#audit-quantitative-tbody 및 #audit-quantitative-tbody-main)
   const qTbodies = [document.getElementById('audit-quantitative-tbody'), document.getElementById('audit-quantitative-tbody-main')].filter(Boolean);
@@ -5023,7 +5160,7 @@ function renderAuditTables() {
         '시트 연도를 비용 정산 연도로 유지하고 날짜 연도가 이전이면 전년도 이월로 분리', '이월은 월별 추정에서 제외하고 연간 정산에 1회만 합산'],
       ['네고 대상', 'O열 공란·숫자 0', `후보 ${report.negotiationCandidateCount || 0}건 · 병합 공유 ${report.mergedContractorCellCount || 0}건`,
         'O열 공란 또는 숫자 0만 네고 후보로 판정하고 병합 공유값·비수치값은 분리', '상세표·모달·엑셀 원천 입력에 같은 판정값 사용'],
-      ['계절 보정', latestYr + ' 추정', `계수 ${(latestMetric.seasonality?.factor || 1).toFixed(4)} · ${latestMetric.seasonality?.reason || '적용 대상 없음'}`,
+      ['계절 옵션', latestYr + ' 추정', `사용자 입력 ${Number(latestMetric.seasonality?.factor??1).toFixed(4)} · ${latestMetric.seasonality?.suggestionText || 'XLSB 비교 표본 없음'} · ${latestMetric.seasonality?.reason || '적용 대상 없음'}`,
         '연간 추정과 잔여월 건수·비용 차트가 동일한 월별 계절 가중치를 공유', '비교 자료가 쌓이면 기준계수에서 원천 월별 산출값으로 자동 전환']
     ];
     integrityTbody.innerHTML = findings.map((item, index) => `<tr>
@@ -5109,7 +5246,7 @@ if (typeof recalculateDerivedData === 'function') {
 
 // ─── 리스크 분석 및 작업 다발 호실 공통 집계 헬퍼 (전역 공유 및 엑셀 내보내기 무결성 보증) ───
 function buildRiskRows(data, years) {
-  const yk = years || window.YR_KEYS || ['24년', '25년', '26년'];
+  const yk = years || window.YR_KEYS || [];
   const firstIdx = 0;
   const lastIdx = Math.max(0, yk.length - 1);
   const bData = data || window.buildingData || [];
@@ -5460,8 +5597,10 @@ function updateModalYearButtons(isForecast = false) {
     addButton('all', `전체 ${modalCurrentData.length}건`);
     availableYears.forEach(yr => {
       const count = modalCurrentData.filter(r => r.yr === yr).length;
-      const forecastStyle = isForecast && yr === '27년' ? 'color:#e05c7b;font-weight:700;' : '';
-      addButton(yr, `${isForecast && yr === '27년' ? '🔮 ' : ''}${formatYearLabel(yr)} ${count}건`, forecastStyle);
+      const forecastYearKey = String((window.forecastModel27?.latestYear || new Date().getFullYear()) + 1).slice(-2) + '년';
+      const isForecastYear = isForecast && yr === forecastYearKey;
+      const forecastStyle = isForecastYear ? 'color:#e05c7b;font-weight:700;' : '';
+      addButton(yr, `${isForecastYear ? '🔮 ' : ''}${formatYearLabel(yr)} ${count}건`, forecastStyle);
     });
   } else {
     const btns = document.querySelectorAll('.modal-filters .modal-filter-btn');
@@ -5558,7 +5697,7 @@ function renderModalTable(){
   } else if(modalWorkerFilter === 'negotiation') {
     data = data.filter(r => Boolean(r.negotiation_candidate));
   } else if(modalWorkerFilter === 'corrections') {
-    data = data.filter(r => Boolean(r.is_continuation || r.is_expense_only || r.date === '2024-05-24' || r.no === '36'));
+    data = data.filter(r => Boolean(r.is_continuation || r.is_expense_only));
   }
 
   if(modalSearchQ){
@@ -6158,7 +6297,7 @@ function renderBldgTable() {
   const btbody = document.getElementById('bldg-table-body');
   if (!thead || !btbody) return;
 
-  const yk = window.YR_KEYS || YR_KEYS || ['24년', '25년', '26년'];
+  const yk = window.YR_KEYS || YR_KEYS || [];
   const ykRev = window.YR_KEYS_REV || YR_KEYS_REV || [...yk].reverse();
   const data = [...(window.buildingData || buildingData)];
   const { key, asc } = window.bldgTableSort || { key: 'totalCnt', asc: false };
@@ -6186,18 +6325,6 @@ function renderBldgTable() {
       const yr = key.replace('hours_', '');
       const idx = yk.indexOf(yr);
       valA = a.hours[idx] || 0; valB = b.hours[idx] || 0;
-    } else if (key === 'cnt26') {
-      const idx = yk.indexOf('26년'); valA = a.cnt[idx >= 0 ? idx : yk.length - 1] || 0; valB = b.cnt[idx >= 0 ? idx : yk.length - 1] || 0;
-    } else if (key === 'hours26') {
-      const idx = yk.indexOf('26년'); valA = a.hours[idx >= 0 ? idx : yk.length - 1] || 0; valB = b.hours[idx >= 0 ? idx : yk.length - 1] || 0;
-    } else if (key === 'cnt25') {
-      const idx = yk.indexOf('25년'); valA = a.cnt[idx >= 0 ? idx : 1] || 0; valB = b.cnt[idx >= 0 ? idx : 1] || 0;
-    } else if (key === 'hours25') {
-      const idx = yk.indexOf('25년'); valA = a.hours[idx >= 0 ? idx : 1] || 0; valB = b.hours[idx >= 0 ? idx : 1] || 0;
-    } else if (key === 'cnt24') {
-      const idx = yk.indexOf('24년'); valA = a.cnt[idx >= 0 ? idx : 0] || 0; valB = b.cnt[idx >= 0 ? idx : 0] || 0;
-    } else if (key === 'hours24') {
-      const idx = yk.indexOf('24년'); valA = a.hours[idx >= 0 ? idx : 0] || 0; valB = b.hours[idx >= 0 ? idx : 0] || 0;
     } else if (key === 'totalCnt') {
       valA = a.cnt.reduce((s, v) => s + v, 0);
       valB = b.cnt.reduce((s, v) => s + v, 0);
@@ -6221,7 +6348,7 @@ function renderBldgTable() {
   });
 
   // 헤더 정렬 방향 표시기 업데이트
-  const keys = ['name', 'cnt26', 'hours26', 'cnt25', 'hours25', 'cnt24', 'hours24', 'totalCnt', 'trend', 'risk'];
+  const keys = ['name', ...ykRev.flatMap(year => [`cnt_${year}`, `hours_${year}`]), 'totalCnt', 'trend', 'risk'];
   keys.forEach(k => {
     const el = document.getElementById(`bldg-sort-${k}`);
     if (el) {
@@ -6329,7 +6456,7 @@ function buildForecastModel2027(records = window.RAW || [], annualMetrics = wind
   }
 
   const currentYearCount = Number(latestMetric.currentYearCount ?? currentYearRows.length) || 0;
-  const averageMonthlyCount = currentYearCount > 0 && maxMonth > 0 ? Math.max(0, Math.round(currentYearCount / maxMonth * (latestMetric.seasonality?.factor || 1))) : 0;
+  const averageMonthlyCount = currentYearCount > 0 && maxMonth > 0 ? Math.max(0, Math.round(currentYearCount / maxMonth * Number(latestMetric.seasonality?.factor??1))) : 0;
   const currentYearAdminCost = Number(latestMetric.currentYearAdminCost
     ?? calculateXlsbCostContribution(currentYearRows, false)) || 0;
   const averageMonthlyCostWan = currentYearAdminCost > 0 && maxMonth > 0 ? Math.max(0, Math.round(currentYearAdminCost / maxMonth / 10000)) : 0;
@@ -6393,7 +6520,7 @@ function renderAllCharts() {
     window.dashboardCharts = {};
   }
 
-  const yk = window.YR_KEYS || ['24년', '25년', '26년'];
+  const yk = window.YR_KEYS || [];
   const ykRev = window.YR_KEYS_REV || [...yk].reverse();
   const latestIdx = yk.length - 1;
   const prevIdx = Math.max(0, yk.length - 2);
@@ -6664,7 +6791,8 @@ buildChart('c-repairBar',{
     const metrics    = window.annualMetrics || {};
     const nYears     = years.length;
     const lastYrIdx  = Math.max(0, nYears - 1);
-    const lastYrShort = yrKeys[lastYrIdx] || '26년';
+    const lastYrShort = yrKeys[lastYrIdx] || '원천연도 없음';
+    const nextForecastYear = (Number(years[lastYrIdx]) || new Date().getFullYear()) + 1;
 
     const yrChainFull = [...yrKeys].reverse().join('←');
     const yrChainLong = [...years].reverse().join('←');
@@ -6772,7 +6900,7 @@ buildChart('c-repairBar',{
       let lines = [];
       lines.push(`📌 [${d.type}] 보수 유형 추정비용 산출 근거`);
       lines.push(`${'━'.repeat(48)}`);
-      lines.push(`■ 단가 기준: KPI(집행비 추정치) · 27년 예측 모델과 동일한 projectedAdminCost 기준`);
+      lines.push(`■ 단가 기준: KPI(집행비 추정치) · ${nextForecastYear}년 예측 모델과 동일한 projectedAdminCost 기준`);
       lines.push(`■ 산출 방식: (유형건수 ÷ 연도전체유형건수) × 연도 projectedAdminCost (점유율 비례 배분)`);
       lines.push(`   ※ 1건에 복수유형 기재 가능 → 유형인스턴스합 ≠ 레코드수`);
       lines.push(``);
@@ -6803,10 +6931,10 @@ buildChart('c-repairBar',{
       lines.push(``);
       lines.push(`■ 전체 합계: ${d.total}건, 누적 추정비용 약 ${d.totalCostWan.toLocaleString()}만원`);
       lines.push(`■ 전체 점유율: ${d.pct}% (총 ${totalAll}건 중)`);
-      lines.push(`■ 3개년 projectedAdminCost 합: ${totalProjWan.toLocaleString()}만원`);
-      lines.push(`   (26년 KPI 추정치 포함, 모든 유형 합계와 일치)`);
-      lines.push(`■ 27년 예측 단가 참고: ${globalUnitWan.toFixed(2)}만원/건`);
-      lines.push(`   = 26년 projectedAdminCost ÷ 26년 레코드수`);
+      lines.push(`■ ${yrKeys.length}개년 projectedAdminCost 합: ${totalProjWan.toLocaleString()}만원`);
+      lines.push(`   (${lastYrShort} KPI 추정치 포함, 모든 유형 합계와 일치)`);
+      lines.push(`■ ${nextForecastYear}년 예측 단가 참고: ${globalUnitWan.toFixed(2)}만원/건`);
+      lines.push(`   = ${lastYrShort} projectedAdminCost ÷ ${lastYrShort} 레코드수`);
       lines.push(`${'━'.repeat(48)}`);
       lines.push(`⚠ 비용은 XLSB 갱신 시 자동 재계산됩니다.`);
       lines.push(`💡 클릭 시 [${d.type}] 전체 증빙 목록 조회`);
@@ -6987,8 +7115,8 @@ buildChart('c-repairBar',{
   type:'radar',
   data:{
     labels:repairData.slice(0,8).map(d=>d.type),
-    datasets:(window.YR_KEYS_REV || ['26년', '25년', '24년']).map((yr, idx) => {
-      const yrIdx = (window.YR_KEYS || ['24년', '25년', '26년']).indexOf(yr);
+    datasets:(window.YR_KEYS_REV || []).map((yr, idx) => {
+      const yrIdx = (window.YR_KEYS || []).indexOf(yr);
       const color = ['#4ecb71', '#f5a623', '#6c8ef5', '#e05c7b'][idx % 4];
       return {
         label: (yr.startsWith('20') ? yr : '20' + yr),
@@ -7021,7 +7149,7 @@ buildChart('c-repairBar',{
     const existing = document.getElementById('radar-custom-legend');
     if (existing) existing.remove();
 
-    const yrs   = window.YR_KEYS_REV  || ['26년', '25년', '24년'];
+    const yrs   = window.YR_KEYS_REV  || [];
     const colors = ['#4ecb71', '#f5a623', '#6c8ef5', '#e05c7b'];
 
     const legend = document.createElement('div');
@@ -7120,7 +7248,7 @@ function renderRepairTable() {
   const rtbody = document.getElementById('repair-table-body');
   if (!rtbody) return;
 
-  const yk = window.YR_KEYS || ['24년', '25년', '26년'];
+  const yk = window.YR_KEYS || [];
   const ykRev = window.YR_KEYS_REV || [...yk].reverse();
   const latestIdx = Math.max(0, yk.length - 1);
   const rData = window.repairData || repairData || [];
@@ -7216,7 +7344,7 @@ buildChart('c-halfYear',{
 buildChart('c-monthlyAvg',{
   type:'line',
   data:{labels:MONTHS,datasets:[{
-    label:'3년 평균 건수',
+    label:yk.length+'년 평균 건수',
     data:MONTHS.map((_,i)=>(yk.reduce((sum, yr) => sum + ((monthlyData['y'+yr.replace(/[^0-9]/g,'')] || [])[i] || 0), 0) / Math.max(yk.length,1)).toFixed(1)),
     borderColor:'#6c8ef5',backgroundColor:alpha('#6c8ef5',.2),
     tension:0.4,pointRadius:5,pointBackgroundColor:'#6c8ef5',fill:true,borderWidth:2
@@ -7225,7 +7353,7 @@ buildChart('c-monthlyAvg',{
     scales:{y:{beginAtZero:true,grid:{color:alpha('#2e3350',1)}},x:{grid:{display:false}}}}
 },(ds,idx)=>{
   const m=idx+1;
-  openModal(`${m}월 전체 증빙 (24·25·26년)`, getMonthFilter(m));
+  openModal(`${m}월 전체 증빙 (${yk.map(formatYearLabel).join('·')})`, getMonthFilter(m));
 });
 
 // ─── MATERIAL Charts ──────────────────────────────────────────────────────────
@@ -7694,31 +7822,48 @@ const dashboardExcelExporter = {
 
   // [무결성 보증] 전수 25종 차트 공식 한국어 명칭 매핑 테이블
   OFFICIAL_CHART_TITLES: {
-    'c-yoy-bldg': '건물동별 전년대비 증감 (26년 - 25년) [하향(-) 감소: 녹색 / 상향(+) 증가: 적색]',
-    'c-yoy-type': '보수유형별 전년대비 증감 (26년 - 25년) [◀ 좌측(-) 감소 / 우측(+) 증가 ▶]',
+    'c-yoy-bldg': '건물동별 전년대비 증감',
+    'c-yoy-type': '보수유형별 전년대비 증감',
     'c-yearCount': '연도별 긴급보수 건수 비교',
     'c-yearHours': '연도별 총 작업시간 비교',
     'c-bldgYear': '건물동별 연도별 작업 건수',
     'c-repairDoughnut': '보수 유형별 점유율',
     'c-repairTrend': '상위 5대 보수유형 월별 누적 추세',
-    'c-bldgBar': '건물동별 2026년 작업 건수',
+    'c-bldgBar': '건물동별 최신 정산연도 작업 건수',
     'c-bldgHours': '건물동별 총 작업시간',
     'c-bldgWorker': '건물동별 소요 인력',
-    'c-bldgLine': '건물동별 3개년 작업 추이',
+    'c-bldgLine': '건물동별 연도별 작업 추이',
     'c-repairBar': '보수 유형별 연도 비교',
     'c-repairRadar': '보수 유형 레이더',
-    'c-repairLine': '보수 유형별 3개년 추이',
+    'c-repairLine': '보수 유형별 연도 추이',
     'c-monthly': '월별 긴급보수 발생 건수 추이',
     'c-halfYear': '상/하반기 보수 건수 비교',
     'c-monthlyAvg': '월평균 작업 건수 및 계절성 지수',
-    'c-matTrend': '주요 자재별 3개년 사용 추이',
+    'c-matTrend': '주요 자재별 연도 사용 추이',
     'c-matDoughnut': '주요 자재 사용 비중',
     'c-baseboard': '걸레받이 집중 보수 발생 현황',
     'c-riskBubble': '건물동별 위험도 매트릭스',
     'c-roomTop': '작업 다발 호실 TOP 10',
     'c-cost': '연도별 긴급보수 집행 비용 추이',
-    'c-forecast': '2027년 긴급보수 건수 예측',
-    'c-forecast-cost': '2027년 긴급보수 비용 예측'
+    'c-forecast': '다음 연도 긴급보수 건수 예측',
+    'c-forecast-cost': '다음 연도 긴급보수 비용 예측'
+  },
+
+  getOfficialChartTitle: function(canvasId) {
+    const years = window.YR_KEYS || [];
+    const latest = years[years.length - 1];
+    const previous = years[years.length - 2];
+    const nextYear = (Number(String(latest || '').replace(/\D/g, '')) < 100
+      ? 2000 + Number(String(latest || '').replace(/\D/g, ''))
+      : Number(String(latest || '').replace(/\D/g, ''))) + 1;
+    if (canvasId === 'c-yoy-bldg' || canvasId === 'c-yoy-type') {
+      const scope = previous ? ` (${latest} - ${previous})` : ` (${latest || '원천 연도'} 단일 연도)`;
+      return (canvasId === 'c-yoy-bldg' ? '건물동별 전년대비 증감' : '보수유형별 전년대비 증감') + scope + ' [감소: 녹색 / 증가: 적색]';
+    }
+    if (canvasId === 'c-bldgBar') return `건물동별 ${formatYearLabel(latest)} 작업 건수`;
+    if (canvasId === 'c-forecast') return `${nextYear}년 긴급보수 건수 예측`;
+    if (canvasId === 'c-forecast-cost') return `${nextYear}년 긴급보수 비용 예측`;
+    return this.OFFICIAL_CHART_TITLES[canvasId];
   },
 
   getFileTimestamp: function(d = new Date()) {
@@ -7895,6 +8040,12 @@ const dashboardExcelExporter = {
     });
 
     const varyColorsVal = (hasPointColors || isDoughnut) ? "1" : "0";
+    const bubbleYears = window.YR_KEYS || [];
+    const bubbleFirstYear = formatYearLabel(bubbleYears[0] || '원천 최초연도');
+    const bubbleLatestYear = formatYearLabel(bubbleYears[bubbleYears.length - 1] || '원천 최신연도');
+    const bubbleSeriesTitle = spec.seriesTitle || (bubbleLatestYear + ' 실적 vs ' + bubbleFirstYear + ' 실적');
+    const bubbleXAxisTitle = spec.xAxisTitle || (bubbleFirstYear + ' 건수');
+    const bubbleYAxisTitle = spec.yAxisTitle || (bubbleLatestYear + ' 건수');
     let plotXml = "";
     if (isDoughnut) {
       plotXml = '<c:doughnutChart><c:varyColors val="1"/>' + seriesXml + '<c:firstSliceAng val="0"/><c:holeSize val="50"/></c:doughnutChart>';
@@ -7924,7 +8075,7 @@ const dashboardExcelExporter = {
       plotXml = '<c:bubbleChart><c:varyColors val="1"/>' +
         '<c:ser>' +
           '<c:idx val="0"/><c:order val="0"/>' +
-          '<c:tx><c:strRef><c:f>\'' + this.escapeXml(spec.sheetName) + '\'!$C$4</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>2026년 실적 vs 2024년 실적</c:v></c:pt></c:strCache></c:strRef></c:tx>' +
+          '<c:tx><c:strRef><c:f>\'' + this.escapeXml(spec.sheetName) + '\'!$C$4</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>' + this.escapeXml(bubbleSeriesTitle) + '</c:v></c:pt></c:strCache></c:strRef></c:tx>' +
           '<c:spPr><a:solidFill><a:srgbClr val="F5A623"/></a:solidFill><a:ln w="19050"><a:solidFill><a:srgbClr val="F5A623"/></a:solidFill></a:ln></c:spPr>' +
           bDptXml +
           '<c:xVal><c:numRef><c:f>' + bXRange + '</c:f><c:numCache><c:formatCode>#,##0</c:formatCode><c:ptCount val="' + bCount + '"/>' + bXPoints + '</c:numCache></c:numRef></c:xVal>' +
@@ -7946,7 +8097,7 @@ const dashboardExcelExporter = {
     if (isBubble) {
       axesXml = '<c:valAx><c:axId val="' + catAxisId + '"/><c:scaling><c:orientation val="minMax"/><c:min val="-1.5"/><c:max val="21.5"/></c:scaling><c:delete val="0"/><c:axPos val="b"/>' +
         '<c:majorGridlines><c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>' +
-        '<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="1"/></a:pPr><a:r><a:rPr lang="ko-KR" sz="900" b="1"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr><a:t>2024년 건수</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val="0"/></c:title>' +
+        '<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="1"/></a:pPr><a:r><a:rPr lang="ko-KR" sz="900" b="1"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr><a:t>' + this.escapeXml(bubbleXAxisTitle) + '</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val="0"/></c:title>' +
         '<c:numFmt formatCode="#,##0" sourceLinked="0"/>' +
         '<c:tickLblPos val="low"/>' +
         '<c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr>' +
@@ -7954,7 +8105,7 @@ const dashboardExcelExporter = {
         '<c:crossAx val="' + valAxisId + '"/><c:crosses val="autoZero"/><c:majorUnit val="2"/></c:valAx>' +
         '<c:valAx><c:axId val="' + valAxisId + '"/><c:scaling><c:orientation val="minMax"/><c:min val="-1.5"/><c:max val="16.5"/></c:scaling><c:delete val="0"/><c:axPos val="l"/>' +
         '<c:majorGridlines><c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr></c:majorGridlines>' +
-        '<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="1"/></a:pPr><a:r><a:rPr lang="ko-KR" sz="900" b="1"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr><a:t>2026년 건수</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val="0"/></c:title>' +
+        '<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="900" b="1"/></a:pPr><a:r><a:rPr lang="ko-KR" sz="900" b="1"><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr><a:t>' + this.escapeXml(bubbleYAxisTitle) + '</a:t></a:r></a:p></c:rich></c:tx><c:layout/><c:overlay val="0"/></c:title>' +
         '<c:numFmt formatCode="#,##0" sourceLinked="0"/>' +
         '<c:tickLblPos val="low"/>' +
         '<c:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="2E3350"/></a:solidFill></a:ln></c:spPr>' +
@@ -8147,15 +8298,17 @@ const dashboardExcelExporter = {
     ws.getCell("A1").alignment = { vertical: "middle", horizontal: "left" };
     ws.getRow(1).height = 32;
 
-    const yk = (typeof window !== 'undefined' && window.YR_KEYS) ? window.YR_KEYS : ['24년','25년','26년'];
-    const firstYr = yk[0] || '24년';
-    const latestYr = yk[yk.length - 1] || '26년';
+    const yk = (typeof window !== 'undefined' && window.YR_KEYS) ? window.YR_KEYS : [];
+    const firstYr = yk[0] || '';
+    const latestYr = yk[yk.length - 1] || '';
     const am = (typeof window !== 'undefined' && window.annualMetrics) ? window.annualMetrics : {};
     const mLatest = am[latestYr] || {};
     const rangeTag = mLatest.isPartialYear ? ` (20${firstYr.replace(/[^0-9]/g,'')}년 ~ 20${latestYr.replace(/[^0-9]/g,'')}년 ${mLatest.maxMonth}월)` : ` (20${firstYr.replace(/[^0-9]/g,'')}년 ~ 20${latestYr.replace(/[^0-9]/g,'')}년)`;
 
     const rawList = (typeof RAW !== 'undefined' && Array.isArray(RAW)) ? RAW : [];
     const integrity = (typeof window !== 'undefined' && window.rawIntegrityReport) ? window.rawIntegrityReport : {};
+    const selectedSeasonality = typeof getUserSeasonalityFactor === 'function' ? getUserSeasonalityFactor() : 1;
+    const seasonalityEvidence = mLatest.seasonality || {};
     const totAdminW = Math.round(rawList.reduce((s, r) => s + (Number(r.workers_admin ?? r.workers) || 0), 0));
     const totContrL = rawList.reduce((s, r) => s + (Number(r.workers_contractor) || 0), 0).toFixed(1);
     const totDiffW = Math.abs(rawList.reduce((s, r) => s + (Number(r.workers_contractor) || 0) - (Number(r.workers_admin ?? r.workers) || 0), 0)).toFixed(1);
@@ -8164,14 +8317,16 @@ const dashboardExcelExporter = {
       ["보고서 명칭", title || "긴급보수 분석 리포트"],
       ["생성 일시", this.formatDateTime()],
       ["원천 데이터 출처", `021 관리대장_(건축 긴급대응).xlsb${rangeTag}`],
+      ["원천 GitHub 경로", integrity.sourceUrl || buildRawGithubUrl()],
       ["Git 원본 blob SHA", integrity.sourceGitBlobSha || "GitHub API에서 확인 불가"],
       ["원천 XLSB SHA-256", integrity.sourceSha256 || "브라우저에서 해시 계산 불가"],
       ["연계 상세 증빙 건수", `${recordCount}건 (전수 누락 방지 무결성 보증)`],
       ["전수 무결성 대조", `수식 캐시 ${integrity.formulaCheckCount || 0}건 중 불일치 ${integrity.formulaCacheMismatchCount || 0}건 · 경고 ${(integrity.warnings || []).join(' / ') || '없음'} · 알림 ${(integrity.notices || []).join(' / ') || '없음'}`],
       ["정산·네고 기준", "시트 연도는 정산 연도입니다. 전년도 날짜의 이월 작업도 해당 시트 연도에 1회 귀속합니다. 네고 후보는 독립된 O열 시공사 청구 품수 공란·숫자 0만 포함하며 병합 자식 셀은 중복 계산하지 않습니다."],
+      ["사용자 계절 옵션", `${selectedSeasonality.toFixed(4)} (${Math.abs(selectedSeasonality-1)<1e-9?'미적용':'적용'}) · ${seasonalityEvidence.suggestionText || 'XLSB 비교 표본 없음'} · 부분연도 잔여월 추정에만 적용, 실적·이월 불변`],
       ["품 산출 단일 기준", `관리소 직접 서명 ${totAdminW}명(공수) 단일 무결성 기준 적용 (시공사 청구 ${totContrL}품 대비 ${totDiffW}품 정합성 검증 완료)`],
       ["시트 구성 안내", `1. [차트]: Microsoft Excel 고유 차트 객체 및 조건부 서식 히트맵/게이지 연계 시각화\n2. [차트 연계 데이터]: 집계 테이블 (노란색 셀 수정 시 차트/히트맵 실시간 연동)\n3. [연계 상세 증빙 레코드]: ${recordCount}건 전수 필터링/정렬 가능 상세 로우데이터\n4. [README]: 시스템 안내 및 정합성 보증 확인서`],
-      ["실시간 차트 연동 안내", "💡 '차트 연계 데이터' 시트의 [노란색 배경 셀] 수치를 수정하면, '차트' 시트의 네이티브 엑셀 막대/선 그래프 및 조건부 서식 히트맵 색상이 즉시 자동으로 동기화 변경됩니다."]
+      ["실시간 차트 연동 안내", "💡 '차트 연계 데이터' 시트의 [노란색 배경 셀] 수치를 수정하면, '차트' 시트의 네이티브 엑셀 막대/선 그래프 및 조건부 서식 히트맵 색상이 즉시 자동으로 동기화 변경됩니다. 비용 감사 시트가 포함된 파일은 '단가 및 모델'의 사용자 계절 옵션을 바꾸면 산식 검증과 예측 시트도 다시 계산됩니다."]
     ];
 
     let rowIdx = 3;
@@ -8333,7 +8488,7 @@ const dashboardExcelExporter = {
     rateSheet.getCell('A1').font = { bold: true, size: 15, color: { argb: 'FFFFFFFF' } };
     rateSheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
     rateSheet.mergeCells('A2:D2');
-    rateSheet.getCell('A2').value = '노란 입력 셀을 수정하면 원천 레코드 비용, 연도별 연환산, 2027년 월별 건수·비용 산식이 Excel 재계산으로 함께 갱신됩니다.';
+    rateSheet.getCell('A2').value = '노란 입력 셀을 수정하면 원천 레코드 비용, 연도별 연환산, 다음 연도 월별 건수·비용 산식이 Excel 재계산으로 함께 갱신됩니다. 사용자 계절 옵션의 기본값 1.0000은 보정 미적용입니다.';
     rateSheet.getCell('A2').alignment = { wrapText: true };
     const rateRows = [
       ['산식 항목', '입력값', '단위', '설명'],
@@ -8345,9 +8500,9 @@ const dashboardExcelExporter = {
       ['걸레받이', COST_UNIT.matCost.baseboard, '원/m', '원천 자재 수량 × 단가'],
       ['블라인드 하드웨어', COST_UNIT.matCost.hardware, '원/㎡', '원천 자재 수량 × 단가'],
       ['기타 지정 자재', COST_UNIT.matCost.etc, '원/단위', '이보드·열반사 단열재·석고보드'],
-      ['2027년 물가 상승률', COST_UNIT.forecastInflationRate, '%', '2027년 예측 금액에 적용'],
-      ['2027년 작업 건수 증가율', COST_UNIT.forecastCountGrowthRate, '%', '최신 연도 연환산 건수에 적용'],
-      ['자동 계절 보정 계수', 1, '배', '계절 보정 시트의 최신 연도 계수. 연도별 계수는 산식 검증에서 각각 참조']
+      ['다음 연도 물가 상승률', COST_UNIT.forecastInflationRate, '%', '최신 정산 연도의 다음 연도 예측 금액에 적용'],
+      ['다음 연도 작업 건수 증가율', COST_UNIT.forecastCountGrowthRate, '%', '최신 연도 연환산 건수에 적용'],
+      ['사용자 계절 옵션', getUserSeasonalityFactor(), '배', '1.0000=미적용. 부분연도 잔여월 추정에만 적용하며 화면 상단 선택값과 동일']
     ];
     rateRows.forEach((row, rowIndex) => {
       row.forEach((value, colIndex) => {
@@ -8364,6 +8519,7 @@ const dashboardExcelExporter = {
     });
     rateSheet.getCell('B13').numFmt = '0.0%';
     rateSheet.getCell('B14').numFmt = '0.0%';
+    rateSheet.getCell('B15').numFmt = '0.0000';
     rateSheet.columns = [{ width: 27 }, { width: 17 }, { width: 15 }, { width: 50 }];
 
     const inputSheet = workbook.addWorksheet('원천 입력');
@@ -8492,7 +8648,7 @@ const dashboardExcelExporter = {
     calcSheet.getCell('A1').font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
     calcSheet.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
     calcSheet.mergeCells('A2:P3');
-    calcSheet.getCell('A2').value = '당해 실적 × (1 + 잔여월/관측월 × 자동 계절계수) + 이월 1회. 계절계수 산출 근거는 계절 보정 시트를 참조하세요. 단가·증가율·물가율은 모델 가정입니다.';
+    calcSheet.getCell('A2').value = '당해 실적 + (당해 월평균 × 잔여월 × 사용자 계절 옵션) + 이월 1회. 사용자 계절 옵션은 단가 및 모델!B15이며 기본값 1.0000은 미적용입니다. XLSB 참고계수는 계절 보정 시트에서 별도로 검토합니다.';
     calcSheet.getCell('A2').alignment = { wrapText: true, vertical: 'top' };
     calcSheet.getRow(2).height = 42;
     calcSheet.getRow(3).height = 42;
@@ -8511,8 +8667,8 @@ const dashboardExcelExporter = {
       return (digits.length === 2 ? Number('20' + digits) : Number(digits)) === key;
     });
     const seasonSheet=workbook.addWorksheet('계절 보정');
-    seasonSheet.addRow(['자동 계절 보정 · 월별 원천 비용 · 이월 제외']);
-    seasonSheet.addRow(['적용 기준: 과거 12개월 모두 관측된 2개년 이상이면 반복성 조건으로 자동 판정합니다. 2개년 미만이면 2024년 비용 정합성 검증 기준계수 0.8123을 적용하되, 월별 모양은 이용 가능한 완결연도 실적 비율로 자동 산출합니다.']);
+    seasonSheet.addRow(['사용자 계절 옵션 · XLSB 월별 참고 근거 · 이월 제외']);
+    seasonSheet.addRow(['적용 기준: 단가 및 모델!B15의 사용자 입력값을 부분연도 잔여월에 적용합니다. 기본값 1.0000은 미적용입니다. 과거 12개월 완결연도의 관측/잔여 월평균 비율과 월별 모양은 판단용 참고자료이며 사용자 입력을 강제로 덮어쓰지 않습니다.']);
     seasonSheet.addRow(['대상 연도','관측 최대월','비교 연도','관측 월수','전반 월평균 비용','잔여 월평균 비용','비율','비율 제곱','1월 비율','2월 비율','3월 비율','4월 비율','5월 비율','6월 비율','7월 비율','8월 비율','9월 비율','10월 비율','11월 비율','12월 비율']);
     const seasonRanges={};
     let seasonRow=4;
@@ -8545,20 +8701,18 @@ const dashboardExcelExporter = {
       if(start===seasonRow){seasonSheet.getCell(seasonRow++,1).value=targetYear;}
       const end=seasonRow-1, resultRow=seasonRow++;
       const gr='G'+start+':G'+end, hr='H'+start+':H'+end;
-      seasonSheet.getCell(resultRow,1).value=targetYear+'년 적용계수';
+      seasonSheet.getCell(resultRow,1).value=targetYear+'년 적용/참고';
       seasonSheet.getCell(resultRow,2).value={formula:"'산식 검증'!F"+targetSummary,result:cutoff};
       seasonSheet.getCell(resultRow,4).value={formula:'COUNT('+gr+')',result:evidence.samples.length};
       seasonSheet.getCell(resultRow,5).value={formula:'IFERROR(AVERAGE('+gr+'),1)',result:evidence.mean};
       seasonSheet.getCell(resultRow,6).value={formula:'IFERROR(SQRT(MAX(0,AVERAGE('+hr+')-E'+resultRow+'^2))/E'+resultRow+',0)',result:evidence.cv};
-      seasonSheet.getCell(resultRow,7).value={formula:'IF(OR(B'+resultRow+'<=0,B'+resultRow+'>=12),1,IF(D'+resultRow+'<2,IF(B'+resultRow+'<=10,'+Number(COST_UNIT.legacySeasonalityFactor)+',1),IF(AND(ABS(E'+resultRow+'-1)>=0.1,F'+resultRow+'<=0.25,OR(COUNTIF('+gr+',"<1")=D'+resultRow+',COUNTIF('+gr+',">1")=D'+resultRow+')),E'+resultRow+',1)))',result:evidence.factor};
+      seasonSheet.getCell(resultRow,7).value={formula:'IF(OR(B'+resultRow+'<=0,B'+resultRow+'>=12),1,\'단가 및 모델\'!$B$15)',result:evidence.factor};
       seasonRanges[targetYear]=resultRow;
     }
     seasonSheet.columns=[24,18,16,16,24,24,20,20,...new Array(12).fill(14),4,15,15,58].map(width=>({width}));
     seasonSheet.views=[{state:'frozen',ySplit:3}];
-    sourceYears.forEach((year,i)=>{const model=window.annualMetrics?.[latestMetricYearKey(year)]?.seasonality;seasonSheet.getCell(i+4,22).value=year;seasonSheet.getCell(i+4,23).value={formula:'G'+seasonRanges[year],result:model?.factor||1};seasonSheet.getCell(i+4,24).value=formatSeasonalityDecision(model);});
-    seasonSheet.getCell('V3').value='대상 연도';seasonSheet.getCell('W3').value='계산 항등값/적용계수';seasonSheet.getCell('X3').value='적용 판단 및 근거';
-    const currentYear=years[years.length-1];
-    rateSheet.getCell('B15').value={formula:"IFERROR(INDEX('계절 보정'!$W$4:$W$"+(sourceYears.length+3)+",MATCH(MAX('원천 입력'!$A:$A),'계절 보정'!$V$4:$V$"+(sourceYears.length+3)+",0)),1)",result:window.annualMetrics?.[latestMetricYearKey(currentYear)]?.seasonality?.factor||1};
+    sourceYears.forEach((year,i)=>{const model=window.annualMetrics?.[latestMetricYearKey(year)]?.seasonality;seasonSheet.getCell(i+4,22).value=year;seasonSheet.getCell(i+4,23).value={formula:'G'+seasonRanges[year],result:model?.factor??1};seasonSheet.getCell(i+4,24).value=(model?.suggestionText||'XLSB 비교 표본 없음')+' · '+formatSeasonalityDecision(model);});
+    seasonSheet.getCell('V3').value='대상 연도';seasonSheet.getCell('W3').value='사용자 적용계수';seasonSheet.getCell('X3').value='XLSB 참고값 및 적용 근거';
 
     sourceYears.forEach((year, offset) => {
       const row = summaryStart + offset;
@@ -8608,15 +8762,16 @@ const dashboardExcelExporter = {
 
   addForecastWorkbookSheet: function(workbook, audit) {
     const model = window.forecastModel27 || buildForecastModel2027();
+    const nextYear = model.latestYear + 1;
     const row = audit.rowMap[model.latestYear];
-    const ws = workbook.addWorksheet('2027 월별 예측');
+    const ws = workbook.addWorksheet('다음 연도 월별 예측');
     ws.views = [{ state: 'frozen', ySplit: 19, xSplit: 1 }];
     ws.mergeCells('A1:I1');
-    ws.getCell('A1').value = '2027년 작업 건수·비용 예측 산식 연결표';
+    ws.getCell('A1').value = nextYear + '년 작업 건수·비용 예측 산식 연결표';
     ws.getCell('A1').font = { bold: true, size: 15, color: { argb: 'FFFFFFFF' } };
     ws.getCell('A1').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E3A8A' } };
     ws.mergeCells('A2:I2');
-    ws.getCell('A2').value = '원천 입력 표와 단가 및 모델 시트의 값을 바꾸면 이 표가 자동 재계산됩니다. 최신 정산 연도 연환산 건수와 연환산 비용/건 단가를 2027년 예측의 기준으로 사용합니다. 실제·추정 월별 비중으로 건수를 배분하며 월별 작업수·비용 합계는 연간 예측값과 일치합니다.';
+    ws.getCell('A2').value = '원천 입력 표와 단가 및 모델 시트의 값을 바꾸면 이 표가 자동 재계산됩니다. 최신 정산 연도 연환산 건수와 연환산 비용/건 단가를 ' + nextYear + '년 예측의 기준으로 사용합니다. 실제·추정 월별 비중으로 건수를 배분하며 월별 작업수·비용 합계는 연간 예측값과 일치합니다.';
     ws.getCell('A2').alignment = { wrapText: true };
 
     const auditRow = row || audit.summaryStart;
@@ -8630,11 +8785,11 @@ const dashboardExcelExporter = {
       ['당해연도 최대 실적 월', "=INDEX('산식 검증'!$F:$F,MATCH(B5,'산식 검증'!$A:$A,0))", model.maxMonth, '월'],
       ['월평균 추정 건수', '=IF(B9>0,ROUND(B7/B9*\'단가 및 모델\'!$B$15,0),0)', model.averageMonthlyCount, '건/월'],
       ['최신 연도 연환산 건수', "=INDEX('산식 검증'!$P:$P,MATCH(B5,'산식 검증'!$A:$A,0))", model.projectedCountLatest, '건'],
-      ['2027년 작업 증가율', "='단가 및 모델'!$B$14", model.countGrowthRate, '%'],
-      ['2027년 연간 예측 건수', '=MAX(0,ROUND(B11*(1+B12),0))', model.totalPred27, '건'],
+      [nextYear + '년 작업 증가율', "='단가 및 모델'!$B$14", model.countGrowthRate, '%'],
+      [nextYear + '년 연간 예측 건수', '=MAX(0,ROUND(B11*(1+B12),0))', model.totalPred27, '건'],
       ['최근 정산연도 연환산 비용/건', "=IFERROR(INDEX('산식 검증'!$M:$M,MATCH(B5,'산식 검증'!$A:$A,0))/B11,0)", avgCost, '원/건'],
       ['물가 상승률', "='단가 및 모델'!$B$13", model.inflationRate, '%'],
-      ['2027년 연간 예측 비용', '=ROUND(B13*B14*(1+B15)/10000,0)', model.cost27TotalWan, '만원']
+      [nextYear + '년 연간 예측 비용', '=ROUND(B13*B14*(1+B15)/10000,0)', model.cost27TotalWan, '만원']
     ];
     const labels = ['계산 항목', '수식 결과', '단위', '산식 근거'];
     labels.forEach((value, index) => {
@@ -8727,7 +8882,7 @@ const dashboardExcelExporter = {
 
       const seasonColumn=String.fromCharCode('I'.charCodeAt(0)+index);
       setFormula(r,21,'IF(A'+r+'<=$B$9,1,IFERROR(AVERAGEIFS(\'계절 보정\'!$'+seasonColumn+':$'+seasonColumn+',\'계절 보정\'!$A:$A,$B$5),\'단가 및 모델\'!$B$15))',model.seasonality?.rawMonthlyFactors?.[index]||1,'0.0000');
-      setFormula(r,22,'IF(A'+r+'<=$B$9,1,IFERROR(U'+r+'/AVERAGEIFS($U$20:$U$31,$A$20:$A$31,">"&$B$9)*\'단가 및 모델\'!$B$15,\'단가 및 모델\'!$B$15))',model.seasonalMonthFactors[index]||1,'0.0000');
+      setFormula(r,22,'IF(A'+r+'<=$B$9,1,IF(ABS(\'단가 및 모델\'!$B$15-1)<0.0000001,1,IFERROR(U'+r+'/AVERAGEIFS($U$20:$U$31,$A$20:$A$31,">"&$B$9)*\'단가 및 모델\'!$B$15,\'단가 및 모델\'!$B$15)))',Number(model.seasonalMonthFactors[index]??1),'0.0000');
       const remainingCountQuota='IF(AND(A'+r+'>$B$9,$B$9>0,$B$9<12),IFERROR(V'+r+'/SUMIFS($V$20:$V$31,$A$20:$A$31,">"&$B$9)*'+residualCount+',0),0)';
       setFormula(r,23,remainingCountQuota,0,'0.00000');
       setFormula(r,24,'INT(W'+r+')',0,'0');
@@ -8777,7 +8932,7 @@ const dashboardExcelExporter = {
         const card = canvas ? canvas.closest('.card') : null;
 
         // [결함 방지] 공식 타이틀 테이블을 1순위로 조회하여 이모지 잘림/공백 파일명 원천 방지
-        const officialTitle = this.OFFICIAL_CHART_TITLES[canvasId];
+        const officialTitle = this.getOfficialChartTitle(canvasId);
         let title = customTitle || officialTitle;
         if (!title && card) {
           const tEl = card.querySelector('.card-title');
@@ -8855,11 +9010,11 @@ const dashboardExcelExporter = {
           ];
 
           const headerRow = 4;
-          const yk_bub = (typeof window !== 'undefined' && window.YR_KEYS) ? window.YR_KEYS : ['24년', '25년', '26년'];
-          const firstYr_bub = yk_bub[0] || '24년';
+          const yk_bub = (typeof window !== 'undefined' && window.YR_KEYS) ? window.YR_KEYS : [];
+          const firstYr_bub = yk_bub[0] || '';
           const lastIdx_bub = Math.max(0, yk_bub.length - 1);
-          const latestYr_bub = yk_bub[lastIdx_bub] || '26년';
-          const headers = ["건물동", `${formatYearLabel(firstYr_bub)} 건수 (X축)`, `${formatYearLabel(latestYr_bub)} 건수 (Y축)`, `${yk_bub.length}개년 누적 건수 (버블 크기)`];
+          const latestYr_bub = yk_bub[lastIdx_bub] || '';
+          const headers = ["건물동", `${firstYr_bub?formatYearLabel(firstYr_bub):'원천 최초연도'} 건수 (X축)`, `${latestYr_bub?formatYearLabel(latestYr_bub):'원천 최신연도'} 건수 (Y축)`, `${yk_bub.length}개년 누적 건수 (버블 크기)`];
           headers.forEach((h, hIdx) => {
             const cell = dataSheet.getCell(headerRow, hIdx + 1);
             cell.value = h;
@@ -9004,11 +9159,11 @@ const dashboardExcelExporter = {
         let hideLegend = false;
 
         if (canvasId === 'c-yoy-bldg') {
-          chartDisplayTitle = '건물동별 전년대비 증감 (26년 - 25년) [하향(-) 감소: 녹색 / 상향(+) 증가: 적색]';
+          chartDisplayTitle = this.getOfficialChartTitle(canvasId);
           valFmt = '+0"건";-0"건";0"건"';
           hideLegend = true;
         } else if (canvasId === 'c-yoy-type') {
-          chartDisplayTitle = '보수유형별 전년대비 증감 (26년 - 25년) [◀ 좌측(-) 감소 / 우측(+) 증가 ▶]';
+          chartDisplayTitle = this.getOfficialChartTitle(canvasId);
           valFmt = '+0"건";-0"건";0"건"';
           hideLegend = true;
         } else if (canvasId === 'c-yearHours' || canvasId === 'c-bldgHours') {
@@ -9095,15 +9250,17 @@ const dashboardExcelExporter = {
         // [히트맵 전용] 000 벤치마킹 기반 12개월×3개년 조건부 서식 + 엑셀 네이티브 차트 동시 연계
         // =========================================================================
         if (type === "heatmap") {
-          title = customTitle || "월별 작업 빈도 히트맵 및 3개년 추이";
-          filename = `[021_건축긴급대응]_월별_작업_히트맵_3개년매트릭스_${timestamp}.xlsx`;
+          const heatmapYearKeys = [...(window.YR_KEYS_REV || [])];
+          const heatmapYearCount = heatmapYearKeys.length;
+          title = customTitle || `월별 작업 빈도 히트맵 및 ${heatmapYearCount}개년 추이`;
+          filename = `[021_건축긴급대응]_월별_작업_히트맵_${heatmapYearCount}개년매트릭스_${timestamp}.xlsx`;
 
           const chartSheet = wb.addWorksheet("차트");
           chartSheet.properties.showGridLines = true;
           chartSheet.views = [{ state: "frozen", ySplit: 4 }];
 
           chartSheet.mergeCells("A1:N1");
-          chartSheet.getCell("A1").value = "🌡️ 월별 긴급보수 작업 빈도 히트맵 및 3개년 추이 (조건부 서식 + 네이티브 차트)";
+          chartSheet.getCell("A1").value = `🌡️ 월별 긴급보수 작업 빈도 히트맵 및 ${heatmapYearCount}개년 추이 (조건부 서식 + 네이티브 차트)`;
           chartSheet.getCell("A1").font = { bold: true, size: 14, color: { argb: "FF1E293B" } };
 
           chartSheet.mergeCells("A2:N2");
@@ -9130,12 +9287,8 @@ const dashboardExcelExporter = {
           totalHeader.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF173B61" } };
           totalHeader.alignment = { horizontal: "center", vertical: "middle" };
 
-          const years = ["2026년", "2025년", "2024년"];
-          const yData = [
-            typeof monthlyData !== 'undefined' && monthlyData.y26 ? monthlyData.y26 : [7,7,15,5,9,16,14,8,0,0,0,0],
-            typeof monthlyData !== 'undefined' && monthlyData.y25 ? monthlyData.y25 : [3,9,3,9,8,2,7,9,13,10,9,6],
-            typeof monthlyData !== 'undefined' && monthlyData.y24 ? monthlyData.y24 : [8,10,13,10,15,4,16,9,4,9,0,0]
-          ];
+          const years = heatmapYearKeys.map(formatYearLabel);
+          const yData = heatmapYearKeys.map(key => window.monthlyData?.['y' + String(key).replace(/[^0-9]/g, '')] || new Array(12).fill(0));
           const maxVal = Math.max(1, ...yData.flat());
 
           years.forEach((yr, yIdx) => {
@@ -9187,10 +9340,11 @@ const dashboardExcelExporter = {
             sumCell.border = { top: { style: "thin", color: { argb: "FFE2E8F0" } }, bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
           });
 
-          // 월별 3개년 총합 행 (Row 8)
-          const totRow = 8;
+          // 원천 연도가 추가·삭제되어도 합계와 조건부 서식 범위를 함께 확장한다.
+          const lastYearRow = 4 + years.length;
+          const totRow = lastYearRow + 1;
           const totCellA = chartSheet.getCell(totRow, 1);
-          totCellA.value = "월별 3개년 총계";
+          totCellA.value = `월별 ${heatmapYearCount}개년 총계`;
           totCellA.font = { bold: true, color: { argb: "FF102A43" } };
           totCellA.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDCEBFA" } };
           totCellA.alignment = { horizontal: "center", vertical: "middle" };
@@ -9199,7 +9353,7 @@ const dashboardExcelExporter = {
             const col = mIdx + 2;
             const colLetter = this.excelCol(col);
             const c = chartSheet.getCell(totRow, col);
-            c.value = { formula: `SUM(${colLetter}5:${colLetter}7)` };
+            c.value = { formula: `SUM(${colLetter}5:${colLetter}${lastYearRow})` };
             c.font = { bold: true, color: { argb: "FF102A43" } };
             c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDCEBFA" } };
             c.alignment = { horizontal: "center", vertical: "middle" };
@@ -9207,7 +9361,7 @@ const dashboardExcelExporter = {
             c.border = { top: { style: "thin", color: { argb: "FFCBD5E1" } }, bottom: { style: "thin", color: { argb: "FFCBD5E1" } } };
           }
           const grandTotCell = chartSheet.getCell(totRow, 14);
-          grandTotCell.value = { formula: `SUM(N5:N7)` };
+          grandTotCell.value = { formula: `SUM(N5:N${lastYearRow})` };
           grandTotCell.font = { bold: true, color: { argb: "FFFFFFFF" } };
           grandTotCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1E3A8A" } };
           grandTotCell.alignment = { horizontal: "center", vertical: "middle" };
@@ -9220,9 +9374,9 @@ const dashboardExcelExporter = {
           });
 
           const anchor = "B5";
-          const dynamicMax = "MAX($B$5:$M$7,1)";
+          const dynamicMax = `MAX($B$5:$M$${lastYearRow},1)`;
           chartSheet.addConditionalFormatting({
-            ref: "B5:M7",
+            ref: `B5:M${lastYearRow}`,
             rules: [
               {
                 type: "expression",
@@ -9263,9 +9417,11 @@ const dashboardExcelExporter = {
           });
 
           // 히트맵 등급 범례 표시
-          chartSheet.mergeCells("A10:N10");
-          chartSheet.getCell("A10").value = "🎨 히트맵 발생 빈도 범례 (조건부 서식 등급):";
-          chartSheet.getCell("A10").font = { bold: true, size: 9.5, color: { argb: "FF475569" } };
+          const legendTitleRow = totRow + 2;
+          const legendRow = legendTitleRow + 1;
+          chartSheet.mergeCells(legendTitleRow, 1, legendTitleRow, 14);
+          chartSheet.getCell(legendTitleRow, 1).value = "🎨 히트맵 발생 빈도 범례 (조건부 서식 등급):";
+          chartSheet.getCell(legendTitleRow, 1).font = { bold: true, size: 9.5, color: { argb: "FF475569" } };
 
           const legends = [
             { label: "■ 최고 빈도 (80% 이상)", bg: "FFE05C7B", fg: "FFFFFFFF" },
@@ -9277,8 +9433,8 @@ const dashboardExcelExporter = {
 
           legends.forEach((lg, i) => {
             const colStart = 2 + i * 2;
-            chartSheet.mergeCells(11, colStart, 11, colStart + 1);
-            const c = chartSheet.getCell(11, colStart);
+            chartSheet.mergeCells(legendRow, colStart, legendRow, colStart + 1);
+            const c = chartSheet.getCell(legendRow, colStart);
             c.value = lg.label;
             c.font = { bold: true, size: 8.5, color: { argb: lg.fg } };
             c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: lg.bg } };
@@ -9358,23 +9514,25 @@ const dashboardExcelExporter = {
 
           // [핵심] 히트맵 매트릭스 하단에 네이티브 엑셀 클러스터 바 차트 배치
           chartSpec = {
-            title: "월별 긴급보수 건수 3개년 추이 (엑셀 네이티브 연동 차트)",
+            title: `월별 긴급보수 건수 ${heatmapYearCount}개년 추이 (엑셀 네이티브 연동 차트)`,
             type: "bar",
             sheetName: "차트 연계 데이터",
             categoryRange: "'차트 연계 데이터'!$B$4:$M$4",
             categoryValues: months,
-            series: [
-              { name: "2026년", color: "4ECB71", nameRef: "'차트 연계 데이터'!$A$5", valRange: "'차트 연계 데이터'!$B$5:$M$5", values: yData[0] },
-              { name: "2025년", color: "F5A623", nameRef: "'차트 연계 데이터'!$A$6", valRange: "'차트 연계 데이터'!$B$6:$M$6", values: yData[1] },
-              { name: "2024년", color: "6C8EF5", nameRef: "'차트 연계 데이터'!$A$7", valRange: "'차트 연계 데이터'!$B$7:$M$7", values: yData[2] }
-            ],
+            series: years.map((yearLabel, index) => ({
+              name: yearLabel,
+              color: ["4ECB71","F5A623","6C8EF5","38BDF8","A78BFA"][index % 5],
+              nameRef: `'차트 연계 데이터'!$A$${5+index}`,
+              valRange: `'차트 연계 데이터'!$B$${5+index}:$M$${5+index}`,
+              values: yData[index]
+            })),
             valFormatCode: '#,##0"건"',
             hideLegend: false,
             invertIfNegative: 0,
             tickLblPos: "low",
-            fromRow: 14,
+            fromRow: legendRow + 3,
             fromCol: 0,
-            toRow: 34,
+            toRow: legendRow + 23,
             toCol: 14
           };
 
@@ -9411,7 +9569,7 @@ const dashboardExcelExporter = {
           });
 
           const exportRiskRows = (typeof window !== "undefined" && window.buildRiskRows)
-            ? window.buildRiskRows(window.buildingData || [], window.YR_KEYS || ['24년', '25년', '26년'])
+            ? window.buildRiskRows(window.buildingData || [], window.YR_KEYS || [])
             : (typeof buildRiskRows === "function" ? buildRiskRows(buildingData, YR_KEYS) : []);
           const defaultRiskRows = exportRiskRows.map((r, idx) => [
             idx + 1, r.name, r.score, r.score >= 70 ? "🚨 고위험" : r.score >= 45 ? "⚠️ 주의" : "안정",
@@ -9645,7 +9803,7 @@ const dashboardExcelExporter = {
           chartSheet.getCell("A2").value = "💡 안내: '차트 연계 데이터' 시트의 노란색 수치를 변경하면 건물동별/유형별 편차 및 하단 엑셀 차트가 자동 갱신됩니다.";
           chartSheet.getCell("A2").font = { italic: true, size: 9.5, color: { argb: "FF475569" } };
 
-          const exportYk = window.YR_KEYS || ['24년', '25년', '26년'];
+          const exportYk = window.YR_KEYS || [];
           const exportLatestIdx = exportYk.length - 1;
           const exportPrevIdx = Math.max(0, exportYk.length - 2);
           const exportLatestYr = exportYk[exportLatestIdx];
@@ -9798,7 +9956,7 @@ const dashboardExcelExporter = {
 
           const yk_bldg = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS) && window.YR_KEYS.length > 0)
             ? window.YR_KEYS
-            : ['24년', '25년', '26년'];
+            : [];
           const ykRev_bldg = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS_REV) && window.YR_KEYS_REV.length > 0)
             ? window.YR_KEYS_REV
             : [...yk_bldg].reverse();
@@ -10058,7 +10216,7 @@ const dashboardExcelExporter = {
           titleCell.alignment = { vertical: "middle" };
           tableSheet.getRow(1).height = 30;
 
-          const yk_rep = (typeof window !== 'undefined' && window.YR_KEYS) ? window.YR_KEYS : ['24년', '25년', '26년'];
+          const yk_rep = (typeof window !== 'undefined' && window.YR_KEYS) ? window.YR_KEYS : [];
           const ykRev_rep = (typeof window !== 'undefined' && window.YR_KEYS_REV) ? window.YR_KEYS_REV : [...yk_rep].reverse();
           const yrRangeRepText = yk_rep.length > 1 ? `${yk_rep[0]}~${yk_rep[yk_rep.length - 1]}` : yk_rep[0];
           const repColsCount = 1 + ykRev_rep.length + 3;
@@ -10276,7 +10434,7 @@ const dashboardExcelExporter = {
             c.alignment = { horizontal: "center", vertical: "middle" };
           });
 
-          const costExportYears = window.YR_KEYS || ['24년', '25년', '26년'];
+          const costExportYears = window.YR_KEYS || [];
           const costRows = costExportYears.map(yr => {
             const m = window.annualMetrics?.[yr] || {};
             const admin = Math.round(Number(m.adminCost || 0) / 10000);
@@ -10287,7 +10445,7 @@ const dashboardExcelExporter = {
             const _cRatio = getLatestContractorCostRatio();
             const forecastCost = Number(window.cost27TotalWan) || 0;
             const forecastContr = Math.round(forecastCost * _cRatio);
-            costRows.push(['2027년(연간예측)', forecastCost, forecastContr, forecastContr - forecastCost]);
+            costRows.push([(window.forecastModel27.latestYear + 1) + '년(연간예측)', forecastCost, forecastContr, forecastContr - forecastCost]);
           }
 
           costRows.forEach((row, rIdx) => {
@@ -10315,7 +10473,7 @@ const dashboardExcelExporter = {
                 }
               } else if (rIdx === costExportYears.length) {
                 if (cIdx === 0) {
-                  formula = "'2027 월별 예측'!$B$16";
+                  formula = "'다음 연도 월별 예측'!$B$16";
                 } else if (cIdx === 1) {
                   const firstAuditRow = costAudit.summaryStart;
                   const lastAuditRow = costAudit.summaryStart + costAudit.sourceYears.length - 1;
@@ -10334,7 +10492,7 @@ const dashboardExcelExporter = {
           dataSheet.columns = [{ width: 18 }, { width: 22 }, { width: 22 }, { width: 16 }];
 
           chartSpec = {
-            title: "4개년 시스템적 비용 대조 (서명 vs 시공사)",
+            title: costRows.length + "개년 시스템적 비용 대조 (서명 vs 시공사)",
             type: "bar",
             sheetName: "차트 연계 데이터",
             categoryCol: 1,
@@ -10385,7 +10543,7 @@ const dashboardExcelExporter = {
             c.alignment = { horizontal: "center", vertical: "middle" };
           });
 
-          const auditYears = window.YR_KEYS || ['24년', '25년', '26년'];
+          const auditYears = window.YR_KEYS || [];
           const auditRows = auditYears.map(yr => {
             const m = window.annualMetrics?.[yr] || {};
             const admin = Number(m.adminWorkers || 0);
@@ -10440,32 +10598,33 @@ const dashboardExcelExporter = {
         // =========================================================================
         } else if (type === "forecast-2027" || type === "forecast-cost-2027") {
           const isCost = (type === "forecast-cost-2027");
-          title = customTitle || (isCost ? "2027년 작업 예측 (비용) 산식 검증 및 연동 리포트" : "2027년 작업 예측 (건수) 산식 검증 및 연동 리포트");
+          const model = window.forecastModel27 || buildForecastModel2027();
+          const nextYear = model.latestYear + 1;
+          title = customTitle || (isCost ? nextYear + "년 작업 예측 (비용) 산식 검증 및 연동 리포트" : nextYear + "년 작업 예측 (건수) 산식 검증 및 연동 리포트");
           filename = `[021_건축긴급대응]_${this.sanitizeFilename(title)}_${timestamp}.xlsx`;
           const costAudit = this.addCostAuditSheets(wb);
           this.addForecastWorkbookSheet(wb, costAudit);
 
-          const model = window.forecastModel27 || buildForecastModel2027();
           const latestYrStr = formatYearLabel(model.latestYear);
 
           const chartSheet = wb.addWorksheet("차트");
           chartSheet.properties.showGridLines = true;
           chartSheet.getCell("A1").value = "📊 " + title;
           chartSheet.getCell("A1").font = { bold: true, size: 14, color: { argb: "FF1E293B" } };
-          chartSheet.getCell("A2").value = "💡 '단가 및 모델' 또는 '원천 입력'의 값을 수정하면 2027 월별 예측과 이 차트가 Excel에서 자동 재계산됩니다.";
+          chartSheet.getCell("A2").value = "💡 '단가 및 모델' 또는 '원천 입력'의 값을 수정하면 다음 연도 월별 예측과 이 차트가 Excel에서 자동 재계산됩니다.";
           chartSheet.getCell("A2").font = { italic: true, size: 10, color: { argb: "FF64748B" } };
           chartSheet.columns = Array.from({ length: 16 }, () => ({ width: 11 }));
 
           const dataSheet = wb.addWorksheet("차트 연계 데이터");
           dataSheet.mergeCells("A1:D1");
           dataSheet.getCell("A1").value = isCost
-            ? "💡 '2027 월별 예측' 시트와 100% 동적 수식으로 연동된 월별 비용 데이터입니다."
-            : "💡 '2027 월별 예측' 시트와 100% 동적 수식으로 연동된 월별 건수 데이터입니다.";
+            ? "💡 '다음 연도 월별 예측' 시트와 100% 동적 수식으로 연동된 월별 비용 데이터입니다."
+            : "💡 '다음 연도 월별 예측' 시트와 100% 동적 수식으로 연동된 월별 건수 데이터입니다.";
           dataSheet.getCell("A1").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F2FF" } };
 
           const headers = isCost
-            ? ["구분 / 항목", latestYrStr + " 실제 집행비용", latestYrStr + " 잔여월 비용 예측", "2027년 월별 예측 비용"]
-            : ["구분 / 항목", latestYrStr + " 실제 월별 실적", latestYrStr + " 잔여월 예측", "2027년 월별 예측"];
+            ? ["구분 / 항목", latestYrStr + " 실제 집행비용", latestYrStr + " 잔여월 비용 예측", nextYear + "년 월별 예측 비용"]
+            : ["구분 / 항목", latestYrStr + " 실제 월별 실적", latestYrStr + " 잔여월 예측", nextYear + "년 월별 예측"];
           headers.forEach((h, i) => {
             const c = dataSheet.getCell(4, i + 1);
             c.value = h;
@@ -10482,7 +10641,7 @@ const dashboardExcelExporter = {
             if (isCost) {
               const actualCell = dataSheet.getCell(r, 2);
 
-                actualCell.value = { formula: "'2027 월별 예측'!S" + rF, result: Math.round((calculateXlsbCostContribution(model.currentYearRows.filter(x => Number(x.month) === m), false) || 0) / 10000) };
+                actualCell.value = { formula: "'다음 연도 월별 예측'!S" + rF, result: Math.round((calculateXlsbCostContribution(model.currentYearRows.filter(x => Number(x.month) === m), false) || 0) / 10000) };
 
               actualCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
               actualCell.numFmt = '#,##0"만원"';
@@ -10490,21 +10649,21 @@ const dashboardExcelExporter = {
 
               const remainCell = dataSheet.getCell(r, 3);
 
-                remainCell.value = { formula: "'2027 월별 예측'!T" + rF, result: model.monthlyForecastCostWan[m-1]||0 };
+                remainCell.value = { formula: "'다음 연도 월별 예측'!T" + rF, result: model.monthlyForecastCostWan[m-1]||0 };
 
               remainCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
               remainCell.numFmt = '#,##0"만원"';
               remainCell.alignment = { horizontal: "center" };
 
               const predCell = dataSheet.getCell(r, 4);
-              predCell.value = { formula: "'2027 월별 예측'!I" + rF, result: model.costs27Forecast[m - 1] };
+              predCell.value = { formula: "'다음 연도 월별 예측'!I" + rF, result: model.costs27Forecast[m - 1] };
               predCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
               predCell.numFmt = '#,##0"만원"';
               predCell.alignment = { horizontal: "center" };
             } else {
               const actualCell = dataSheet.getCell(r, 2);
 
-                actualCell.value = { formula: "'2027 월별 예측'!B" + rF, result: model.actualCounts[m - 1] || 0 };
+                actualCell.value = { formula: "'다음 연도 월별 예측'!B" + rF, result: model.actualCounts[m - 1] || 0 };
 
               actualCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
               actualCell.numFmt = '#,##0"건"';
@@ -10512,14 +10671,14 @@ const dashboardExcelExporter = {
 
               const remainCell = dataSheet.getCell(r, 3);
 
-                remainCell.value = { formula: "'2027 월별 예측'!C" + rF, result: model.forecastCounts[m - 1] || 0 };
+                remainCell.value = { formula: "'다음 연도 월별 예측'!C" + rF, result: model.forecastCounts[m - 1] || 0 };
 
               remainCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
               remainCell.numFmt = '#,##0"건"';
               remainCell.alignment = { horizontal: "center" };
 
               const predCell = dataSheet.getCell(r, 4);
-              predCell.value = { formula: "'2027 월별 예측'!F" + rF, result: model.counts27Forecast[m - 1] || 0 };
+              predCell.value = { formula: "'다음 연도 월별 예측'!F" + rF, result: model.counts27Forecast[m - 1] || 0 };
               predCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
               predCell.numFmt = '#,##0"건"';
               predCell.alignment = { horizontal: "center" };
@@ -10529,7 +10688,7 @@ const dashboardExcelExporter = {
           dataSheet.columns = [{ width: 16 }, { width: 22 }, { width: 22 }, { width: 22 }];
 
           chartSpec = {
-            title: isCost ? "2027년 긴급보수 비용 예측 (월별 실적·추정·예측 대조)" : "2027년 긴급보수 건수 예측 (월별 실적·추정·예측 대조)",
+            title: isCost ? nextYear + "년 긴급보수 비용 예측 (월별 실적·추정·예측 대조)" : nextYear + "년 긴급보수 건수 예측 (월별 실적·추정·예측 대조)",
             type: "line",
             sheetName: "차트 연계 데이터",
             categoryCol: 1,
@@ -10540,11 +10699,11 @@ const dashboardExcelExporter = {
             series: isCost ? [
               { name: latestYrStr + " 실제 집행비용", col: 2, color: "4ECB71", values: model.monthlyActualCostWan || [] },
               { name: latestYrStr + " 잔여월 비용 예측", col: 3, color: "F5A623", values: model.monthlyForecastCostWan || [] },
-              { name: "2027년 월별 예측 비용", col: 4, color: "38BDF8", values: model.costs27Forecast || [] }
+              { name: nextYear + "년 월별 예측 비용", col: 4, color: "38BDF8", values: model.costs27Forecast || [] }
             ] : [
               { name: latestYrStr + " 실제 월별 실적", col: 2, color: "4ECB71", values: model.actualCounts || [] },
               { name: latestYrStr + " 잔여월 예측", col: 3, color: "F5A623", values: model.forecastCounts || [] },
-              { name: "2027년 월별 예측", col: 4, color: "E05C7B", values: model.counts27Forecast || [] }
+              { name: nextYear + "년 월별 예측", col: 4, color: "E05C7B", values: model.counts27Forecast || [] }
             ],
             valFormatCode: isCost ? '#,##0"만원"' : '#,##0"건"',
             hideLegend: false,
@@ -10582,7 +10741,7 @@ const dashboardExcelExporter = {
           dataSheet.mergeCells("A2:E2");
           dataSheet.getCell("A2").value = "부분 연도 비용은 당해연도 건만 12개월 환산하고 전년도 이월 정산액은 1회만 더합니다. 원천 상세에는 실제 정산액과 이월/네고 비고가 보존됩니다.";
 
-          const kpiYears = window.YR_KEYS || ['24년', '25년', '26년'];
+          const kpiYears = window.YR_KEYS || [];
           const kpiCostForYear = yr => Number(window.annualMetrics?.[yr]?.projectedAdminCost
             ?? window.annualMetrics?.[yr]?.adminCost ?? 0);
           const kpiRows = [
@@ -10741,9 +10900,7 @@ const dashboardExcelExporter = {
         const wb = new ExcelLib.Workbook();
         wb.creator = "021 건축 긴급대응 현황";
         wb.calcProperties.fullCalcOnLoad = true;
-        const yk_m = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS) && window.YR_KEYS.length > 0)
-          ? window.YR_KEYS
-          : ['24년', '25년', '26년'];
+        const yk_m = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS)) ? window.YR_KEYS : [];
         const ykRev_m = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS_REV) && window.YR_KEYS_REV.length > 0)
           ? window.YR_KEYS_REV
           : [...yk_m].reverse();
@@ -10754,13 +10911,13 @@ const dashboardExcelExporter = {
         // 1. 차트 시트 (마스터 네이티브 차트)
         const chartSheet = wb.addWorksheet("차트");
         chartSheet.properties.showGridLines = true;
-        chartSheet.getCell("A1").value = "📊 건축 긴급보수 대응 3개년 종합 마스터 차트";
+        chartSheet.getCell("A1").value = `📊 건축 긴급보수 대응 ${yk_m.length}개년 종합 마스터 차트`;
         chartSheet.getCell("A1").font = { bold: true, size: 14, color: { argb: "FF1E293B" } };
         chartSheet.getCell("A2").value = "💡 안내: '차트 연계 데이터' 시트의 노란색 수치를 수정하면 하단 네이티브 차트가 실시간으로 자동 갱신됩니다.";
         chartSheet.getCell("A2").font = { italic: true, size: 10, color: { argb: "FF64748B" } };
         chartSheet.columns = Array.from({ length: 24 }, () => ({ width: 11 }));
 
-        // 2. 차트 연계 데이터 (월별 3개년)
+        // 2. 차트 연계 데이터 (XLSB에 존재하는 모든 정산 연도)
         const dataSheet = wb.addWorksheet("차트 연계 데이터");
         dataSheet.properties.showGridLines = true;
         dataSheet.views = [{ state: "frozen", ySplit: 4 }];
@@ -10770,9 +10927,9 @@ const dashboardExcelExporter = {
         dataSheet.getCell("A1").font = { bold: true, color: { argb: "FF0F4C81" } };
         dataSheet.getCell("A1").fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE8F2FF" } };
 
-        const mDataSrc = (typeof monthlyData !== 'undefined') ? monthlyData : (typeof window !== 'undefined' && window.monthlyData ? window.monthlyData : { y26:[], y25:[], y24:[] });
+        const mDataSrc = (typeof monthlyData !== 'undefined') ? monthlyData : (window.monthlyData || {});
         const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
-        const mHeaders = ["월 구분", "2026년 건수", "2025년 건수", "2024년 건수"];
+        const mHeaders = ["월 구분", ...ykRev_m.map(year => formatYearLabel(year) + ' 건수')];
         mHeaders.forEach((h, i) => {
           const c = dataSheet.getCell(4, i + 1);
           c.value = h;
@@ -10788,11 +10945,7 @@ const dashboardExcelExporter = {
           c1.alignment = { horizontal: "center" };
           c1.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
 
-          const y26 = mDataSrc.y26 ? (mDataSrc.y26[idx] || 0) : 0;
-          const y25 = mDataSrc.y25 ? (mDataSrc.y25[idx] || 0) : 0;
-          const y24 = mDataSrc.y24 ? (mDataSrc.y24[idx] || 0) : 0;
-
-          [y26, y25, y24].forEach((val, cIdx) => {
+          ykRev_m.map(year => mDataSrc['y' + String(year).replace(/[^0-9]/g, '')]?.[idx] || 0).forEach((val, cIdx) => {
             const cell = dataSheet.getCell(rowNum, cIdx + 2);
             cell.value = Number(val) || 0;
             cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFF4CC" } };
@@ -10801,10 +10954,10 @@ const dashboardExcelExporter = {
             cell.border = { top:{style:'thin',color:{argb:'FFE2E8F0'}}, bottom:{style:'thin',color:{argb:'FFE2E8F0'}} };
           });
         });
-        dataSheet.columns = [{ width: 14 }, { width: 16 }, { width: 16 }, { width: 16 }];
+        dataSheet.columns = [{ width: 14 }, ...ykRev_m.map(() => ({ width: 16 }))];
 
         const masterChartSpec = {
-          title: "3개년 월별 긴급보수 건수 종합 추이 대조",
+          title: `${yk_m.length}개년 월별 긴급보수 건수 종합 추이 대조`,
           type: "bar",
           sheetName: "차트 연계 데이터",
           categoryCol: 1,
@@ -10812,11 +10965,12 @@ const dashboardExcelExporter = {
           headerRow: 4,
           dataStartRow: 5,
           dataEndRow: 16,
-          series: [
-            { name: "2026년 건수", col: 2, color: "4ECB71", values: mDataSrc.y26 || [] },
-            { name: "2025년 건수", col: 3, color: "F5A623", values: mDataSrc.y25 || [] },
-            { name: "2024년 건수", col: 4, color: "6C8EF5", values: mDataSrc.y24 || [] }
-          ]
+          series: ykRev_m.map((year, index) => ({
+            name: formatYearLabel(year) + ' 건수',
+            col: index + 2,
+            color: ["4ECB71","F5A623","6C8EF5","38BDF8","A78BFA"][index % 5],
+            values: mDataSrc['y' + String(year).replace(/[^0-9]/g, '')] || []
+          }))
         };
 
         // 3. Sheet: 1. 핵심 지표(KPI) 총괄
@@ -10825,9 +10979,7 @@ const dashboardExcelExporter = {
         wsKpi.properties.showGridLines = true;
         wsKpi.views = [{ state: "frozen", ySplit: 3 }];
 
-        const yk_kpi = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS) && window.YR_KEYS.length > 0)
-          ? window.YR_KEYS
-          : ['24년', '25년', '26년'];
+        const yk_kpi = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS)) ? window.YR_KEYS : [];
         const ykRev_kpi = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS_REV) && window.YR_KEYS_REV.length > 0)
           ? window.YR_KEYS_REV
           : [...yk_kpi].reverse();
@@ -10903,7 +11055,7 @@ const dashboardExcelExporter = {
         if (bData.length > 0) {
           const yk_bldg_m = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS) && window.YR_KEYS.length > 0)
             ? window.YR_KEYS
-            : ['24년', '25년', '26년'];
+            : [];
           const ykRev_bldg_m = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS_REV) && window.YR_KEYS_REV.length > 0)
             ? window.YR_KEYS_REV
             : [...yk_bldg_m].reverse();
@@ -10990,7 +11142,7 @@ const dashboardExcelExporter = {
         if (rData.length > 0) {
           const yk_rep_m = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS) && window.YR_KEYS.length > 0)
             ? window.YR_KEYS
-            : ['24년', '25년', '26년'];
+            : [];
           const ykRev_rep_m = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS_REV) && window.YR_KEYS_REV.length > 0)
             ? window.YR_KEYS_REV
             : [...yk_rep_m].reverse();
@@ -11071,7 +11223,7 @@ const dashboardExcelExporter = {
         // 6. Sheet: 4. 월별 작업 빈도 히트맵
         const yk_hm = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS) && window.YR_KEYS.length > 0)
           ? window.YR_KEYS
-          : ['24년', '25년', '26년'];
+          : [];
         const ykRev_hm = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS_REV) && window.YR_KEYS_REV.length > 0)
           ? window.YR_KEYS_REV
           : [...yk_hm].reverse();
@@ -11135,7 +11287,7 @@ const dashboardExcelExporter = {
         // 7. Sheet: 5. 전년대비 증감편차(YoY)
         const yk_yoy = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS) && window.YR_KEYS.length > 0)
           ? window.YR_KEYS
-          : ['24년', '25년', '26년'];
+          : [];
         const ykRev_yoy = (typeof window !== 'undefined' && Array.isArray(window.YR_KEYS_REV) && window.YR_KEYS_REV.length > 0)
           ? window.YR_KEYS_REV
           : [...yk_yoy].reverse();
@@ -11230,7 +11382,7 @@ const dashboardExcelExporter = {
         wsRisk.getCell("A1").value = "⚠️ 건물동 종합 위험도 지수 스코어링 및 리스크 진단";
         wsRisk.getCell("A1").font = { bold: true, size: 13, color: { argb: "FF1E293B" } };
 
-        const rkHeaders = ["순위", "건물동", "위험도 점수 (0~100)", "리스크 등급", "게이지", "주요 진단 및 위험 요인", "3년 누적 건수"];
+        const rkHeaders = ["순위", "건물동", "위험도 점수 (0~100)", "리스크 등급", "게이지", "주요 진단 및 위험 요인", `${yk_m.length}개년 누적 건수`];
         rkHeaders.forEach((h, i) => {
           const c = wsRisk.getCell(3, i + 1);
           c.value = h;
@@ -11240,7 +11392,7 @@ const dashboardExcelExporter = {
         });
 
         const exportRiskRows = (typeof window !== "undefined" && window.buildRiskRows)
-          ? window.buildRiskRows(window.buildingData || bData || [], window.YR_KEYS || ['24년', '25년', '26년'])
+          ? window.buildRiskRows(window.buildingData || bData || [], window.YR_KEYS || [])
           : (typeof buildRiskRows === "function" ? buildRiskRows(buildingData, YR_KEYS) : []);
         const riskRows = exportRiskRows.map((r, idx) => [
           idx + 1, r.name, r.score, r.score >= 70 ? "🚨 고위험" : r.score >= 45 ? "⚠️ 주의" : "안정",
@@ -11269,11 +11421,13 @@ const dashboardExcelExporter = {
         const wsCost = wb.addWorksheet("7. 시스템적 비용 집행 분석");
         wsCost.properties.showGridLines = true;
         wsCost.views = [{ state: "frozen", ySplit: 3 }];
-        wsCost.mergeCells("A1:F1");
-        wsCost.getCell("A1").value = "💰 연도별 비용 집행 추정 및 2027년 긴급보수 예산 예측";
+        wsCost.mergeCells(1, 1, 1, Math.max(3, yk_m.length + 3));
+        const masterForecastModel = window.forecastModel27 || buildForecastModel2027();
+        const masterNextYear = masterForecastModel.latestYear + 1;
+        wsCost.getCell("A1").value = `💰 연도별 비용 집행 추정 및 ${masterNextYear}년 긴급보수 예산 예측`;
         wsCost.getCell("A1").font = { bold: true, size: 13, color: { argb: "FF1E293B" } };
 
-        const costHeaders = ["구분 / 연도", ...ykRev_m.map(k => formatYearLabel(k) + " 실적"), `${yk_m.length}개년 누적 총계`, "2027년 예측치"];
+        const costHeaders = ["구분 / 연도", ...ykRev_m.map(k => formatYearLabel(k) + " 실적"), `${yk_m.length}개년 누적 총계`, `${masterNextYear}년 예측치`];
         const totalCostCols = costHeaders.length;
         costHeaders.forEach((h, i) => {
           const c = wsCost.getCell(3, i + 1);
@@ -11289,8 +11443,8 @@ const dashboardExcelExporter = {
         ykRev_m.forEach(yr => {
           const m = am[yr] || {};
           const cWan = Math.round(Number(m.adminCost || 0) / 10000);
-          const laborWan = Math.round(Number(m.adminWorkers || 0) * 8 * 35000 / 10000);
-          const matWan = Math.round(Number(m.materialCost || (cWan * 0.25 * 10000)) / 10000);
+          const laborWan = Math.round(Number(m.hours || 0) * COST_UNIT.hourlyRate / 10000);
+          const matWan = Math.round(Number(m.materialCost || 0) / 10000);
           const ovWan = Math.max(0, cWan - laborWan - matWan);
           const count = Number(m.cnt || 0);
 
@@ -11307,12 +11461,15 @@ const dashboardExcelExporter = {
           totCntAll += count;
         });
 
-        const nYears = Math.max(1, ykRev_m.length);
-        const predLabor27 = Math.round(totLabor / nYears * 1.045);
-        const predMat27 = Math.round(totMat / nYears * 1.045);
-        const predOv27 = Math.round(totOverhead / nYears * 1.045);
-        const predCost27 = predLabor27 + predMat27 + predOv27;
-        const predCnt27 = (typeof window.totalPred27 !== 'undefined' && window.totalPred27 > 0) ? window.totalPred27 : Math.round(totCntAll / nYears * 1.1);
+        const latestMasterMetric = am[yk_m[yk_m.length - 1]] || {};
+        const latestActualCost = Math.max(1, Number(latestMasterMetric.adminCost || 0));
+        const latestLaborShare = Math.max(0, Number(latestMasterMetric.hours || 0) * COST_UNIT.hourlyRate / latestActualCost);
+        const latestMaterialShare = Math.max(0, Number(latestMasterMetric.materialCost || 0) / latestActualCost);
+        const predCost27 = Number(masterForecastModel.cost27TotalWan || 0);
+        const predLabor27 = Math.round(predCost27 * latestLaborShare);
+        const predMat27 = Math.round(predCost27 * latestMaterialShare);
+        const predOv27 = Math.max(0, predCost27 - predLabor27 - predMat27);
+        const predCnt27 = Number(masterForecastModel.totalPred27 || 0);
 
         const costRowsDefs = [
           { name: "직접인건비 (만원)", map: yrLabor, tot: totLabor, pred: predLabor27, isFloat: false },
@@ -11392,7 +11549,7 @@ const dashboardExcelExporter = {
         wsAudit.views = [{ state: "frozen", ySplit: 3 }];
         wsAudit.mergeCells("A1:E1");
         const amMetrics = window.annualMetrics || {};
-        const ykKeys = window.YR_KEYS || ['24년','25년','26년'];
+        const ykKeys = window.YR_KEYS || [];
         let totAdmW = 0, totContrL = 0;
         const auditRows = ykKeys.map(k => {
           const m = amMetrics[k] || {};
@@ -11480,7 +11637,7 @@ const dashboardExcelExporter = {
         this.addRawRecordsSheet(wb, `10. ${rawList.length}건 전수 증빙 레코드`, rawList);
 
         // 13. Sheet: README (리포트 개요)
-        this.buildReadmeSheet(wb, "건축 긴급보수 3개년 통합 종합 마스터 리포트", rawList.length);
+        this.buildReadmeSheet(wb, `건축 긴급보수 ${yk_m.length}개년 통합 종합 마스터 리포트`, rawList.length);
 
         const baseBuffer = await wb.xlsx.writeBuffer();
         const patchedBlob = await this.patchWorkbookWithNativeCharts(baseBuffer, [masterChartSpec], "차트");
