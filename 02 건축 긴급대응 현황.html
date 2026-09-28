@@ -1133,13 +1133,19 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 .pt-ic-meter { height: 9px; border-radius: 999px; overflow: hidden; background: rgba(139,144,176,.17); }
 .pt-ic-meter > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg,var(--pt-tone),color-mix(in srgb,var(--pt-tone) 55%,#fff)); }
 .pt-ic-meter-caption { display: flex; justify-content: space-between; gap: 12px; margin-top: 7px; color: var(--text2); font-size: 11px; }
-/* 핵심 3대 유형: 이름만 나열하지 않고 같은 연환산 기준의 누적 건수·비용(추정)을 함께 표시한다. */
+/* 핵심 3대 유형: 3개년 합계와 같은 연환산 기준의 연도별 건수·비용(추정)을 함께 표시한다. */
 .pt-ic-type-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin: 4px 0 9px; }
-.pt-ic-type-summary { min-width: 0; padding: 7px 8px; border-radius: 7px; background: rgba(9,12,23,.28); border: 1px solid rgba(139,144,176,.13); }
+.pt-ic-type-summary { display: flex; flex-direction: column; gap: 6px; min-width: 0; padding: 8px; border-radius: 7px; background: rgba(9,12,23,.28); border: 1px solid rgba(139,144,176,.13); }
 .pt-ic-type-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: 10.5px; font-weight: 800; }
-.pt-ic-type-metrics { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; margin-top: 4px; font-variant-numeric: tabular-nums; }
-.pt-ic-type-count { flex: 0 0 auto; color: #fff; font-size: 11px; font-weight: 800; white-space: nowrap; }
-.pt-ic-type-cost { min-width: 0; color: #93c5fd; font-size: 10px; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+.pt-ic-type-total { display: flex; flex-direction: column; gap: 2px; padding-bottom: 5px; border-bottom: 1px solid rgba(139,144,176,.16); font-variant-numeric: tabular-nums; }
+.pt-ic-type-total-label { color: var(--text2); font-size: 8.5px; font-weight: 700; }
+.pt-ic-type-total-value { color: #fff; font-size: 10.5px; font-weight: 800; line-height: 1.25; white-space: nowrap; }
+.pt-ic-type-total-value em { color: #93c5fd; font-style: normal; }
+.pt-ic-type-years { display: grid; gap: 3px; }
+.pt-ic-type-year { display: grid; grid-template-columns: 28px 32px minmax(0,1fr); align-items: baseline; gap: 3px; min-width: 0; font-variant-numeric: tabular-nums; }
+.pt-ic-type-year-label { color: var(--pt-tone); font-size: 9px; font-weight: 800; white-space: nowrap; }
+.pt-ic-type-year-count { color: var(--text); font-size: 9.5px; font-weight: 800; white-space: nowrap; }
+.pt-ic-type-year-cost { min-width: 0; color: #93c5fd; font-size: 8.5px; font-weight: 700; text-align: right; white-space: nowrap; }
 .pt-insight-card.info:not(.zoomed-4x) .pt-ic-hero { margin-bottom: 6px; }
 .pt-ic-trend-wrap { min-width: 0; }
 .pt-ic-trend-heading { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 5px; color: var(--text2); font-size: 9.5px; font-weight: 700; }
@@ -7559,11 +7565,19 @@ buildChart('c-repairBar',{
               </div>
               ${buildInsightTrend(top3TrendData)}
             </div>
-            <div class="pt-ic-type-grid" aria-label="상위 ${top3.length}개 유형의 ${nYears}개년 누적 건수 및 비용 추정">
-              ${top3.map((d,index)=>`<div class="pt-ic-type-summary">
-                <span class="pt-ic-type-name">${index + 1}. ${d.type}</span>
-                <span class="pt-ic-type-metrics"><span class="pt-ic-type-count">${d.total.toLocaleString()}건</span><span class="pt-ic-type-cost">추정 ${d.totalCostWan.toLocaleString()}만원</span></span>
-              </div>`).join('')}
+            <div class="pt-ic-type-grid" aria-label="상위 ${top3.length}개 유형의 3개년 합계 및 연도별 건수·비용 추정">
+              ${top3.map((d,index) => {
+                const annualRows = yrKeys.map((year, yearIndex) => ({
+                  label: `${String(year || years[yearIndex] || '').replace('년', '')}년`,
+                  count: Number(d?.cnt?.[yearIndex] || 0),
+                  costWan: Math.round(Number(d?.yrCostWan?.[yearIndex] || 0))
+                })).reverse();
+                return `<div class="pt-ic-type-summary" aria-label="${index + 1}. ${d.type}: 3개년 ${d.total.toLocaleString()}건, 추정 ${d.totalCostWan.toLocaleString()}만원">
+                  <span class="pt-ic-type-name">${index + 1}. ${d.type}</span>
+                  <span class="pt-ic-type-total"><span class="pt-ic-type-total-label">3개년 합계</span><span class="pt-ic-type-total-value">${d.total.toLocaleString()}건 · <em>추정 ${d.totalCostWan.toLocaleString()}만원</em></span></span>
+                  <span class="pt-ic-type-years">${annualRows.map(row => `<span class="pt-ic-type-year"><span class="pt-ic-type-year-label">${row.label}</span><span class="pt-ic-type-year-count">${row.count.toLocaleString()}건</span><span class="pt-ic-type-year-cost">추정 ${row.costWan.toLocaleString()}만원</span></span>`).join('')}</span>
+                </div>`;
+              }).join('')}
             </div>
             <div class="pt-ic-stats">
               <div class="pt-ic-stat"><span class="pt-ic-stat-label">상위 ${top3.length}개 전체 ${nYears}개년 건수</span><span class="pt-ic-stat-value">${top3cnt.toLocaleString()}건</span></div>
