@@ -855,7 +855,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   border-color: var(--green) !important;
   box-shadow: 0 34px 86px rgba(0, 0, 0, 0.95), 0 0 58px rgba(78, 203, 113, 0.55) !important;
 }
-.pt-external-tooltip {
+.dashboard-external-tooltip {
   position: fixed;
   z-index: 100000;
   width: min(430px, calc(100vw - 24px));
@@ -877,7 +877,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   transform: translateY(4px);
   transition: opacity .14s ease, transform .14s ease, visibility .14s ease;
 }
-.pt-external-tooltip.is-visible {
+.dashboard-external-tooltip.is-visible {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -5496,11 +5496,205 @@ window.repairData = repairData;
 window.monthlyData = monthlyData;
 
 
+// ─── Unified external tooltip manager ───────────────────────────────────────
+// Native title tooltips and Chart.js canvas tooltips share one body-level
+// overlay. The overlay is always positioned outside the active control/card.
+function createDashboardTooltipManager() {
+  if (window.dashboardTooltipManager) return window.dashboardTooltipManager;
+
+  const selector = '[data-dashboard-tooltip],[data-pt-tooltip]';
+  const tooltipEl = document.getElementById('dashboard-external-tooltip') || (() => {
+    const el = document.createElement('div');
+    el.id = 'dashboard-external-tooltip';
+    el.className = 'dashboard-external-tooltip';
+    el.setAttribute('role', 'tooltip');
+    el.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(el);
+    return el;
+  })();
+  let activeSource = null;
+  let activeBoundary = null;
+  let trackingToken = 0;
+
+  const tooltipText = target => target?.getAttribute('data-dashboard-tooltip')
+    || target?.getAttribute('data-pt-tooltip') || '';
+
+  const resolveBoundary = target => {
+    if (!target || typeof target.closest !== 'function') return target;
+    if (target.closest('.modal')) return target;
+    return target.closest([
+      '.pt-data-row', '.pt-insight-card', '.kpi', '.yoy-card',
+      '.audit-kpi-card', '.audit-cause-card', '.insight', '.risk-row',
+      '.decision-card', '.roadmap-card', '.chart-wrap', '.cost-basis-box', '.card'
+    ].join(',')) || target;
+  };
+
+  const hide = source => {
+    if (source && activeSource && source !== activeSource) return;
+    trackingToken += 1;
+    activeSource = null;
+    activeBoundary = null;
+    tooltipEl.classList.remove('is-visible');
+    tooltipEl.setAttribute('aria-hidden', 'true');
+  };
+
+  const position = boundary => {
+    if (!boundary || !tooltipEl.classList.contains('is-visible')) return false;
+    const gap = 14;
+    const margin = 12;
+    const boundaryRect = boundary.getBoundingClientRect();
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    const defaultWidth = Math.min(430, viewportW - margin * 2);
+    const availableRight = viewportW - boundaryRect.right - margin - gap;
+    const availableLeft = boundaryRect.left - margin - gap;
+    const sideMinimum = Math.min(120, defaultWidth);
+    const useRight = availableRight >= sideMinimum;
+    const useLeft = !useRight && availableLeft >= sideMinimum;
+    let left;
+    let top;
+
+    if (useRight || useLeft) {
+      const sideWidth = Math.min(defaultWidth, useRight ? availableRight : availableLeft);
+      tooltipEl.style.width = `${sideWidth}px`;
+      tooltipEl.style.maxHeight = `${viewportH - margin * 2}px`;
+      const tipRect = tooltipEl.getBoundingClientRect();
+      left = useRight ? boundaryRect.right + gap : boundaryRect.left - tipRect.width - gap;
+      top = boundaryRect.top + (boundaryRect.height - tipRect.height) / 2;
+    } else {
+      tooltipEl.style.width = `${defaultWidth}px`;
+      const availableBelow = viewportH - boundaryRect.bottom - margin - gap;
+      const availableAbove = boundaryRect.top - margin - gap;
+      const placeBelow = availableBelow >= availableAbove;
+      const verticalSpace = placeBelow ? availableBelow : availableAbove;
+      if (verticalSpace < 48) {
+        tooltipEl.classList.remove('is-visible');
+        tooltipEl.setAttribute('aria-hidden', 'true');
+        return false;
+      }
+      tooltipEl.style.maxHeight = `${verticalSpace}px`;
+      const tipRect = tooltipEl.getBoundingClientRect();
+      left = boundaryRect.left;
+      top = placeBelow ? boundaryRect.bottom + gap : boundaryRect.top - tipRect.height - gap;
+    }
+
+    const tipRect = tooltipEl.getBoundingClientRect();
+    tooltipEl.style.left = `${Math.max(margin, Math.min(left, viewportW - tipRect.width - margin))}px`;
+    tooltipEl.style.top = `${Math.max(margin, Math.min(top, viewportH - tipRect.height - margin))}px`;
+    return true;
+  };
+
+  const trackTransition = boundary => {
+    const token = ++trackingToken;
+    const startedAt = performance.now();
+    const follow = () => {
+      if (token !== trackingToken || activeBoundary !== boundary) return;
+      position(boundary);
+      if (performance.now() - startedAt < 420) requestAnimationFrame(follow);
+    };
+    requestAnimationFrame(follow);
+  };
+
+  const show = (source, text, boundary) => {
+    const content = String(text || '').trim();
+    if (!source || !content) return hide(source);
+    activeSource = source;
+    activeBoundary = boundary || resolveBoundary(source);
+    tooltipEl.textContent = content;
+    tooltipEl.classList.add('is-visible');
+    tooltipEl.setAttribute('aria-hidden', 'false');
+    position(activeBoundary);
+    trackTransition(activeBoundary);
+  };
+
+  const captureTitle = element => {
+    if (!element || element.nodeType !== 1 || element === tooltipEl) return;
+    const nativeTitle = element.getAttribute?.('title');
+    if (nativeTitle !== null && nativeTitle !== undefined) {
+      if (String(nativeTitle).trim()) element.setAttribute('data-dashboard-tooltip', nativeTitle);
+      element.removeAttribute('title');
+    }
+  };
+
+  const captureTree = root => {
+    if (!root) return;
+    if (root.nodeType === 1) captureTitle(root);
+    root.querySelectorAll?.('[title]').forEach(captureTitle);
+  };
+
+  captureTree(document.body);
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      if (mutation.type === 'attributes') captureTitle(mutation.target);
+      mutation.addedNodes?.forEach(captureTree);
+    });
+  });
+  observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['title'] });
+
+  document.addEventListener('pointerover', event => {
+    const target = event.target?.closest?.(selector);
+    if (!target || target.contains(event.relatedTarget)) return;
+    show(target, tooltipText(target));
+  }, true);
+  document.addEventListener('pointerout', event => {
+    const target = event.target?.closest?.(selector);
+    if (!target || target.contains(event.relatedTarget)) return;
+    hide(target);
+  }, true);
+  document.addEventListener('focusin', event => {
+    const target = event.target?.closest?.(selector);
+    if (target) show(target, tooltipText(target));
+  }, true);
+  document.addEventListener('focusout', event => {
+    const target = event.target?.closest?.(selector);
+    if (target) hide(target);
+  }, true);
+  document.addEventListener('click', event => {
+    const target = event.target?.closest?.(selector);
+    if (target) hide(target);
+  }, true);
+
+  const showChart = context => {
+    const chart = context?.chart;
+    const model = context?.tooltip;
+    const canvas = chart?.canvas;
+    if (!canvas || !model || model.opacity === 0) return hide(canvas);
+    const lines = [
+      ...(model.title || []),
+      ...(model.beforeBody || []),
+      ...(model.body || []).flatMap(item => item.lines || []),
+      ...(model.afterBody || []),
+      ...(model.footer || [])
+    ].map(value => String(value || '').trim()).filter(Boolean);
+    show(canvas, lines.join('\n'), canvas.closest('.chart-wrap,.card') || canvas);
+  };
+
+  const reposition = () => activeBoundary && position(activeBoundary);
+  window.addEventListener('resize', reposition);
+  window.addEventListener('scroll', reposition, true);
+
+  window.dashboardTooltipManager = {
+    element: tooltipEl,
+    show,
+    hide,
+    showChart,
+    captureTree,
+    get activeSource() { return activeSource; },
+    get activeBoundary() { return activeBoundary; }
+  };
+  return window.dashboardTooltipManager;
+}
+
+const dashboardTooltipManager = createDashboardTooltipManager();
+
+
 // Chart defaults - 모든 차트의 X/Y축 텍스트 및 범례 문자를 흰색으로 통일
 Chart.defaults.color = '#ffffff';
 Chart.defaults.borderColor = '#2e3350';
 Chart.defaults.font.family = "'Segoe UI','Malgun Gothic',sans-serif";
 Chart.defaults.font.size = 11;
+Chart.defaults.plugins.tooltip.enabled = false;
+Chart.defaults.plugins.tooltip.external = context => dashboardTooltipManager.showChart(context);
 
 try {
   if (Chart.defaults.plugins && Chart.defaults.plugins.legend && Chart.defaults.plugins.legend.labels) {
@@ -7210,7 +7404,7 @@ buildChart('c-repairBar',{
       html += `
           <div class="pt-data-row ${rowClass}" style="${rowStyle}"
                onclick="openModal('[${d.type}] 상세 증빙', getTypeFilter('${d.type}'))"
-               data-pt-tooltip="${tooltipAttr}"
+               data-dashboard-tooltip="${tooltipAttr}"
                aria-label="${d.type} 상세 증빙 열기">
             <div class="pt-rank">${i + 1}</div>
             <div class="pt-type-name">${d.type}</div>
@@ -7371,99 +7565,7 @@ buildChart('c-repairBar',{
 
     const ptWrapper = document.getElementById('pt-viz-wrapper');
     ptWrapper.innerHTML = html;
-    const externalTooltip = document.getElementById('pt-external-tooltip') || (() => {
-      const el = document.createElement('div');
-      el.id = 'pt-external-tooltip';
-      el.className = 'pt-external-tooltip';
-      el.setAttribute('role', 'tooltip');
-      el.setAttribute('aria-hidden', 'true');
-      document.body.appendChild(el);
-      return el;
-    })();
-    let activeTooltipRow = null;
-    const positionExternalTooltip = row => {
-      if (!row || !externalTooltip.classList.contains('is-visible')) return;
-      const gap = 14;
-      const margin = 12;
-      const rowRect = row.getBoundingClientRect();
-      const viewportW = window.innerWidth;
-      const viewportH = window.innerHeight;
-      const defaultWidth = Math.min(430, viewportW - margin * 2);
-      const availableRight = viewportW - rowRect.right - margin - gap;
-      const availableLeft = rowRect.left - margin - gap;
-      const sideMinimum = Math.min(260, defaultWidth);
-      const useRight = availableRight >= sideMinimum;
-      const useLeft = !useRight && availableLeft >= sideMinimum;
-      let left;
-      let top;
-
-      if (useRight || useLeft) {
-        const sideWidth = Math.min(defaultWidth, useRight ? availableRight : availableLeft);
-        externalTooltip.style.width = `${sideWidth}px`;
-        externalTooltip.style.maxHeight = `${viewportH - margin * 2}px`;
-        const tipRect = externalTooltip.getBoundingClientRect();
-        if (useRight) {
-          left = rowRect.right + gap;
-        } else {
-          left = rowRect.left - tipRect.width - gap;
-        }
-        top = rowRect.top + (rowRect.height - tipRect.height) / 2;
-      } else {
-        externalTooltip.style.width = `${defaultWidth}px`;
-        const availableBelow = viewportH - rowRect.bottom - margin - gap;
-        const availableAbove = rowRect.top - margin - gap;
-        const placeBelow = availableBelow >= availableAbove;
-        const verticalSpace = Math.max(100, placeBelow ? availableBelow : availableAbove);
-        externalTooltip.style.maxHeight = `${verticalSpace}px`;
-        const tipRect = externalTooltip.getBoundingClientRect();
-        left = rowRect.left;
-        top = placeBelow ? rowRect.bottom + gap : rowRect.top - tipRect.height - gap;
-      }
-
-      const tipRect = externalTooltip.getBoundingClientRect();
-      externalTooltip.style.left = `${Math.max(margin, Math.min(left, viewportW - tipRect.width - margin))}px`;
-      externalTooltip.style.top = `${Math.max(margin, Math.min(top, viewportH - tipRect.height - margin))}px`;
-    };
-    const trackExternalTooltip = row => {
-      const startedAt = performance.now();
-      const followTransform = () => {
-        if (activeTooltipRow !== row) return;
-        positionExternalTooltip(row);
-        if (performance.now() - startedAt < 360) requestAnimationFrame(followTransform);
-      };
-      requestAnimationFrame(followTransform);
-    };
-    const showExternalTooltip = row => {
-      const content = row?.dataset?.ptTooltip;
-      if (!content) return;
-      activeTooltipRow = row;
-      externalTooltip.textContent = content;
-      externalTooltip.classList.add('is-visible');
-      externalTooltip.setAttribute('aria-hidden', 'false');
-      trackExternalTooltip(row);
-    };
-    const hideExternalTooltip = () => {
-      activeTooltipRow = null;
-      externalTooltip.classList.remove('is-visible');
-      externalTooltip.setAttribute('aria-hidden', 'true');
-    };
-    ptWrapper.querySelectorAll('.pt-data-row[data-pt-tooltip]').forEach(row => {
-      row.addEventListener('pointerenter', () => showExternalTooltip(row));
-      row.addEventListener('pointermove', () => positionExternalTooltip(row));
-      row.addEventListener('pointerleave', hideExternalTooltip);
-      row.addEventListener('focusin', () => showExternalTooltip(row));
-      row.addEventListener('focusout', hideExternalTooltip);
-      row.addEventListener('click', hideExternalTooltip);
-    });
-    if (typeof window.__ptTooltipCleanup === 'function') window.__ptTooltipCleanup();
-    const repositionExternalTooltip = () => activeTooltipRow && positionExternalTooltip(activeTooltipRow);
-    window.addEventListener('resize', repositionExternalTooltip);
-    window.addEventListener('scroll', repositionExternalTooltip, true);
-    window.__ptTooltipCleanup = () => {
-      window.removeEventListener('resize', repositionExternalTooltip);
-      window.removeEventListener('scroll', repositionExternalTooltip, true);
-      hideExternalTooltip();
-    };
+    window.dashboardTooltipManager?.captureTree(ptWrapper);
     ptWrapper.querySelectorAll('.pt-insight-card').forEach(card => {
       const cardTitle = card.querySelector('.pt-ic-title')?.textContent?.trim() || '분석 카드';
       card.tabIndex = 0;
