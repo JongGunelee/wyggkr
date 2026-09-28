@@ -882,6 +882,21 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   visibility: visible;
   transform: translateY(0);
 }
+/* 확대 차트에서는 우측에 툴팁 전용 공간을 예약해 캔버스와 겹침 없이 표시한다. */
+.zoomed-4x.dashboard-tooltip-gutter,
+#c-repairRadar-wrap.zoomed-4x.dashboard-tooltip-gutter,
+.chart-wrap.zoomed-4x.dashboard-tooltip-gutter:has(#c-repairRadar),
+.card.zoomed-4x.dashboard-tooltip-gutter:has(#c-repairRadar) {
+  padding-right: clamp(250px, 28vw, 380px) !important;
+}
+#c-repairRadar-wrap.zoomed-4x.dashboard-tooltip-gutter canvas#c-repairRadar,
+.chart-wrap.zoomed-4x.dashboard-tooltip-gutter canvas#c-repairRadar,
+.card.zoomed-4x.dashboard-tooltip-gutter canvas#c-repairRadar {
+  width: min(44vh, calc(100% - 8px), 420px) !important;
+  height: min(44vh, calc(100% - 8px), 420px) !important;
+  max-width: 420px !important;
+  max-height: 420px !important;
+}
 .pt-rank {
   font-size: 16px;
   font-weight: 800;
@@ -5514,6 +5529,7 @@ function createDashboardTooltipManager() {
   })();
   let activeSource = null;
   let activeBoundary = null;
+  let activeZoomHost = null;
   let trackingToken = 0;
 
   const tooltipText = target => target?.getAttribute('data-dashboard-tooltip')
@@ -5522,6 +5538,7 @@ function createDashboardTooltipManager() {
   const resolveBoundary = target => {
     if (!target || typeof target.closest !== 'function') return target;
     if (target.closest('.modal')) return target;
+    if (target.closest('.zoomed-4x') && !target.matches('canvas')) return target;
     return target.closest([
       '.pt-data-row', '.pt-insight-card', '.kpi', '.yoy-card',
       '.audit-kpi-card', '.audit-cause-card', '.insight', '.risk-row',
@@ -5529,9 +5546,20 @@ function createDashboardTooltipManager() {
     ].join(',')) || target;
   };
 
+  const clearZoomReservation = () => {
+    if (!activeZoomHost) return;
+    const canvas = activeZoomHost.querySelector('canvas');
+    activeZoomHost.classList.remove('dashboard-tooltip-gutter');
+    activeZoomHost = null;
+    if (canvas?.id && window.dashboardCharts?.[canvas.id]) {
+      requestAnimationFrame(() => window.dashboardCharts[canvas.id]?.resize?.());
+    }
+  };
+
   const hide = source => {
     if (source && activeSource && source !== activeSource) return;
     trackingToken += 1;
+    clearZoomReservation();
     activeSource = null;
     activeBoundary = null;
     tooltipEl.classList.remove('is-visible');
@@ -5545,6 +5573,19 @@ function createDashboardTooltipManager() {
     const boundaryRect = boundary.getBoundingClientRect();
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
+    const zoomHost = boundary.closest?.('.zoomed-4x.dashboard-tooltip-gutter');
+    if (zoomHost && activeSource?.matches?.('canvas')) {
+      const hostRect = zoomHost.getBoundingClientRect();
+      const gutterWidth = Math.min(380, Math.max(250, viewportW * 0.28));
+      const tooltipWidth = Math.max(180, Math.min(348, gutterWidth - 32));
+      const topInset = Math.min(82, Math.max(58, hostRect.height * 0.1));
+      tooltipEl.style.width = `${tooltipWidth}px`;
+      tooltipEl.style.maxHeight = `${Math.max(120, hostRect.height - topInset - 16)}px`;
+      const tipRect = tooltipEl.getBoundingClientRect();
+      tooltipEl.style.left = `${Math.max(12, hostRect.right - gutterWidth + 16)}px`;
+      tooltipEl.style.top = `${Math.max(12, Math.min(hostRect.top + topInset, viewportH - tipRect.height - 12))}px`;
+      return true;
+    }
     const defaultWidth = Math.min(430, viewportW - margin * 2);
     const availableRight = viewportW - boundaryRect.right - margin - gap;
     const availableLeft = boundaryRect.left - margin - gap;
@@ -5666,7 +5707,23 @@ function createDashboardTooltipManager() {
       ...(model.afterBody || []),
       ...(model.footer || [])
     ].map(value => String(value || '').trim()).filter(Boolean);
-    show(canvas, lines.join('\n'), canvas.closest('.chart-wrap,.card') || canvas);
+    const zoomHost = canvas.closest('.zoomed-4x');
+    if (activeZoomHost && activeZoomHost !== zoomHost) clearZoomReservation();
+    if (zoomHost) {
+      activeZoomHost = zoomHost;
+      const newlyReserved = !zoomHost.classList.contains('dashboard-tooltip-gutter');
+      zoomHost.classList.add('dashboard-tooltip-gutter');
+      show(canvas, lines.join('\n'), canvas);
+      if (newlyReserved && canvas.id && window.dashboardCharts?.[canvas.id]) {
+        requestAnimationFrame(() => {
+          window.dashboardCharts[canvas.id]?.resize?.();
+          position(canvas);
+        });
+      }
+    } else {
+      clearZoomReservation();
+      show(canvas, lines.join('\n'), canvas.closest('.chart-wrap,.card') || canvas);
+    }
   };
 
   const reposition = () => activeBoundary && position(activeBoundary);
@@ -6499,6 +6556,7 @@ function toggleZoom(target){
 const toggleChartZoom = toggleZoom;
 
 function closeAllZoom(){
+  window.dashboardTooltipManager?.hide();
   const backdrop = document.getElementById('chart-zoom-backdrop');
   if(backdrop) backdrop.classList.remove('active');
 
