@@ -5548,18 +5548,28 @@ function createDashboardTooltipManager() {
 
   const clearZoomReservation = () => {
     if (!activeZoomHost) return;
-    const canvas = activeZoomHost.querySelector('canvas');
     activeZoomHost.classList.remove('dashboard-tooltip-gutter');
     activeZoomHost = null;
-    if (canvas?.id && window.dashboardCharts?.[canvas.id]) {
-      requestAnimationFrame(() => window.dashboardCharts[canvas.id]?.resize?.());
-    }
+  };
+
+  // 확대 진입 시 한 번만 차트 오른쪽 여백을 확보한다. 포인터 이동 중에는
+  // 캔버스를 재배치하지 않아 Chart.js hover 상태가 끊기지 않는다.
+  const reserveZoom = host => {
+    if (!host?.classList?.contains('zoomed-4x') || !host.querySelector('canvas')) return;
+    if (activeZoomHost && activeZoomHost !== host) clearZoomReservation();
+    activeZoomHost = host;
+    host.classList.add('dashboard-tooltip-gutter');
+  };
+
+  const releaseZoom = host => {
+    if (!host) return;
+    host.classList.remove('dashboard-tooltip-gutter');
+    if (activeZoomHost === host) activeZoomHost = null;
   };
 
   const hide = source => {
     if (source && activeSource && source !== activeSource) return;
     trackingToken += 1;
-    clearZoomReservation();
     activeSource = null;
     activeBoundary = null;
     tooltipEl.classList.remove('is-visible');
@@ -5708,20 +5718,11 @@ function createDashboardTooltipManager() {
       ...(model.footer || [])
     ].map(value => String(value || '').trim()).filter(Boolean);
     const zoomHost = canvas.closest('.zoomed-4x');
-    if (activeZoomHost && activeZoomHost !== zoomHost) clearZoomReservation();
     if (zoomHost) {
-      activeZoomHost = zoomHost;
-      const newlyReserved = !zoomHost.classList.contains('dashboard-tooltip-gutter');
-      zoomHost.classList.add('dashboard-tooltip-gutter');
+      // toggleZoom()이 확대 진입 시 선행 예약한다. 예외 경로만 여기서 보정한다.
+      if (!zoomHost.classList.contains('dashboard-tooltip-gutter')) reserveZoom(zoomHost);
       show(canvas, lines.join('\n'), canvas);
-      if (newlyReserved && canvas.id && window.dashboardCharts?.[canvas.id]) {
-        requestAnimationFrame(() => {
-          window.dashboardCharts[canvas.id]?.resize?.();
-          position(canvas);
-        });
-      }
     } else {
-      clearZoomReservation();
       show(canvas, lines.join('\n'), canvas.closest('.chart-wrap,.card') || canvas);
     }
   };
@@ -5736,6 +5737,8 @@ function createDashboardTooltipManager() {
     hide,
     showChart,
     captureTree,
+    reserveZoom,
+    releaseZoom,
     get activeSource() { return activeSource; },
     get activeBoundary() { return activeBoundary; }
   };
@@ -6524,6 +6527,10 @@ function toggleZoom(target){
   el.classList.add('zoomed-4x');
   backdrop.classList.add('active');
 
+  // 차트 확대 직후 전용 툴팁 영역을 고정한다. 이후 호버 중에는 레이아웃을
+  // 변경하지 않으므로 포인터 아래의 Chart.js 활성 요소가 안정적으로 유지된다.
+  window.dashboardTooltipManager?.reserveZoom(el);
+
   // 내부 캔버스 차트 리사이즈 및 종횡비 보정
   const canvases = el.querySelectorAll('canvas');
   canvases.forEach(cv => {
@@ -6564,6 +6571,7 @@ function closeAllZoom(){
   if(zoomedEls.length === 0) return;
 
   zoomedEls.forEach(el => {
+    window.dashboardTooltipManager?.releaseZoom(el);
     el.classList.remove('zoomed-4x');
     const header = el.querySelector('.chart-zoom-header');
     if(header) header.remove();
