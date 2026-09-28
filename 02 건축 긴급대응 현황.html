@@ -837,21 +837,50 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   transform-origin: left center;
   z-index: 1;
   will-change: transform;
+  transform-box: border-box;
 }
 .pt-data-row:hover {
-  transform: translateX(12px) scale(1.10) !important;
-  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.95), 0 0 46px rgba(108, 142, 245, 0.52) !important;
+  /* 기존 10% 확대 폭을 두 배로 확장: 카드·문자·막대를 20% 동일 비율 확대 */
+  transform: translateX(18px) scale(1.20) !important;
+  box-shadow: 0 34px 86px rgba(0, 0, 0, 0.95), 0 0 58px rgba(108, 142, 245, 0.58) !important;
   background: #1f2336 !important;
   border-color: var(--accent1) !important;
   z-index: 100 !important;
 }
 .pt-data-row.is-red:hover {
   border-color: var(--red) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 30px rgba(255, 77, 109, 0.5) !important;
+  box-shadow: 0 34px 86px rgba(0, 0, 0, 0.95), 0 0 58px rgba(255, 77, 109, 0.55) !important;
 }
 .pt-data-row.is-green:hover {
   border-color: var(--green) !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.95), 0 0 30px rgba(78, 203, 113, 0.5) !important;
+  box-shadow: 0 34px 86px rgba(0, 0, 0, 0.95), 0 0 58px rgba(78, 203, 113, 0.55) !important;
+}
+.pt-external-tooltip {
+  position: fixed;
+  z-index: 100000;
+  width: min(430px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+  padding: 13px 15px;
+  box-sizing: border-box;
+  border: 1px solid rgba(108,142,245,.72);
+  border-radius: 9px;
+  background: rgba(10,13,25,.98);
+  box-shadow: 0 20px 54px rgba(0,0,0,.72), 0 0 24px rgba(108,142,245,.24);
+  color: #e8ecff;
+  font-size: 11px;
+  line-height: 1.48;
+  white-space: pre-line;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(4px);
+  transition: opacity .14s ease, transform .14s ease, visibility .14s ease;
+}
+.pt-external-tooltip.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 .pt-rank {
   font-size: 16px;
@@ -1153,7 +1182,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 
 @media (max-width: 1180px) {
   .pt-layout { flex-direction: column; }
-  .pt-top-rows { padding-right: calc(9.1% + 12px); }
+  .pt-top-rows { padding-right: calc(16.7% + 18px); }
   .pt-right-col { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); }
   .pt-insight-card { min-height: 300px; }
   .pt-ic-hero { grid-template-columns: 1fr; gap: 10px; }
@@ -1161,9 +1190,9 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 }
 @media (max-width: 820px) {
   .pt-slide { padding: 16px; }
-  .pt-top-rows { padding-right: calc(3.85% + 6px); }
+  .pt-top-rows { padding-right: calc(7.5% + 8px); }
   .pt-right-col { grid-template-columns: 1fr; }
-  .pt-data-row:hover { transform: translateX(6px) scale(1.04) !important; }
+  .pt-data-row:hover { transform: translateX(8px) scale(1.08) !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pt-data-row { transition: box-shadow .15s ease, border-color .15s ease, background .15s ease; }
@@ -7176,11 +7205,13 @@ buildChart('c-repairBar',{
     topFinal.forEach((d, i) => {
       const { badge, rowClass, rowStyle, numStyle } = getTrend(d);
       const tooltip = buildTooltip(d);
+      const tooltipAttr = tooltip.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '&#10;');
       const costBiRatio = totalProjWan > 0 ? (d.totalCostWan / totalProjWan * 100).toFixed(1) : d.pct;
       html += `
           <div class="pt-data-row ${rowClass}" style="${rowStyle}"
                onclick="openModal('[${d.type}] 상세 증빙', getTypeFilter('${d.type}'))"
-               title="${tooltip.replace(/"/g, '&quot;').replace(/\n/g, '&#10;')}">
+               data-pt-tooltip="${tooltipAttr}"
+               aria-label="${d.type} 상세 증빙 열기">
             <div class="pt-rank">${i + 1}</div>
             <div class="pt-type-name">${d.type}</div>
             <div class="pt-share-wrap">
@@ -7192,10 +7223,10 @@ buildChart('c-repairBar',{
                 <div><strong style="font-size:13px;color:#ffffff;">${d.pct}%</strong></div>
               </div>
               <div class="pt-dual-bars">
-                <div class="pt-bar-track count-track" title="건수 점유율: ${d.pct}% (${d.total}건)">
+                <div class="pt-bar-track count-track" aria-label="건수 점유율: ${d.pct}% (${d.total}건)">
                   <div class="pt-bar-fill" style="width:${d.pct}%;background:${d.color};"></div>
                 </div>
-                <div class="pt-bar-track cost-track" title="비용 비중: ${costBiRatio}% (약 ${d.totalCostWan.toLocaleString()}만원)">
+                <div class="pt-bar-track cost-track" aria-label="비용 비중: ${costBiRatio}% (약 ${d.totalCostWan.toLocaleString()}만원)">
                   <div class="pt-bar-fill" style="width:${costBiRatio}%;background:linear-gradient(90deg,#38bdf8,#818cf8);"></div>
                 </div>
               </div>
@@ -7340,6 +7371,99 @@ buildChart('c-repairBar',{
 
     const ptWrapper = document.getElementById('pt-viz-wrapper');
     ptWrapper.innerHTML = html;
+    const externalTooltip = document.getElementById('pt-external-tooltip') || (() => {
+      const el = document.createElement('div');
+      el.id = 'pt-external-tooltip';
+      el.className = 'pt-external-tooltip';
+      el.setAttribute('role', 'tooltip');
+      el.setAttribute('aria-hidden', 'true');
+      document.body.appendChild(el);
+      return el;
+    })();
+    let activeTooltipRow = null;
+    const positionExternalTooltip = row => {
+      if (!row || !externalTooltip.classList.contains('is-visible')) return;
+      const gap = 14;
+      const margin = 12;
+      const rowRect = row.getBoundingClientRect();
+      const viewportW = window.innerWidth;
+      const viewportH = window.innerHeight;
+      const defaultWidth = Math.min(430, viewportW - margin * 2);
+      const availableRight = viewportW - rowRect.right - margin - gap;
+      const availableLeft = rowRect.left - margin - gap;
+      const sideMinimum = Math.min(260, defaultWidth);
+      const useRight = availableRight >= sideMinimum;
+      const useLeft = !useRight && availableLeft >= sideMinimum;
+      let left;
+      let top;
+
+      if (useRight || useLeft) {
+        const sideWidth = Math.min(defaultWidth, useRight ? availableRight : availableLeft);
+        externalTooltip.style.width = `${sideWidth}px`;
+        externalTooltip.style.maxHeight = `${viewportH - margin * 2}px`;
+        const tipRect = externalTooltip.getBoundingClientRect();
+        if (useRight) {
+          left = rowRect.right + gap;
+        } else {
+          left = rowRect.left - tipRect.width - gap;
+        }
+        top = rowRect.top + (rowRect.height - tipRect.height) / 2;
+      } else {
+        externalTooltip.style.width = `${defaultWidth}px`;
+        const availableBelow = viewportH - rowRect.bottom - margin - gap;
+        const availableAbove = rowRect.top - margin - gap;
+        const placeBelow = availableBelow >= availableAbove;
+        const verticalSpace = Math.max(100, placeBelow ? availableBelow : availableAbove);
+        externalTooltip.style.maxHeight = `${verticalSpace}px`;
+        const tipRect = externalTooltip.getBoundingClientRect();
+        left = rowRect.left;
+        top = placeBelow ? rowRect.bottom + gap : rowRect.top - tipRect.height - gap;
+      }
+
+      const tipRect = externalTooltip.getBoundingClientRect();
+      externalTooltip.style.left = `${Math.max(margin, Math.min(left, viewportW - tipRect.width - margin))}px`;
+      externalTooltip.style.top = `${Math.max(margin, Math.min(top, viewportH - tipRect.height - margin))}px`;
+    };
+    const trackExternalTooltip = row => {
+      const startedAt = performance.now();
+      const followTransform = () => {
+        if (activeTooltipRow !== row) return;
+        positionExternalTooltip(row);
+        if (performance.now() - startedAt < 360) requestAnimationFrame(followTransform);
+      };
+      requestAnimationFrame(followTransform);
+    };
+    const showExternalTooltip = row => {
+      const content = row?.dataset?.ptTooltip;
+      if (!content) return;
+      activeTooltipRow = row;
+      externalTooltip.textContent = content;
+      externalTooltip.classList.add('is-visible');
+      externalTooltip.setAttribute('aria-hidden', 'false');
+      trackExternalTooltip(row);
+    };
+    const hideExternalTooltip = () => {
+      activeTooltipRow = null;
+      externalTooltip.classList.remove('is-visible');
+      externalTooltip.setAttribute('aria-hidden', 'true');
+    };
+    ptWrapper.querySelectorAll('.pt-data-row[data-pt-tooltip]').forEach(row => {
+      row.addEventListener('pointerenter', () => showExternalTooltip(row));
+      row.addEventListener('pointermove', () => positionExternalTooltip(row));
+      row.addEventListener('pointerleave', hideExternalTooltip);
+      row.addEventListener('focusin', () => showExternalTooltip(row));
+      row.addEventListener('focusout', hideExternalTooltip);
+      row.addEventListener('click', hideExternalTooltip);
+    });
+    if (typeof window.__ptTooltipCleanup === 'function') window.__ptTooltipCleanup();
+    const repositionExternalTooltip = () => activeTooltipRow && positionExternalTooltip(activeTooltipRow);
+    window.addEventListener('resize', repositionExternalTooltip);
+    window.addEventListener('scroll', repositionExternalTooltip, true);
+    window.__ptTooltipCleanup = () => {
+      window.removeEventListener('resize', repositionExternalTooltip);
+      window.removeEventListener('scroll', repositionExternalTooltip, true);
+      hideExternalTooltip();
+    };
     ptWrapper.querySelectorAll('.pt-insight-card').forEach(card => {
       const cardTitle = card.querySelector('.pt-ic-title')?.textContent?.trim() || '분석 카드';
       card.tabIndex = 0;
