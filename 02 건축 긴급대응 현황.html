@@ -32,8 +32,8 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   -webkit-backdrop-filter: blur(10px);
 }
 .header{background:linear-gradient(135deg,#1a1d27 0%,#0f1117 100%);border-bottom:1px solid var(--border);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;}
-.header-title{font-size:22px;font-weight:700;}
-.header-title span{color:var(--accent1);}
+.header-title{font-size:22px;font-weight:700;min-width:0;}
+.header-title .title-suffix{color:var(--accent1);}
 .header-meta{font-size:12px;color:var(--text2);text-align:right;}
 .header-meta .master-xls-btn{flex:0 0 auto;white-space:nowrap;writing-mode:horizontal-tb;}
 .seasonality-control{display:grid;grid-template-columns:auto 78px auto auto;align-items:center;gap:6px;padding:6px 8px;border:1px solid rgba(108,142,245,.45);border-radius:8px;background:rgba(20,26,43,.9);white-space:nowrap;text-align:left;}
@@ -92,6 +92,33 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 .card-title{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;color:#ffffff !important;}
 .card-title .icon{font-size:16px;}
 .card-title .sub{font-size:11.5px;color:#ffffff !important;font-weight:500;opacity:0.95;}
+/* 제목 단일 행 계약: 핵심 제목은 유지하고 연도·괄호·상태 등 후행 표현만 축소한다. */
+[data-title-contract="single-line"]{min-width:0;}
+.title-text-group{
+  display:inline-flex;
+  align-items:baseline;
+  gap:.28em;
+  min-width:0;
+  max-width:100%;
+  width:max-content;
+  white-space:nowrap;
+  line-height:inherit;
+  vertical-align:baseline;
+}
+.card-title > .title-text-group,
+.kpi-section-heading > .title-text-group{flex:0 1 auto;}
+.title-main-text{min-width:0;white-space:nowrap;}
+.title-suffix{
+  display:inline-block;
+  flex:0 0 auto;
+  font-size:var(--title-suffix-scale,.78em);
+  line-height:inherit;
+  letter-spacing:-.028em;
+  white-space:nowrap;
+  opacity:.94;
+}
+.title-suffix.title-suffix--phrase{--title-suffix-scale:.73em;}
+[data-title-contract="single-line"] br{display:none;}
 .chart-wrap{position:relative;width:100% !important;max-width:100% !important;box-sizing:border-box !important;}
 .chart-wrap:not(.zoomed-4x) canvas {
   max-width: 100% !important;
@@ -439,7 +466,10 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
   .header-meta>div:last-child{flex:1 0 100%;width:100%;min-width:0;text-align:left!important;white-space:normal;line-height:1.35;}
   .dashboard-sticky-header.is-compact .header{padding:6px 12px;flex-wrap:nowrap;align-items:center;gap:8px;}
   .dashboard-sticky-header.is-compact .header>div:first-child{flex:1;min-width:0;}
-  .dashboard-sticky-header.is-compact .header-title{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .dashboard-sticky-header.is-compact .header-title{display:flex;align-items:baseline;min-width:0;font-size:14px;white-space:nowrap;overflow:visible;text-overflow:clip;}
+  .dashboard-sticky-header.is-compact .header-title .title-text-group{min-width:0;max-width:100%;}
+  .dashboard-sticky-header.is-compact .header-title .title-main-text{overflow:hidden;text-overflow:ellipsis;}
+  .dashboard-sticky-header.is-compact .header-title .title-suffix{--title-suffix-scale:.72em;}
   .dashboard-sticky-header.is-compact .header>div:first-child>div:nth-child(2){display:none;}
   .dashboard-sticky-header.is-compact .header-meta{width:auto;flex:0 0 auto;flex-wrap:nowrap;gap:5px!important;padding:0;overflow:visible;}
   .dashboard-sticky-header.is-compact .header-meta>div:last-child{display:none;}
@@ -1634,7 +1664,7 @@ body{font-family:'Segoe UI','Malgun Gothic',sans-serif;background:var(--bg);colo
 <div class="dashboard-sticky-header" id="dashboard-sticky-header">
   <div class="header">
     <div>
-      <div class="header-title">🏢 건축 소액·소모품·긴급성 대응 <span>대시보드</span></div>
+      <div class="header-title" data-title-contract="single-line"><span class="title-text-group"><span class="title-main-text">🏢 건축 소액·소모품·긴급성 대응</span><span class="title-suffix">대시보드</span></span></div>
       <div style="font-size:12px;color:var(--text2);margin-top:4px;">건축(실비정산) · <span id="header-years-range">원천 연도 확인 중</span> · 분석기준: <span id="header-analysis-date">원천 일자 확인 중</span> · 차트 클릭 시 상세 증빙 표시</div>
     </div>
     <div class="header-meta" style="display:flex;align-items:center;gap:12px;">
@@ -3783,6 +3813,7 @@ function rebuildDashboard(records) {
   renderCostCorrelationAnalysis();
   renderEvidenceInsights();
   refreshForecastLabels();
+  window.applyTitleSuffixContract?.(document);
   updateSeasonalityControlUI();
 }
 
@@ -3793,7 +3824,7 @@ function refreshForecastLabels() {
   for(const id of ['c-forecast','c-forecast-cost']){
     const canvas=document.getElementById(id),card=canvas?.closest('.card');
     if(card){
-      for(const heading of card.querySelectorAll('h3,.card-title'))for(const node of heading.childNodes){if(node.nodeType===3 && /20\d{2}년 작업 예측/.test(node.textContent))node.textContent=node.textContent.replace(/20\d{2}년 작업 예측/,next+'년 작업 예측');}
+      for(const heading of card.querySelectorAll('h3,.card-title')){const targetYear=(heading.textContent.match(/20\d{2}(?=년\s*작업\s*예측)/)||[])[0];if(!targetYear)continue;const textWalker=document.createTreeWalker(heading,NodeFilter.SHOW_TEXT);let textNode;while(textNode=textWalker.nextNode()){if(textNode.textContent.includes(targetYear)){textNode.textContent=textNode.textContent.replace(targetYear,String(next));break;}}}
       const button=card.querySelector('.section-xls-btn');
       if(button)button.title=next+'년 월별 작업 '+(id==='c-forecast-cost'?'비용':'건수')+' 예측과 XLSB 연계 산식을 수식 포함 엑셀로 다운로드';
     }
@@ -12581,6 +12612,98 @@ function injectExcelExportButtons(root) {
     auditToggleIcon.parentNode.insertBefore(btn, auditToggleIcon);
   }
 }
+
+/* === 제목 단일 행·접미사 축소 공통 계약 ===
+   XLSB 재분석으로 동적 카드가 다시 그려져도 제목 본문과 도구 버튼을 분리한다.
+   제목의 의미를 바꾸지 않고, 괄호·연도·상태 표현만 작은 글자로 보인다. */
+(function installTitleSuffixContract(){
+  const TARGET_SELECTOR = [
+    '.header-title','.card-title','.section-title','.audit-subhead','.pt-title','.pt-ic-title',
+    '.pt-ic-trend-heading','.roadmap-title','.chart-zoom-title','.modal-title','.i-title','.executive-title'
+  ].join(',');
+  const CONTROL_SELECTOR = [
+    'button','input','select','textarea','[role="button"]','.card-header-actions','.kpi-heading-actions',
+    '.chart-zoom-actions','.chart-zoom-close','.modal-close','.section-xls-btn','.card-xls-btn',
+    '.chart-xls-btn','.card-zoom-btn','.chart-zoom-btn','.cost-zoom-btn'
+  ].join(',');
+  const PHRASE_SUFFIX = /^(.*?)(\s*(?:\([^)]{1,96}\)|\[[^\]]{1,96}\]|(?:증가|감소|안정)\s*신호|대시보드|관리대장|로드맵|대조표|분석|예측|현황|추이|비교|평가|레이더|차트|비율|지표|기준|목록|분포|계획|요약|상세|증빙|근거|집중|변화|유형|내역))\s*$/u;
+  let normalizing = false;
+  let scheduled = false;
+  function isControl(node){ return node?.nodeType === Node.ELEMENT_NODE && node.matches(CONTROL_SELECTOR); }
+  function markExistingSuffixes(group){
+    Array.from(group.children).forEach(child => {
+      if(child.classList.contains('title-suffix')) return;
+      if(child.matches('.small-text,.sub,[data-title-suffix]')) child.classList.add('title-suffix');
+    });
+  }
+  function splitTrailingText(group){
+    Array.from(group.childNodes).forEach(node => {
+      if(node.nodeType !== Node.TEXT_NODE || !node.nodeValue.trim()) return;
+      const match = node.nodeValue.match(PHRASE_SUFFIX);
+      if(!match || !match[1].trim() || !match[2].trim()) return;
+      node.nodeValue = match[1].replace(/\s+$/,'');
+      const suffix = document.createElement('span');
+      suffix.className = 'title-suffix';
+      if(/(?:증가|감소|안정)\s*신호/.test(match[2])) suffix.classList.add('title-suffix--phrase');
+      suffix.textContent = match[2].trim();
+      group.insertBefore(suffix,node.nextSibling);
+    });
+  }
+  function ensureTitleContract(root){
+    if(!(root instanceof Element) || !root.matches(TARGET_SELECTOR)) return;
+    root.dataset.titleContract = 'single-line';
+    let group = root.querySelector(':scope > .title-text-group');
+    if(!group){
+      const existingTextWrapper = root.querySelector(':scope > .card-title-text');
+      if(existingTextWrapper){
+        group = existingTextWrapper;
+        group.classList.add('title-text-group');
+      }else{
+        const titleNodes = Array.from(root.childNodes).filter(node => {
+          if(node.nodeType === Node.TEXT_NODE) return Boolean(node.nodeValue.trim());
+          if(node.nodeType !== Node.ELEMENT_NODE) return false;
+          return !isControl(node);
+        });
+        if(!titleNodes.length) return;
+        group = document.createElement('span');
+        group.className = 'title-text-group';
+        root.insertBefore(group,titleNodes[0]);
+        titleNodes.forEach(node => group.appendChild(node));
+      }
+    }
+    markExistingSuffixes(group);
+    splitTrailingText(group);
+  }
+  function applyTitleSuffixContract(scope=document){
+    if(normalizing) return;
+    normalizing = true;
+    try{
+      if(scope instanceof Element && scope.matches(TARGET_SELECTOR)) ensureTitleContract(scope);
+      const roots = scope.querySelectorAll ? scope.querySelectorAll(TARGET_SELECTOR) : [];
+      roots.forEach(ensureTitleContract);
+    }finally{ normalizing = false; }
+  }
+  function scheduleTitleContract(){
+    if(scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(() => { scheduled = false; applyTitleSuffixContract(document); });
+  }
+  window.applyTitleSuffixContract = applyTitleSuffixContract;
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',scheduleTitleContract,{once:true}); else scheduleTitleContract();
+  window.addEventListener('resize',scheduleTitleContract,{passive:true});
+  const observer = new MutationObserver(mutations => {
+    if(normalizing) return;
+    for(const mutation of mutations){
+      const target = mutation.target?.nodeType === Node.TEXT_NODE ? mutation.target.parentElement : mutation.target;
+      if(target?.closest?.(TARGET_SELECTOR) || Array.from(mutation.addedNodes || []).some(node => node.nodeType === Node.ELEMENT_NODE && (node.matches?.(TARGET_SELECTOR) || node.querySelector?.(TARGET_SELECTOR)))){
+        scheduleTitleContract();
+        break;
+      }
+    }
+  });
+  const observe = () => observer.observe(document.body,{subtree:true,childList:true,characterData:true});
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',observe,{once:true}); else observe();
+})();
 
 function updateStickyHeaderDensity() {
   const header = document.getElementById('dashboard-sticky-header');
