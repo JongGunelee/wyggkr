@@ -85,11 +85,13 @@
         if(Array.isArray(project.workDetail))copy.workDetail=indices.map(i=>project.workDetail[i]);
         return copy;
     }
-    function getViewState(){const year=ensure(),now=currentYear();return {year,currentYear:now,readonly:!!root.YearBootCoordinator?.isCurrentLoading?.()||year==='all'||(year<now&&!editUnlocked),editUnlocked,includeOpen,generation};}
+    const partialYearReadOnly = year => root.YearBootCoordinator?.canEditYear?.(year) === false;
+    const isYearReady = year => root.YearBootCoordinator?.isYearReady?.(year) !== false;
+    function getViewState(){const year=ensure(),now=currentYear();return {year,currentYear:now,readonly:!!root.YearBootCoordinator?.isCurrentLoading?.()||partialYearReadOnly(year)||year==='all'||(year<now&&!editUnlocked),editUnlocked,includeOpen,generation};}
     function getState(){
         const now=currentYear(),source=canonical(),partial=financialMetadata&&root.YearBootCoordinator&&!root.YearBootCoordinator.getState().complete;
         const open=partial?financialMetadata.open:source.reduce((a,p)=>{const c=memo(p).classification;if(c.kind==='open'){a.count++;a.po+=Number(p.poAmount)||0;if(c.completed)a.completed++;}return a;},{count:0,po:0,completed:0});
-        return {version:VERSION,year:ensure(),currentYear:now,years:[...new Set([...metadataYears,...canonicalYears()])].sort((a,b)=>b-a),explicit,readonly:!!root.YearBootCoordinator?.isCurrentLoading?.()||selected==='all'||(selected<now&&!editUnlocked),editUnlocked,includeOpen,openCount:open?.count||0,open:open||{count:0,po:0,completed:0},generation,bootStatus};
+        return {version:VERSION,year:ensure(),currentYear:now,years:[...new Set([...metadataYears,...canonicalYears()])].sort((a,b)=>b-a),explicit,readonly:!!root.YearBootCoordinator?.isCurrentLoading?.()||partialYearReadOnly(selected)||selected==='all'||(selected<now&&!editUnlocked),editUnlocked,includeOpen,openCount:open?.count||0,open:open||{count:0,po:0,completed:0},generation,bootStatus};
     }
     function beforeChange() {
         if(root.CodexWorkContentSearch?.canChangeYear?.()===false||root.CodexProjectManager?.canChangeYear?.()===false)throw new Error('편집 중인 작업일·프로젝트를 먼저 적용하거나 취소해 주세요. 입력은 그대로 보존됩니다.');
@@ -107,11 +109,12 @@
     function select(year,options={}) {
         const next=year==='all'?'all':Number(year);
         if(next!=='all'&&(!Number.isInteger(next)||next<2000||next>2199))throw new Error('잘못된 운영 연도');
+        if(next!==selected&&!isYearReady(next))throw new Error((next==='all'?'전체 기간':'선택한 '+next+'년')+' 자료가 아직 준비 중입니다. 준비된 연도의 조회·편집은 계속할 수 있습니다.');
         if(next!==selected)beforeChange();
         selected=next;explicit=options.explicit!==false;editUnlocked=false;generation++;return notify();
     }
     function setOptions(options={}){if(typeof options.includeOpen==='boolean'&&options.includeOpen!==includeOpen){beforeChange();includeOpen=options.includeOpen;generation++;notify();}return getState();}
-    function toggleEdit(){editUnlocked=!editUnlocked;updateUI();return getState();}
+    function toggleEdit(){if(!editUnlocked&&partialYearReadOnly(ensure())){root.showToast?.('전체 원본 확인이 완료되면 선택한 연도를 수정할 수 있습니다. 현재 준비 연도의 편집은 유지됩니다.','warning');return getState();}editUnlocked=!editUnlocked;updateUI();return getState();}
     function assertEditable(){if(root.YearBootCoordinator?.isCurrentLoading?.())throw new Error('최신 연도 데이터 준비 완료 후 편집해 주세요.');if(getViewState().readonly)throw new Error('이전 연도는 조회 모드입니다. 이전 연도 수정 버튼으로 수정 모드를 선택해 주세요.');}
     const fmt=n=>Number(n||0).toLocaleString('ko-KR');
     function updateUI(){
@@ -120,13 +123,13 @@
         if(picker){
             const years=state.years.includes(state.currentYear)?state.years:[state.currentYear,...state.years];
             const values=[...new Set(years)].sort((a,b)=>b-a);
-            const signature=values.join(',');
-            if(picker.dataset.years!==signature){picker.replaceChildren(...values.map(y=>{const o=doc.createElement('option');o.value=String(y);o.textContent=y+'년'+(y>state.currentYear?' (예정)':y===state.currentYear?' (현재)':' (이전)');return o;}));const all=doc.createElement('option');all.value='all';all.textContent='전체 기간 (비교·조회)';picker.append(all);picker.dataset.years=signature;}
+            const signature=values.join(',')+'|'+values.map(isYearReady).join(',')+'|'+isYearReady('all');
+            if(picker.dataset.years!==signature){picker.replaceChildren(...values.map(y=>{const o=doc.createElement('option');o.value=String(y);o.disabled=!isYearReady(y);o.textContent=y+'년'+(o.disabled?' (준비 중)':y>state.currentYear?' (예정)':y===state.currentYear?' (현재)':' (이전)');return o;}));const all=doc.createElement('option');all.value='all';all.disabled=!isYearReady('all');all.textContent='전체 기간 '+(all.disabled?'(준비 중)':'(비교·조회)');picker.append(all);picker.dataset.years=signature;}
             picker.value=String(state.year);
         }
         const label=doc.getElementById('operation-year-basis');
         if(label)label.textContent=(state.year==='all'?'전체 기간':state.year+'년')+(state.year>state.currentYear?' · PO: 정산 지정·예정 예산 (예정은 정산 카드에서 제외)':' · PO: 최종 정산월·최신 진행 대기')+' / 일정: 해당 연도 작업'+(state.readonly?' · 조회 모드':'');
-        const edit=doc.getElementById('operation-year-edit');if(edit){edit.hidden=!(state.year<state.currentYear);edit.textContent=state.editUnlocked?'이전 연도 수정 종료':'이전 연도 수정';edit.setAttribute('aria-pressed',String(state.editUnlocked));}
+        const edit=doc.getElementById('operation-year-edit');if(edit){edit.hidden=!(state.year<state.currentYear);edit.disabled=partialYearReadOnly(state.year);edit.title=edit.disabled?'전체 원본 확인 후 수정할 수 있습니다.':'';edit.textContent=state.editUnlocked?'이전 연도 수정 종료':'이전 연도 수정';edit.setAttribute('aria-pressed',String(state.editUnlocked));}
         const pending=scope(canonical(),'unassigned'),unassigned=doc.getElementById('operation-year-unassigned');
         const partial=financialMetadata&&root.YearBootCoordinator&&!root.YearBootCoordinator.getState().complete;
         const count=partial?(financialMetadata.unknown?.count||0):pending.length,amount=partial?(financialMetadata.unknown?.po||0):pending.reduce((n,p)=>n+(Number(p.poAmount)||0),0);
@@ -316,10 +319,11 @@
     function rebuildPicker(state) {
         const picker = root.document.getElementById('operation-year-select'); if (!picker) return;
         const years = [...new Set([state.currentYear, ...(state.years || [])].map(Number).filter(y => Number.isInteger(y) && y >= 2000 && y <= 2199))].sort((a, b) => b - a);
-        const signature = years.join(',');
+        const ready = year => root.YearBootCoordinator?.isYearReady?.(year) !== false;
+        const signature = years.join(',') + '|' + years.map(ready).join(',') + '|' + ready('all');
         if (picker.dataset.years !== signature) {
-            picker.replaceChildren(...years.map(year => { const option = root.document.createElement('option'); option.value = String(year); option.textContent = year + '년' + (year > state.currentYear ? ' (예정)' : year === state.currentYear ? ' (현재)' : ' (이전)'); return option; }));
-            const all = root.document.createElement('option'); all.value = 'all'; all.textContent = '전체 기간 (비교·조회)'; picker.append(all); picker.dataset.years = signature;
+            picker.replaceChildren(...years.map(year => { const option = root.document.createElement('option'); option.value = String(year); option.disabled = !ready(year); option.textContent = year + '년' + (option.disabled ? ' (준비 중)' : year > state.currentYear ? ' (예정)' : year === state.currentYear ? ' (현재)' : ' (이전)'); return option; }));
+            const all = root.document.createElement('option'); all.value = 'all'; all.disabled = !ready('all'); all.textContent = '전체 기간 ' + (all.disabled ? '(준비 중)' : '(비교·조회)'); picker.append(all); picker.dataset.years = signature;
         }
         const value = opened && draftYear !== null ? draftYear : String(state.year);
         picker.value = [...picker.options].some(option => option.value === value) ? value : String(state.year);
@@ -334,9 +338,10 @@
         rebuildPicker(state);
         const include = root.document.getElementById('operation-year-include-open'); if (include) include.checked = state.includeOpen !== false;
         const edit = root.document.getElementById('operation-year-edit');
-        if (edit) { edit.hidden = !(Number(state.year) < Number(state.currentYear)); edit.disabled = typeof root.YearContext?.toggleEdit !== 'function'; edit.textContent = state.editUnlocked ? '이전 연도 수정 종료' : '이전 연도 수정'; edit.setAttribute('aria-pressed', String(Boolean(state.editUnlocked))); }
+        const partialReadOnly = root.YearBootCoordinator?.canEditYear?.(state.year) === false;
+        if (edit) { edit.hidden = !(Number(state.year) < Number(state.currentYear)); edit.disabled = partialReadOnly || typeof root.YearContext?.toggleEdit !== 'function'; edit.title = partialReadOnly ? '전체 원본 확인 후 수정할 수 있습니다.' : ''; edit.textContent = state.editUnlocked ? '이전 연도 수정 종료' : '이전 연도 수정'; edit.setAttribute('aria-pressed', String(Boolean(state.editUnlocked))); }
         const readonly = root.document.getElementById('operation-year-readonly');
-        if (readonly) { readonly.hidden = !state.readonly; readonly.textContent = state.year === 'all' ? '전체 기간은 비교·조회 모드입니다. 수정할 연도를 먼저 선택해 주세요.' : '이전 연도는 조회 모드입니다. 수정이 필요하면 이전 연도 수정 모드를 선택해 주세요.'; }
+        if (readonly) { readonly.hidden = !state.readonly; readonly.textContent = state.year === 'all' ? '전체 기간은 비교·조회 모드입니다. 수정할 연도를 먼저 선택해 주세요.' : partialReadOnly ? '선택한 연도는 조회할 수 있습니다. 전체 원본 확인이 완료되면 수정할 수 있습니다.' : '이전 연도는 조회 모드입니다. 수정이 필요하면 이전 연도 수정 모드를 선택해 주세요.'; }
         const count = state.openCount ?? state.open?.count ?? state.ongoingCount;
         if (count !== undefined) root.document.getElementById('operation-year-open-count').textContent = '진행·정산 대기 (전체 원본·조회): ' + Number(count || 0).toLocaleString('ko-KR') + '건 · 최신 운영 연도 관리';
         const retry = root.document.getElementById('operation-year-retry'); if (retry) retry.hidden = root.YearBootCoordinator?.getState?.().phase !== 'blocked';
@@ -447,7 +452,7 @@
     function assertSourceReplacementReady(){if(state.usingCache&&!state.complete)throw new Error('전체 연도와 원본 XLSB 확인 중에는 원본·정산 Excel 업로드를 할 수 없습니다. 현재 편집은 계속할 수 있으며, 전체 확인 완료 후 다시 업로드해 주세요.');return true;}
     async function ensureComplete(){while(!state.complete){if(state.phase==='blocked')assertComplete();if(!completion)throw new Error('전체 원본 확인이 진행되지 않았습니다.');status('전체 원본 확인 후 저장합니다. 편집 내용은 유지됩니다.');await completion;}assertComplete();}
     function snapshot(){return bridge?bridge.snapshot():null;}
-    function persistPending(){if(state.complete||!state.usingCache||!initialBase)return {ok:false,reason:'not-partial'};try{const value={schemaVersion:SCHEMA,sourceSha256:manifest.sourceSha256,base:initialBase,local:snapshot(),savedAt:new Date().toISOString()};sessionStorage.setItem(PENDING_KEY,JSON.stringify(value));return {ok:true,pending:true};}catch(e){state.error='편집 대기 기록을 저장하지 못했습니다.';status(state.error);return {ok:false,error:String(e)};}}
+    function persistPending(){if(state.complete||!state.usingCache||!initialBase)return {ok:false,reason:'not-partial'};if(!state.marks.currentDataReady)return {ok:false,reason:'recovery-incomplete'};try{const value={schemaVersion:SCHEMA,sourceSha256:manifest.sourceSha256,base:initialBase,local:snapshot(),savedAt:new Date().toISOString()};sessionStorage.setItem(PENDING_KEY,JSON.stringify(value));return {ok:true,pending:true};}catch(e){state.error='편집 대기 기록을 저장하지 못했습니다.';status(state.error);return {ok:false,error:String(e)};}}
     function restorePending(){const saved=sessionStorage.getItem(PENDING_KEY);if(!saved)return;const pending=JSON.parse(saved);if(pending.schemaVersion!==SCHEMA||pending.sourceSha256!==manifest.sourceSha256)throw new Error('대기 중인 편집 기록의 원본 버전이 다릅니다. 기록을 보존했으며 전체 원본과 충돌 검사가 필요합니다.');bridge.restorePending(pending);root.showToast?.('중단 전에 편집한 내용을 복구했습니다.','info');}
     async function loadRemaining(){
         const requested=root.YearContext.getViewState().year;
@@ -495,7 +500,7 @@
     async function retry(){if(!background)return;if(state.phase!=='blocked')return completion;state.error=null;state.phase='background';completion=background().catch(e=>{state.phase='blocked';state.complete=false;state.error=String(e.message||e);persistPending();status(state.error);throw e;});completion.catch(()=>{});return completion;}
     function reserveNextId(proposed,projects){if(!state.usingCache||state.complete)return proposed;let floor=Number(manifest.sourceInternalIdMax)||0;for(const p of projects||[])if(/^\d+$/.test(String(p.id)))floor=Math.max(floor,Number(p.id));return String(Math.max(Number(proposed)||0,floor+1));}
     function containsSourceCode(code){return state.usingCache&&!state.complete&&(manifest.sourceMaintenanceCodes||[]).includes(String(code));}
-    root.YearBootCoordinator={VERSION,tryBoot,getState,assertComplete,assertSourceReplacementReady,ensureComplete,persistPending,legacyBegin,legacyComplete,legacyFailure,retry,prefetchDecision:()=>validProbe.then(Boolean),reserveNextId,containsSourceCode,isCurrentLoading:()=>state.usingCache&&state.phase==='current-loading'};
+    root.YearBootCoordinator={VERSION,tryBoot,getState,assertComplete,assertSourceReplacementReady,ensureComplete,persistPending,legacyBegin,legacyComplete,legacyFailure,retry,prefetchDecision:()=>validProbe.then(Boolean),reserveNextId,containsSourceCode,isCurrentLoading:()=>state.usingCache&&state.phase==='current-loading',isYearReady:year=>!state.usingCache||state.complete||(year!=='all'&&state.loadedYears.includes(year)),canEditYear:year=>!state.usingCache||state.complete||(!!state.marks.currentDataReady&&year===state.loadedYears[0])};
     if(root.document){
         const sourceUploadIds=new Set(['fileInput','revisionHistoryFileInput','uploadSettlementExcel','settlementExcelFileInput','codexXlsbUploadFile']);
         root.document.addEventListener('change',event=>{
@@ -61016,6 +61021,11 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 completeSource: async (bytes, manifest) => {
                     // Reading the complete source establishes the save baseline only. It must
                     // not schedule the legacy XLSX Work hook over edits made after current-ready.
+                    // Yield only between complete source stages; keep the existing parser,
+                    // formatted-date row conversion and atomic save baseline unchanged.
+                    const yieldToInput = () => typeof window.scheduler?.yield === 'function'
+                        ? window.scheduler.yield() : new Promise(resolve => setTimeout(resolve, 0));
+                    await yieldToInput();
                     const wasReadingForSave = window.__codexWebSaveWorkbookReadInProgress;
                     let workbook;
                     try {
@@ -61028,6 +61038,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     const primary = workbook.SheetNames[0], worksheet = workbook.Sheets[primary];
                     window.__lastProjectSheetContext = { sheetName: primary, worksheet, startRow: 0, startCol: 0, date1904: !!workbook.Workbook?.WBProps?.date1904 };
                     for (const name of workbook.SheetNames) {
+                        await yieldToInput();
                         const rows = await parseAutoUploadSheetRows(workbook.Sheets[name], '전체 연도 저장 원본 확인');
                         if (name === primary) rememberAutoUploadRawSheet('project', rows);
                         else if (isAutoUploadWorkSheetName(name)) rememberAutoUploadRawSheet('work', rows);
@@ -61035,6 +61046,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         else if (isAutoUploadWebLinksSheetName(name)) rememberAutoUploadRawSheet('link', rows);
                         else if (/milestone|마일스톤/i.test(name)) rememberAutoUploadRawSheet('milestone', rows);
                     }
+                    await yieldToInput();
                     if (window.WebSavePlugin) {
                         window.WebSavePlugin.rememberCurrentBaseSha(manifest.sourceBlobSha, 'year-cache-source-verified');
                         window.WebSavePlugin.captureValueBaseline('year-cache-source-verified');
