@@ -42831,6 +42831,10 @@
                     if (clickedItem.id === 'projectView') {
                         try { window.__refreshScheduleAccordionObservers?.(); } catch (e) { }
                         setupControlSectionToggles(clickedItem.querySelector('#controlsSection'));
+                        if (window.matchMedia('(min-width: 769px)').matches && projectData.length > 0 &&
+                            !clickedItem.querySelector('#ganttViewContent .gantt-chart-container')) {
+                            requestCoalescedMainRender('desktop-first-schedule-open');
+                        }
                         window.__scrollToTodayOnScheduleOpen = true;
                         const autoScrollDelays = [0, 50, 150, 300, 500, 800, 1200, 1600];
                         autoScrollDelays.forEach(d => {
@@ -62831,7 +62835,14 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const financialList = window.YearContext ? window.YearContext.scope(list, 'financial') : list;
             try { if (typeof renderPoSummary === 'function') renderPoSummary(financialList); } catch (e) { }
             renderSettlement(financialList);
-            try { if (typeof renderGanttChart === 'function') renderGanttChart(list); } catch (e) { }
+            // Desktop's initially closed schedule has no visible chart to paint.
+            // Existing accordion open/fullscreen paths render the latest filtered data.
+            const scheduleShell = document.getElementById('projectView');
+            const deferFirstDesktopChart = window.matchMedia('(min-width: 769px)').matches &&
+                scheduleShell && !scheduleShell.classList.contains('open') &&
+                (!fullscreenModal || fullscreenModal.classList.contains('hidden')) &&
+                !document.querySelector('#ganttViewContent .gantt-chart-container');
+            try { if (!deferFirstDesktopChart && typeof renderGanttChart === 'function') renderGanttChart(list); } catch (e) { }
         }
 
         // Compatibility aliases for the refactored render pipeline
@@ -70482,15 +70493,37 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             }
             headerToggleBtn.title = '\ud5e4\ub354 \uc811\uae30/\ud3b4\uae30';
 
-            headerToggleBtn.addEventListener('click', (e) => {
+            let headerTouchHandledAt = -Infinity;
+            const toggleGanttHeader = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation(); // [TRAP-FIX] \ub2e4\ub978 \ud578\ub4e4\ub7ec\ub85c \uc804\ud30c \ubc29\uc9c0
-                const ganttContainer = document.querySelector('.gantt-chart-container');
+                const ganttContainer = headerToggleBtn.closest('.gantt-chart-container');
                 if (ganttContainer) {
                     ganttContainer.classList.toggle('header-collapsed');
                     headerToggleBtn.classList.toggle('active');
+                    headerToggleBtn.setAttribute('aria-expanded', String(!ganttContainer.classList.contains('header-collapsed')));
                 }
+            };
+            headerToggleBtn.setAttribute('role', 'button');
+            headerToggleBtn.setAttribute('aria-label', headerToggleBtn.title);
+            headerToggleBtn.setAttribute('aria-expanded', String(!wasHeaderCollapsed));
+            headerToggleBtn.tabIndex = 0;
+            const onHeaderTouch = (e) => {
+                if (!window.matchMedia('(max-width: 768px) and (orientation: portrait)').matches) return;
+                if (e.type === 'pointerdown' && e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
+                headerTouchHandledAt = performance.now();
+                toggleGanttHeader(e);
+            };
+            headerToggleBtn.addEventListener(window.PointerEvent ? 'pointerdown' : 'touchstart', onHeaderTouch, {passive: false});
+            headerToggleBtn.addEventListener('click', (e) => {
+                if (performance.now() - headerTouchHandledAt < 700) {
+                    e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); return;
+                }
+                toggleGanttHeader(e);
+            });
+            headerToggleBtn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') toggleGanttHeader(e);
             });
 
             headerToggleContainer.appendChild(headerToggleBtn);
@@ -75011,6 +75044,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             try {
                 const panel = document.getElementById('accordion-panel-overview');
                 if (!panel) return;
+                const item = panel.closest('.accordion-item');
+                if (!item || !item.classList.contains('open')) return;
                 // Keep original grid layout intact; only limit height and enable vertical scroll
                 const rect = panel.getBoundingClientRect();
                 // Reserve small margin at bottom (24px)
@@ -100511,6 +100546,19 @@ function showPendingSettlementModal(periodType, projects) {
         #ganttChartWrapper .header-toggle-btn::after {
             display: none !important;
             content: none !important;
+        }
+        @media (max-width: 768px) and (orientation: portrait) {
+            #ganttChartWrapper .header-toggle-btn { touch-action: manipulation; }
+            #ganttChartWrapper .header-toggle-btn::after {
+                content: '' !important;
+                display: block !important;
+                position: absolute;
+                width: 44px;
+                height: 44px;
+                left: -22px;
+                top: -17px;
+                background: transparent;
+            }
         }
         #ganttChartWrapper .gantt-timeline-wrapper {
             flex: 1 1 0 !important;
