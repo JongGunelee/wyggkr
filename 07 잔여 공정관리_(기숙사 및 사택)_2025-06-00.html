@@ -168,11 +168,11 @@
 <script id="codex-year-bubble-20261009">
 (function(root) {
     'use strict';
-    const VERSION = 'year-bubble-20261009-v1';
+    const VERSION = 'year-bubble-20261010-v2';
     const POSITION_KEY = 'codex.operation-year-bubble.position.v1';
-    const SIZE = 80, EDGE = 8, DRAG_THRESHOLD = 6;
-    const IDS = ['operation-year-bubble','operation-year-modal','operation-year-toolbar'];
-    let button = null, backdrop = null, panel = null, mounted = false;
+    const EDGE = 8, DRAG_THRESHOLD = 6;
+    const IDS = ['operation-year-bubble','operation-year-lock','operation-year-modal','operation-year-toolbar'];
+    let button = null, lockButton = null, backdrop = null, panel = null, mounted = false, locked = false;
     let position = null, drag = null, suppressClickUntil = 0, opened = false;
     let opener = null, previousOverflow = null, draftYear = null, globalListeners = false;
 
@@ -186,36 +186,56 @@
         const doc = root.document;
         return {width: Math.max(1, root.innerWidth || doc?.documentElement.clientWidth || 390), height: Math.max(1, root.innerHeight || doc?.documentElement.clientHeight || 844)};
     }
+    function bubbleSize() { const area = viewport(); return area.width <= 768 && area.height >= area.width ? 64 : 80; }
     function clamp(value) {
-        const area = viewport();
-        const minX = Math.min(EDGE, Math.max(0, area.width - SIZE)), minY = Math.min(EDGE, Math.max(0, area.height - SIZE));
-        return {x: Math.max(minX, Math.min(Number(value.x), Math.max(minX, area.width - SIZE - EDGE))), y: Math.max(minY, Math.min(Number(value.y), Math.max(minY, area.height - SIZE - EDGE))), width: area.width, height: area.height};
+        const area = viewport(), SIZE = bubbleSize();
+        const minX = Math.min(EDGE, Math.max(0, area.width - SIZE)), minY = Math.min(EDGE, Math.max(0, area.height - SIZE - 16));
+        return {x: Math.max(minX, Math.min(Number(value.x), Math.max(minX, area.width - SIZE - EDGE))), y: Math.max(minY, Math.min(Number(value.y), Math.max(minY, area.height - SIZE - EDGE - 16))), width: area.width, height: area.height};
     }
-    function defaultPosition() { const area = viewport(); return clamp({x: area.width - SIZE - 100, y: 110}); }
+    function defaultPosition() {
+        const area = viewport(); if (bubbleSize() === 80) return clamp({x: EDGE, y: EDGE});
+        const badge = root.document?.getElementById('network-status')?.getBoundingClientRect();
+        return clamp({x: area.width - bubbleSize() - EDGE, y: badge?.width > 0 && badge.bottom > 0 ? badge.bottom + EDGE : 64});
+    }
     function validPosition(value) { return value && Number.isFinite(Number(value.x)) && Number.isFinite(Number(value.y)); }
     function adaptedPosition(value) {
-        const area = viewport();
+        const area = viewport(), SIZE = bubbleSize(), oldSize = Number(value.size) || 80;
         let x = Number(value.x), y = Number(value.y);
         if (Number(value.width) > SIZE && Number(value.height) > SIZE && (Number(value.width) !== area.width || Number(value.height) !== area.height)) {
-            x = x / (Number(value.width) - SIZE) * Math.max(0, area.width - SIZE);
-            y = y / (Number(value.height) - SIZE) * Math.max(0, area.height - SIZE);
+            x = x / (Number(value.width) - oldSize) * Math.max(0, area.width - SIZE);
+            y = y / (Number(value.height) - oldSize) * Math.max(0, area.height - SIZE);
         }
         return clamp({x, y});
     }
-    function paintPosition() { if (button && position) { button.style.left = position.x + 'px'; button.style.top = position.y + 'px'; } }
+    function paintPosition() {
+        if (button && position) { button.style.left = position.x + 'px'; button.style.top = position.y + 'px'; }
+        if (lockButton && position) { lockButton.style.left = position.x + 'px'; lockButton.style.top = (position.y + bubbleSize() - 16) + 'px'; }
+    }
+    function paintLock() {
+        if (!button || !lockButton) return;
+        button.dataset.locked = String(locked); lockButton.setAttribute('aria-pressed', String(locked));
+        const label = locked ? '물방울 위치 잠금 해제' : '물방울 위치 잠금'; lockButton.title = label; lockButton.setAttribute('aria-label', label);
+        lockButton.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2"><path d="' + (locked ? 'M7 11V7a5 5 0 0 1 10 0v4' : 'M7 11V7a5 5 0 0 1 9-3') + '"/><rect x="4" y="11" width="16" height="11" rx="3"/><path d="M12 15v3"/></svg>';
+        lockButton.dataset.locked = String(locked);
+    }
+    function setLocked(value) {
+        locked = value === true;
+        if (locked && drag) { const id = drag.id; drag = null; button?.removeAttribute('data-dragging'); suppressClickUntil = Date.now() + 700; try { if (button?.hasPointerCapture(id)) button.releasePointerCapture(id); } catch (_) { /* A cancelled gesture must not move a locked bubble. */ } }
+        paintLock(); storePosition(); update(safeState()); return serializePosition();
+    }
     function storePosition() { try { root.localStorage?.setItem(POSITION_KEY, JSON.stringify(serializePosition())); } catch (_) { /* A storage restriction must not disable movement. */ } }
-    function serializePosition() { const value = position || defaultPosition(); return {version: VERSION, x: value.x, y: value.y, width: value.width, height: value.height}; }
+    function serializePosition() { const value = position || defaultPosition(); return {version: VERSION, x: value.x, y: value.y, width: value.width, height: value.height, size: bubbleSize(), locked}; }
     function restorePosition(value, persist = false) {
         position = validPosition(value) ? adaptedPosition(value) : defaultPosition();
-        paintPosition(); if (persist) storePosition(); return serializePosition();
+        locked = value?.locked === true; paintPosition(); paintLock(); if (persist) storePosition(); return serializePosition();
     }
     function initialPosition() {
-        if (validPosition(root.embeddedSettings?.yearBubblePosition)) return restorePosition(root.embeddedSettings.yearBubblePosition);
+        if (root.embeddedSettings?.yearBubblePosition?.version === VERSION && validPosition(root.embeddedSettings.yearBubblePosition)) return restorePosition(root.embeddedSettings.yearBubblePosition);
         let saved = null; try { saved = JSON.parse(root.localStorage?.getItem(POSITION_KEY) || 'null'); } catch (_) { /* Invalid local UI settings fall back to the visible default. */ }
-        return restorePosition(saved);
+        return restorePosition(saved?.version === VERSION ? saved : null);
     }
     function getPosition() { return serializePosition(); }
-    function resetPosition() { position = defaultPosition(); paintPosition(); storePosition(); return serializePosition(); }
+    function resetPosition() { locked = false; position = defaultPosition(); paintPosition(); paintLock(); storePosition(); update(safeState()); return serializePosition(); }
 
     function style() {
         const doc = root.document; if (!doc) return;
@@ -227,6 +247,11 @@
 #operation-year-bubble:focus-visible{outline:3px solid #7c3aed;outline-offset:3px}
 #operation-year-bubble[data-dragging="true"]{cursor:grabbing;box-shadow:0 6px 15px #0f172a40}
 #operation-year-bubble[data-readonly="true"]{border-color:#64748b;color:#334155}
+#operation-year-bubble[data-locked="true"]{cursor:pointer}
+#operation-year-lock{position:fixed;width:32px;height:32px;min-width:32px;padding:0;z-index:100601;border:1px solid #0284c7;border-radius:50%;background:#f0f9ff;color:#075985;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;box-shadow:0 2px 5px #0f172a30}
+#operation-year-lock[data-locked="true"]{background:#075985;color:#fff}
+#operation-year-lock:focus-visible{outline:3px solid #7c3aed;outline-offset:2px}
+@media(max-width:768px) and (orientation:portrait){#operation-year-bubble{width:64px;height:64px;min-width:64px;max-width:64px;padding:6px}#operation-year-bubble strong{font-size:21px}#operation-year-bubble small{font-size:9px}}
 #operation-year-modal{position:fixed;inset:0;z-index:100610;display:flex;align-items:center;justify-content:center;background:#0f172a73;padding:12px;box-sizing:border-box;overscroll-behavior:contain}
 #operation-year-modal[hidden]{display:none!important}
 #operation-year-modal *{box-sizing:border-box}
@@ -293,12 +318,12 @@
     function focusGuard(event) { if (ownsModalFocus() && panel && !panel.contains(event.target)) focusable()[0]?.focus({preventScroll: true}); }
     function resize() { if (position) { position = clamp(position); paintPosition(); } }
     function pointerDown(event) {
-        if (drag || opened || (event.pointerType === 'mouse' && event.button !== 0)) return;
+        if (locked || drag || opened || (event.pointerType === 'mouse' && event.button !== 0)) return;
         drag = {id: event.pointerId, x: event.clientX, y: event.clientY, start: {...position}, moved: false};
         try { button.setPointerCapture(event.pointerId); } catch (_) { /* A cancelled pointer retains the last clamped position. */ }
     }
     function pointerMove(event) {
-        if (!drag || drag.id !== event.pointerId) return;
+        if (locked || !drag || drag.id !== event.pointerId) return;
         const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
         if (!drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
         drag.moved = true; event.preventDefault(); button.dataset.dragging = 'true';
@@ -312,7 +337,7 @@
     }
     function moveWithKeyboard(event) {
         const steps = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]};
-        if (!event.altKey || !steps[event.key]) return;
+        if (locked || !event.altKey || !steps[event.key]) return;
         event.preventDefault(); event.stopPropagation(); const [x, y] = steps[event.key], step = event.shiftKey ? 30 : 10;
         position = clamp({x: position.x + x * step, y: position.y + y * step}); paintPosition(); storePosition();
     }
@@ -333,8 +358,8 @@
         const label = state.year === 'all' ? '전체' : String(state.year).slice(-2) + '년';
         button.querySelector('strong').textContent = label;
         button.dataset.readonly = String(Boolean(state.readonly));
-        button.setAttribute('aria-label', '운영 연도 ' + (state.year === 'all' ? '전체 기간' : state.year + '년') + '. 눌러 선택하거나 끌어서 이동합니다.');
-        button.title = '운영 연도 선택 · 끌어서 이동 · Alt+방향키로 이동';
+        button.setAttribute('aria-label', '운영 연도 ' + (state.year === 'all' ? '전체 기간' : state.year + '년') + (locked ? '. 위치 잠김. 눌러 연도 선택합니다.' : '. 눌러 선택하거나 끌어서 이동합니다.'));
+        button.title = locked ? '운영 연도 선택 · 위치 잠김' : '운영 연도 선택 · 끌어서 이동 · Alt+방향키로 이동';
         rebuildPicker(state);
         const include = root.document.getElementById('operation-year-include-open'); if (include) include.checked = state.includeOpen !== false;
         const edit = root.document.getElementById('operation-year-edit');
@@ -376,27 +401,29 @@
     }
     function mount() {
         const doc = root.document; if (!doc?.body) return false;
-        if (mounted && button?.isConnected && backdrop?.isConnected) { update(safeState()); return true; }
+        if (mounted && button?.isConnected && lockButton?.isConnected && backdrop?.isConnected) { update(safeState()); return true; }
         if (opened) close();
         normalizeSnapshot(doc);
         // Saved standalone DOM has no live listener registrations. Recreate only this module's UI.
         for (const id of IDS) for (const old of doc.querySelectorAll('[id="' + id + '"]')) old.remove();
-        mounted = false; button = null; backdrop = null; panel = null; drag = null;
+        mounted = false; button = null; lockButton = null; backdrop = null; panel = null; drag = null;
         style();
         button = doc.createElement('button'); button.id = 'operation-year-bubble'; button.type = 'button'; button.setAttribute('aria-haspopup', 'dialog'); button.setAttribute('aria-controls', 'operation-year-modal'); button.setAttribute('aria-expanded', 'false');
         button.innerHTML = '<strong>--년</strong><small>운영 연도</small>';
+        lockButton = doc.createElement('button'); lockButton.id = 'operation-year-lock'; lockButton.type = 'button';
         backdrop = doc.createElement('div'); backdrop.id = 'operation-year-modal'; backdrop.hidden = true;
         backdrop.innerHTML = '<section id="operation-year-toolbar" role="dialog" aria-modal="true" aria-labelledby="operation-year-modal-title" tabindex="-1"><div class="year-modal-heading"><h2 id="operation-year-modal-title">운영 연도 선택</h2><button type="button" id="operation-year-close" aria-label="운영 연도 선택 닫기">×</button></div><label for="operation-year-select">조회할 연도</label><select id="operation-year-select"></select><div class="year-modal-row"><button type="button" id="operation-year-current">올해 보기</button><button type="button" id="operation-year-edit" hidden>이전 연도 수정</button></div><label class="year-modal-option"><input type="checkbox" id="operation-year-include-open" checked><span>진행·정산 대기 포함<br><small>최신 운영 연도에서 계속 관리합니다.</small></span></label><span id="operation-year-open-count" class="year-modal-info">진행·정산 대기 확인 중</span><span id="operation-year-basis" class="year-modal-info"></span><span id="operation-year-unassigned" class="year-modal-info"></span><p id="operation-year-readonly" class="year-modal-note" hidden></p><p class="year-modal-note">미완료 작업과 완료 후 정산 대기는 최신 운영 연도로 이어집니다. 이전 연도에 시작한 작업도 정산이 끝난 연도에 비용이 귀속됩니다. 날짜 정보 자체가 확인되지 않은 기록은 별도로 표시합니다.</p><span id="operation-year-progress" class="year-modal-info" role="status" aria-live="polite"></span><div class="year-modal-row"><button type="button" id="operation-year-retry" hidden>전체 확인 재시도</button><button type="button" id="operation-year-position-reset">물방울 위치 초기화</button></div><div class="year-modal-footer"><button type="button" id="operation-year-cancel">닫기</button><button type="button" id="operation-year-apply">적용</button></div></section>';
-        panel = backdrop.querySelector('#operation-year-toolbar'); doc.body.append(button, backdrop);
+        panel = backdrop.querySelector('#operation-year-toolbar'); doc.body.append(button, lockButton, backdrop);
         initialPosition();
         button.addEventListener('pointerdown', pointerDown); button.addEventListener('pointermove', pointerMove); button.addEventListener('pointerup', pointerEnd); button.addEventListener('pointercancel', pointerEnd); button.addEventListener('lostpointercapture', pointerEnd);
         button.addEventListener('keydown', moveWithKeyboard);
+        lockButton.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); setLocked(!locked); });
         button.addEventListener('click', event => { if (Date.now() < suppressClickUntil && event.detail !== 0) { event.preventDefault(); event.stopPropagation(); return; } open(); });
         backdrop.addEventListener('click', modalClick); backdrop.addEventListener('change', modalChange);
         if (!globalListeners) { root.addEventListener('resize', resize); doc.addEventListener('keydown', keyboard, true); doc.addEventListener('focusin', focusGuard); globalListeners = true; }
         mounted = true; update(safeState()); return true;
     }
-    const api = {VERSION, mount, update, getPosition, resetPosition, serializePosition, restorePosition, normalizeSnapshot, open, close};
+    const api = {VERSION, mount, update, getPosition, resetPosition, serializePosition, restorePosition, normalizeSnapshot, setLocked, open, close};
     root.YearBubbleUI = api;
     if (typeof module === 'object' && module.exports) module.exports = api;
     if (root.document) {
