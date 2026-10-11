@@ -436,7 +436,7 @@
 (function(root){
     'use strict';
     const SCHEMA=1,VERSION='year-context-20261009-v2',PENDING_KEY='codex.multiyear.pending.v1';
-    const state={phase:'idle',complete:true,source:null,usingCache:false,loadedYears:[],loadedSourceIds:new Set(),marks:{},error:null};
+    const state={phase:'idle',complete:true,source:null,usingCache:false,initialProjectionComplete:false,loadedYears:[],loadedSourceIds:new Set(),marks:{},error:null};
     let completion=null,background=null,bridge=null,manifest=null,cacheBase=null,sourceBase=null,initialBase=null,legacyResolve=null,legacyId=0;
     const sourceSets={projects:new Set(),work:new Set(),milestones:new Set(),dependencies:new Set(),webLinks:new Set()};
     function recordSourceModel(model){for(const p of model.projects){sourceSets.projects.add(String(p.id));for(const dep of p.dependsOn||[])sourceSets.dependencies.add(JSON.stringify([String(p.id),dep]));}for(const w of model.works)sourceSets.work.add(JSON.stringify([String(w.projectId),w.workDate,w.workDetail||'']));for(const m of model.milestones)sourceSets.milestones.add(JSON.stringify(m));for(const [id,url]of Object.entries(model.links||{}))if(url)sourceSets.webLinks.add(JSON.stringify([id,url]));}
@@ -449,15 +449,12 @@
     async function fetchBytes(url,limit){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);try{const response=await fetch(url,{cache:'no-store',signal:controller.signal});if(!response.ok)throw new Error('데이터 HTTP '+response.status);if(Number(response.headers.get('content-length'))>limit)throw new Error('파생 데이터 크기 제한 초과');const b=await response.arrayBuffer();if(b.byteLength>limit)throw new Error('파생 데이터 크기 제한 초과');return b;}finally{clearTimeout(timer);}}
     async function readJson(url,limit=200000){return JSON.parse(new TextDecoder().decode(await fetchBytes(url,limit)));}
     const defaultBase='https://raw.githubusercontent.com/jonggunelee/wyggkr04/main/RawData/%EA%B3%B5%EC%A0%95%EA%B4%80%EB%A6%AC/YearCache/';
-    function cacheIsWorthPartitioning(candidate){const current=root.YearContext.chooseDefault(candidate.years),file=candidate.files?.[String(current)],keys=['projects','work','milestones','dependencies','webLinks'];if(!file)return false;const total=keys.reduce((n,k)=>n+(Number(candidate.counts?.[k])||0),0),first=keys.reduce((n,k)=>n+(Number(file[k])||0),0);return total>0&&first/total<=0.6;}
     // Start the small metadata request while the existing application is still parsing.
     const probe=(root.location?.hostname==='jonggunelee.github.io'&&!root.__codexYearCacheDisabled)?readJson(defaultBase+'manifest.json').catch(()=>null):Promise.resolve(null);
     const validProbe=probe.then(async candidate=>{
         if(!candidate||candidate.schemaVersion!==SCHEMA||candidate.mappingVersion!==VERSION||candidate.generatedForOperatingYear!==root.YearContext?.currentYear?.()||candidate.sourcePath!=='RawData/공정관리/26년 잔여 공사 공정관리_(입력).xlsb'||!/^[a-f0-9]{40}$/.test(candidate.sourceCommit||'')||!/^[a-f0-9]{64}$/.test(candidate.sourceSha256||'')||!Array.isArray(candidate.years))return null;
-        // A mostly current-year source would be mapped, then decoded a second time
-        // for saving. Preserve the legacy single-source boot when this cost cannot
-        // be offset by a substantial history partition (measured 2026-10-09).
-        if(!cacheIsWorthPartitioning(candidate))return null;
+        // Every verified source uses current-year-first boot, independently of
+        // the proportion of history. Stale or invalid metadata still falls back.
         try{const commits=await readJson('https://api.github.com/repos/jonggunelee/wyggkr04/commits?path='+encodeURIComponent(candidate.sourcePath)+'&sha=main&per_page=1');return Array.isArray(commits)&&commits[0]?.sha===candidate.sourceCommit?candidate:null;}catch(e){return null;}
     });
     async function readModel(year){
@@ -494,7 +491,9 @@
         state.phase='complete';state.complete=true;state.error=null;mark('saveReady');status('전체 연도 확인 완료 · 저장 가능');
         // Persist the recovered/early edits in the existing complete-data backup before removing their waiting journal.
         const pending=sessionStorage.getItem(PENDING_KEY);if(pending){const saved=root.WebSavePlugin?.persistLocalBackup?.('year-boot-complete');if(!saved?.ok)throw new Error('전체 편집 백업 확인 실패: 대기 기록을 유지합니다.');sessionStorage.removeItem(PENDING_KEY);}
-        bridge.refresh();
+        // A source fully represented by the first model has no newly appended
+        // data to repaint. Source verification changes save readiness only.
+        if(state.initialProjectionComplete)root.YearContext.updateUI();else bridge.refresh();
     }
     async function tryBoot(url,options,adapter){
         const source=sourceDescriptor(url);if(!source||root.isStandalone||root.__codexYearCacheDisabled||root.location?.protocol==='file:')return false;
@@ -512,7 +511,7 @@
         if(state.usingCache)return true;
         bridge=adapter;
         state.complete=false;state.usingCache=true;state.source=manifest.sourceSha256;state.phase='current-loading';root.YearContext.setMetadata(manifest.years,manifest.classificationChecks);if(root.WebSavePlugin)root.WebSavePlugin.state.baselineValueSnapshot=null;status(current+'년 먼저 준비 중');mark('currentStart');
-        try{recordSourceModel(model);await bridge.initial(model);for(const p of model.projects)state.loadedSourceIds.add(String(p.id));state.loadedYears.push(current);initialBase=clone(snapshot());restorePending();state.phase='current-ready';mark('currentDataReady');bridge.refresh();await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));mark('currentInteractive');status(current+'년 조회·편집 가능 · 이전 연도 확인 중');
+        try{recordSourceModel(model);state.initialProjectionComplete=Object.entries(manifest.counts).every(([key,count])=>sourceSets[key]?.size===count);await bridge.initial(model);for(const p of model.projects)state.loadedSourceIds.add(String(p.id));state.loadedYears.push(current);initialBase=clone(snapshot());restorePending();state.phase='current-ready';mark('currentDataReady');bridge.refresh();await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));mark('currentInteractive');status(current+'년 조회·편집 가능 · 이전 연도 확인 중');
             background=loadRemaining;completion=loadRemaining().catch(error=>{state.phase='blocked';state.complete=false;state.error=String(error.message||error);persistPending();status('편집 내용 보존 · 전체 확인 중단: '+state.error);throw error;});completion.catch(()=>{});return true;
         }catch(error){state.phase='blocked';state.error=String(error.message||error);state.complete=false;status(state.error);throw error;}
     }
@@ -30498,7 +30497,7 @@
             return '';
         }
 
-        function collectMaintenanceCodeLegendIssues(source) {
+        function collectMaintenanceCodeLegendIssues(source, visibleSource) {
             const rows = Array.isArray(source) ? source : [];
             const resolved = new Array(rows.length);
             const frequencies = new Map();
@@ -30512,10 +30511,11 @@
             let duplicateProjects = 0;
             let temporaryProjects = 0;
             let overlapProjects = 0;
-            for (let i = 0; i < rows.length; i++) {
-                const project = rows[i];
+            const visibleRows = Array.isArray(visibleSource) ? visibleSource : rows;
+            for (let i = 0; i < visibleRows.length; i++) {
+                const project = visibleRows[i];
                 if (!project) continue;
-                const code = resolved[i];
+                const code = resolveMaintenanceCodeForLegend(project);
                 const duplicate = !!code && (frequencies.get(code) || 0) > 1;
                 const temporary = !code.startsWith('45');
                 if (!duplicate && !temporary) continue;
@@ -30537,7 +30537,8 @@
         }
 
         function updateMaintenanceCodeLegendNotice(source) {
-            const summary = collectMaintenanceCodeLegendIssues(source);
+            const visible = window.YearContext ? window.YearContext.scope(source, 'schedule') : source;
+            const summary = collectMaintenanceCodeLegendIssues(source, visible);
             document.querySelectorAll('[data-status-filter="중복및임시"]').forEach(button => {
                 const count = button.querySelector('[data-maintenance-issue-count]');
                 if (count) count.textContent = `(${summary.total}건)`;
@@ -56804,6 +56805,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         }
 
         function processMappedData(rawData, mapping, dataStartIndex) {
+            // The year adapter publishes once after authoritative Work/links are ready.
+            const deferToYearBoot = !!window.YearBootCoordinator?.isCurrentLoading?.();
             return new Promise((resolve, reject) => {
                 // [FIX-v2] processMappedData 스코프에서도 디버그 게이트를 안전하게 사용
                 const uploadDebug = !!window.__UPLOAD_DEBUG__;
@@ -57532,6 +57535,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         // [PERF-CRITICAL] \ub80c\ub354\ub9c1\uc744 data:loaded \uc774\ubca4\ud2b8 \uc774\ud6c4\ub85c \uc9c0\uc5f0
                         // 721ms \uba54\uc778\uc2a4\ub808\ub4dc \ube14\ub85c\ud0b9 \ud574\uacb0 \u2192 \uc5c5\ub85c\ub4dc \uc18d\ub3c4 \uccb4\uac10 \ud5a5\uc0c1
                         const performRender = () => {
+                            if (deferToYearBoot) return;
                             if (window.__DEBUG_MODE__) {
                                 console.log('[finishProcessing] Data sanity check:', {
                                     projectDataLen: projectData ? projectData.length : 0,
@@ -57656,6 +57660,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         
                         // [SUPREME-OPT] Defer data:loaded dispatch to avoid freezing UI while 22 event listeners execute synchronously
                         const fireDataLoaded = () => {
+                            if (deferToYearBoot) return;
                             if (activeAutoUploadPerf && !activeAutoUploadPerf.finished) {
                                 deferAutoUploadDataLoaded(dataLoadedDetail);
                             } else if (window.dispatchDataEvent) {
@@ -62787,6 +62792,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         }
 
         document.addEventListener('operation-year:changed', function () {
+            if (typeof window.updateWorkdateOutOfPlanNotice === 'function') window.updateWorkdateOutOfPlanNotice();
             const state = window.YearContext.getState();
             const year = state.year;
             if (typeof year === 'number') { viewMinDate = new Date(year, 0, 1); viewMaxDate = new Date(year, 11, 31); }
@@ -76703,7 +76709,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 return entries;
             };
 
-            const getWorkdatePlanPinIssue = (project, indexedWorkItems = undefined) => {
+            const getWorkdatePlanPinIssue = (project, indexedWorkItems = undefined, year = 'all') => {
                 const pid = getWorkdateAuditProjectId(project);
                 if (!project || !pid) return null;
                 const planStart = normalizeDate(project.startDate || project.startDateStr);
@@ -76714,7 +76720,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const entries = getWorkdateAuditEntries(project, indexedWorkItems);
                 const outOfPlanEntries = entries.filter(item => {
                     const parsed = normalizeDate(item.date);
-                    return parsed && !isNaN(parsed.getTime()) && (parsed < minPlan || parsed > maxPlan);
+                    return (year === 'all' || Number(item.date.slice(0, 4)) === Number(year)) && parsed && !isNaN(parsed.getTime()) && (parsed < minPlan || parsed > maxPlan);
                 });
                 if (!entries.length && minPlan && maxPlan) {
                     return {
@@ -76745,7 +76751,9 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 let source = Array.isArray(projectsArg) ? projectsArg : null;
                 if (!source) {
                     source = Array.isArray(window.projectData) ? window.projectData : [];
+                    if (window.YearContext) source = window.YearContext.scope(source, 'schedule');
                 }
+                const year = !Array.isArray(projectsArg) && window.YearContext ? window.YearContext.getViewState().year : 'all';
                 const issues = [];
                 let outOfPlanPins = 0;
                 let missingPinProjects = 0;
@@ -76768,7 +76776,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         const indexedWorkItems = workItemsByProject
                             ? (workItemsByProject.get(getWorkdateAuditProjectId(project)) || [])
                             : undefined;
-                        const issue = getWorkdatePlanPinIssue(project, indexedWorkItems);
+                        const issue = getWorkdatePlanPinIssue(project, indexedWorkItems, year);
                         if (!issue) return;
                         issues.push(issue);
                         outOfPlanPins += issue.outOfPlanEntries ? issue.outOfPlanEntries.length : 0;
@@ -76785,7 +76793,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 };
             };
 
-            const projectHasWorkdatePlanPinIssue = (project) => !!getWorkdatePlanPinIssue(project);
+            const projectHasWorkdatePlanPinIssue = (project) => !!getWorkdatePlanPinIssue(project, undefined, window.YearContext ? window.YearContext.getViewState().year : 'all');
             window.__workdatePlanPinAudit = {
                 collect: collectWorkdatePlanPinIssues,
                 projectHasIssue: projectHasWorkdatePlanPinIssue,
@@ -76831,12 +76839,12 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 if (!button || !countEl) return;
                 const summary = collectWorkdatePlanPinIssues();
                 const markers = getActiveOutOfPlanMarkers(container);
-                const count = Math.max(summary.total || 0, markers.length || 0);
+                const count = summary.total || 0;
                 countEl.textContent = String(count);
                 button.classList.toggle('hidden', count === 0);
                 button.setAttribute('aria-hidden', count === 0 ? 'true' : 'false');
                 button.title = count > 0
-                    ? `기간 밖 작업일 핀 ${summary.outOfPlanPins || markers.length}건, 작업기간 내 핀 없음 ${summary.missingPinProjects || 0}건을 표시합니다.`
+                    ? `기간 밖 작업일 핀 ${summary.outOfPlanPins}건, 작업기간 내 핀 없음 ${summary.missingPinProjects || 0}건을 표시합니다.`
                     : '기간 밖 작업일 핀 또는 작업기간 내 핀 없음 항목 없음';
                 button.dataset.legendDiagnosticStatus = button.title;
                 button.setAttribute('aria-label', `기간 밖 핀. ${button.title}`);
