@@ -42831,10 +42831,6 @@
                     if (clickedItem.id === 'projectView') {
                         try { window.__refreshScheduleAccordionObservers?.(); } catch (e) { }
                         setupControlSectionToggles(clickedItem.querySelector('#controlsSection'));
-                        if (window.matchMedia('(min-width: 769px)').matches && projectData.length > 0 &&
-                            !clickedItem.querySelector('#ganttViewContent .gantt-chart-container')) {
-                            requestCoalescedMainRender('desktop-first-schedule-open');
-                        }
                         window.__scrollToTodayOnScheduleOpen = true;
                         const autoScrollDelays = [0, 50, 150, 300, 500, 800, 1200, 1600];
                         autoScrollDelays.forEach(d => {
@@ -62835,14 +62831,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const financialList = window.YearContext ? window.YearContext.scope(list, 'financial') : list;
             try { if (typeof renderPoSummary === 'function') renderPoSummary(financialList); } catch (e) { }
             renderSettlement(financialList);
-            // Desktop's initially closed schedule has no visible chart to paint.
-            // Existing accordion open/fullscreen paths render the latest filtered data.
-            const scheduleShell = document.getElementById('projectView');
-            const deferFirstDesktopChart = window.matchMedia('(min-width: 769px)').matches &&
-                scheduleShell && !scheduleShell.classList.contains('open') &&
-                (!fullscreenModal || fullscreenModal.classList.contains('hidden')) &&
-                !document.querySelector('#ganttViewContent .gantt-chart-container');
-            try { if (!deferFirstDesktopChart && typeof renderGanttChart === 'function') renderGanttChart(list); } catch (e) { }
+            try { if (typeof renderGanttChart === 'function') renderGanttChart(list); } catch (e) { }
         }
 
         // Compatibility aliases for the refactored render pipeline
@@ -63912,6 +63901,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
         let __settlementHeaderFastPending = false;
         let __settlementHeaderFastAttempts = 0;
+        let __settlementHeaderFastLastKey = '';
         function scheduleSettlementHeaderSummariesFast(reason) {
             if (__settlementHeaderFastPending) return;
             __settlementHeaderFastPending = true;
@@ -63925,10 +63915,16 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 try {
                     data = getStableProjectDatasetForSummary();
                 } catch (e) { }
+                const stateGeneration = window.YearContext?.getState?.().generation ?? '';
+                const dataKey = [data.length, data[0]?.id || '', data[data.length - 1]?.id || '', stateGeneration].join('|');
+                if (__settlementHeaderFastLastKey === dataKey &&
+                    !container?.hasAttribute('data-fast-header-preview') &&
+                    !overviewHeaderContainer?.hasAttribute('data-fast-header-preview')) return;
                 const settlementRendered = !!(container && renderOverviewHeaderSummariesFast(data, container));
                 const overviewRendered = !!(overviewHeaderContainer && renderSettlementHeaderSummariesFast(data, overviewHeaderContainer));
                 if (settlementRendered && overviewRendered) {
                     __settlementHeaderFastAttempts = 0;
+                    __settlementHeaderFastLastKey = dataKey;
                     try { container.setAttribute('data-fast-header-reason', String(reason || 'scheduled')); } catch (e2) { }
                     return;
                 }
@@ -63949,7 +63945,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 window.scheduleSettlementHeaderSummariesFast = scheduleSettlementHeaderSummariesFast;
                 document.addEventListener('DOMContentLoaded', function () { scheduleSettlementHeaderSummariesFast('domcontentloaded'); }, true);
                 document.addEventListener('data:loaded', function () { scheduleSettlementHeaderSummariesFast('data:loaded'); }, true);
-                document.addEventListener('data:changed', function () { scheduleSettlementHeaderSummariesFast('data:changed'); }, true);
+                document.addEventListener('data:changed', function () { __settlementHeaderFastLastKey = ''; scheduleSettlementHeaderSummariesFast('data:changed'); }, true);
+                document.addEventListener('settlement:updated', function () { __settlementHeaderFastLastKey = ''; scheduleSettlementHeaderSummariesFast('settlement:updated'); }, true);
                 document.addEventListener('app:data-ready', function () { scheduleSettlementHeaderSummariesFast('app:data-ready'); }, true);
                 window.addEventListener('load', function () { scheduleSettlementHeaderSummariesFast('window-load'); }, true);
                 setTimeout(function () { scheduleSettlementHeaderSummariesFast('boot-0'); }, 0);
