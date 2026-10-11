@@ -254,6 +254,11 @@
 @media(max-width:768px) and (orientation:portrait){#operation-year-bubble{width:64px;height:64px;min-width:64px;max-width:64px;padding:6px}#operation-year-bubble strong{font-size:21px}#operation-year-bubble small{font-size:9px}}
 #operation-year-modal{position:fixed;inset:0;z-index:100610;display:flex;align-items:center;justify-content:center;background:#0f172a73;padding:12px;box-sizing:border-box;overscroll-behavior:contain}
 #operation-year-modal[hidden]{display:none!important}
+#operation-year-bubble{z-index:2147483640}
+#operation-year-lock{z-index:2147483641}
+#operation-year-modal{z-index:2147483642}
+#webSavePatPrompt,#codexXlsbUploadModal,.codex-webdown-guide-modal{z-index:2147483643!important}
+.stl-group-tooltip,#overviewSankeyAnalysisTooltip{z-index:2147483639!important}
 #operation-year-modal *{box-sizing:border-box}
 #operation-year-toolbar{width:100%;max-width:390px;max-height:calc(100dvh - 24px);overflow:auto;border-radius:18px;border:1px solid #bae6fd;background:#fff;color:#0f172a;padding:18px;box-shadow:0 12px 36px #0003;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
 #operation-year-toolbar .year-modal-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:14px}
@@ -286,7 +291,7 @@
         for (const node of higher) {
             if (node.hidden || node.closest('[hidden]') || !node.getClientRects().length) continue;
             const css = root.getComputedStyle(node);
-            if (css.visibility !== 'hidden' && Number(css.zIndex) > 100610) return false;
+            if (css.visibility !== 'hidden' && Number(css.zIndex) > Number(root.getComputedStyle(backdrop).zIndex)) return false;
         }
         return true;
     }
@@ -372,6 +377,7 @@
         const retry = root.document.getElementById('operation-year-retry'); if (retry) retry.hidden = root.YearBootCoordinator?.getState?.().phase !== 'blocked';
     }
     function modalClick(event) {
+        event.stopPropagation();
         if (event.target === backdrop) { close(); return; }
         const action = event.target.closest?.('button')?.id;
         try {
@@ -418,7 +424,7 @@
         button.addEventListener('pointerdown', pointerDown); button.addEventListener('pointermove', pointerMove); button.addEventListener('pointerup', pointerEnd); button.addEventListener('pointercancel', pointerEnd); button.addEventListener('lostpointercapture', pointerEnd);
         button.addEventListener('keydown', moveWithKeyboard);
         lockButton.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); setLocked(!locked); });
-        button.addEventListener('click', event => { if (Date.now() < suppressClickUntil && event.detail !== 0) { event.preventDefault(); event.stopPropagation(); return; } open(); });
+        button.addEventListener('click', event => { event.stopPropagation(); if (Date.now() < suppressClickUntil && event.detail !== 0) { event.preventDefault(); return; } open(); });
         backdrop.addEventListener('click', modalClick); backdrop.addEventListener('change', modalChange);
         if (!globalListeners) { root.addEventListener('resize', resize); doc.addEventListener('keydown', keyboard, true); doc.addEventListener('focusin', focusGuard); globalListeners = true; }
         mounted = true; update(safeState()); return true;
@@ -22294,7 +22300,7 @@
            This pushes the layer back in GPU stack without z-index wars
            ---------------------------- */
         /* IMPORTANT: Do NOT apply dimming/filter to modal roots; otherwise modal content looks "transparent". */
-        body.modal-active>*:not(#fullscreenModal):not(#dataDetailModal):not(#dataPanel):not(#revisionHistoryPanel):not(#mappingModal):not(#milestoneModal):not(#zoomModal):not(#errorCorrectionModal):not(#manualModal):not(#startupChoiceModal):not(#dependencyModal):not(#rsStartCalendarPopup):not(#fabMenuBtn):not(#filterTimelineFabBtn):not(#revisionHistoryFabBtn):not(#manualFabBtn):not(.modal-overlay):not(.fullscreen-modal-overlay):not(.settlement-modal-overlay):not(.pending-settlement-modal-overlay):not(script):not(style):not(link) {
+        body.modal-active>*:not(#operation-year-bubble,#operation-year-lock,#operation-year-modal):not(#fullscreenModal):not(#dataDetailModal):not(#dataPanel):not(#revisionHistoryPanel):not(#mappingModal):not(#milestoneModal):not(#zoomModal):not(#errorCorrectionModal):not(#manualModal):not(#startupChoiceModal):not(#dependencyModal):not(#rsStartCalendarPopup):not(#fabMenuBtn):not(#filterTimelineFabBtn):not(#revisionHistoryFabBtn):not(#manualFabBtn):not(.modal-overlay):not(.fullscreen-modal-overlay):not(.settlement-modal-overlay):not(.pending-settlement-modal-overlay):not(script):not(style):not(link) {
             pointer-events: none !important;
             user-select: none !important;
             filter: grayscale(0.3) opacity(0.85);
@@ -45843,6 +45849,7 @@
                 window.addEventListener('scroll', this.scrollHandler, true);
 
                 this.outsideClickHandler = (e) => {
+                    if (e.target.closest('#operation-year-bubble,#operation-year-lock,#operation-year-modal')) return;
                     // \ubbf8\ub2c8 \ub2ec\ub825 \ud31d\uc5c5 \ub0b4\ubd80\ub294 \ubb34\uc2dc
                     if (e.target.closest('#rsStartCalendarPopup')) return;
                     if (e.target.closest('.smart-date-icon')) return;
@@ -101396,6 +101403,7 @@ function showPendingSettlementModal(periodType, projects) {
         }
 
         function interceptBackgroundClicksWhenAnalysisTooltipOpen(ev) {
+            if (ev.target?.closest?.('#operation-year-bubble,#operation-year-lock,#operation-year-modal')) return;
             const status = isAnyAnalysisTooltipActive();
             if (!status.active) return;
 
