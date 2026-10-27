@@ -4605,6 +4605,20 @@
 /* Keep workbook status labels on one line; mobile uses the shared scope strip. */
 .wb-status-bar{white-space:nowrap;flex-shrink:0}
 @media(max-width:760px){#workbook-bottom-bar .wb-status-bar,#owner-scope-pill{display:none!important}#workbook-bottom-bar .wb-tabs-track{min-width:0;flex:1 1 0}}
+/* Phase 82: presentation changes chrome only; retain the same canvas and camera. */
+body.model-fullscreen #workbook-bottom-bar{display:none!important}
+body.model-fullscreen #scope-context-strip{top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));right:auto;max-width:calc(100vw - 78px);height:28px;border:1px solid #334155;border-radius:7px;background:#101c2de8;padding:0 8px}
+#model-view-controls{position:fixed;right:max(12px,env(safe-area-inset-right));top:76px;z-index:1001;display:none;gap:6px;align-items:center}
+body.model-fullscreen #model-view-controls{top:max(12px,env(safe-area-inset-top))}
+#model-view-controls button{background:#101c2de8;border:1px solid #64748b;border-radius:7px;color:#e2e8f0;padding:7px 11px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600}
+#model-fullscreen-close{display:none;font-size:17px!important;min-width:38px;min-height:36px}
+body.model-fullscreen #model-fullscreen-close{display:block}
+body.model-fullscreen #model-fullscreen-open{display:none}
+.wb-tab[draggable=true]{cursor:grab;flex-shrink:0}
+.wb-tab.tab-dragging{opacity:.45}
+.wb-tab.tab-drop-before{box-shadow:inset 3px 0 #38bdf8}
+.wb-tab.tab-drop-after{box-shadow:inset -3px 0 #38bdf8}
+.wb-tab:focus-visible{outline:2px solid #38bdf8;outline-offset:-3px}
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -4681,6 +4695,10 @@
 
 
   <canvas id="webgl-canvas"></canvas>
+  <div id="model-view-controls" aria-label="모델링 화면 크기">
+    <button id="model-fullscreen-open" type="button" onclick="ModelPresentation.enter()" title="모델링을 전체 화면으로 보기">⛶ 전체 화면</button>
+    <button id="model-fullscreen-close" type="button" onclick="ModelPresentation.exit(true)" aria-label="전체 화면 닫기 · 일반 화면으로" title="전체 화면 닫기 · 일반 화면으로 (Esc)">✕</button>
+  </div>
 
   <!-- [Phase 48] 상단 타이틀 헤더 바(#header) 및 텍스트 영역 완전 제거 (작업 뷰포트 극대화) -->
 
@@ -8590,7 +8608,7 @@ const RenderScheduler = {
 };
 
 // P/BP/Hs share world-space size; BP uses its own clearance and follows its actual curved member.
-const InspectionMarkerStyle={badgeSize:.075,badgeOffsetZ:.028,hitRadius:.08,surfaceGap:.02,bottomSurfaceGap:.05};
+const InspectionMarkerStyle={badgeSize:.075,badgeOffsetZ:.028,hitRadius:.08,surfaceGap:.02,bottomSurfaceGap:.05,labelFontSize:42,badgeExtent:58};
 function layoutBottomInspectionMarkers(){
  for(const key of BOTTOM_POINT_KEYS){
   const d=pointDefinition(key),pin=defectPinGroups[d.id];if(!pin)continue;
@@ -8713,7 +8731,7 @@ function renderRemoteSaveState() {
 
 // One authoritative main-branch reader and compare-and-swap writer for all save buttons.
 const GitHubWorkbookSync={
- build:'87.0',
+ build:'88.0',
  repository:'JongGunelee/wyggkr04',branch:'main',path:'RawData/발코니 난간대/사택_발코니난간대_정밀안전점검_DB.xlsb',
  uiSheet:'워크북_UI_설정',conflictResolver:null,lastRefresh:0,
  get apiUrl(){return 'https://api.github.com/repos/'+this.repository+'/contents/'+encodeURI(this.path);},
@@ -9849,6 +9867,31 @@ function getRoomsSpreadsheetData() {
     }
   };
   window.WebSavePatVault = WebSavePatVault;
+// Browser-only presentation preferences deliberately stay outside XLSB/shared UI snapshots.
+const ModelPresentation={
+ active:false,
+ enter(){if(WorkbookManager.activeTabId!=='model')return;this.active=true;document.body.classList.add('model-fullscreen');RenderScheduler.request();},
+ exit(focus=false){this.active=false;document.body.classList.remove('model-fullscreen');if(focus&&WorkbookManager.activeTabId==='model')document.getElementById('model-fullscreen-open')?.focus();RenderScheduler.request();},
+ sync(tabId,enter){const controls=document.getElementById('model-view-controls');if(controls)controls.style.display=tabId==='model'?'flex':'none';if(tabId!=='model')this.exit();else if(enter)this.enter();}
+};
+const WorkbookTabLayout={
+ key:'balcony_workbook_tab_order_v1',dragId:null,suppressUntil:0,
+ defaults:['owner','model','sheet-summary','sheet-site','sheet-rooms','sheet-1'],
+ order(available){let saved=[];try{const value=JSON.parse(localStorage.getItem(this.key)||'null');if(value?.version===1&&Array.isArray(value.order))saved=value.order.filter(id=>typeof id==='string');}catch(error){}return [...new Set([...saved,...this.defaults,...available])].filter(id=>available.includes(id));},
+ save(order){try{localStorage.setItem(this.key,JSON.stringify({version:1,order}));return true;}catch(error){showToast('⚠️ 탭 순서를 브라우저에 보관하지 못했습니다.');return false;}},
+ clearHints(){document.querySelectorAll('#wb-tabs-track .tab-drop-before,#wb-tabs-track .tab-drop-after').forEach(el=>el.classList.remove('tab-drop-before','tab-drop-after'));},
+ finish(){if(this.dragId)this.suppressUntil=performance.now()+250;this.dragId=null;this.clearHints();document.querySelector('#wb-tabs-track .tab-dragging')?.classList.remove('tab-dragging');},
+ move(from,to,after){const track=document.getElementById('wb-tabs-track'),order=[...track.children].map(el=>el.dataset.tabId);if(from===to||!order.includes(from)||!order.includes(to))return;const next=order.filter(id=>id!==from);next.splice(next.indexOf(to)+(after?1:0),0,from);if(next.every((id,i)=>id===order[i]))return;this.save(next);for(const id of next)track.appendChild(document.getElementById('wb-tab-'+id));},
+ bind(tab,id){
+  tab.dataset.tabId=id;tab.draggable=true;tab.tabIndex=0;tab.setAttribute('role','tab');tab.setAttribute('aria-selected',String(WorkbookManager.activeTabId===id));tab.title+=' · 드래그로 순서 이동 (Alt+←/→)';
+  const click=tab.onclick;tab.onclick=event=>{if(performance.now()<this.suppressUntil){event.preventDefault();return;}click?.(event);};
+  tab.ondragstart=event=>{this.dragId=id;event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',id);tab.classList.add('tab-dragging');};
+  tab.ondragover=event=>{if(!this.dragId||this.dragId===id)return;event.preventDefault();event.dataTransfer.dropEffect='move';this.clearHints();const rect=tab.getBoundingClientRect();tab.classList.add(event.clientX<rect.left+rect.width/2?'tab-drop-before':'tab-drop-after');const track=tab.parentElement,bounds=track.getBoundingClientRect();if(event.clientX<bounds.left+30)track.scrollLeft-=18;else if(event.clientX>bounds.right-30)track.scrollLeft+=18;};
+  tab.ondrop=event=>{if(!this.dragId)return;event.preventDefault();const rect=tab.getBoundingClientRect();this.move(this.dragId,id,event.clientX>=rect.left+rect.width/2);this.suppressUntil=performance.now()+250;this.finish();};
+  tab.ondragend=()=>{this.suppressUntil=performance.now()+250;this.finish();};
+  tab.onkeydown=event=>{if(event.altKey&&['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();const order=[...tab.parentElement.children].map(el=>el.dataset.tabId),target=order[order.indexOf(id)+(event.key==='ArrowLeft'?-1:1)];if(target)this.move(id,target,event.key==='ArrowRight');tab.focus();}else if(event.key==='Enter'||event.key===' '){event.preventDefault();tab.click();}};
+ }
+};
 const WorkbookManager = {
       activeTabId: 'model', // 'model' | 'sheet-site' | 'sheet-1' ...
       storageKey: 'handrail_sim_workbook_v5',
@@ -9896,7 +9939,7 @@ const WorkbookManager = {
           colCount: 16
         }
       },
-      sheetOrder: ['sheet-summary', 'sheet-site', 'sheet-1', 'sheet-rooms'],
+      sheetOrder: ['sheet-summary', 'sheet-site', 'sheet-rooms', 'sheet-1'],
       sheetFocusMode: 'row', // [Phase 46] 'row' (기본값) | 'col' | 'both' | 'none'
       isWorkbookToolbarCollapsed: false, // [Phase 47] 상단 메뉴바 접기/펴기 (기본값: 펴기 상태)
       isKeyplanMarkerLocked: false, // [Phase 47] 동적 키플랜 마커 뱃지 위치 잠금 (기본값: 해제/열림 🔓)
@@ -9979,6 +10022,7 @@ const WorkbookManager = {
       },
 
       renderTabs() {
+        WorkbookTabLayout.finish();
         for(const name of this.viewCache.keys())if(name!=='owner'&&!this.sheets[name])this.viewCache.delete(name);
         const track = document.getElementById('wb-tabs-track');
         if (!track) return;
@@ -9989,7 +10033,7 @@ const WorkbookManager = {
         ownerTab.id = 'wb-tab-owner'; ownerTab.textContent = '👤 건물주';
         ownerTab.title = '소속·건물동·세대별 안전점검 대상 선택';
         ownerTab.onclick = () => this.activateTab('owner'); track.appendChild(ownerTab);
-        // 1. 모델링 탭 (고정)
+        // Model and owner tabs participate in the browser-local visual order.
         const modelTab = document.createElement('div');
         modelTab.className = 'wb-tab' + (this.activeTabId === 'model' ? ' active' : '');
         modelTab.id = 'wb-tab-model';
@@ -10014,6 +10058,9 @@ const WorkbookManager = {
           tab.oncontextmenu = (e) => this.onTabContextMenu(e, sheetId);
           track.appendChild(tab);
         });
+        track.setAttribute('role','tablist');track.setAttribute('aria-label','워크북 · 드래그로 순서 이동');
+        const order=WorkbookTabLayout.order(['owner','model',...this.sheetOrder]);
+        for(const id of order){const tab=document.getElementById('wb-tab-'+id);if(tab){WorkbookTabLayout.bind(tab,id);track.appendChild(tab);}}
       },
 
       viewCache:new Map(),
@@ -10029,8 +10076,10 @@ const WorkbookManager = {
         render();this.viewCache.set(name,{key:makeKey(),source:this.sheets[name]});return true;
       },
       activateTab(tabId, save = true) {
+        const enteringModel=tabId==='model'&&(this.activeTabId!==tabId||!this._modelPresented);
         if(this.activeTabId!==tabId)TabTransientUI.dismiss(this.activeTabId,tabId);
         this.activeTabId = tabId;
+        ModelPresentation.sync(tabId,enteringModel);if(tabId==='model')this._modelPresented=true;
         const sheetWorkspace = document.getElementById('sheet-workspace');
         const gridContainer = document.getElementById('sheet-grid-container');
         const siteContainer = document.getElementById('site-map-container');
@@ -10044,6 +10093,7 @@ const WorkbookManager = {
         document.querySelectorAll('.wb-tab').forEach(t => t.classList.remove('active'));
         const activeTabEl = document.getElementById(tabId === 'model' ? 'wb-tab-model' : ('wb-tab-' + tabId));
         if (activeTabEl) activeTabEl.classList.add('active');
+        document.querySelectorAll('#wb-tabs-track [role=tab]').forEach(tab=>tab.setAttribute('aria-selected',String(tab===activeTabEl)));
 
         let ownerContainer = document.getElementById('owner-workspace-container');
         if (!ownerContainer) {
@@ -10949,7 +10999,7 @@ const WorkbookManager = {
             };
           }
 
-          // [Phase 61] sheetOrder 순서 보장: 점검 집계표(모델링 바로 우측), 단지 배치, 건물동 현황, 호실 배치 순
+          // Shared sheet order remains compatible; browser-local visual order is applied by renderTabs.
           this.sheetOrder = this.sheetOrder.filter(id => id !== 'sheet-summary');
           this.sheetOrder.unshift('sheet-summary');
 
@@ -20220,7 +20270,7 @@ const WorkbookManager = {
 
         // 외곽 어두운 윤곽선 링 (자연광 백화 방지)
         ctx.beginPath();
-        ctx.arc(64, 64, 58, 0, Math.PI * 2);
+        ctx.arc(64, 64, InspectionMarkerStyle.badgeExtent, 0, Math.PI * 2);
         ctx.fillStyle = '#0a101e';
         ctx.fill();
 
@@ -20238,16 +20288,18 @@ const WorkbookManager = {
         ctx.stroke();
 
         if(numStr.startsWith('BP')) {
-          ctx.clearRect(0,0,128,128);ctx.beginPath();ctx.moveTo(64,3);ctx.lineTo(125,64);ctx.lineTo(64,125);ctx.lineTo(3,64);ctx.closePath();ctx.fillStyle='#090d16';ctx.fill();
+          ctx.clearRect(0,0,128,128);ctx.beginPath();ctx.moveTo(64,6);ctx.lineTo(122,64);ctx.lineTo(64,122);ctx.lineTo(6,64);ctx.closePath();ctx.fillStyle='#090d16';ctx.fill();
           ctx.beginPath();ctx.moveTo(64,14);ctx.lineTo(114,64);ctx.lineTo(64,114);ctx.lineTo(14,64);ctx.closePath();ctx.fillStyle=bgColorHex;ctx.fill();
         } else if(numStr==='Hs') {
-          ctx.clearRect(0,0,128,128);ctx.fillStyle='#090d16';ctx.fillRect(5,5,118,118);ctx.fillStyle='#ffffff';ctx.fillRect(15,15,98,98);
+          ctx.clearRect(0,0,128,128);ctx.fillStyle='#090d16';ctx.fillRect(6,6,116,116);ctx.fillStyle='#ffffff';ctx.fillRect(14,14,100,100);
         }
         // 텍스트 (P1~P6 / BP1~BP6 / Hs)
         ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold ' + (numStr.length > 2 ? '32' : '42') + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        ctx.font = 'bold ' + InspectionMarkerStyle.labelFontSize + 'px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        // Long BP labels keep the same font size; a thin halo protects diamond-corner contrast.
+        if(numStr.startsWith('BP')){ctx.strokeStyle='#ffffff';ctx.lineWidth=2;ctx.strokeText(numStr,64,66);}
         ctx.fillText(numStr, 64, 66);
 
         const texture = new THREE.CanvasTexture(canvas);
@@ -24447,6 +24499,7 @@ function setCameraView(name, animate = true) {
         } else {
           WindowManager.closeAll();
         }
+        if(ModelPresentation.active)ModelPresentation.exit(true);
       }
     }
 
