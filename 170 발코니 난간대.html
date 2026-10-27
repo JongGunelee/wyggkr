@@ -4605,6 +4605,11 @@
 /* Keep workbook status labels on one line; mobile uses the shared scope strip. */
 .wb-status-bar{white-space:nowrap;flex-shrink:0}
 @media(max-width:760px){#workbook-bottom-bar .wb-status-bar,#owner-scope-pill{display:none!important}#workbook-bottom-bar .wb-tabs-track{min-width:0;flex:1 1 0}}
+/* Phase 83: dashboard SVG is generated only on entry or data changes. */
+#progress-workspace-container{display:none;flex:1;min-height:0;overflow:auto;background:#f1f5f9;padding:12px;color:#17253b}
+.progress-actions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin:0 18px 8px}.progress-actions button{background:#fff;color:#23415c;border-color:#b8c7d8}
+#progress-dashboard-visual svg{display:block;max-width:100%;height:auto}.progress-detail{margin:12px 18px;color:#334155}.progress-detail summary{cursor:pointer;font-weight:700}.progress-detail table{width:100%;border-collapse:collapse;background:white;font-size:12px;margin-top:10px}.progress-detail th,.progress-detail td{padding:8px 12px;border-bottom:1px solid #e2e8f0;text-align:right;white-space:nowrap}.progress-detail th:first-child,.progress-detail td:first-child{text-align:left}
+.room-inspection-metadata{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0 16px;padding:12px;background:#172337;border:1px solid #334155;border-radius:7px}.room-inspection-metadata label{display:flex;align-items:center;gap:8px;font-size:12px;color:#cbd5e1}.room-inspection-metadata input{width:170px;padding:7px 9px;background:#0f172a;border:1px solid #475569;border-radius:5px;color:#f1f5f9}.room-inspection-metadata input[aria-invalid=true]{border-color:#ef4444}
 /* Phase 82: presentation changes chrome only; retain the same canvas and camera. */
 body.model-fullscreen #workbook-bottom-bar{display:none!important}
 body.model-fullscreen #scope-context-strip{top:max(12px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));right:auto;max-width:calc(100vw - 78px);height:28px;border:1px solid #334155;border-radius:7px;background:#101c2de8;padding:0 8px}
@@ -8730,8 +8735,158 @@ function renderRemoteSaveState() {
 }
 
 // One authoritative main-branch reader and compare-and-swap writer for all save buttons.
+// Inspection dates are stored as ISO calendar dates; only the editor uses YYYY-DD-MM.
+const InspectionDate={
+ iso(value){
+  if(value===null||value===undefined||value==='')return '';
+  if(value instanceof Date)return Number.isNaN(value.getTime())?'':value.toISOString().slice(0,10);
+  if(typeof value==='number'){const d=XLSX.SSF.parse_date_code(value);return d?this.checked(d.y,d.m,d.d):'';}
+  const match=String(value).trim().match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:T.*)?$/);return match?(this.checked(+match[1],+match[2],+match[3])||String(value).trim()):String(value).trim();
+ },
+ checked(y,m,d){const date=new Date(Date.UTC(y,m-1,d));return y>=1900&&y<=9999&&date.getUTCFullYear()===y&&date.getUTCMonth()===m-1&&date.getUTCDate()===d?`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`:'';},
+ display(value){const iso=this.iso(value),m=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m&&this.checked(+m[1],+m[2],+m[3])===iso?`${m[1]}-${m[3]}-${m[2]}`:iso;},
+ input(text){if(!text.trim())return '';const m=text.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?this.checked(+m[1],+m[3],+m[2]):'';},
+ excel(value){const iso=this.iso(value),m=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m&&this.checked(+m[1],+m[2],+m[3])===iso?new Date(iso+'T00:00:00.000Z'):null;}
+};
+const RoomInspectionMetadata={
+ flush(){const modal=document.getElementById('room-detail-modal');if(!modal||getComputedStyle(modal).display==='none')return true;const room=RoomIndex.get(WorkbookManager.activeRoomId);if(!room||!OwnerScope.selected(room))return true;for(const [field,id]of [['inspector','room-inspector-input'],['inspectDate','room-inspection-date-input']]){const input=document.getElementById(id),saved=field==='inspectDate'?InspectionDate.display(room[field]):room[field]||'';if(input&&input.value!==saved&&this.change(field,input)===false)return false;}return true;},
+ show(room){document.getElementById('room-inspector-input').value=room.inspector||'';const input=document.getElementById('room-inspection-date-input');input.value=InspectionDate.display(room.inspectDate);input.setCustomValidity('');input.removeAttribute('aria-invalid');},
+ change(field,input){
+  const room=RoomIndex.get(WorkbookManager.activeRoomId);if(!room||!OwnerScope.selected(room))return;
+  let value=input.value.trim();if(field==='inspectDate'){
+   const date=InspectionDate.input(value);if(value&&!date){input.setCustomValidity('실제 날짜를 YYYY-DD-MM 순서로 입력하세요. 예: 2026-28-10');input.setAttribute('aria-invalid','true');input.reportValidity();return false;}value=date;
+  }else if(field==='inspector'){value=value.replace(/[\u0000-\u001f]/g,'').slice(0,100);}else return;
+  input.setCustomValidity('');input.removeAttribute('aria-invalid');if((room[field]||'')===value)return;room[field]=value;
+  WorkbookManager.notifyDataMutation();if(field==='inspectDate')input.value=InspectionDate.display(value);
+ }
+};
+const ProgressDashboard={
+ id:'sheet-progress',version:1,cache:null,lastWidth:1440,resizeTimer:null,
+ colors:{selected:'#0284c7',excluded:'#cbd5e1',uninspected:'#94a3b8',in_progress:'#f59e0b',complete:'#10b981',danger:'#ef4444',warning:'#f59e0b',good:'#10b981',repaired:'#3b82f6'},
+ esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));},
+ ensureSheet(){const wm=WorkbookManager;if(!wm.sheets[this.id])wm.sheets[this.id]={id:this.id,name:'진행 현황',type:'progress',data:{},activeCell:'A1',rowCount:1,colCount:1};if(!wm.sheetOrder.includes(this.id)){const at=wm.sheetOrder.indexOf('sheet-summary');wm.sheetOrder.splice(at<0?0:at,0,this.id);}},
+ snapshot(archive=ROOMS_DATA,scope=OwnerScope.state,keys=INSPECTION_POINT_KEYS){
+  const excluded=new Set(scope.excluded),owners=new Set(scope.owners),selected=r=>owners.has(r.team||OwnerScope.ownerOf(r))&&!excluded.has(r.id),pointStage=p=>p.status!=='uninspected'&&p.progress!=='미점검'&&p.progress!=='점검중'?'complete':p.status!=='uninspected'||(p.progress&&p.progress!=='미점검')?'in_progress':'uninspected';
+  const s={version:1,owners:[...owners],keys:[...keys],buildings:BUILDING_SPECS.map(b=>({id:b.id,name:b.name,total:0,selected:0,uninspected:0,in_progress:0,complete:0,cost:0,missing:0})),types:['P','BP','Hs'].map(id=>({id,total:0,uninspected:0,in_progress:0,complete:0,cost:0})),safety:{uninspected:0,danger:0,warning:0,good:0,repaired:0},progress:Object.fromEntries(['미점검','점검중','점검완료','조치진행','조치완료'].map(k=>[k,0])),rooms:[],points:[],totals:{buildings:0,units:0,uninspected:0,in_progress:0,complete:0,cost:0,missing:0,points:0}};
+  const buildings=new Map(s.buildings.map(b=>[b.id,b])),types=new Map(s.types.map(t=>[t.id,t]));
+  archive.forEach(room=>{
+   const building=buildings.get(room.buildingId);if(!building)return;building.total++;const include=selected(room);let complete=0,started=0,cost=0;
+   keys.forEach(key=>{const p=room.points?.[key]||newInspectionPoint(key),stage=pointStage(p),type=key.startsWith('BP')?'BP':key==='Hs'?'Hs':'P',amount=Number(p.cost)||0;complete+=stage==='complete';started+=stage!=='uninspected';cost+=amount;const progress=getPointProgress(room,key);s.points.push({roomId:room.id,buildingId:room.buildingId,building:building.name,key,type,selected:include,status:p.status,progress,cost:amount,complete:stage==='complete'?1:0,started:stage!=='uninspected'?1:0});if(!include)return;const group=types.get(type);group.total++;group[stage]++;group.cost+=amount;s.safety[p.status in s.safety?p.status:'uninspected']++;if(progress in s.progress)s.progress[progress]++;});
+   const stage=complete===keys.length?'complete':started?'in_progress':'uninspected',missing=stage==='complete'&&(!room.inspector||!InspectionDate.excel(room.inspectDate))?1:0;s.rooms.push({id:room.id,buildingId:room.buildingId,building:building.name,owner:room.team,selected:include,inspector:room.inspector||'',date:InspectionDate.iso(room.inspectDate),count:keys.length,completePoints:complete,startedPoints:started,stage,cost,missing});
+   if(include){building.selected++;building[stage]++;building.cost+=cost;building.missing+=missing;}
+  });
+  s.buildings.forEach(b=>{b.excluded=b.total-b.selected;b.rate=b.selected?b.complete/b.selected:0;if(b.selected)s.totals.buildings++;for(const key of ['uninspected','in_progress','complete','cost','missing'])s.totals[key]+=b[key];s.totals.units+=b.selected;});s.totals.points=s.totals.units*keys.length;s.totals.rate=s.totals.units?s.totals.complete/s.totals.units:0;return s;
+ },
+ current(){const key=JSON.stringify([OwnerScope.revision,RoomIndex.version,OwnerScope.state,INSPECTION_POINT_KEYS]);if(this.cache?.key!==key)this.cache={key,value:this.snapshot()};return this.cache.value;},
+ charts(s){const c=this.colors,series=(name,color,values,column)=>({name,color,values,column});return [
+  {title:'건물동별 점검 대상',kind:'bar',labels:s.buildings.map(b=>b.name),first:2,last:12,series:[series('선택',c.selected,s.buildings.map(b=>b.selected),'C'),series('제외',c.excluded,s.buildings.map(b=>b.excluded),'D')]},
+  {title:'건물동별 점검 진행',kind:'bar',labels:s.buildings.map(b=>b.name),first:2,last:12,series:[series('미점검',c.uninspected,s.buildings.map(b=>b.uninspected),'E'),series('점검중',c.in_progress,s.buildings.map(b=>b.in_progress),'F'),series('점검완료',c.complete,s.buildings.map(b=>b.complete),'G')]},
+  {title:'부위 유형별 점검 진행',kind:'bar',labels:['외벽 P','하부 BP','수평 Hs'],first:16,last:18,series:[series('미점검',c.uninspected,s.types.map(t=>t.uninspected),'C'),series('점검중',c.in_progress,s.types.map(t=>t.in_progress),'D'),series('점검완료',c.complete,s.types.map(t=>t.complete),'E')]},
+  {title:'건물동별 실제 집행비 (원)',kind:'bar',money:true,labels:s.buildings.map(b=>b.name),first:2,last:12,series:[series('집행비',c.selected,s.buildings.map(b=>b.cost),'I')]},
+  {title:'부위 안전상태 분포',kind:'doughnut',labels:['미점검','위험','주의','양호','조치완료'],first:22,last:26,series:[series('부위 수',c.selected,Object.values(s.safety),'B')],sliceColors:[c.uninspected,c.danger,c.warning,c.good,c.repaired]},
+  {title:'부위별 점검·조치 단계',kind:'bar',labels:Object.keys(s.progress),first:30,last:34,series:[series('부위 수',c.selected,Object.values(s.progress),'B')]}
+ ];},
+ kpis(s){return [['선택 건물동',s.totals.buildings,'개동'],['점검 대상',s.totals.units,'세대'],['점검완료',s.totals.complete,'세대'],['현재 점검중',s.totals.in_progress,'세대'],['점검완료율',(s.totals.rate*100).toFixed(1),'%'],['누적 집행비',s.totals.cost.toLocaleString(),'원']];},
+ chartSvg(chart,width,height=276){
+  const esc=this.esc,number=n=>Number(n).toLocaleString(),w=width;let out=`<rect x="0" y="0" width="${w}" height="${height}" rx="8" fill="#fff" stroke="#dce3ed"/><text x="20" y="28" font-size="16" font-weight="700">${esc(chart.title)}</text>`;
+  if(chart.kind==='doughnut'){
+   const values=chart.series[0].values,total=values.reduce((a,b)=>a+b,0),cx=w*.29,cy=157,r=73;let angle=-Math.PI/2;
+   values.forEach((value,i)=>{if(!value)return;const next=angle+value/total*Math.PI*2,x1=cx+r*Math.cos(angle),y1=cy+r*Math.sin(angle),x2=cx+r*Math.cos(next),y2=cy+r*Math.sin(next),d=value===total?`M${cx-r},${cy} a${r},${r} 0 1,0 ${r*2},0 a${r},${r} 0 1,0 -${r*2},0`:`M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${next-angle>Math.PI?1:0} 1 ${x2},${y2} Z`;out+=`<path d="${d}" fill="${chart.sliceColors[i]}"><title>${esc(chart.labels[i])}: ${value}부위</title></path>`;angle=next;});out+=`<circle cx="${cx}" cy="${cy}" r="45" fill="white"/><text x="${cx}" y="${cy+5}" font-size="18" text-anchor="middle" font-weight="700">${number(total)}</text>`;
+   chart.labels.forEach((label,i)=>{out+=`<rect x="${w*.56}" y="${78+i*31}" width="10" height="10" rx="2" fill="${chart.sliceColors[i]}"/><text x="${w*.56+20}" y="${88+i*31}" font-size="13">${esc(label)}  ${number(values[i])}</text>`;});if(!total)out+=`<text x="${cx}" y="${cy+27}" text-anchor="middle" font-size="11" fill="#64748b">선택 부위 없음</text>`;return out;
+  }
+  let lx=20;chart.series.forEach(s=>{out+=`<rect x="${lx}" y="44" width="9" height="9" rx="2" fill="${s.color}"/><text x="${lx+14}" y="53" font-size="11" fill="#475569">${esc(s.name)}</text>`;lx+=s.name.length*12+40;});
+  const left=82,right=48,top=72,bottom=30,pw=w-left-right,ph=height-top-bottom,max=Math.max(4,Math.ceil(Math.max(0,...chart.labels.map((_,i)=>chart.series.reduce((sum,s)=>sum+s.values[i],0)))/4)*4),rh=ph/chart.labels.length;
+  for(let i=0;i<=4;i++){const x=left+pw*i/4;out+=`<path d="M${x} ${top} V${height-bottom}" stroke="#e5eaf1"/><text x="${x}" y="${height-10}" text-anchor="middle" font-size="10" fill="#64748b">${number(Math.round(max*i/4))}</text>`;}
+  chart.labels.forEach((label,i)=>{const y=top+i*rh+rh/2;out+=`<text x="${left-10}" y="${y+4}" text-anchor="end" font-size="12">${esc(label)}</text>`;let x=left;chart.series.forEach(s=>{const bw=s.values[i]/max*pw;if(bw>0)out+=`<rect x="${x}" y="${y-rh*.27}" width="${bw}" height="${rh*.54}" fill="${s.color}"><title>${esc(label)} · ${esc(s.name)} ${number(s.values[i])}${chart.money?'원':''}</title></rect>`;x+=bw;});const sum=chart.series.reduce((sum,s)=>sum+s.values[i],0);out+=`<text x="${Math.min(w-8,x+5)}" y="${y+4}" font-size="11" fill="#475569">${number(sum)}</text>`;});return out;
+ },
+ svg(s,width=1440){
+  const w=Math.max(340,Math.round(width)),cols=w<850?1:2,kCols=w<620?2:6,gap=16,pad=18,kHeight=Math.ceil(6/kCols)*76,chartTop=94+kHeight,cardW=(w-pad*2-gap*(cols-1))/cols,height=chartTop+Math.ceil(6/cols)*292+(w<620?100:76);let out=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${height}" viewBox="0 0 ${w} ${height}" role="img" aria-label="선택한 사택 안전점검 진행 현황"><rect width="100%" height="100%" fill="#f1f5f9"/><g font-family="Malgun Gothic,Arial,sans-serif" fill="#17253b"><text x="${pad}" y="34" font-size="23" font-weight="700">안전점검 진행 현황</text><text x="${pad}" y="60" font-size="12" fill="#475569">${this.esc(s.owners.join(' · ')||'소속 미선택')} · 선택한 사택만 점검·집행비 집계 · Hs는 세대당 1항목</text>`;
+  this.kpis(s).forEach(([label,value,unit],i)=>{const kw=(w-pad*2-gap*(kCols-1))/kCols,x=pad+(i%kCols)*(kw+gap),y=80+Math.floor(i/kCols)*76;out+=`<rect x="${x}" y="${y}" width="${kw}" height="62" rx="7" fill="#fff" stroke="#dce3ed"/><text x="${x+12}" y="${y+21}" font-size="11" fill="#64748b">${label}</text><text x="${x+12}" y="${y+47}" font-size="${kw<160?19:23}" font-weight="700">${value}<tspan font-size="11" font-weight="400"> ${unit}</tspan></text>`;});
+  this.charts(s).forEach((c,i)=>out+=`<g transform="translate(${pad+(i%cols)*(cardW+gap)} ${chartTop+Math.floor(i/cols)*292})">${this.chartSvg(c,cardW)}</g>`);out+=w<620?`<text x="${pad}" y="${height-65}" font-size="11" fill="#475569">점검완료: 적용 부위 전체 점검 완료</text><text x="${pad}" y="${height-43}" font-size="11" fill="#475569">집행비: 입력한 실제 비용 합계</text><text x="${pad}" y="${height-22}" font-size="11" fill="#475569">점검인/날짜 확인 필요 ${s.totals.missing}세대 · 기숙사 제외</text></g></svg>`:`<text x="${pad}" y="${height-43}" font-size="12" fill="#475569">점검완료: 적용 부위 전체의 점검 완료 · 점검중: 일부 부위 착수 · 집행비: 입력한 실제 비용 합계</text><text x="${pad}" y="${height-22}" font-size="12" fill="#475569">점검완료 세대 중 점검인/날짜 확인 필요 ${s.totals.missing}세대 · 기숙사 배정은 별도 관리</text></g></svg>`;return out;
+ },
+ render(){
+  if(WorkbookManager.activeTabId!==this.id)return;let root=document.getElementById('progress-workspace-container');if(!root){root=document.createElement('div');root.id='progress-workspace-container';document.getElementById('sheet-workspace').append(root);}root.style.display='block';const s=this.current();this.lastWidth=Math.max(340,root.clientWidth-24);root.innerHTML=`<div class="progress-actions"><button class="rooms-btn web-save-btn" onclick="WorkbookManager.executeWebSave()">☁️ 웹 저장</button><button class="rooms-btn excel-save-btn" onclick="WorkbookManager.exportExcelWithValidation()">Excel 차트·데이터</button><button class="rooms-btn" onclick="ProgressDashboard.downloadPng()">화면 PNG</button></div><div id="progress-dashboard-visual">${this.svg(s,this.lastWidth)}</div><details class="progress-detail"><summary>건물동별 수량·집행비 상세</summary><div style="overflow:auto"><table><thead><tr>${['건물동','전체','선택','미점검','점검중','점검완료','완료율','집행비(원)'].map(x=>'<th>'+x+'</th>').join('')}</tr></thead><tbody>${s.buildings.map(b=>`<tr${b.selected?'':' class="owner-excluded" title="선택되지 않아 점검·계산에서 제외됩니다."'}><td>${this.esc(b.name)}</td>${[b.total,b.selected,b.uninspected,b.in_progress,b.complete,(b.rate*100).toFixed(1)+'%',b.cost.toLocaleString()].map(x=>'<td>'+x+'</td>').join('')}</tr>`).join('')}</tbody></table></div></details>`;syncWebSaveButtons();
+ },
+ refresh(){this.cache=null;if(WorkbookManager.activeTabId===this.id)this.render();},
+ resize(){if(WorkbookManager.activeTabId!==this.id)return;clearTimeout(this.resizeTimer);this.resizeTimer=setTimeout(()=>this.render(),100);},
+ async png(svg){const image=new Image(),url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));try{await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=url;});const c=document.createElement('canvas');c.width=image.naturalWidth;c.height=image.naturalHeight;c.getContext('2d').drawImage(image,0,0);return c.toDataURL('image/png');}finally{URL.revokeObjectURL(url);}},
+ async downloadPng(){const source=document.querySelector('#progress-dashboard-visual svg')?.outerHTML||this.svg(this.current(),this.lastWidth),a=document.createElement('a');a.download='안전점검_진행현황.png';a.href=await this.png(source);a.click();},
+ appendSheets(wb,s=this.snapshot()){
+  const rows=s.buildings.map(b=>({'건물동ID':b.id,'건물동':b.name,'전체세대':b.total,'선택세대':b.selected,'미점검':b.uninspected,'점검중':b.in_progress,'점검완료':b.complete,'완료율':b.rate,'집행비':b.cost,'점검인날짜확인필요':b.missing}));
+  for(const [name,records]of [['진행_건물동별',rows],['진행_부위유형',s.types],['진행_안전상태',Object.entries(s.safety).map(([상태,부위수])=>({상태,부위수}))],['진행_조치단계',Object.entries(s.progress).map(([단계,부위수])=>({단계,부위수}))]]){const sheet=XLSX.utils.json_to_sheet(records);if(wb.Sheets[name])wb.Sheets[name]=sheet;else XLSX.utils.book_append_sheet(wb,sheet,name);}
+ },
+ excelScope(wb,scope){
+  if(!wb.Sheets['진행_세대데이터']||!wb.Sheets['진행_목록'])return scope;
+  const rows=XLSX.utils.sheet_to_json(wb.Sheets['건물주_대상']),catalog=new Map(OwnerScope.catalog().map(r=>[r.id,r])),seen=new Set(),owners=new Set(scope.owners),excluded=new Set(scope.excluded);let changed=false;
+  for(const row of rows){const id=row['세대ID'],entry=catalog.get(id),flag=row['점검대상'];if(!entry||seen.has(id)||!['선택','제외'].includes(flag))throw Error('Excel 건물주 대상 목록 누락/중복/선택값 오류');seen.add(id);const expected=scope.owners.includes(entry.owner)&&!scope.excluded.includes(id),selected=flag==='선택';if(selected===expected)continue;changed=true;if(selected){owners.add(entry.owner);excluded.delete(id);}else excluded.add(id);}
+  if(seen.size!==catalog.size)throw Error('Excel 건물주 대상 목록 수량 오류');
+  for(const row of rows){const entry=catalog.get(row['세대ID']);if(owners.has(entry.owner)&&!scope.owners.includes(entry.owner)){if(row['점검대상']==='선택')excluded.delete(entry.id);else excluded.add(entry.id);}}
+  return changed?{...scope,owners:[...owners],excluded:[...excluded],updatedAt:new Date().toISOString()}:scope;
+ }
+};
+
+// Browser export adapter: ExcelJS retains established sheets; standard OOXML adds native charts.
+const ProgressExcel={
+ dateFormula(ref){const parsed=`DATE(VALUE(LEFT(${ref},4)),VALUE(MID(${ref},6,2)),VALUE(RIGHT(${ref},2)))`;return `IF(${ref}="","",IF(ISNUMBER(${ref}),${ref},IF(AND(LEN(${ref})=10,TEXT(${parsed},"yyyy-mm-dd")=${ref}),${parsed},NA())))`;},
+ statusFormula(ref){return `IF(${ref}="","uninspected",VLOOKUP(${ref},RawStatusMapping,2,FALSE))`;},
+ progressFormula(ref,status){return `IF(${ref}="",IF(${status}="uninspected","미점검",IF(${status}="repaired","조치완료",IF(OR(${status}="danger",${status}="warning"),"조치진행","점검완료"))),VLOOKUP(${ref},RawProgressMapping,2,FALSE))`;},
+ dataName:'진행_차트데이터',roomName:'진행_세대데이터',pointName:'진행_부위데이터',chartMeta:null,
+ async addWorkbook(wb,s){
+  const raw=wb.getWorksheet('호실별_정밀안전점검_DB');if(!raw)throw Error('진행 현황 원본 DB 누락');
+  const headers=raw.getRow(1).values.slice(1).map(key=>String(key).replace(/^[^A-Za-z0-9가-힣]+/u,'').trim().replace(/^(P[1-6]상태).*$/,'$1').replace(/^(P[1-6]비용).*$/,'$1')),col=key=>{const i=headers.indexOf(key);if(i<0)throw Error('진행 현황 원본 열 누락: '+key);return XLSX.utils.encode_col(i);},q=name=>"'"+name.replace(/'/g,"''")+"'",rawRef=(key,row)=>'INDEX('+q(raw.name)+'!$'+col(key)+'$2:$'+col(key)+'$'+(s.rooms.length+1)+','+q(this.roomName)+'!$P$'+sourceHelper.get(row)+')',sourceRows=new Map();raw.eachRow((row,i)=>{if(i>1)sourceRows.set(row.getCell(headers.indexOf('세대ID')+1).value,i);});
+  const sheet=(name,head)=>{const ws=wb.addWorksheet(name,{views:[{showGridLines:false,state:'frozen',ySplit:1}]});ws.columns=head.map((h,i)=>({header:h,key:'c'+i,width:i===0?23:18}));ws.getRow(1).font={name:'맑은 고딕',bold:true,color:{argb:'FFFFFFFF'}};ws.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF23364F'}};ws.getRow(1).height=24;return ws;};
+  const sourceHelper=new Map(s.rooms.map((r,i)=>[sourceRows.get(r.id),i+2]));
+  const rooms=sheet(this.roomName,['세대ID','건물동ID','건물동','소속','선택','점검인','점검일','적용부위','완료부위','시작부위','미점검','점검중','점검완료','집행비','점검인날짜확인필요','원본행']);
+  const points=sheet(this.pointName,['세대ID','건물동ID','건물동','유형','부위','선택','상태','진행','집행비','점검완료','점검시작']);
+  const data=sheet(this.dataName,['건물동/분류','전체','선택','제외','미점검','점검중','점검완료','완료율','집행비','위험','주의','양호','조치완료','점검인날짜확인필요']);
+  const lastRoom=s.rooms.length+1,lastPoint=s.points.length+1,pr=c=>q(points.name)+'!$'+c+'$2:$'+c+'$'+lastPoint,rr=c=>q(rooms.name)+'!$'+c+'$2:$'+c+'$'+lastRoom,f=(formula,result)=>({formula,result}),pointIds=new Map(s.rooms.map((r,i)=>[r.id,i+2]));
+  const target=wb.getWorksheet('건물주_대상'),targetRows=new Map();target.eachRow((row,i)=>{if(i>1)targetRows.set(row.getCell(4).value,i);});
+  let previousBuilding='';s.rooms.forEach((r,i)=>{const n=i+2,rawRow=sourceRows.get(r.id);if(!rawRow)throw Error('진행 현황 세대 매핑 누락');const meta=rawRef('점검책임자',rawRow),date=rawRef('점검일자',rawRow);
+   rooms.addRow([r.id,r.buildingId,r.building,r.owner,f(`--(INDEX(${q(target.name)}!$G$2:$G$${target.rowCount},MATCH(A${n},${q(target.name)}!$D$2:$D$${target.rowCount},0))="선택")`,r.selected?1:0),f(`IF(${meta}="","",${meta})`,r.inspector),f(this.dateFormula(date),r.date?(InspectionDate.excel(r.date)?Math.round((new Date(r.date+'T00:00:00Z')-new Date('1899-12-30T00:00:00Z'))/86400000):{error:'#VALUE!'}):''),r.count,f(`COUNTIFS(${pr('A')},A${n},${pr('J')},1)`,r.completePoints),f(`COUNTIFS(${pr('A')},A${n},${pr('K')},1)`,r.startedPoints),f(`IF(E${n}=1,--(J${n}=0),0)`,r.selected&&r.stage==='uninspected'?1:0),f(`IF(E${n}=1,--AND(J${n}>0,I${n}<H${n}),0)`,r.selected&&r.stage==='in_progress'?1:0),f(`IF(E${n}=1,--(I${n}=H${n}),0)`,r.selected&&r.stage==='complete'?1:0),f(`IF(E${n}=1,SUMIFS(${pr('I')},${pr('A')},A${n}),0)`,r.selected?r.cost:0),f(`IF(M${n}=1,--OR(F${n}="",NOT(ISNUMBER(G${n}))),0)`,r.selected?r.missing:0),f(`MATCH(A${n},${q(raw.name)}!$${col("세대ID")}$2:$${col("세대ID")}$${s.rooms.length+1},0)`,rawRow-1)]);
+   // Selection remains the captured web scope. Raw inspection inputs remain the authoritative editable cells.
+   rooms.getRow(n).outlineLevel=previousBuilding===r.buildingId?1:0;previousBuilding=r.buildingId;rooms.getCell('G'+n).numFmt='yyyy-dd-mm';rooms.getCell('N'+n).numFmt='#,##0"원"';
+   const dateCell=raw.getCell(col('점검일자')+rawRow),dateValue=InspectionDate.excel(r.date);if(dateValue){dateCell.value=dateValue;dateCell.numFmt='yyyy-dd-mm';}
+  });
+  previousBuilding='';s.points.forEach((p,i)=>{const n=i+2,r=pointIds.get(p.roomId),rawRow=sourceRows.get(p.roomId),status=rawRef(p.key+'상태',rawRow),progress=rawRef(p.key+'진행현황',rawRow),cost=rawRef(p.key+'비용',rawRow);points.addRow([p.roomId,p.buildingId,p.building,p.type,p.key,f(q(rooms.name)+'!E'+r,p.selected?1:0),f(this.statusFormula(status),p.status),f(this.progressFormula(progress,`G${n}`),p.progress),f(`IF(${cost}="",0,${cost})`,p.cost),f(`--AND(G${n}<>"uninspected",H${n}<>"미점검",H${n}<>"점검중")`,p.complete),f(`--OR(G${n}<>"uninspected",AND(H${n}<>"",H${n}<>"미점검"))`,p.started)]);points.getRow(n).outlineLevel=previousBuilding===p.buildingId?1:0;previousBuilding=p.buildingId;points.getCell('I'+n).numFmt='#,##0"원"';});
+  const sum=(column,id)=>`SUMIFS(${rr(column)},${rr('B')},"${id}")`,cnt=(status,id)=>`COUNTIFS(${pr('B')},"${id}",${pr('F')},1,${pr('G')},"${status}")`;
+  s.buildings.forEach((b,i)=>{const n=i+2;data.addRow([b.name,b.total,f(sum('E',b.id),b.selected),f(`B${n}-C${n}`,b.excluded),f(sum('K',b.id),b.uninspected),f(sum('L',b.id),b.in_progress),f(sum('M',b.id),b.complete),f(`IF(C${n}=0,0,G${n}/C${n})`,b.rate),f(sum('N',b.id),b.cost),f(cnt('danger',b.id),s.points.filter(p=>p.selected&&p.buildingId===b.id&&p.status==='danger').length),f(cnt('warning',b.id),s.points.filter(p=>p.selected&&p.buildingId===b.id&&p.status==='warning').length),f(cnt('good',b.id),s.points.filter(p=>p.selected&&p.buildingId===b.id&&p.status==='good').length),f(cnt('repaired',b.id),s.points.filter(p=>p.selected&&p.buildingId===b.id&&p.status==='repaired').length),f(sum('O',b.id),b.missing)]);data.getCell('H'+n).numFmt='0.0%';data.getCell('I'+n).numFmt='#,##0"원"';});
+  const write=(row,values)=>values.forEach((v,i)=>data.getCell(row,i+1).value=v);write(15,['부위 유형','전체','미점검','점검중','점검완료','집행비']);
+  s.types.forEach((t,i)=>{const n=i+16,group=`${pr('D')},"${t.id}",${pr('F')},1`,total=`COUNTIFS(${group})`,done=`COUNTIFS(${group},${pr('J')},1)`,start=`COUNTIFS(${group},${pr('K')},1)`;write(n,[['외벽 P','하부 BP','수평 Hs'][i],f(total,t.total),f(`${total}-${start}`,t.uninspected),f(`${start}-${done}`,t.in_progress),f(done,t.complete),f(`SUMIFS(${pr('I')},${group})`,t.cost)]);});
+  write(21,['안전상태','부위 수']);Object.entries(s.safety).forEach(([key,value],i)=>write(22+i,[['미점검','위험','주의','양호','조치완료'][i],f(`COUNTIFS(${pr('F')},1,${pr('G')},"${key}")`,value)]));write(29,['진행단계','부위 수']);Object.entries(s.progress).forEach(([key,value],i)=>write(30+i,[key,f(`COUNTIFS(${pr('F')},1,${pr('H')},"${key}")`,value)]));
+  const lists=sheet('진행_목록',['점검인','부위 상태','진행 단계']);const statusPairs=[['uninspected','미점검','⚪ 미점검'],['danger','위험','🚨 위험'],['warning','주의','⚠️ 주의'],['good','양호','🟢 양호'],['repaired','완료','🔵 완료','조치완료','🔵 조치완료']].flatMap(([code,...labels])=>[code,...labels,...labels.map(v=>v.replaceAll(' ',''))].map(label=>[label,code])),progressPairs=Object.keys(s.progress).flatMap((label,i)=>[label,['⚪','🟡','🟢','🟠','🔵'][i]+' '+label,['⚪','🟡','🟢','🟠','🔵'][i]+label].map(text=>[text,label]));
+  lists.getCell('E1').value='원본 상태';lists.getCell('F1').value='상태 코드';lists.getCell('G1').value='원본 진행';lists.getCell('H1').value='진행 코드';statusPairs.forEach((p,i)=>{lists.getCell(i+2,5).value=p[0];lists.getCell(i+2,6).value=p[1];});progressPairs.forEach((p,i)=>{lists.getCell(i+2,7).value=p[0];lists.getCell(i+2,8).value=p[1];});wb.definedNames.add(q(lists.name)+'!$E$2:$F$'+(statusPairs.length+1),'RawStatusMapping');wb.definedNames.add(q(lists.name)+'!$G$2:$H$'+(progressPairs.length+1),'RawProgressMapping');
+  const names=[...new Set(s.rooms.map(r=>r.inspector).filter(Boolean))];for(let i=0;i<Math.max(5,names.length);i++){lists.getCell(i+2,1).value=names[i]||'';lists.getCell(i+2,2).value=Object.keys(s.safety)[i]||'';lists.getCell(i+2,3).value=Object.keys(s.progress)[i]||'';}
+  wb.definedNames.add(q(lists.name)+'!$A$2:$A$'+Math.max(2,names.length+1),'InspectionNames');wb.definedNames.add(q(lists.name)+'!$B$2:$B$6','InspectionStatuses');wb.definedNames.add(q(lists.name)+'!$C$2:$C$6','InspectionProgress');wb.definedNames.add(q(data.name)+'!$C$2:$C$12','ProgressTargets');wb.definedNames.add(q(data.name)+'!$I$2:$I$12','ProgressCosts');
+  target.getColumn(7).eachCell((cell,i)=>{if(i>1){cell.dataValidation={type:'list',allowBlank:false,formulae:['"선택,제외"'],showErrorMessage:true};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFBEB'}};}});
+  const highlight={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFBEB'}};s.rooms.forEach(r=>{const n=sourceRows.get(r.id);for(const key of ['점검책임자','점검일자',...s.keys.flatMap(k=>[k+'상태',k+'진행현황',k+'비용'])])raw.getCell(col(key)+n).fill=highlight;raw.getCell(col('점검책임자')+n).dataValidation={type:'list',allowBlank:true,formulae:['InspectionNames'],showErrorMessage:false};for(const key of s.keys){raw.getCell(col(key+'상태')+n).dataValidation={type:'list',allowBlank:true,formulae:['InspectionStatuses'],showErrorMessage:true};raw.getCell(col(key+'진행현황')+n).dataValidation={type:'list',allowBlank:true,formulae:['InspectionProgress'],showErrorMessage:true};raw.getCell(col(key+'비용')+n).dataValidation={type:'decimal',operator:'greaterThanOrEqual',allowBlank:true,formulae:[0],showErrorMessage:true};}});
+  for(const ws of [rooms,points,data,lists]){ws.autoFilter={from:'A1',to:{row:ws.rowCount,column:ws.columnCount}};ws.properties.outlineProperties={summaryBelow:false,summaryRight:false};ws.eachRow((row,i)=>{if(i>1){row.height=20;row.eachCell(cell=>{cell.font={name:'맑은 고딕',size:10,color:{argb:'FF17253B'}};});}});}
+  data.addConditionalFormatting({ref:'A2:N12',rules:[{type:'expression',formulae:['$C2=0'],style:{font:{color:{argb:'FF94A3B8'}}}}]});data.addConditionalFormatting({ref:'H2:H12',rules:[{type:'cellIs',operator:'equal',formulae:[1],style:{fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFDCFCE7'}}}},{type:'cellIs',operator:'between',formulae:[0.000001,0.999999],style:{fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFEF3C7'}}}}]});rooms.addConditionalFormatting({ref:'O2:O'+lastRoom,rules:[{type:'cellIs',operator:'greaterThan',formulae:[0],style:{font:{color:{argb:'FFDC2626'},bold:true}}}]});
+  const dashboard=wb.addWorksheet('진행 현황',{views:[{showGridLines:false}],pageSetup:{orientation:'landscape',paperSize:8,fitToPage:true,fitToWidth:1,fitToHeight:1,printArea:'A1:AB58'}});for(let c=1;c<=28;c++)dashboard.getColumn(c).width=6;for(let r=1;r<=58;r++)dashboard.getRow(r).height=18;dashboard.mergeCells('A1:AB2');dashboard.getCell('A1').value='안전점검 진행 현황';dashboard.getCell('A1').font={name:'맑은 고딕',size:20,bold:true,color:{argb:'FF17253B'}};dashboard.mergeCells('A3:AB3');dashboard.getCell('A3').value=s.owners.join(' · ')+' · 선택 사택 점검 현황 · 집행비는 실제 입력 비용';
+  const kpiFormulas=[`COUNTIF(${q(data.name)}!C2:C12,">0")`,`SUM(${q(data.name)}!C2:C12)`,`SUM(${q(data.name)}!G2:G12)`,`SUM(${q(data.name)}!F2:F12)`,`IF(SUM(${q(data.name)}!C2:C12)=0,0,SUM(${q(data.name)}!G2:G12)/SUM(${q(data.name)}!C2:C12))`,`SUM(${q(data.name)}!I2:I12)`],kpiValues=[s.totals.buildings,s.totals.units,s.totals.complete,s.totals.in_progress,s.totals.rate,s.totals.cost];
+  const chartMeta={sheetId:dashboard.id,charts:ProgressDashboard.charts(s)};ProgressDashboard.kpis(s).forEach(([label],i)=>{const c=i*4+1;dashboard.mergeCells(5,c,5,c+3);dashboard.getCell(5,c).value=label;dashboard.mergeCells(6,c,7,c+3);const cell=dashboard.getCell(6,c);cell.value=f(kpiFormulas[i],kpiValues[i]);cell.numFmt=i===4?'0.0%':i===5?'#,##0"원"':'#,##0';cell.font={name:'맑은 고딕',bold:true,size:18,color:{argb:'FF0284C7'}};});
+  dashboard.mergeCells('A56:AB56');dashboard.getCell('A56').value='수정: 호실별_정밀안전점검_DB의 노란 입력 셀 → 세대/부위 계산 → 차트 자동 갱신';dashboard.mergeCells('A57:AB57');dashboard.getCell('A57').value='선택 변경: 건물주_대상의 선택/제외 목록. 화면 원본은 별도 시트의 고정 이미지입니다.';
+  const imageSheet=wb.addWorksheet('진행현황_화면원본',{views:[{showGridLines:false}]});imageSheet.getCell('A1').value='내보내기 당시 화면 원본 (고정 이미지) · 수정 연동 차트는 진행 현황 시트';imageSheet.getColumn('A').width=110;const svg=s.screenSvg||ProgressDashboard.svg(s,ProgressDashboard.lastWidth),png=await ProgressDashboard.png(svg),image=wb.addImage({base64:png,extension:'png'}),dimensions=svg.match(/width="(\d+)" height="(\d+)"/);imageSheet.addImage(image,{tl:{col:0,row:2},ext:{width:+dimensions[1],height:+dimensions[2]}});
+  wb.calcProperties={fullCalcOnLoad:true,forceFullCalc:true,calcMode:'auto'};wb.views=[{activeTab:wb.worksheets.indexOf(dashboard),firstSheet:0,visibility:'visible'}];return chartMeta;
+ },
+ chartXml(chart,index){
+  const esc=ProgressDashboard.esc,q=name=>"'"+name+"'",cat=q(this.dataName)+'!$A$'+chart.first+':$A$'+chart.last,rich=text=>`<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200"><a:latin typeface="Malgun Gothic"/><a:ea typeface="Malgun Gothic"/></a:rPr><a:t>${esc(text)}</a:t></a:r></a:p></c:rich></c:tx>`,fill=color=>`<c:spPr><a:solidFill><a:srgbClr val="${color.slice(1)}"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>`,cache=(values,numeric)=>`<c:${numeric?'num':'str'}Cache>${numeric?'<c:formatCode>0</c:formatCode>':''}<c:ptCount val="${values.length}"/>${values.map((v,i)=>`<c:pt idx="${i}"><c:v>${esc(v)}</c:v></c:pt>`).join('')}</c:${numeric?'num':'str'}Cache>`,txPr=`<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:latin typeface="Malgun Gothic"/><a:ea typeface="Malgun Gothic"/></a:defRPr></a:pPr></a:p></c:txPr>`;
+  const series=chart.series.map((s,i)=>`<c:ser><c:idx val="${i}"/><c:order val="${i}"/><c:tx><c:v>${esc(s.name)}</c:v></c:tx>${fill(s.color)}${chart.kind==='bar'?'<c:invertIfNegative val="0"/>':''}${chart.sliceColors?chart.sliceColors.map((color,j)=>`<c:dPt><c:idx val="${j}"/>${fill(color)}</c:dPt>`).join(''):''}<c:cat><c:strRef><c:f>${esc(cat)}</c:f>${cache(chart.labels,false)}</c:strRef></c:cat><c:val><c:numRef><c:f>${esc(q(this.dataName)+'!$'+s.column+'$'+chart.first+':$'+s.column+'$'+chart.last)}</c:f>${cache(s.values,true)}</c:numRef></c:val></c:ser>`).join('');
+  const a=1000+index*2,b=a+1,max=Math.max(4,Math.ceil(Math.max(0,...chart.labels.map((_,i)=>chart.series.reduce((sum,s)=>sum+s.values[i],0)))/4)*4),bar=`<c:barChart><c:barDir val="bar"/><c:grouping val="${chart.series.length>1?'stacked':'clustered'}"/><c:varyColors val="0"/>${series}<c:gapWidth val="75"/>${chart.series.length>1?'<c:overlap val="100"/>':''}<c:axId val="${a}"/><c:axId val="${b}"/></c:barChart><c:catAx><c:axId val="${a}"/><c:scaling><c:orientation val="maxMin"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>${txPr}<c:crossAx val="${b}"/><c:crosses val="autoZero"/></c:catAx><c:valAx><c:axId val="${b}"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="E5EAF1"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:numFmt formatCode="#,##0" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>${txPr}<c:crossAx val="${a}"/><c:crosses val="max"/><c:crossBetween val="between"/></c:valAx>`,pie=`<c:doughnutChart><c:varyColors val="1"/>${series}<c:firstSliceAng val="270"/><c:holeSize val="62"/></c:doughnutChart>`;
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:lang val="ko-KR"/><c:roundedCorners val="0"/><c:chart><c:title>${rich(chart.title)}<c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/><c:plotArea><c:layout/>${chart.kind==='bar'?bar:pie}</c:plotArea><c:legend><c:legendPos val="${chart.kind==='doughnut'?'r':'t'}"/><c:overlay val="0"/>${txPr}</c:legend><c:plotVisOnly val="0"/><c:dispBlanksAs val="zero"/></c:chart><c:spPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="DCE3ED"/></a:solidFill></a:ln></c:spPr>${txPr}</c:chartSpace>`;
+ },
+ package(buffer,meta){
+  const zip=XLSX.CFB.read(new Uint8Array(buffer),{type:'array'}),decode=p=>{const at=zip.FullPaths.findIndex(name=>name===p||name.endsWith('/'+p)),file=zip.FileIndex[at];return file?new TextDecoder().decode(file.content):'';},put=(p,text)=>{const data=new TextEncoder().encode(text),at=zip.FullPaths.findIndex(name=>name===p||name.endsWith('/'+p));if(at>=0){zip.FileIndex[at].content=data;zip.FileIndex[at].size=data.length;}else XLSX.CFB.utils.cfb_add(zip,p,data);};
+  const typeNs='http://schemas.openxmlformats.org/package/2006/relationships',officeRel='http://schemas.openxmlformats.org/officeDocument/2006/relationships',sheetPath='xl/worksheets/sheet'+meta.sheetId+'.xml',relsPath='xl/worksheets/_rels/sheet'+meta.sheetId+'.xml.rels';let sheet=decode(sheetPath);if(!sheet)throw Error('차트 대상 워크시트 XML 누락');sheet=sheet.replace('</worksheet>','<drawing r:id="rIdProgressCharts"/></worksheet>');put(sheetPath,sheet);
+  let rels=decode(relsPath)||`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="${typeNs}"></Relationships>`;rels=rels.replace('</Relationships>',`<Relationship Id="rIdProgressCharts" Type="${officeRel}/drawing" Target="../drawings/progress-dashboard.xml"/></Relationships>`);put(relsPath,rels);
+  let drawing=`<?xml version="1.0" encoding="UTF-8"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">`,drawingRels=`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="${typeNs}">`,types=decode('[Content_Types].xml');
+  meta.charts.forEach((chart,i)=>{const col=i%2?14:0,row=8+Math.floor(i/2)*15,id=i+1;drawing+=`<xdr:twoCellAnchor><xdr:from><xdr:col>${col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${row}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>${col+14}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${row+15}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="${id}" name="Progress Chart ${id}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="${officeRel}" r:id="rId${id}"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>`;drawingRels+=`<Relationship Id="rId${id}" Type="${officeRel}/chart" Target="../charts/progress${id}.xml"/>`;put('xl/charts/progress'+id+'.xml',this.chartXml(chart,id));types=types.replace('</Types>',`<Override PartName="/xl/charts/progress${id}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>`);});
+  const workbookXml=decode('xl/workbook.xml'),calcPr='<calcPr calcId="171027" calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"/>';put('xl/workbook.xml',/<calcPr\b/.test(workbookXml)?workbookXml.replace(/<calcPr\b[^>]*\/>/,calcPr):workbookXml.replace('</workbook>',calcPr+'</workbook>'));
+  put('xl/drawings/progress-dashboard.xml',drawing+'</xdr:wsDr>');put('xl/drawings/_rels/progress-dashboard.xml.rels',drawingRels+'</Relationships>');types=types.replace('</Types>','<Override PartName="/xl/drawings/progress-dashboard.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');put('[Content_Types].xml',types);return XLSX.CFB.write(zip,{type:'array',fileType:'zip',compression:true});
+ }
+};
+
 const GitHubWorkbookSync={
- build:'88.0',
+ build:'89.0',
  repository:'JongGunelee/wyggkr04',branch:'main',path:'RawData/발코니 난간대/사택_발코니난간대_정밀안전점검_DB.xlsb',
  uiSheet:'워크북_UI_설정',conflictResolver:null,lastRefresh:0,
  get apiUrl(){return 'https://api.github.com/repos/'+this.repository+'/contents/'+encodeURI(this.path);},
@@ -8779,7 +8934,8 @@ const GitHubWorkbookSync={
  restoreUi(wb){
   const sheet=wb.Sheets[this.uiSheet];if(!sheet)return;
   const value=this.validateUi(JSON.parse((XLSX.utils.sheet_to_json(sheet)[0]||{})['설정JSON'])),wm=WorkbookManager;
-  const required=['sheet-summary','sheet-site','sheet-1','sheet-rooms'];
+  ProgressDashboard.ensureSheet();
+  const required=['sheet-progress','sheet-summary','sheet-site','sheet-1','sheet-rooms'];
   const next={};for(const [id,item]of Object.entries(value.sheets)){const previous=wm.sheets[id]||{id,activeCell:'A1',data:{}};next[id]={...previous,...structuredClone(item),data:item.data?{...(id==='sheet-1'?getBuildingStatusData():{}),...item.data}:previous.data};}
   for(const id of required)if(!next[id])next[id]=wm.sheets[id];
   wm.sheets=next;wm.sheetOrder=[...new Set([...value.sheetOrder,...required])].filter(id=>next[id]);wm.nextSheetIdx=Math.max(Number(value.nextSheetIdx)||1,...Object.keys(next).map(id=>(Number(id.replace('sheet-',''))||0)+1));
@@ -8789,7 +8945,7 @@ const GitHubWorkbookSync={
  snapshot(wb,uiFallback=null){
   const db=wb.Sheets['호실별_정밀안전점검_DB'];if(!db)throw this.error('원격 세대 원본 시트가 없습니다.');
   const rows=XLSX.utils.sheet_to_json(db,{defval:''}),expected=new Set(generateDeterministicRooms().map(room=>room.id)),rooms={};
-  for(const row of rows){const id=row['세대ID']||row.ID;if(!expected.has(id)||rooms[id])throw this.error('원격 원본 세대ID 누락/중복/불일치');rooms[id]=Object.fromEntries(Object.entries(row).filter(([key])=>this.editable(key)));}
+  for(const row of rows){const id=row['세대ID']||row.ID;if(!expected.has(id)||rooms[id])throw this.error('원격 원본 세대ID 누락/중복/불일치');rooms[id]=Object.fromEntries(Object.entries(row).filter(([key])=>this.editable(key)).map(([key,value])=>[key,key==='점검일자'?InspectionDate.iso(value):value]));}
   if(rows.length!==expected.size)throw this.error('원격 원본 세대 수가 다릅니다.');
   const json=name=>{const sheet=wb.Sheets[name];return sheet?JSON.parse((XLSX.utils.sheet_to_json(sheet)[0]||{})['설정JSON']):null;};
   const rawScope=json('건물주_설정'),scopeValue=rawScope||{version:1,owners:['에너지솔루션'],excluded:[]};
@@ -9876,8 +10032,8 @@ const ModelPresentation={
 };
 const WorkbookTabLayout={
  key:'balcony_workbook_tab_order_v1',dragId:null,suppressUntil:0,
- defaults:['owner','model','sheet-summary','sheet-site','sheet-rooms','sheet-1'],
- order(available){let saved=[];try{const value=JSON.parse(localStorage.getItem(this.key)||'null');if(value?.version===1&&Array.isArray(value.order))saved=value.order.filter(id=>typeof id==='string');}catch(error){}return [...new Set([...saved,...this.defaults,...available])].filter(id=>available.includes(id));},
+ defaults:['owner','model','sheet-progress','sheet-summary','sheet-site','sheet-rooms','sheet-1'],
+ order(available){let saved=[];try{const value=JSON.parse(localStorage.getItem(this.key)||'null');if(value?.version===1&&Array.isArray(value.order))saved=value.order.filter(id=>typeof id==='string');}catch(error){}if(!saved.includes('sheet-progress')&&saved.includes('sheet-summary'))saved.splice(saved.indexOf('sheet-summary'),0,'sheet-progress');return [...new Set([...saved,...this.defaults,...available])].filter(id=>available.includes(id));},
  save(order){try{localStorage.setItem(this.key,JSON.stringify({version:1,order}));return true;}catch(error){showToast('⚠️ 탭 순서를 브라우저에 보관하지 못했습니다.');return false;}},
  clearHints(){document.querySelectorAll('#wb-tabs-track .tab-drop-before,#wb-tabs-track .tab-drop-after').forEach(el=>el.classList.remove('tab-drop-before','tab-drop-after'));},
  finish(){if(this.dragId)this.suppressUntil=performance.now()+250;this.dragId=null;this.clearHints();document.querySelector('#wb-tabs-track .tab-dragging')?.classList.remove('tab-dragging');},
@@ -10022,6 +10178,7 @@ const WorkbookManager = {
       },
 
       renderTabs() {
+        ProgressDashboard.ensureSheet();
         WorkbookTabLayout.finish();
         for(const name of this.viewCache.keys())if(name!=='owner'&&!this.sheets[name])this.viewCache.delete(name);
         const track = document.getElementById('wb-tabs-track');
@@ -10050,7 +10207,7 @@ const WorkbookManager = {
           const tab = document.createElement('div');
           tab.className = 'wb-tab' + (this.activeTabId === sheetId ? ' active' : '');
           tab.id = 'wb-tab-' + sheetId;
-          const icon = s.id === 'sheet-site' ? '🗺️' : (s.id === 'sheet-summary' ? '📊' : (s.id === 'sheet-rooms' ? '🏠' : '📋'));
+          const icon = s.id === 'sheet-progress' ? '📈' : s.id === 'sheet-site' ? '🗺️' : (s.id === 'sheet-summary' ? '📊' : (s.id === 'sheet-rooms' ? '🏠' : '📋'));
           tab.title = '워크시트: ' + s.name + ' (더블클릭 또는 우클릭 시 탭 이름 변경)';
           tab.innerHTML = '<span class="wb-tab-icon">' + icon + '</span><span class="wb-tab-name">' + s.name + '</span><span class="wb-tab-edit-hint" title="이름 바꾸기">✏️</span>';
           tab.onclick = () => this.activateTab(sheetId);
@@ -10066,7 +10223,7 @@ const WorkbookManager = {
       viewCache:new Map(),
       ensureWorkbookView(name,render){
         RoomIndex.ensure();
-        const sheet=this.sheets[name],grid=!!sheet&&!['sheet-site','sheet-summary','sheet-rooms'].includes(name);
+        const sheet=this.sheets[name],grid=!!sheet&&!['sheet-progress','sheet-site','sheet-summary','sheet-rooms'].includes(name);
         const makeKey=()=>JSON.stringify([OwnerScope.revision,RoomIndex.version,OwnerScope.state.owners,OwnerScope.state.excluded,INSPECTION_POINT_KEYS,
           this.roomsBuildingFilter,this.roomsStatusFilter,this.selectedBuildingId,this.siteMapViewMode,
           grid?[this.sheets[name],this.sheetFocusMode]:null]);
@@ -10079,6 +10236,7 @@ const WorkbookManager = {
         const enteringModel=tabId==='model'&&(this.activeTabId!==tabId||!this._modelPresented);
         if(this.activeTabId!==tabId)TabTransientUI.dismiss(this.activeTabId,tabId);
         this.activeTabId = tabId;
+        const progressRoot=document.getElementById('progress-workspace-container');if(progressRoot)progressRoot.style.display='none';
         ModelPresentation.sync(tabId,enteringModel);if(tabId==='model')this._modelPresented=true;
         const sheetWorkspace = document.getElementById('sheet-workspace');
         const gridContainer = document.getElementById('sheet-grid-container');
@@ -10157,7 +10315,7 @@ const WorkbookManager = {
           const topBar = document.getElementById('wb-sheet-top-bar');
           const formulaBar = document.querySelector('.sheet-formula-bar');
 
-          if (tabId === 'owner' || tabId === 'sheet-site' || tabId === 'sheet-summary' || tabId === 'sheet-rooms') {
+          if (tabId === 'sheet-progress' || tabId === 'owner' || tabId === 'sheet-site' || tabId === 'sheet-summary' || tabId === 'sheet-rooms') {
             if (topBar) topBar.style.display = 'none';
             if (formulaBar) formulaBar.style.display = 'none';
           } else {
@@ -10165,7 +10323,11 @@ const WorkbookManager = {
             if (formulaBar) formulaBar.style.display = 'flex';
           }
 
-          if (tabId === 'owner') {
+          if (tabId === 'sheet-progress') {
+            [gridContainer,roomsContainer,summaryContainer,siteContainer].forEach(el=>{if(el)el.style.display='none';});
+            const keyplan=document.getElementById('dynamic-keyplan-window');if(keyplan)keyplan.style.display='none';
+            ProgressDashboard.render();if(appBadge)appBadge.textContent='EXCEL WORKBENCH · 진행 현황';
+          } else if (tabId === 'owner') {
             [gridContainer, roomsContainer, summaryContainer, siteContainer].forEach(el => { if (el) el.style.display = 'none'; });
             const kp = document.getElementById('dynamic-keyplan-window'); if (kp) kp.style.display = 'none';
             ownerContainer.style.display = 'block'; this.ensureWorkbookView('owner',()=>OwnerScope.render());
@@ -13016,6 +13178,7 @@ const WorkbookManager = {
         if (!room) return;
         this.activeRoomId = roomId;
 
+        RoomInspectionMetadata.show(room);
         const modal = document.getElementById('room-detail-modal');
         const badge = document.getElementById('room-modal-badge');
         const titleText = document.getElementById('room-modal-title-text');
@@ -13314,6 +13477,7 @@ const WorkbookManager = {
       // [Phase 63/64] 데이터 변동 시 전 워크북(summary/rooms/bldg/site), 모달 및 원격 DB 플래그 일체 실시간 전수 동기화
       notifyDataMutation(options = {}) {
         RoomIndex.invalidate();
+        ProgressDashboard.refresh();
         OwnerScope._catalog = null;
         if(this.sheets['sheet-summary']) this.sheets['sheet-summary'].colCount=Math.max(21,this.sheets['sheet-summary'].colCount||0);
         if(this.sheets['sheet-rooms']) this.sheets['sheet-rooms'].colCount=Math.max(22,this.sheets['sheet-rooms'].colCount||0);
@@ -14012,7 +14176,7 @@ const WorkbookManager = {
               defectSummary: defSum,
               actionSummary: actSum,
               inspector: row['점검책임자'] || '',
-              inspectDate: row['점검일자'] || ''
+              inspectDate: InspectionDate.iso(row['점검일자'])
             });
           });
 
@@ -14024,7 +14188,7 @@ const WorkbookManager = {
             const scopeSheet = wb.Sheets['건물주_설정'];
             if (scopeSheet) {
               const scopeRows = XLSX.utils.sheet_to_json(scopeSheet);
-              if (!scopeRows[0] || !OwnerScope.restore(JSON.parse(scopeRows[0]['설정JSON']))) throw new Error('건물주 설정 스키마 오류');
+              if (!scopeRows[0] || !OwnerScope.restore(ProgressDashboard.excelScope(wb,JSON.parse(scopeRows[0]['설정JSON'])))) throw new Error('건물주 설정 스키마 오류');
             }
             if(incomingModel && options.preserveExtended && incomingModel.storedCount<ModelParameters.storedCount){
               const local=ModelParameters.snapshot();incomingModel.storedCount=local.storedCount;
@@ -14064,6 +14228,7 @@ const WorkbookManager = {
               if (currentRoom) {
                 this.renderRoomPointsTable(currentRoom);
                 this.renderRoomLinks(currentRoom);
+                RoomInspectionMetadata.show(currentRoom);
                 this.renderRoomSchematic(currentRoom);
               }
             }
@@ -14365,7 +14530,7 @@ const WorkbookManager = {
             'P5상태': r.points.P5.status, 'P5진행현황': getPointProgress(r, 'P5'), 'P5결함내역': r.points.P5.defect, 'P5보강공법': r.points.P5.action, 'P5비용': r.points.P5.cost,
             'P6상태': r.points.P6.status, 'P6진행현황': getPointProgress(r, 'P6'), 'P6결함내역': r.points.P6.defect, 'P6보강공법': r.points.P6.action, 'P6비용': r.points.P6.cost,
             '점검책임자': r.inspector,
-            '점검일자': r.inspectDate,
+            '점검일자': InspectionDate.iso(r.inspectDate),
             '관련웹링크': (r.links && r.links.length) ? JSON.stringify(r.links) : ''
           }, extraInspectionFields(r)));
           const ws2 = XLSX.utils.json_to_sheet(s2_rows);
@@ -14373,11 +14538,13 @@ const WorkbookManager = {
 
           OwnerScope.appendSheets(wb); OwnerScope.formatWorkbook(wb);
           GitHubWorkbookSync.appendUi(wb);
+          ProgressDashboard.appendSheets(wb);
           return wb;
       },
 
       async executeWebSave(options = {}) {
         if(this.webSaveInFlight)return false;
+        if(!options.automatic&&!RoomInspectionMetadata.flush())return false;
         if(typeof XLSX==='undefined'){if(!options.automatic)alert('엑셀 라이브러리를 불러오는 중입니다.');return false;}
         this.webSaveInFlight=true;syncWebSaveButtons();let saved=false,saveRevision=OwnerScope.revision;
         try{
@@ -14414,9 +14581,12 @@ const WorkbookManager = {
       },
 
       async exportExcelWithValidation() {
+        if(this.excelExportInFlight){showToast('Excel 파일을 생성 중입니다.');return;}
+        if(!RoomInspectionMetadata.flush())return;
         const exportArchive = structuredClone(ROOMS_DATA);
         const exportRooms = exportArchive.filter(r => OwnerScope.selected(r));
         const exportScope = structuredClone(OwnerScope.state);
+        const exportProgress=ProgressDashboard.snapshot(exportArchive,exportScope);exportProgress.screenSvg=ProgressDashboard.svg(exportProgress,ProgressDashboard.lastWidth);
         const exportTargets = OwnerScope.targetRows();
         const exportTotals = ['', '에너지솔루션', '화학'].map(owner => ({ '소속': owner || '전체 (중복동 제외)', ...OwnerScope.totals(owner) }));
         const btnRooms = document.getElementById('btn-rooms-excel-save');
@@ -14425,6 +14595,7 @@ const WorkbookManager = {
         const origSheetHtml = btnSheet ? btnSheet.innerHTML : '';
 
         try {
+          this.excelExportInFlight=true;showToast('Excel 차트·데이터를 생성 중입니다.');
           if (btnRooms) btnRooms.innerHTML = '⏳ <b>엑셀 생성 중...</b>';
           if (btnSheet) btnSheet.innerHTML = '⏳ <b>엑셀 생성 중...</b>';
 
@@ -14442,7 +14613,7 @@ const WorkbookManager = {
           }
 
           if (typeof ExcelJS === 'undefined') {
-            alert('고급 엑셀 생성 라이브러리(ExcelJS)를 불러오지 못하여 기본 XLSB 내보내기로 전환합니다.');
+            alert('Excel 차트 라이브러리를 불러오지 못했습니다. 차트 없는 XLSB 데이터로 내보냅니다. 연결 확인 후 Excel 차트를 다시 내려받으세요.');
             this.oldExportDatabase();
             return;
           }
@@ -15017,8 +15188,8 @@ const WorkbookManager = {
               p6Action: p6.action || '',
               p6Cost: Number(p6.cost) || 0,
 
-              inspector: r.inspector || '안전관리자',
-              inspectDate: r.inspectDate || '',
+              inspector: r.inspector || '',
+              inspectDate: InspectionDate.excel(r.inspectDate) || r.inspectDate || '',
               links: (r.links && r.links.length) ? JSON.stringify(r.links) : ''
             });
 
@@ -15360,7 +15531,8 @@ const WorkbookManager = {
             matrixSheet.columns=headers.map(key=>({header:key,key,width:key==='건물동'?24:16}));
             matrixRows.forEach(row=>matrixSheet.addRow(row));matrixSheet.views=[{state:'frozen',xSplit:3,ySplit:1}];
           }
-          const buffer = await wb.xlsx.writeBuffer();
+          const progressMeta=await ProgressExcel.addWorkbook(wb,exportProgress);
+          const buffer = ProgressExcel.package(await wb.xlsx.writeBuffer(),progressMeta);
           const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
           const now = new Date();
           const dateStr = now.toISOString().split('T')[0];
@@ -15391,7 +15563,7 @@ const WorkbookManager = {
           alert('엑셀 파일 생성 중 오류가 발생했습니다: ' + err.message);
           if (btnRooms) btnRooms.innerHTML = origRoomsHtml || '📊 엑셀 저장';
           if (btnSheet) btnSheet.innerHTML = origSheetHtml || '📊 <b>엑셀 저장</b>';
-        }
+        } finally { this.excelExportInFlight=false; }
       },
 
       oldExportDatabase() {
@@ -15582,7 +15754,7 @@ const WorkbookManager = {
             'P5상태': r.points.P5.status, 'P5진행현황': getPointProgress(r, 'P5'), 'P5결함내역': r.points.P5.defect, 'P5보강공법': r.points.P5.action, 'P5비용': r.points.P5.cost,
             'P6상태': r.points.P6.status, 'P6진행현황': getPointProgress(r, 'P6'), 'P6결함내역': r.points.P6.defect, 'P6보강공법': r.points.P6.action, 'P6비용': r.points.P6.cost,
             '점검책임자': r.inspector,
-            '점검일자': r.inspectDate,
+            '점검일자': InspectionDate.iso(r.inspectDate),
             '관련웹링크': (r.links && r.links.length) ? JSON.stringify(r.links) : ''
           }, extraInspectionFields(r)));
           const ws2 = XLSX.utils.json_to_sheet(s2_rows);
@@ -15590,6 +15762,7 @@ const WorkbookManager = {
 
           // 바이너리 XLSB 파일로 즉시 다운로드 저장
           OwnerScope.appendSheets(wb); OwnerScope.formatWorkbook(wb);
+          ProgressDashboard.appendSheets(wb);
           XLSX.writeFile(wb, '사택_발코니난간대_정밀안전점검_DB.xlsb', { bookType: 'xlsb' });
 
           if (typeof showToast === 'function') {
@@ -22311,6 +22484,7 @@ function setCameraView(name, animate = true) {
     }
 
     function onResize() {
+      ProgressDashboard.resize();
       if (camera && renderer) {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
@@ -24576,6 +24750,10 @@ function setCameraView(name, animate = true) {
         </div>
       </div>
 
+      <div class="room-inspection-metadata">
+        <label>점검인 <input id="room-inspector-input" type="text" maxlength="100" autocomplete="off" placeholder="점검인 성명" onchange="RoomInspectionMetadata.change('inspector',this)"></label>
+        <label>점검 날짜 (YYYY-DD-MM) <input id="room-inspection-date-input" type="text" inputmode="numeric" maxlength="10" placeholder="2026-28-10" autocomplete="off" onchange="RoomInspectionMetadata.change('inspectDate',this)"></label>
+      </div>
       <!-- 외벽 앙커 6개소 3D 위치 매핑 다이어그램 (Schematic) -->
       <div class="room-schematic-wrap">
         <div class="schematic-head">
