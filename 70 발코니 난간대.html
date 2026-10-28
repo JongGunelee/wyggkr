@@ -7531,7 +7531,7 @@ function configureInspectionPoints(count,storedCount=Math.max(6,count)) {
 const WorkspaceStorage={
  identity:(()=>{const u=new URL(location.href);let path;try{path=decodeURIComponent(u.pathname).normalize('NFC');}catch{path=u.pathname;}if(u.protocol==='file:')path=path.toLowerCase();return u.protocol+'//'+u.host+path;})(),
  recovery:null,memo:null,migrationWarning:false,
- get primary(){return decodeURIComponent(location.pathname).split('/').pop().toLowerCase()==='170 발코니 난간대.html';},
+ get primary(){const name=decodeURIComponent(location.pathname).split('/').pop().toLowerCase();return name==='70 발코니 난간대.html'||name==='170 발코니 난간대.html';},
  key(name){return 'balcony:v6:'+encodeURIComponent(this.identity)+':'+name;},
  get stateKey(){return this.key('workbook');},
  get holdAutomatic(){return this.recovery?.status==='unreviewed';},
@@ -9024,15 +9024,17 @@ const GitHubWorkbookSync={
  stable(value){if(value===undefined)return '__absent__';if(value===null||typeof value!=='object')return JSON.stringify(value);if(Array.isArray(value))return '['+value.map(v=>this.stable(v)).join(',')+']';return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+this.stable(value[k])).join(',')+'}';},
  merge(base,local,remote,choices=new Map()){
   const conflicts=[],equal=(a,b)=>this.stable(a)===this.stable(b),plain=v=>v!==null&&typeof v==='object'&&!Array.isArray(v);
+  const effectiveBase=base||structuredClone(remote);
   const visit=(b,l,r,path)=>{
    if(path.join('/')==='model/storedCount')return Math.max(Number(b)||6,Number(l)||6,Number(r)||6);
    if(equal(l,r))return structuredClone(l);
-   if(base){if(equal(l,b))return structuredClone(r);if(equal(r,b))return structuredClone(l);}
+   if(effectiveBase){if(equal(l,b))return structuredClone(r);if(equal(r,b))return structuredClone(l);}
    if(plain(l)&&plain(r)){const out={};for(const key of new Set([...Object.keys(b||{}),...Object.keys(l),...Object.keys(r)])){if(['__proto__','constructor','prototype'].includes(key))throw this.error('병합 키 오류');const value=visit(b?.[key],l[key],r[key],[...path,key]);if(value!==undefined)out[key]=value;}return out;}
    const key=JSON.stringify(path),signature=this.stable([b,l,r]),choice=choices.get(key);if(choice?.signature===signature)return structuredClone(choice.side==='local'?l:r);
+   if(!base||equal(r,b))return structuredClone(l);
    conflicts.push({path,key,signature,base:b,local:l,remote:r});return structuredClone(r);
   };
-  return {value:visit(base,local,remote,[]),conflicts};
+  return {value:visit(effectiveBase,local,remote,[]),conflicts};
  },
  materialize(snapshot,template){
   const wb=structuredClone(template),source=XLSX.utils.sheet_to_json(wb.Sheets['호실별_정밀안전점검_DB'],{defval:''}),headers=XLSX.utils.sheet_to_json(wb.Sheets['호실별_정밀안전점검_DB'],{header:1})[0]||[];
@@ -9040,7 +9042,10 @@ const GitHubWorkbookSync={
   wb.Sheets['호실별_정밀안전점검_DB']=XLSX.utils.json_to_sheet(rows,{header:headers});
   const scope={version:1,owners:Object.keys(snapshot.scope.owners).filter(key=>snapshot.scope.owners[key]),excluded:Object.keys(snapshot.scope.excluded).filter(id=>snapshot.scope.excluded[id]),updatedAt:new Date().toISOString()};
   const put=(name,value)=>{wb.Sheets[name]=XLSX.utils.json_to_sheet([{'설정버전':1,'설정JSON':JSON.stringify(value)}]);if(!wb.SheetNames.includes(name))wb.SheetNames.push(name);};
-  put('건물주_설정',scope);put('난간_모델_설정',snapshot.model);if(snapshot.ui)put(this.uiSheet,snapshot.ui);return wb;
+  put('건물주_설정',scope);put('난간_모델_설정',snapshot.model);if(snapshot.ui)put(this.uiSheet,snapshot.ui);
+  wb.Sheets['건물주_대상']=XLSX.utils.json_to_sheet(OwnerScope.targetRows(scope));if(!wb.SheetNames.includes('건물주_대상'))wb.SheetNames.push('건물주_대상');
+  wb.Sheets['건물주_집계']=XLSX.utils.json_to_sheet(OwnerScope.totalsRows(scope));if(!wb.SheetNames.includes('건물주_집계'))wb.SheetNames.push('건물주_집계');
+  return wb;
  },
  remember(main,snapshot,currentMain=true){
   WorkbookManager.remoteBaseline={version:1,sha:main.sha,snapshot:snapshot||this.snapshot(main.wb,this.uiState())};
@@ -9110,8 +9115,18 @@ const GitHubWorkbookSync={
    WebSaveProgress.set('verify','원격 저장 재조회 검증 중','전송한 XLSB 바이트·Git SHA·세대 수를 확인합니다.');
    const receipt=await GitHubSaveVerifier.verify({apiUrl:this.apiUrl,token,base64,acknowledgment,revision:expectedRevision});
    this.remember({sha:receipt.blobSha,base64,wb},this.snapshot(wb),!receipt.mainAdvanced);wm.lastVerifiedWebSave=receipt;
-   if(receipt.mainAdvanced&&OwnerScope.revision===expectedRevision){
-    try{const latest=await this.readMain(token);if(OwnerScope.revision===expectedRevision&&wm.parseAndMapXlsbData(latest.wb,'저장 이후 다른 사용자 최신 변경')){this.remember(latest);wm.remoteLoadEvidence={status:'verified',sha:latest.sha,loadedAt:new Date().toISOString()};expectedRevision=OwnerScope.revision;}}catch(error){receipt.latestRefreshPending=true;}
+   WebSaveProgress.set('sync','GitHub 최신 DB 즉시 재조회 및 전수 매핑 중','저장된 XLSB DB를 즉시 다시 읽어 전 워크북·집계에 동기화합니다.');await WebSaveProgress.paint();
+   let latestWb=wb,latestSha=receipt.blobSha;
+   try{
+    const latest=await this.readMain(token);
+    if(latest?.wb){latestWb=latest.wb;latestSha=latest.sha;}
+   }catch(fetchErr){
+    console.warn('저장 직후 readMain 재조회 보류 (검증된 바이너리로 즉시 매핑):',fetchErr.message);
+   }
+   if(wm.parseAndMapXlsbData(latestWb,'GitHub main 최신 저장 DB 즉시 매핑',{preserveExtended:true,postSaveSync:true})){
+    this.remember({sha:latestSha,base64:XLSX.write(latestWb,{bookType:'xlsb',type:'base64'}),wb:latestWb},this.snapshot(latestWb),true);
+    wm.remoteLoadEvidence={status:'verified',sha:latestSha,loadedAt:new Date().toISOString()};
+    wm.remoteSaveVerified=true;expectedRevision=OwnerScope.revision;
    }
    return {receipt,revision:expectedRevision};
   }throw this.error('동시 저장이 계속되어 쓰기를 보류했습니다. 로컬 수정은 보관됩니다.','conflict');
@@ -9264,6 +9279,9 @@ const OwnerScope = {
     if (!value || value.version !== 1 || !Array.isArray(value.owners) || !Array.isArray(value.excluded) ||
         value.owners.some(o => !['에너지솔루션','화학'].includes(o)) || value.excluded.some(id => typeof id !== 'string')) return false;
     this.state = { version: 1, owners: [...new Set(value.owners)], excluded: [...new Set(value.excluded)], updatedAt: value.updatedAt || '' };
+    this._excludedSource = null;
+    this._excludedSet = null;
+    if (typeof RoomIndex !== 'undefined' && RoomIndex.invalidate) RoomIndex.invalidate();
     return true;
   },
   change(kind, key, checked, owner) {
@@ -9427,20 +9445,42 @@ const OwnerScope = {
     if (pill) pill.textContent = `대상 ${total.buildings}개동 ${total.units}세대 · 앙커 DB ${total.inspection}세대`;
   },
   settingsRows() { return [{ '설정버전': 1, '설정JSON': JSON.stringify(this.state) }]; },
-  targetRows() {
+  targetRows(scopeOverride = null) {
+    const isSelected = r => {
+      if (!scopeOverride) return this.selected(r);
+      const owners = scopeOverride.owners || [];
+      const excluded = new Set(scopeOverride.excluded || []);
+      const owner = r.owner || this.ownerOf(r);
+      return owners.includes(owner) && !excluded.has(r.id);
+    };
     return this.catalog().map(r => ({ '소속': r.owner, '건물동ID': r.buildingId, '건물동': r.buildingName,
-      '세대ID': r.id, '층수': r.floor, '세대표시': r.label, '점검대상': this.selected(r) ? '선택' : '제외',
+      '세대ID': r.id, '층수': r.floor, '세대표시': r.label, '점검대상': isSelected(r) ? '선택' : '제외',
       '자료구분': r.inspection ? '사택 앙커 점검 DB' : '기숙사 층별 배정 (호실 미등록)' }));
+  },
+  totalsRows(scopeOverride = null) {
+    const isSelected = r => {
+      if (!scopeOverride) return this.selected(r);
+      const owners = scopeOverride.owners || [];
+      const excluded = new Set(scopeOverride.excluded || []);
+      const owner = r.owner || this.ownerOf(r);
+      return owners.includes(owner) && !excluded.has(r.id);
+    };
+    const catalog = this.catalog();
+    return ['', '에너지솔루션', '화학'].map(o => {
+      const all = catalog.filter(r => !o || r.owner === o);
+      const sel = all.filter(r => isSelected(r));
+      return {
+        '소속': o || '전체 (중복동 제외)', '선택건물동수': new Set(sel.map(r => r.buildingId)).size, '선택세대수': sel.length,
+        '앙커점검DB세대수': sel.filter(r => r.inspection).length, '기숙사배정세대수': sel.filter(r => !r.inspection).length
+      };
+    });
   },
   appendSheets(wb) {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ModelParameters.settingsRows()), '난간_모델_설정');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(pointDefinitionRows()), '점검_부위_정의');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(this.settingsRows()), '건물주_설정');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(this.targetRows()), '건물주_대상');
-    const totals = ['', '에너지솔루션', '화학'].map(o => { const s = this.totals(o); return {
-      '소속': o || '전체 (중복동 제외)', '선택건물동수': s.buildings, '선택세대수': s.units,
-      '앙커점검DB세대수': s.inspection, '기숙사배정세대수': s.dormitory }; });
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(totals), '건물주_집계');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(this.totalsRows()), '건물주_집계');
   }
 };
 
@@ -14098,7 +14138,10 @@ const WorkbookManager = {
           }
           // A fallback is usable data, never evidence of the latest main selection.
           this.remoteLoadEvidence={status:'unverified',reason:error?.message||'원격 DB 스키마 검증 실패'};
-          if(this.localSnapshotRestored){OwnerScope.syncStatus='원격 최신 확인 보류 · 기존 로컬 수정/선택 유지';OwnerScope.updateStatus();return false;}
+          if(this.localSnapshotRestored || this.remoteLoadEvidence?.status==='verified'){
+            OwnerScope.syncStatus='원격 최신 확인 보류 · 기존 검증된 선택/데이터 유지';
+            OwnerScope.updateStatus();return false;
+          }
           for(const [label,url]of [['Raw 임시 DB',GitHubWorkbookSync.rawUrl+'?_fallback='+Date.now()],['로컬 임시 DB','./사택_발코니난간대_정밀안전점검_DB.xlsb']]){
             try{
               const bytes=await GitHubWorkbookSync.resource(url,{binary:true});if(!unchanged())return false;
@@ -14322,11 +14365,13 @@ const WorkbookManager = {
                 this.renderRoomSchematic(currentRoom);
               }
             }
-            // [Phase 57/63] 전 단지 종합 분석 모달 및 점검 집계표 워크북 실시간 전수 동기화
-            const wasDirty = this.isDirty;
-            this.notifyDataMutation({loading:true}); this.markWebDirty(wasDirty||bendMetadataUpgrade&&!options.unverifiedFallback);
+            // [Phase 57/63/86] 전 단지 종합 분석 모달 및 점검 집계표 워크북 실시간 전수 동기화
+            const wasDirty = options.postSaveSync ? false : this.isDirty;
+            if (typeof RoomIndex !== 'undefined' && RoomIndex.invalidate) RoomIndex.invalidate();
+            this.viewCache.clear();
+            this.notifyDataMutation({loading:!options.postSaveSync}); this.markWebDirty(wasDirty||bendMetadataUpgrade&&!options.unverifiedFallback);
             OwnerScope.refreshBuildingSheet();
-            OwnerScope.render(); OwnerScope.decorate();
+            OwnerScope.render(); OwnerScope.decorate(); OwnerScope.updateScopeLabels();
             if(bendMetadataUpgrade&&!options.unverifiedFallback){OwnerScope.pending=true;OwnerScope.syncStatus="BP 장곡관 설정 보완 · 웹 저장 대기";}
             if(preservedConstruction){this.markWebDirty(true);OwnerScope.pending=true;OwnerScope.syncStatus='구형 DB에 없는 시공 정보를 보존했습니다. 웹 저장으로 갱신하세요.';}
             if(preservedExtension) {
@@ -14648,11 +14693,17 @@ const WorkbookManager = {
           this.lastVerifiedWebSave=result.receipt;
           if(!options.automatic&&WorkspaceStorage.holdAutomatic){WorkspaceStorage.recovery.status='current-retained';WorkspaceStorage.showRecovery();}
           if(OwnerScope.revision===saveRevision){
-            OwnerScope.pending=false;this.markWebDirty(false);this.remoteSaveVerified=!result.receipt.mainAdvanced;
-            OwnerScope.syncStatus=result.receipt.mainAdvanced?(result.receipt.latestRefreshPending?'저장 커밋 확인 완료 · 다른 사용자 최신 변경 재조회 대기':'저장 커밋 확인 완료 · 다른 사용자 최신 변경도 다시 조회했습니다.'):'GitHub XLSB 병합 저장 및 main 재조회 검증 완료';
+            OwnerScope.pending=false;this.markWebDirty(false);this.remoteSaveVerified=true;
+            OwnerScope.syncStatus='GitHub XLSB 저장 및 최신 DB 즉시 재매핑 동기화 완료 · SHA '+result.receipt.blobSha.slice(0,7);
           }else{this.isDirty=true;this.remoteSaveVerified=false;OwnerScope.syncStatus='요청 시점 저장은 검증됨 · 이후 변경은 추가 저장 대기';}
+          this.viewCache.clear();
+          OwnerScope.updateScopeLabels();OwnerScope.refreshBuildingSheet();OwnerScope.render();OwnerScope.decorate();
+          this.notifyDataMutation({loading:false,saved:true});
+          this.renderRoomsElevation();this.renderRoomsSummaryTable();this.renderKeyPlan();this.updateRoomsKpiPills();
+          if(this.fullscreenBuildingId)this.renderBuildingFullscreen(this.fullscreenBuildingId);
+          if(this.activeRoomId){const cur=RoomIndex.get(this.activeRoomId);if(cur){this.renderRoomPointsTable(cur);this.renderRoomLinks(cur);RoomInspectionMetadata.show(cur);this.renderRoomSchematic(cur);}}
           const receipt=result.receipt;
-          showToast('☁️ 저장 검증 완료 · 사택 '+receipt.inspectionBuildings+'개동 '+receipt.inspectionUnits+'세대 · SHA '+receipt.blobSha.slice(0,7)+(OwnerScope.pending?' · 추가 변경 미저장':''));
+          showToast('☁️ 저장 및 최신 DB 즉시 매핑 완료 · 사택 '+receipt.inspectionBuildings+'개동 '+receipt.inspectionUnits+'세대 · SHA '+receipt.blobSha.slice(0,7)+(OwnerScope.pending?' · 추가 변경 미저장':''));
           try{localStorage.setItem(WorkspaceStorage.key('cached_balcony_save_receipt'),JSON.stringify(receipt));}catch(error){}
         }catch(error){
           saveFailure=error.message;this.isDirty=true;OwnerScope.pending=true;this.remoteSaveVerified=false;
