@@ -4431,7 +4431,7 @@
         padding: 8px 8px calc(48px + env(safe-area-inset-bottom, 0px)) 8px !important;
         gap: 10px !important;
       }
-      /* KPI 5대 카드: 스마트폰 화면 맞춤 반응형 그리드 (첫번째 전단지 점검현황 카드는 2칸 확장 배치) */
+      /* KPI 5대 카드: 스마트폰 화면 맞춤 반응형 그리드 (첫번째 점검현황 카드는 2칸 확장 배치) */
       .summary-kpi-grid {
         grid-template-columns: repeat(2, 1fr) !important;
         gap: 6px !important;
@@ -4878,12 +4878,12 @@ body.model-fullscreen #model-fullscreen-open{display:none}
     </div>
   </div>
 
-  <!-- 2. 외벽 앙커 부위별 전 단지 결함 이력 및 조치 필요 세대 종합 분석창 (초기 실행 시 닫힘) -->
+  <!-- 2. 외벽 앙커 부위별 결함 이력 및 조치 필요 세대 종합 분석창 (초기 실행 시 닫힘) -->
   <div id="defect-modal" class="app-window" style="display: none;">
     <div class="window-head" id="defect-modal-head" style="cursor:move;">
       <div class="window-title" style="display:flex; align-items:center; gap:6px;">
         <span class="defect-num-pill" id="modal-point-pill" style="background:#ef4444; color:#fff; font-weight:800; font-size:10.5px; padding:2px 7px; border-radius:12px;">① P1</span>
-        <span style="font-size: 11px; font-weight: 700; color: #f1f5f9;" id="modal-head-title">전 단지 결함 이력 및 조치 분석</span>
+        <span style="font-size: 11px; font-weight: 700; color: #f1f5f9;" id="modal-head-title">결함 이력 및 조치 분석</span>
       </div>
       <div class="window-actions">
         <button class="win-btn" onclick="WindowManager.toggleCollapse('defect-modal')" title="창 접기/펴기 (헤더 더블클릭 가능)">−</button>
@@ -4891,7 +4891,7 @@ body.model-fullscreen #model-fullscreen-open{display:none}
       </div>
     </div>
     <div class="window-body" id="modal-content-wrap">
-      <!-- updateDefectModal()로 전 단지 결함 및 동별 조치 필요 세대(7-101 등) 칩 목록 동적 렌더링 -->
+      <!-- updateDefectModal()로 결함 및 동별 조치 필요 세대(7-101 등) 칩 목록 동적 렌더링 -->
     </div>
   </div>
 
@@ -6633,17 +6633,17 @@ body.model-fullscreen #model-fullscreen-open{display:none}
       <div class="summary-content-scroll" id="summary-content-scroll">
         <!-- 1) 경영/안전총괄 4대 대시보드 KPI 카드 -->
         <div class="summary-kpi-grid">
-          <div class="summary-kpi-card" style="border-left: 4px solid #8b5cf6;" onclick="WorkbookManager.openKpiVerificationModal('inspect-status')" title="클릭 시 [사택 11개동 세대별 점검 3단계(미점검·점검중·점검완료) 현황 및 결함 조치 대기 세대] 세부 검증 모달 열기">
+          <div class="summary-kpi-card" style="border-left: 4px solid #8b5cf6;" onclick="WorkbookManager.openKpiVerificationModal('inspect-status')" title="클릭 시 [세대별 점검 3단계(미점검·점검중·점검완료) 현황 및 결함 조치 대기 세대] 세부 검증 모달 열기">
             <div class="summary-kpi-title">
-              <span>📋 전 단지 점검 현황</span>
+              <span>📋 점검 현황</span>
               <span class="kpi-click-badge" style="color: #a78bfa; background: rgba(139, 92, 246, 0.15);">🔍 데이터 검증 ➜</span>
             </div>
             <div class="summary-kpi-value" id="summary-kpi-inspect-status" style="color: #c4b5fd;">2 / 309 세대</div>
             <div class="summary-kpi-sub" id="summary-kpi-inspect-status-sub">🟢 완료 2 · 🟡 점검중 0 · ⚪ 미점검 307 (결함대기: 2세대)</div>
           </div>
-          <div class="summary-kpi-card" style="border-left: 4px solid #38bdf8;" onclick="WorkbookManager.openKpiVerificationModal('inspect-rate')" title="클릭 시 [전 단지 점검 진척도] 세부 검증 모달 열기">
+          <div class="summary-kpi-card" style="border-left: 4px solid #38bdf8;" onclick="WorkbookManager.openKpiVerificationModal('inspect-rate')" title="클릭 시 [점검 진척도] 세부 검증 모달 열기">
             <div class="summary-kpi-title">
-              <span>📈 전 단지 점검 진척도</span>
+              <span>📈 점검 진척도</span>
               <span class="kpi-click-badge" style="color: #38bdf8; background: rgba(56, 189, 248, 0.15);">🔍 데이터 검증 ➜</span>
             </div>
             <div class="summary-kpi-value" id="summary-kpi-inspect-rate" style="color: #38bdf8;">0.6%</div>
@@ -6675,7 +6675,7 @@ body.model-fullscreen #model-fullscreen-open{display:none}
           </div>
         </div>
 
-        <!-- 2) P1~P6 외벽 고정 앙커 6개소 전 단지 현황 미니 트랙 -->
+        <!-- 2) P1~P6 외벽 고정 앙커 6개소 현황 미니 트랙 -->
         <div class="summary-anchors-track">
           <div class="summary-anchors-header">
             <div style="display: flex; align-items: center; gap: 8px;">
@@ -12512,7 +12512,7 @@ const WorkbookManager = {
           }
           this.updateReturnPill();
           if (typeof showToast === 'function') {
-            showToast(`🔍 [${pointKey}] 3D 위치로 줌인 및 전 단지 정밀 분석창을 열었습니다. (복귀: 좌상단 버튼)`);
+            showToast(`🔍 [${pointKey}] 3D 위치로 줌인 및 정밀 분석창을 열었습니다. (복귀: 좌상단 버튼)`);
           }
         }, 80);
       },
@@ -12801,11 +12801,11 @@ const WorkbookManager = {
           if (titleEl) titleEl.textContent = '사택 11개동 세대별 점검 3단계(미점검·점검중·점검완료) 현황 및 결함 조치 대기 세대 정밀 검증';
 
           let html = '<div class="kpi-verify-formula-box" style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.3);">' +
-            '<span><b>📐 데이터 정합성 & 산출 근거</b>: 전 단지 309세대 = 미점검(' + totUninsp + '세대) + 점검중(' + totProg + '세대) + 점검완료(' + totDone + '세대) <b>[100% 전수 일치]</b></span>' +
+            '<span><b>📐 데이터 정합성 & 산출 근거</b>: 총 ' + totUnits + '세대 = 미점검(' + totUninsp + '세대) + 점검중(' + totProg + '세대) + 점검완료(' + totDone + '세대) <b>[100% 전수 일치]</b></span>' +
             '<span style="font-size: 11px; color: #c4b5fd;">※ 점검완료 ' + totDone + '세대 중 외벽 결함 확인 조치대기: <b>' + waitActionCount + '세대</b> (D등급 ' + totD + '세대, C등급 ' + totC + '세대) · 보강 조치완료: ' + totRepaired + '세대 · 양호: ' + totAB + '세대</span>' +
             '</div>' +
             '<div class="kpi-verify-metric-strip">' +
-            '<div class="kpi-verify-metric-chip" style="border-left: 3px solid #8b5cf6;"><span class="kpi-verify-metric-label">🏢 전 단지 총 세대</span><span class="kpi-verify-metric-val" style="color: #c4b5fd;">' + totUnits + ' 세대</span></div>' +
+            '<div class="kpi-verify-metric-chip" style="border-left: 3px solid #8b5cf6;"><span class="kpi-verify-metric-label">🏢 대상 총 세대</span><span class="kpi-verify-metric-val" style="color: #c4b5fd;">' + totUnits + ' 세대</span></div>' +
             '<div class="kpi-verify-metric-chip" style="border-left: 3px solid #10b981;"><span class="kpi-verify-metric-label">🟢 점검 완료 세대</span><span class="kpi-verify-metric-val" style="color: #6ee7b7;">' + totDone + ' 세대</span></div>' +
             '<div class="kpi-verify-metric-chip" style="border-left: 3px solid #f59e0b;"><span class="kpi-verify-metric-label">🟡 점검 진행중</span><span class="kpi-verify-metric-val" style="color: #fde047;">' + totProg + ' 세대</span></div>' +
             '<div class="kpi-verify-metric-chip" style="border-left: 3px solid #64748b;"><span class="kpi-verify-metric-label">⚪ 미점검 대기</span><span class="kpi-verify-metric-val" style="color: #cbd5e1;">' + totUninsp + ' 세대</span></div>' +
@@ -12916,7 +12916,7 @@ const WorkbookManager = {
 
         } else if (type === 'inspect-rate') {
           if (badgeEl) badgeEl.textContent = '📈 점검 진척도 검증';
-          if (titleEl) titleEl.textContent = '전 단지 발코니 난간대 정밀안전점검 진척도 상세 검증';
+          if (titleEl) titleEl.textContent = '발코니 난간대 정밀안전점검 진척도 상세 검증';
 
           let html = '<div class="kpi-verify-formula-box">' +
             '<span><b>📐 산출 공식</b>: [점검 완료 세대수(' + totDone + '세대) ÷ 총 세대수(' + totUnits + '세대)] × 100% = <b>' + inspectionRate + '%</b></span>' +
@@ -12926,7 +12926,7 @@ const WorkbookManager = {
             '<div class="kpi-verify-metric-chip"><span class="kpi-verify-metric-label">총 세대수</span><span class="kpi-verify-metric-val" style="color: #38bdf8;">' + totUnits + ' 세대</span></div>' +
             '<div class="kpi-verify-metric-chip"><span class="kpi-verify-metric-label">점검 완료 세대</span><span class="kpi-verify-metric-val" style="color: #10b981;">' + totDone + ' 세대</span></div>' +
             '<div class="kpi-verify-metric-chip"><span class="kpi-verify-metric-label">미점검 잔여 세대</span><span class="kpi-verify-metric-val" style="color: #cbd5e1;">' + (totUnits - totDone) + ' 세대</span></div>' +
-            '<div class="kpi-verify-metric-chip"><span class="kpi-verify-metric-label">전 단지 점검률</span><span class="kpi-verify-metric-val" style="color: #fbbf24;">' + inspectionRate + '%</span></div>' +
+            '<div class="kpi-verify-metric-chip"><span class="kpi-verify-metric-label">점검률</span><span class="kpi-verify-metric-val" style="color: #fbbf24;">' + inspectionRate + '%</span></div>' +
             '</div>' +
             '<div style="font-size: 12.5px; font-weight: 700; color: #f8fafc; margin-bottom: 6px;">🏢 11개 건물동별 점검 진척 현황 검증</div>' +
             '<table class="rooms-stats-table" style="width: 100%; margin-bottom: 14px;"><thead><tr>' +
@@ -12989,7 +12989,7 @@ const WorkbookManager = {
 
           const defectRooms = getInspectionRooms().filter(r => r.safetyGrade === 'D' || r.safetyGrade === 'C');
           if (defectRooms.length === 0) {
-            html += '<div style="text-align: center; padding: 30px; background: #1e293b; border-radius: 8px; color: #10b981; font-size: 13px; font-weight: 700;">🟢 현재 결함 조치 대상(D·C등급) 세대가 없습니다. 전 단지 안전 상태가 양호합니다.</div>';
+            html += '<div style="text-align: center; padding: 30px; background: #1e293b; border-radius: 8px; color: #10b981; font-size: 13px; font-weight: 700;">🟢 현재 결함 조치 대상(D·C등급) 세대가 없습니다. 안전 상태가 양호합니다.</div>';
           } else {
             html += '<table class="rooms-stats-table" style="width: 100%;"><thead><tr>' +
               '<th>동-호수</th><th>배정</th><th>안전등급</th><th>결함 앙커(P1~P6)</th><th>결함 상세 내용</th><th>집행비</th><th>점검서 열기</th>' +
@@ -13070,7 +13070,7 @@ const WorkbookManager = {
             '<div class="kpi-verify-metric-chip" style="border-left: 3px solid #f59e0b;"><span class="kpi-verify-metric-label">⚠️ C등급 주의 집행비</span><span class="kpi-verify-metric-val" style="color: #fde047;">₩ ' + getInspectionRooms().filter(r => r.safetyGrade === 'C').reduce((s, r) => s + (r.totalCost || 0), 0).toLocaleString() + '</span></div>' +
             '<div class="kpi-verify-metric-chip" style="border-left: 3px solid #3b82f6;"><span class="kpi-verify-metric-label">🔵 완료 투입 집행비</span><span class="kpi-verify-metric-val" style="color: #93c5fd;">' + (totRepaired > 0 ? '₩ ' + getInspectionRooms().filter(r => r.safetyGrade === '완료').reduce((s, r) => s + (r.totalCost || 0), 0).toLocaleString() : '₩ 0') + '</span></div>' +
             '</div>' +
-            '<div style="font-size: 12.5px; font-weight: 700; color: #f8fafc; margin-bottom: 6px;">🏢 건물동별 집행비 집계 및 전 단지 대비 집행비 비중(%)</div>' +
+            '<div style="font-size: 12.5px; font-weight: 700; color: #f8fafc; margin-bottom: 6px;">🏢 건물동별 집행비 집계 및 총 집행비 대비 비중(%)</div>' +
             '<table class="rooms-stats-table" style="width: 100%; margin-bottom: 14px;"><thead><tr>' +
             '<th>No.</th><th>동명</th><th>배정</th><th>총 세대수</th><th>결함 세대수</th><th>집행비</th><th>집행비 점유율(%)</th>' +
             '</tr></thead><tbody>';
@@ -13102,7 +13102,7 @@ const WorkbookManager = {
         if (modal) modal.style.display = 'none';
       },
 
-      // [Phase 68] 전 단지 점검 통계 단일 진실 원천(Single Source of Truth) 산출 엔진
+      // [Phase 68] 점검 통계 단일 진실 원천(Single Source of Truth) 산출 엔진
       calculateInspectionStats() {
         const rooms=getInspectionRooms();
         const totUnits=rooms.length,totDone=rooms.filter(isRoomInspectionComplete).length;
@@ -13196,7 +13196,7 @@ const WorkbookManager = {
             const card = document.createElement('div');
             card.className = 'summary-anchor-mini-card';
             pNames[pk] = pointDefinition(pk).shortName || DEFECT_CATALOG[pk].name;
-            card.title = `[부위 ${pk}] ${pNames[pk]} 외벽 고정 앙커\n• 🚨 위험(D): ${d}세대\n• ⚠️ 주의(C): ${c}세대\n• 🟢 양호(A/B): ${ab}세대\n• 🔵 조치완료: ${rep}세대\n• ⚪ 미점검: ${uninsp}세대\n• 집행비: ₩ ${cost.toLocaleString()}\n👉 마우스 클릭: 3D 모델 [${pk}] 위치로 이동 및 부위별 전 단지 결함 종합 분석창 열기`;
+            card.title = `[부위 ${pk}] ${pNames[pk]} 외벽 고정 앙커\n• 🚨 위험(D): ${d}세대\n• ⚠️ 주의(C): ${c}세대\n• 🟢 양호(A/B): ${ab}세대\n• 🔵 조치완료: ${rep}세대\n• ⚪ 미점검: ${uninsp}세대\n• 집행비: ₩ ${cost.toLocaleString()}\n👉 마우스 클릭: 3D 모델 [${pk}] 위치로 이동 및 부위별 결함 종합 분석창 열기`;
             card.onclick = () => this.focusPointFromSummary(pk);
             card.innerHTML = `
               <div style="font-size: 11px; font-weight: 700; color: #38bdf8;">${pNames[pk]}</div>
@@ -13387,7 +13387,7 @@ const WorkbookManager = {
         const totAnchors = totUnits * INSPECTION_POINT_KEYS.length;
 
         if (badge) {
-          badge.textContent = isAll ? '🏢 전 단지 종합 요약' : `🏢 ${bName} 점검요약`;
+          badge.textContent = isAll ? '🏢 전체 종합 요약' : `🏢 ${bName} 점검요약`;
           badge.className = 'modal-badge ' + (isAll ? 'badge-primary' : 'badge-info');
         }
         if (title) {
@@ -14063,7 +14063,7 @@ const WorkbookManager = {
         if (this.fullscreenBuildingId) this.renderBuildingFullscreen(this.fullscreenBuildingId);
         // [Phase 68] 데이터 변경 통보 버스 호출로 집계표 및 KPI 카드 실시간 집행비 재계산 보장
         this.notifyDataMutation();
-        // [Phase 57] '전 단지 종합 분석' 모달 집행비 및 통계 실시간 동기화
+        // [Phase 57] '결함 종합 분석' 모달 집행비 및 통계 실시간 동기화
         if (typeof updateDefectModal === 'function' && typeof currentDefectId !== 'undefined') {
           updateDefectModal(currentDefectId);
         }
@@ -14674,7 +14674,7 @@ const WorkbookManager = {
                 this.renderRoomSchematic(currentRoom);
               }
             }
-            // [Phase 57/63/86] 전 단지 종합 분석 모달 및 점검 집계표 워크북 실시간 전수 동기화
+            // [Phase 57/63/86] 결함 종합 분석 모달 및 점검 집계표 워크북 실시간 전수 동기화
             const wasDirty = options.postSaveSync ? false : this.isDirty;
             if (typeof RoomIndex !== 'undefined' && RoomIndex.invalidate) RoomIndex.invalidate();
             this.viewCache.clear();
@@ -21723,7 +21723,7 @@ function setCameraView(name, animate = true) {
       });
     }
 
-    // 선택된 앙커 부위의 전 단지 결함 이력 및 동별 조치 필요 세대 종합 분석창 렌더링
+    // 선택된 앙커 부위의 결함 이력 및 동별 조치 필요 세대 종합 분석창 렌더링
     function updateDefectModal(id) {
       const d = DEFECT_DATA[id];
       if (!d) return;
@@ -21740,7 +21740,7 @@ function setCameraView(name, animate = true) {
       }
       const headTitle = document.getElementById('modal-head-title');
       if (headTitle) {
-        headTitle.textContent = `[${d.pointKey}] ${d.name} 전 단지 종합 분석`;
+        headTitle.textContent = `[${d.pointKey}] ${d.name} 결함 종합 분석`;
       }
 
       // 11개 단지 데이터 실시간 취합 (5단계 진행 현황 완벽 분류 및 집행비 무결성 집계)
@@ -21850,7 +21850,7 @@ function setCameraView(name, animate = true) {
       } else {
         dynamicStatusText = '🟢 선택 세대(' + getInspectionRooms().length + '세대) 점검 완료 · 결함 없음 (건전 상태)';
         dynamicPulloutText = totalPtCost > 0 ? `전 세대 완료 (집행비 ₩${totalPtCost.toLocaleString()}원)` : '전 세대 설계 기준 충족 (건전 상태 유지)';
-        dynamicDescText = '전 단지 11개동 모든 세대에서 해당 부위 앙커 체결 상태 및 내력이 건전한 것으로 점검 완료되었습니다.';
+        dynamicDescText = '모든 점검 세대에서 해당 부위 앙커 체결 상태 및 내력이 건전한 것으로 점검 완료되었습니다.';
         dynamicActionText = '정기 안전 점검 지속 유지 관리';
       }
 
@@ -21994,7 +21994,7 @@ function setCameraView(name, animate = true) {
             <div class="defect-kpi-title">🟢 양호/완료</div>
             <div class="defect-kpi-val" style="color:#34d399;">${goodRooms.length + repairedRooms.length}<small style="font-size:10px; font-weight:normal; color:#94a3b8;">세대</small></div>
           </div>
-          <div class="defect-kpi-card" style="border-left: 2px solid #38bdf8;" title="[${d.pointKey}] 전 단지 총 집행비: ₩${totalPtCost.toLocaleString()}원">
+          <div class="defect-kpi-card" style="border-left: 2px solid #38bdf8;" title="[${d.pointKey}] 총 집행비: ₩${totalPtCost.toLocaleString()}원">
             <div class="defect-kpi-title">💰 집행비</div>
             <div class="defect-kpi-val" style="color:#38bdf8; font-size:11.5px;">${totalPtCost >= 10000 ? Math.round(totalPtCost / 10000).toLocaleString() : (totalPtCost > 0 ? totalPtCost.toLocaleString() : '0')}<small style="font-size:9.5px; font-weight:normal; color:#94a3b8;">${totalPtCost >= 10000 ? '만원' : '원'}</small></div>
           </div>
@@ -22583,7 +22583,7 @@ function setCameraView(name, animate = true) {
         setAnchorHoverState(null, false);
       }
 
-      // 2. 결함 마커 핀 호버 감지 (1~6번 전수 대응 & 6색상 배정 & 전 단지 세대 요약 및 7-101 간략 표기)
+      // 2. 결함 마커 핀 호버 감지 (1~6번 전수 대응 & 6색상 배정 & 세대 요약 및 7-101 간략 표기)
       const hits = badgeHit ? [{object:badgeHit}] : raycaster.intersectObjects(interactables.filter(isObjectEffectivelyVisible));
       if (hits.length > 0) {
         const hitObj = hits[0].object;
@@ -22645,7 +22645,7 @@ function setCameraView(name, animate = true) {
               조치 대상 세대: <b style="color:#fde047;">${targetSummary}</b>
             </div>
             <div style="color:#38bdf8; font-size:9.5px; font-weight:600;">
-              👉 마우스 클릭: 부위별 전 단지 결함 종합 분석창 열기
+              👉 마우스 클릭: 부위별 결함 종합 분석창 열기
             </div>
           `;
           tooltip.style.display = 'block';
@@ -25388,7 +25388,7 @@ function setCameraView(name, animate = true) {
   </div>
 
 
-  <!-- [Phase 58] 건물동별/전단지 발코니 난간대 정밀안전점검 현황 요약 팝업 모달 -->
+  <!-- [Phase 58] 건물동별 발코니 난간대 정밀안전점검 현황 요약 팝업 모달 -->
   <div id="building-inspect-summary-modal" class="app-window" style="display: none; width: 720px; max-width: 95vw; max-height: 85vh; flex-direction: column;">
     <div class="room-modal-header" id="building-inspect-summary-modal-head">
       <div class="room-modal-title" style="display: flex; align-items: center; gap: 8px;">
@@ -25442,9 +25442,9 @@ function setCameraView(name, animate = true) {
       <div class="summary-fs-controls">
         <input type="text" id="summary-fs-search" placeholder="🔍 동명 / 배정 검색..." oninput="WorkbookManager.onSummaryFullscreenSearch(this.value)" style="background: #1e293b; border: 1px solid #475569; border-radius: 4px; padding: 5px 10px; color: #f8fafc; font-size: 11.5px; width: 170px;" />
         <select id="summary-fs-filter-team" onchange="WorkbookManager.onSummaryFullscreenFilter()" style="background: #1e293b; border: 1px solid #475569; border-radius: 4px; padding: 5px 8px; color: #38bdf8; font-size: 11.5px; font-weight: 600; cursor: pointer;">
-          <option value="all">🏢 전 단지 (11개동)</option>
-          <option value="화학">🟡 LG화학 (7개동)</option>
-          <option value="에너지솔루션">🔵 LG에너지솔루션 (4개동)</option>
+          <option value="all">🏢 전체 건물동</option>
+          <option value="화학">🟡 LG화학</option>
+          <option value="에너지솔루션">🔵 LG에너지솔루션</option>
           <option value="defect">🚨 결함 발생동만 (D+C)</option>
         </select>
         <button class="rooms-btn excel-save-btn" onclick="WorkbookManager.exportExcelWithValidation()" style="padding: 5px 10px; font-size: 11px;" title="엑셀(.xlsx) 파일 다운로드">
@@ -25463,7 +25463,7 @@ function setCameraView(name, animate = true) {
     <div class="room-modal-header" style="background: #1e293b; padding: 12px 18px; border-bottom: 1px solid #334155; display: flex; align-items: center; justify-content: space-between;">
       <div style="display: flex; align-items: center; gap: 8px;">
         <span class="modal-badge badge-info" id="kpi-verify-badge" style="font-size: 11px; padding: 3px 8px; border-radius: 4px; background: #0284c7; color: #fff; font-weight: 700;">📈 지표 데이터 검증</span>
-        <span id="kpi-verify-title" style="font-size: 14px; font-weight: 800; color: #f8fafc;">전 단지 점검 진척도 정밀 검증 내역</span>
+        <span id="kpi-verify-title" style="font-size: 14px; font-weight: 800; color: #f8fafc;">점검 진척도 정밀 검증 내역</span>
       </div>
       <div class="window-actions">
         <button class="win-btn win-btn-close" onclick="WorkbookManager.closeKpiVerificationModal()" style="background: transparent; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 2px 6px;" title="닫기 (ESC)">✕</button>
