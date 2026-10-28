@@ -4624,6 +4624,8 @@ body.model-fullscreen #model-fullscreen-open{display:none}
 .wb-tab.tab-drop-before{box-shadow:inset 3px 0 #38bdf8}
 .wb-tab.tab-drop-after{box-shadow:inset -3px 0 #38bdf8}
 .wb-tab:focus-visible{outline:2px solid #38bdf8;outline-offset:-3px}
+
+#web-save-progress{position:fixed;right:16px;bottom:16px;z-index:1999999;width:min(360px,calc(100vw - 32px));box-sizing:border-box;background:#101c2d;color:#e2e8f0;border:1px solid #38bdf8;border-radius:9px;padding:12px;box-shadow:0 8px 30px #0009;font:12px/1.5 sans-serif}#web-save-progress[hidden]{display:none!important}#web-save-progress.in-dialog{position:static;width:auto;flex-shrink:0;box-shadow:none;padding:8px 10px}#web-save-progress[data-stage=error]{border-color:#f59e0b}#web-save-progress[data-stage=done]{border-color:#10b981}.wsp-head{display:flex;align-items:center;gap:10px}.wsp-head strong{flex:1}.wsp-head button{background:none;border:0;color:inherit;cursor:pointer;font-size:18px}#wsp-detail{color:#b7c8dc;margin-top:3px;overflow-wrap:anywhere}.wsp-track{height:4px;background:#334155;border-radius:4px;margin-top:8px;overflow:hidden}.wsp-track i{display:block;height:100%;background:#38bdf8;transition:width .2s}#web-save-progress[data-stage=done] .wsp-track i{background:#10b981}.web-saving::after{content:' · 저장 중';font-size:10px;opacity:.85}#sync-conflict-modal{position:fixed;inset:5% 4%;z-index:2000000;background:#101c2d;border:1px solid #64748b;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px;color:#e2e8f0;box-shadow:0 12px 60px #000b;box-sizing:border-box}#sync-conflict-modal h3,#sync-conflict-modal p{margin:0}.sync-conflict-body{overflow:auto;flex:1;min-height:0;overscroll-behavior:contain}.sync-conflict-row{display:grid;grid-template-columns:2fr 2fr 2fr minmax(150px,1fr);gap:10px;padding:8px;border-bottom:1px solid #334155;overflow-wrap:anywhere}.sync-conflict-row select{background:#1e293b;color:#f1f5f9;border:1px solid #64748b;border-radius:4px;padding:6px;max-width:100%}.sync-conflict-actions{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}.sync-conflict-actions button:disabled{opacity:.4;cursor:not-allowed}#sync-conflict-count{font-size:12px;color:#7dd3fc;flex-shrink:0}@media(max-width:700px){#sync-conflict-modal{inset:8px;padding:12px;gap:8px}#sync-conflict-modal h3{font-size:16px}.sync-conflict-row{grid-template-columns:1fr 1fr}.sync-conflict-row>span:first-child{grid-column:1/-1}.sync-conflict-row select{grid-column:1/-1}.sync-conflict-actions button{flex:1 1 42%;padding:9px!important}}
 </style>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -8594,7 +8596,7 @@ function syncWebSaveButtons() {
   button.title=button.dataset.saveBaseTitle+(dirty?' · 미저장 변경사항: 웹 저장 필요':WorkbookManager.lastVerifiedWebSave&&WorkbookManager.remoteSaveVerified?' · 원격 재조회 검증 '+WorkbookManager.lastVerifiedWebSave.blobSha.slice(0,7):' · 변경 시 웹 저장');
   button.setAttribute('aria-label',button.textContent.trim()+(dirty?' · 웹 저장 필요':''));
   button.setAttribute('aria-busy',String(!!WorkbookManager.webSaveInFlight));
-  button.disabled=!!WorkbookManager.webSaveInFlight;
+  button.disabled=!!WorkbookManager.webSaveInFlight;button.classList.toggle('web-saving',!!WorkbookManager.webSaveInFlight);
  });
 }
 
@@ -8936,8 +8938,19 @@ const ProgressExcel={
  }
 };
 
+const WebSaveProgress={
+ running:false,timer:null,hideTimer:null,started:0,history:[],stage:'',
+ ensure(){let el=document.getElementById('web-save-progress');if(el)return el;el=document.createElement('section');el.id='web-save-progress';el.setAttribute('role','status');el.setAttribute('aria-live','polite');el.innerHTML='<div class="wsp-head"><strong id="wsp-title"></strong><span id="wsp-elapsed"></span><button type="button" id="wsp-close" aria-label="저장 상태 닫기">×</button></div><div id="wsp-detail"></div><div class="wsp-track"><i id="wsp-bar"></i></div>';el.querySelector('#wsp-close').onclick=()=>{if(!this.running)el.hidden=true;};document.body.append(el);return el;},
+ host(modal=null,before=null){const el=this.ensure();el.classList.toggle('in-dialog',!!modal);(modal||document.body).insertBefore(el,before);},
+ start(automatic=false){clearTimeout(this.hideTimer);clearInterval(this.timer);this.started=performance.now();this.running=true;this.history=[];this.automatic=automatic;this.timer=setInterval(()=>this.elapsed(),1000);this.set('auth','인증 확인 중','저장 요청을 시작했습니다.');},
+ elapsed(){const el=document.getElementById('wsp-elapsed');if(el)el.textContent=Math.floor((performance.now()-this.started)/1000)+'초';},
+ set(stage,title,detail=''){const el=this.ensure();el.hidden=false;this.stage=stage;this.history.push({stage,time:Date.now()});if(this.history.length>40)this.history.shift();el.dataset.stage=stage;el.setAttribute('aria-busy',String(this.running));el.querySelector('#wsp-title').textContent=title;el.querySelector('#wsp-detail').textContent=detail;el.querySelector('#wsp-close').hidden=this.running;const step={auth:1,baseline:2,read:2,merge:3,review:3,prepare:3,upload:4,verify:5,refresh:5,done:5,error:0}[stage]||0;el.querySelector('#wsp-detail').textContent=(step?'단계 '+step+'/5 · ':'')+detail;el.querySelector('#wsp-bar').style.width=(step*20)+'%';this.elapsed();syncWebSaveButtons();},
+ finish(ok,detail){this.running=false;clearInterval(this.timer);this.timer=null;this.host();this.set(ok?'done':'error',ok?'GitHub 저장 검증 완료':'저장 보류 · 수정 내용 유지',detail);if(ok)this.hideTimer=setTimeout(()=>{const el=document.getElementById('web-save-progress');if(el&&!this.running)el.hidden=true;},10000);},
+ async paint(){await new Promise(resolve=>{let done=false;const end=()=>{if(done)return;done=true;clearTimeout(fallback);resolve();},fallback=setTimeout(end,100);if(document.hidden)setTimeout(end,0);else requestAnimationFrame(()=>setTimeout(end,0));});}
+};
+
 const GitHubWorkbookSync={
- build:'90.0',
+ build:'91.0',
  repository:'JongGunelee/wyggkr04',branch:'main',path:'RawData/발코니 난간대/사택_발코니난간대_정밀안전점검_DB.xlsb',
  uiSheet:'워크북_UI_설정',conflictResolver:null,lastRefresh:0,
  get apiUrl(){return 'https://api.github.com/repos/'+this.repository+'/contents/'+encodeURI(this.path);},
@@ -9035,35 +9048,49 @@ const GitHubWorkbookSync={
   try{localStorage.setItem(WorkspaceStorage.key('cached_balcony_xlsb_b64'),main.base64);localStorage.setItem(WorkspaceStorage.key('cached_balcony_github_sha'),main.sha);}catch(error){console.warn('원격 기준 캐시 보관 실패');}
  },
  describe(path){if(path[0]==='rooms'){const room=RoomIndex.get(path[1]);return (room?room.buildingName+' '+room.roomLabel:path[1])+' · '+path.slice(2).join(' / ');}if(path[0]==='scope'&&path[1]==='excluded'){const entry=OwnerScope.catalog().find(e=>e.id===path[2]);return '건물주 대상 · '+(entry?entry.buildingName+' '+entry.label:path[2]);}return path.join(' / ');},
- cancelConflict(){if(this.conflictResolver){const resolve=this.conflictResolver;this.conflictResolver=null;document.getElementById('sync-conflict-modal')?.remove();resolve(null);}},
- async choose(conflicts){
+ cancelConflict(){if(this.conflictResolver){const resolve=this.conflictResolver;this.conflictResolver=null;WebSaveProgress.host();document.getElementById('sync-conflict-modal')?.remove();resolve(null);}},
+ formatConflict(item,value){if(item.path[0]==='scope'&&typeof value==='boolean'){if(item.path[1]==='excluded')return value?'제외':'점검 대상';if(item.path[1]==='owners')return value?'소속 선택':'소속 해제';}if(value===undefined)return '이전 기준 없음';const text=this.stable(value);return text.length>180?text.slice(0,180)+'…':text;},
+ async choose(conflicts,{hasBaseline=true}={}){
   this.cancelConflict();return new Promise(resolve=>{
-   this.conflictResolver=resolve;const modal=document.createElement('div');modal.id='sync-conflict-modal';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');
-   modal.style.cssText='position:fixed;inset:8% 6%;z-index:2000000;background:#101c2d;border:1px solid #475569;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px;color:#e2e8f0;box-shadow:0 12px 60px #000b';
-   const title=document.createElement('h3');title.textContent='다른 사용자와 같은 항목을 수정했습니다 ('+conflicts.length+'개)';title.style.margin='0';modal.append(title);
-   const note=document.createElement('p');note.textContent='서로 다른 항목은 병합했습니다. 아래 충돌 값만 선택하세요. 취소하면 로컬 수정은 유지되고 원격에는 쓰지 않습니다.';note.style.margin='0';modal.append(note);
-   const body=document.createElement('div');body.style.cssText='overflow:auto;flex:1;min-height:0';const controls=[];modal.append(body);
-   const format=value=>{const text=this.stable(value);return text.length>180?text.slice(0,180)+'…':text;};
-   for(const item of conflicts){const row=document.createElement('div');row.style.cssText='display:grid;grid-template-columns:2fr 2fr 2fr 150px;gap:10px;padding:8px;border-bottom:1px solid #334155';for(const text of [this.describe(item.path),'내 수정: '+format(item.local),'원격 최신: '+format(item.remote)]){const cell=document.createElement('span');cell.textContent=text;row.append(cell);}const select=document.createElement('select');select.setAttribute('aria-label',this.describe(item.path));for(const [value,label]of [['','선택 필요'],['local','내 수정 사용'],['remote','원격 값 사용']]){const option=document.createElement('option');option.value=value;option.textContent=label;select.append(option);}row.append(select);controls.push({select,item});body.append(row);}
-   const actions=document.createElement('div');actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap';modal.append(actions);
-   const button=(label,action)=>{const b=document.createElement('button');b.className='rooms-btn';b.textContent=label;b.onclick=action;actions.append(b);return b;};
-   const update=()=>{save.disabled=controls.some(c=>!c.select.value);};button('충돌 항목 모두 내 수정',()=>{controls.forEach(c=>c.select.value='local');update();});button('충돌 항목 모두 원격 값',()=>{controls.forEach(c=>c.select.value='remote');update();});
-   const save=button('선택을 반영해 저장',()=>{const choices=new Map(controls.map(({item,select})=>[item.key,{signature:item.signature,side:select.value}]));this.conflictResolver=null;modal.remove();resolve(choices);});save.id='sync-conflict-save';save.disabled=true;
-   const cancel=button('취소 · 편집 계속',()=>this.cancelConflict());cancel.id='sync-conflict-cancel';controls.forEach(c=>c.select.onchange=update);modal.addEventListener('keydown',event=>{if(event.key==='Escape'){event.stopPropagation();this.cancelConflict();}});document.body.append(modal);cancel.focus();
+   this.conflictResolver=resolve;const modal=document.createElement('div');modal.id='sync-conflict-modal';modal.setAttribute('role','dialog');modal.setAttribute('aria-modal','true');modal.setAttribute('aria-labelledby','sync-conflict-title');
+   const title=document.createElement('h3');title.id='sync-conflict-title';title.textContent=(hasBaseline?'이전 기준 이후 로컬·원격 값이 달라졌습니다':'이전 저장 기준이 없어 값 확인이 필요합니다')+' ('+conflicts.length+'개)';modal.append(title);
+   const note=document.createElement('p');note.textContent=hasBaseline?'다른 탭·이전 접속에서 저장한 값도 포함될 수 있습니다. 아래 항목의 사용할 값을 선택하세요.':'다른 사람이 수정했다는 뜻은 아닙니다. 기준 기록을 복구할 수 없어 현재 파일과 원격 최신 값의 차이를 확인합니다. 취소하면 로컬 수정은 유지됩니다.';modal.append(note);
+   const count=document.createElement('div');count.id='sync-conflict-count';modal.append(count);
+   const body=document.createElement('div');body.className='sync-conflict-body';const controls=[],fragment=document.createDocumentFragment();modal.append(body);
+   for(const item of conflicts){const row=document.createElement('div');row.className='sync-conflict-row';for(const text of [this.describe(item.path),'현재 파일: '+this.formatConflict(item,item.local),'원격 최신: '+this.formatConflict(item,item.remote)]){const cell=document.createElement('span');cell.textContent=text;row.append(cell);}const select=document.createElement('select');select.setAttribute('aria-label',this.describe(item.path));for(const [value,label]of [['','선택 필요'],['local','내 수정 사용'],['remote','원격 값 사용']]){const option=document.createElement('option');option.value=value;option.textContent=label;select.append(option);}row.append(select);controls.push({select,item});fragment.append(row);}body.append(fragment);
+   const actions=document.createElement('div');actions.className='sync-conflict-actions';modal.append(actions);
+   const button=(label,action)=>{const b=document.createElement('button');b.type='button';b.className='rooms-btn';b.textContent=label;b.onclick=action;actions.append(b);return b;};
+   const update=()=>{const selected=controls.reduce((n,c)=>n+!!c.select.value,0);save.disabled=selected!==controls.length;count.textContent=selected+' / '+controls.length+'개 선택 · '+(save.disabled?'모든 항목을 선택하면 저장할 수 있습니다.':'아래 저장 버튼으로 선택을 반영합니다.');};
+   button('충돌 항목 모두 내 수정',()=>{controls.forEach(c=>c.select.value='local');update();});button('충돌 항목 모두 원격 값',()=>{controls.forEach(c=>c.select.value='remote');update();});
+   const save=button('선택을 반영해 저장',()=>{if(save.disabled||this.conflictResolver!==resolve)return;const choices=new Map(controls.map(({item,select})=>[item.key,{signature:item.signature,side:select.value}]));save.disabled=true;this.conflictResolver=null;WebSaveProgress.host();modal.remove();WebSaveProgress.set('merge','선택 반영 중','선택한 값으로 병합한 뒤 업로드·재조회 검증을 진행합니다.');resolve(choices);});save.id='sync-conflict-save';
+   const cancel=button('취소 · 편집 계속',()=>this.cancelConflict());cancel.id='sync-conflict-cancel';controls.forEach(c=>c.select.onchange=update);update();
+   modal.addEventListener('keydown',event=>{event.stopPropagation();if(event.key==='Escape'){event.preventDefault();this.cancelConflict();}});['pointerdown','click','change'].forEach(type=>modal.addEventListener(type,event=>event.stopPropagation()));document.body.append(modal);WebSaveProgress.host(modal,actions);cancel.focus();
   });
  },
- upgradeSnapshot(value){if(!value)return null;const copy=structuredClone(value);for(const row of Object.values(copy.rooms||{})){row['시공사']=row['시공사']||'';row['시공일자']=InspectionDate.iso(row['시공일자']);}return copy;},
+ upgradeSnapshot(value){if(!value)return null;const copy=structuredClone(value);for(const row of Object.values(copy.rooms||{})){row['시공사']=row['시공사']||'';row['시공일자']=InspectionDate.iso(row['시공일자']);}if(copy.scope?.excluded&&!Array.isArray(copy.scope.excluded))for(const entry of OwnerScope.catalog())if(!Object.hasOwn(copy.scope.excluded,entry.id))copy.scope.excluded[entry.id]=false;return copy;},
+ validBaseline(value){try{return !!value&&Object.keys(value.rooms||{}).length===309&&value.scope?.owners&&!Array.isArray(value.scope.owners)&&['에너지솔루션','화학'].every(k=>typeof value.scope.owners[k]==='boolean')&&value.scope?.excluded&&!Array.isArray(value.scope.excluded)&&Object.values(value.scope.excluded).every(v=>typeof v==='boolean')&&Object.keys(value.rooms).every(id=>RoomIndex.get(id))&&!!ModelParameters.validate(value.model);}catch{return false;}},
+ async recoverBaseline(token){
+  const wm=WorkbookManager;if(this.validBaseline(wm.remoteBaseline?.snapshot))return this.upgradeSnapshot(wm.remoteBaseline.snapshot);
+  WebSaveProgress.set('baseline','이전 저장 기준 확인 중','검증된 캐시 또는 이전 Git blob을 확인합니다.');
+  let cached='',cacheSha='';try{cached=localStorage.getItem(WorkspaceStorage.key('cached_balcony_xlsb_b64'))||'';cacheSha=localStorage.getItem(WorkspaceStorage.key('cached_balcony_github_sha'))||'';}catch{}
+  const known=[wm.remoteBaseline?.sha,wm.remoteLoadEvidence?.status==='verified'?wm.remoteLoadEvidence.sha:null,cacheSha,wm.lastVerifiedWebSave?.blobSha].filter((sha,i,all)=>/^[a-f0-9]{40}$/.test(sha||'')&&all.indexOf(sha)===i);
+  for(const sha of known){try{let base64;if(sha===cacheSha&&cached&&await GitHubSaveVerifier.blobSha(cached)===sha)base64=cached;else{const file=await this.resource('https://api.github.com/repos/'+this.repository+'/git/blobs/'+sha,{token});if(file.sha!==sha||file.encoding!=='base64'||await GitHubSaveVerifier.blobSha(file.content)!==sha)continue;base64=file.content;}const snapshot=this.snapshot(XLSX.read(base64,{type:'base64'}));if(!this.validBaseline(snapshot))continue;wm.remoteBaseline={version:1,sha,snapshot};wm.autoSave();return this.upgradeSnapshot(snapshot);}catch(error){console.warn('이전 저장 기준 복구 보류:',error.message);}}
+  return null;
+ },
  async save(token,options={}){
   const wm=WorkbookManager;let expectedRevision=OwnerScope.revision,choices=new Map();wm.syncConflict=false;
   for(let attempt=0;attempt<3;attempt++){
-   const localWb=wm.buildWebSaveWorkbook(),local=this.snapshot(localWb),base=this.upgradeSnapshot(wm.remoteBaseline?.snapshot||null);
+   const base=await this.recoverBaseline(token);WebSaveProgress.set('read','최신 GitHub DB 읽는 중','최신 main SHA와 원본 데이터를 확인합니다.');await WebSaveProgress.paint();
+   const localWb=wm.buildWebSaveWorkbook(),local=this.snapshot(localWb);
    OwnerScope.syncStatus='최신 main DB와 변경 항목 대조 중';OwnerScope.updateStatus();
    const main=await this.readMain(token);if(OwnerScope.revision!==expectedRevision)throw this.error('저장 준비 중 추가 변경이 생겼습니다. 최신 변경을 다시 저장합니다.','newer');
+   WebSaveProgress.set('merge','변경 항목 비교 중','로컬 수정과 원격 변경을 항목별로 대조합니다.');
    const remote=this.snapshot(main.wb,base?.ui||local.ui);let merged=this.merge(base,local,remote,choices);
    if(merged.conflicts.length){
-    wm.syncConflict=true;OwnerScope.syncStatus='동일 항목 충돌 '+merged.conflicts.length+'개 · 웹 저장에서 선택 필요';OwnerScope.updateStatus();
+    wm.syncConflict=true;OwnerScope.syncStatus=(base?'로컬·원격 값 확인 ':'이전 저장 기준 없음 · 값 확인 ')+merged.conflicts.length+'개 · 웹 저장에서 선택 필요';OwnerScope.updateStatus();
     if(options.automatic)throw this.error(OwnerScope.syncStatus,'conflict');
-    const selected=await this.choose(merged.conflicts);if(!selected)throw this.error('충돌 선택 취소 · 로컬 수정 유지','conflict');for(const [key,value]of selected)choices.set(key,value);
+    WebSaveProgress.set('review','사용할 값 선택 대기',merged.conflicts.length+'개 항목을 확인하세요. 아직 업로드하지 않았습니다.');
+    const selected=await this.choose(merged.conflicts,{hasBaseline:!!base});if(!selected)throw this.error('충돌 선택 취소 · 로컬 수정 유지','conflict');for(const [key,value]of selected)choices.set(key,value);
     if(OwnerScope.revision!==expectedRevision)throw this.error('충돌 검토 중 추가 변경이 생겼습니다. 최신 변경을 다시 대조합니다.','newer');merged=this.merge(base,local,remote,choices);if(merged.conflicts.length)throw this.error('미해결 충돌이 있습니다.','conflict');wm.syncConflict=false;
    }
    if(this.stable(merged.value)!==this.stable(local)){
@@ -9071,13 +9098,16 @@ const GitHubWorkbookSync={
     ROOMS_DATA.forEach(room=>wm.recalcRoomGradeAndCost(room));wm.notifyDataMutation({loading:true});expectedRevision=OwnerScope.revision;
    }
    this.remember(main,remote);wm.autoSave();
+   WebSaveProgress.set('prepare','XLSB 파일 구성 중','선택 범위·점검 기록·집계를 검증합니다.');await WebSaveProgress.paint();
    const wb=wm.buildWebSaveWorkbook(),base64=XLSX.write(wb,{bookType:'xlsb',type:'base64'});GitHubSaveVerifier.summarize(base64);
+   WebSaveProgress.set('upload','GitHub 업로드 중','현재 SHA를 조건으로 저장합니다. 완료 후 원격 파일을 다시 검증합니다.');await WebSaveProgress.paint();
    let acknowledgment;
    try{acknowledgment=await this.resource(this.apiUrl,{token,method:'PUT',body:{message:'웹 저장: 발코니 DB 병합 · '+new Date().toISOString(),content:base64,branch:'main',sha:main.sha}});}
    catch(error){
     if(error.status===401||error.status===403)WebSavePatVault.clearStoredGithubToken('save-auth-failed');
-    if((error.status===409||error.status===422&&/sha|conflict/i.test(error.message))&&attempt<2){if(OwnerScope.revision!==expectedRevision)throw this.error('동시 저장 중 로컬 변경이 추가됐습니다. 다시 대조합니다.','newer');continue;}throw error;
+    if((error.status===409||error.status===422&&/sha|conflict/i.test(error.message))&&attempt<2){WebSaveProgress.set('read','최신 변경 재대조 중','저장 중 main이 변경되어 안전하게 다시 병합합니다. ('+(attempt+2)+'/3)');if(OwnerScope.revision!==expectedRevision)throw this.error('동시 저장 중 로컬 변경이 추가됐습니다. 다시 대조합니다.','newer');continue;}throw error;
    }
+   WebSaveProgress.set('verify','원격 저장 재조회 검증 중','전송한 XLSB 바이트·Git SHA·세대 수를 확인합니다.');
    const receipt=await GitHubSaveVerifier.verify({apiUrl:this.apiUrl,token,base64,acknowledgment,revision:expectedRevision});
    this.remember({sha:receipt.blobSha,base64,wb},this.snapshot(wb),!receipt.mainAdvanced);wm.lastVerifiedWebSave=receipt;
    if(receipt.mainAdvanced&&OwnerScope.revision===expectedRevision){
@@ -14607,9 +14637,9 @@ const WorkbookManager = {
         if(this.webSaveInFlight)return false;
         if(!options.automatic&&!RoomInspectionMetadata.flush())return false;
         if(typeof XLSX==='undefined'){if(!options.automatic)alert('엑셀 라이브러리를 불러오는 중입니다.');return false;}
-        this.webSaveInFlight=true;syncWebSaveButtons();let saved=false,saveRevision=OwnerScope.revision;
+        this.webSaveInFlight=true;WebSaveProgress.start(!!options.automatic);syncWebSaveButtons();let saved=false,saveRevision=OwnerScope.revision,saveFailure='';
         try{
-          OwnerScope.syncStatus='인증 및 최신 원격 변경 대조 중';OwnerScope.updateStatus();
+          await WebSaveProgress.paint();OwnerScope.syncStatus='인증 및 최신 원격 변경 대조 중';OwnerScope.updateStatus();
           const token=await WebSavePatVault.ensureToken({allowPrompt:!options.automatic});
           if(!token)throw GitHubWorkbookSync.error('인증 취소/부재 · 로컬 수정 유지','auth');
           // Authentication may have taken time: save the current intent, then track further edits.
@@ -14625,14 +14655,14 @@ const WorkbookManager = {
           showToast('☁️ 저장 검증 완료 · 사택 '+receipt.inspectionBuildings+'개동 '+receipt.inspectionUnits+'세대 · SHA '+receipt.blobSha.slice(0,7)+(OwnerScope.pending?' · 추가 변경 미저장':''));
           try{localStorage.setItem(WorkspaceStorage.key('cached_balcony_save_receipt'),JSON.stringify(receipt));}catch(error){}
         }catch(error){
-          this.isDirty=true;OwnerScope.pending=true;this.remoteSaveVerified=false;
+          saveFailure=error.message;this.isDirty=true;OwnerScope.pending=true;this.remoteSaveVerified=false;
           if(error.syncKind==='conflict'){this.syncConflict=true;OwnerScope.syncStatus=error.message;}
           else if(error.syncKind==='newer')OwnerScope.syncStatus=error.message;
           else OwnerScope.syncStatus='원격 저장 미확인 · '+error.message;
           if(!options.automatic)showToast('⚠️ '+OwnerScope.syncStatus);
           console.warn('웹 저장 보류:',error.message);
         }finally{
-          this.webSaveInFlight=false;this.autoSave();OwnerScope.updateStatus();
+          this.webSaveInFlight=false;this.autoSave();OwnerScope.updateStatus();WebSaveProgress.finish(saved,saved?'SHA '+this.lastVerifiedWebSave.blobSha.slice(0,7)+(OwnerScope.pending?' · 이후 변경은 추가 저장 필요':' · '+this.lastVerifiedWebSave.inspectionBuildings+'개동 '+this.lastVerifiedWebSave.inspectionUnits+'세대 저장 확인'):saveFailure||OwnerScope.syncStatus);
           if(OwnerScope.pending&&!this.syncConflict&&(saved||OwnerScope.revision!==saveRevision))OwnerScope.scheduleSync();
         }
         return saved;
