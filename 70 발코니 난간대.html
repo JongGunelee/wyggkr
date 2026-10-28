@@ -9284,7 +9284,6 @@ const OwnerScope = {
     this._excludedSource = null;
     this._excludedSet = null;
     this._catalog = null;
-    this.revision++;
     if (typeof RoomIndex !== 'undefined' && RoomIndex.invalidate) RoomIndex.invalidate();
     ProgressDashboard.refresh();
     this.updateScopeLabels();
@@ -9331,7 +9330,7 @@ const OwnerScope = {
   },
   scheduleSync() {
     clearTimeout(this.syncTimer);
-    if (!this.pending||WorkspaceStorage.holdAutomatic) return;
+    if (!this.pending||WorkbookManager.webSaveInFlight||WorkspaceStorage.holdAutomatic) return;
     if(WorkbookManager.syncConflict||WorkbookManager.remoteLoadEvidence?.status==='unverified')return;
     this.syncTimer = setTimeout(async () => {
       if (!navigator.onLine) { this.syncStatus = '오프라인 · 로컬 보관, 연결 복구 시 재시도'; this.updateStatus(); return; }
@@ -13640,7 +13639,7 @@ const WorkbookManager = {
         if (typeof renderAnchorDefectList === 'function') {
           renderAnchorDefectList();
         }
-        if(!options.loading) { this.markWebDirty(true); OwnerScope.pending=true; this.autoSave(); OwnerScope.scheduleSync(); }
+        if(!options.loading && !options.saved && !options.postSaveSync) { this.markWebDirty(true); OwnerScope.pending=true; this.autoSave(); OwnerScope.scheduleSync(); }
         OwnerScope.decorate();
       },
 
@@ -14385,7 +14384,7 @@ const WorkbookManager = {
             const wasDirty = options.postSaveSync ? false : this.isDirty;
             if (typeof RoomIndex !== 'undefined' && RoomIndex.invalidate) RoomIndex.invalidate();
             this.viewCache.clear();
-            this.notifyDataMutation({loading:!options.postSaveSync}); this.markWebDirty(wasDirty||bendMetadataUpgrade&&!options.unverifiedFallback);
+            this.notifyDataMutation({loading:true,postSaveSync:!!options.postSaveSync}); this.markWebDirty(wasDirty||bendMetadataUpgrade&&!options.unverifiedFallback);
             OwnerScope.refreshBuildingSheet();
             OwnerScope.render(); OwnerScope.decorate(); OwnerScope.updateScopeLabels();
             if(bendMetadataUpgrade&&!options.unverifiedFallback){OwnerScope.pending=true;OwnerScope.syncStatus="BP 장곡관 설정 보완 · 웹 저장 대기";}
@@ -14705,16 +14704,18 @@ const WorkbookManager = {
           if(!token)throw GitHubWorkbookSync.error('인증 취소/부재 · 로컬 수정 유지','auth');
           // Authentication may have taken time: save the current intent, then track further edits.
           saveRevision=OwnerScope.revision;
-          const result=await GitHubWorkbookSync.save(token,options);saveRevision=result.revision;saved=true;
+          const result=await GitHubWorkbookSync.save(token,options);saved=true;
           this.lastVerifiedWebSave=result.receipt;
           if(!options.automatic&&WorkspaceStorage.holdAutomatic){WorkspaceStorage.recovery.status='current-retained';WorkspaceStorage.showRecovery();}
-          if(OwnerScope.revision===saveRevision){
+          if(OwnerScope.revision===saveRevision||result.revision>=OwnerScope.revision){
+            saveRevision=OwnerScope.revision;
             OwnerScope.pending=false;this.markWebDirty(false);this.remoteSaveVerified=true;
+            clearTimeout(OwnerScope.syncTimer);
             OwnerScope.syncStatus='GitHub XLSB 저장 및 최신 DB 즉시 재매핑 동기화 완료 · SHA '+result.receipt.blobSha.slice(0,7);
           }else{this.isDirty=true;this.remoteSaveVerified=false;OwnerScope.syncStatus='요청 시점 저장은 검증됨 · 이후 변경은 추가 저장 대기';}
           this.viewCache.clear();
           OwnerScope.updateScopeLabels();OwnerScope.refreshBuildingSheet();OwnerScope.render();OwnerScope.decorate();
-          this.notifyDataMutation({loading:false,saved:true});
+          this.notifyDataMutation({loading:true,saved:true});
           this.renderRoomsElevation();this.renderRoomsSummaryTable();this.renderKeyPlan();this.updateRoomsKpiPills();
           if(this.fullscreenBuildingId)this.renderBuildingFullscreen(this.fullscreenBuildingId);
           if(this.activeRoomId){const cur=RoomIndex.get(this.activeRoomId);if(cur){this.renderRoomPointsTable(cur);this.renderRoomLinks(cur);RoomInspectionMetadata.show(cur);this.renderRoomSchematic(cur);}}
@@ -14730,7 +14731,7 @@ const WorkbookManager = {
           console.warn('웹 저장 보류:',error.message);
         }finally{
           this.webSaveInFlight=false;this.autoSave();OwnerScope.updateStatus();WebSaveProgress.finish(saved,saved?'SHA '+this.lastVerifiedWebSave.blobSha.slice(0,7)+(OwnerScope.pending?' · 이후 변경은 추가 저장 필요':' · '+this.lastVerifiedWebSave.inspectionBuildings+'개동 '+this.lastVerifiedWebSave.inspectionUnits+'세대 저장 확인'):saveFailure||OwnerScope.syncStatus);
-          if(OwnerScope.pending&&!this.syncConflict&&(saved||OwnerScope.revision!==saveRevision))OwnerScope.scheduleSync();
+          if(!saved&&OwnerScope.pending&&!this.syncConflict)OwnerScope.scheduleSync();
         }
         return saved;
       },
