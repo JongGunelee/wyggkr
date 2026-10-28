@@ -8818,13 +8818,13 @@ const ProgressDashboard={
  esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));},
  ensureSheet(){const wm=WorkbookManager;if(!wm.sheets[this.id])wm.sheets[this.id]={id:this.id,name:'진행 현황',type:'progress',data:{},activeCell:'A1',rowCount:1,colCount:1};if(!wm.sheetOrder.includes(this.id)){const at=wm.sheetOrder.indexOf('sheet-summary');wm.sheetOrder.splice(at<0?0:at,0,this.id);}},
  snapshot(archive=ROOMS_DATA,scope=OwnerScope.state,keys=INSPECTION_POINT_KEYS){
-  const excluded=new Set(scope.excluded),owners=new Set(scope.owners),selected=r=>owners.has(r.team||OwnerScope.ownerOf(r))&&!excluded.has(r.id),pointStage=p=>p.status!=='uninspected'&&p.progress!=='미점검'&&p.progress!=='점검중'?'complete':p.status!=='uninspected'||(p.progress&&p.progress!=='미점검')?'in_progress':'uninspected';
+  const excluded=new Set(scope.excluded),owners=new Set(scope.owners),selected=r=>owners.has(OwnerScope.ownerOf(r))&&!excluded.has(r.id),pointStage=p=>p.status!=='uninspected'&&p.progress!=='미점검'&&p.progress!=='점검중'?'complete':p.status!=='uninspected'||(p.progress&&p.progress!=='미점검')?'in_progress':'uninspected';
   const s={version:1,owners:[...owners],keys:[...keys],buildings:BUILDING_SPECS.map(b=>({id:b.id,name:b.name,total:0,selected:0,uninspected:0,in_progress:0,complete:0,cost:0,missing:0})),types:['P','BP','Hs'].map(id=>({id,total:0,uninspected:0,in_progress:0,complete:0,cost:0})),safety:{uninspected:0,danger:0,warning:0,good:0,repaired:0},progress:Object.fromEntries(['미점검','점검중','점검완료','조치진행','조치완료'].map(k=>[k,0])),rooms:[],points:[],totals:{buildings:0,units:0,uninspected:0,in_progress:0,complete:0,cost:0,missing:0,points:0}};
   const buildings=new Map(s.buildings.map(b=>[b.id,b])),types=new Map(s.types.map(t=>[t.id,t]));
   archive.forEach(room=>{
    const building=buildings.get(room.buildingId);if(!building)return;building.total++;const include=selected(room);let complete=0,started=0,cost=0;
    keys.forEach(key=>{const p=room.points?.[key]||newInspectionPoint(key),stage=pointStage(p),type=key.startsWith('BP')?'BP':key==='Hs'?'Hs':'P',amount=Number(p.cost)||0;complete+=stage==='complete';started+=stage!=='uninspected';cost+=amount;const progress=getPointProgress(room,key);s.points.push({roomId:room.id,buildingId:room.buildingId,building:building.name,key,type,selected:include,status:p.status,progress,cost:amount,complete:stage==='complete'?1:0,started:stage!=='uninspected'?1:0});if(!include)return;const group=types.get(type);group.total++;group[stage]++;group.cost+=amount;s.safety[p.status in s.safety?p.status:'uninspected']++;if(progress in s.progress)s.progress[progress]++;});
-   const stage=complete===keys.length?'complete':started?'in_progress':'uninspected',missing=stage==='complete'&&(!room.inspector||!InspectionDate.excel(room.inspectDate))?1:0;s.rooms.push({id:room.id,buildingId:room.buildingId,building:building.name,owner:room.team,selected:include,inspector:room.inspector||'',date:InspectionDate.iso(room.inspectDate),contractor:room.contractor||'',constructDate:InspectionDate.iso(room.constructDate),count:keys.length,completePoints:complete,startedPoints:started,stage,cost,missing});
+   const stage=complete===keys.length?'complete':started?'in_progress':'uninspected',missing=stage==='complete'&&(!room.inspector||!InspectionDate.excel(room.inspectDate))?1:0;s.rooms.push({id:room.id,buildingId:room.buildingId,building:building.name,owner:OwnerScope.ownerOf(room),selected:include,inspector:room.inspector||'',date:InspectionDate.iso(room.inspectDate),contractor:room.contractor||'',constructDate:InspectionDate.iso(room.constructDate),count:keys.length,completePoints:complete,startedPoints:started,stage,cost,missing});
    if(include){building.selected++;building[stage]++;building.cost+=cost;building.missing+=missing;}
   });
   s.buildings.forEach(b=>{b.excluded=b.total-b.selected;b.rate=b.selected?b.complete/b.selected:0;if(b.selected)s.totals.buildings++;for(const key of ['uninspected','in_progress','complete','cost','missing'])s.totals[key]+=b[key];s.totals.units+=b.selected;});s.totals.points=s.totals.units*keys.length;s.totals.rate=s.totals.units?s.totals.complete/s.totals.units:0;return s;
@@ -9219,7 +9219,9 @@ const OwnerScope = {
     });
   },
   ownerOf(room) {
-    return /화학/.test(room.team || '') ? '화학' : '에너지솔루션';
+    if (!room) return '에너지솔루션';
+    if (room.owner && ['에너지솔루션', '화학'].includes(room.owner)) return room.owner;
+    return /화학/.test(room.team || room.owner || room['소속배정'] || '') ? '화학' : '에너지솔루션';
   },
   catalog() {
     if (this._catalogSource === ROOMS_DATA && this._catalog) return this._catalog;
@@ -9252,7 +9254,7 @@ const OwnerScope = {
     return result;
   },
   selected(entry) {
-    return this.state.owners.includes(entry.owner || this.ownerOf(entry)) && !this.excludedSet().has(entry.id);
+    return this.state.owners.includes(this.ownerOf(entry)) && !this.excludedSet().has(entry.id);
   },
   excludedSet() {
     if (this._excludedSource !== this.state.excluded) {
@@ -9281,7 +9283,11 @@ const OwnerScope = {
     this.state = { version: 1, owners: [...new Set(value.owners)], excluded: [...new Set(value.excluded)], updatedAt: value.updatedAt || '' };
     this._excludedSource = null;
     this._excludedSet = null;
+    this._catalog = null;
+    this.revision++;
     if (typeof RoomIndex !== 'undefined' && RoomIndex.invalidate) RoomIndex.invalidate();
+    ProgressDashboard.refresh();
+    this.updateScopeLabels();
     return true;
   },
   change(kind, key, checked, owner) {
@@ -9297,6 +9303,12 @@ const OwnerScope = {
     }
     this.state.updatedAt = new Date().toISOString();
     this.pending = true;
+    this.revision++;
+    this._excludedSource = null;
+    this._excludedSet = null;
+    this._catalog = null;
+    if (typeof RoomIndex !== 'undefined' && RoomIndex.invalidate) RoomIndex.invalidate();
+    ProgressDashboard.refresh();
     this.syncStatus = '변경사항 로컬 보관 · 자동 업로드 대기';
     const wm = WorkbookManager;
     if (wm.activeRoomId && !this.rooms().some(r => r.id === wm.activeRoomId)) {
@@ -9307,10 +9319,13 @@ const OwnerScope = {
     if (!this.buildingSelected(wm.selectedBuildingId)) wm.closeSiteInfoCard();
     if (!this.buildingSelected(wm.activeViewpointBuildingId)) wm.activeViewpointBuildingId = null;
     wm.navStack = wm.navStack.filter(n => (!n.roomId || this.rooms().some(r => r.id === n.roomId)) && this.buildingSelected(n.bId || n.bldgId));
-    wm.notifyDataMutation(); wm.renderRoomsElevation(); wm.renderRoomsSummaryTable();
+    wm.notifyDataMutation();
+    this.updateScopeLabels();
+    wm.renderRoomsElevation(); wm.renderRoomsSummaryTable();
     wm.renderRoomsFilterButtons(); wm.renderKeyPlan(); wm.updateRoomsKpiPills();
     if (wm.fullscreenBuildingId) wm.renderBuildingFullscreen(wm.fullscreenBuildingId);
     this.refreshBuildingSheet();
+    if (typeof RenderScheduler !== 'undefined' && RenderScheduler.request) RenderScheduler.request();
     wm.markWebDirty(true); wm.autoSave();
     this.render(); this.decorate(); this.scheduleSync();
   },
@@ -9450,7 +9465,7 @@ const OwnerScope = {
       if (!scopeOverride) return this.selected(r);
       const owners = scopeOverride.owners || [];
       const excluded = new Set(scopeOverride.excluded || []);
-      const owner = r.owner || this.ownerOf(r);
+      const owner = this.ownerOf(r);
       return owners.includes(owner) && !excluded.has(r.id);
     };
     return this.catalog().map(r => ({ '소속': r.owner, '건물동ID': r.buildingId, '건물동': r.buildingName,
@@ -9462,7 +9477,7 @@ const OwnerScope = {
       if (!scopeOverride) return this.selected(r);
       const owners = scopeOverride.owners || [];
       const excluded = new Set(scopeOverride.excluded || []);
-      const owner = r.owner || this.ownerOf(r);
+      const owner = this.ownerOf(r);
       return owners.includes(owner) && !excluded.has(r.id);
     };
     const catalog = this.catalog();
@@ -13604,6 +13619,7 @@ const WorkbookManager = {
         RoomIndex.invalidate();
         ProgressDashboard.refresh();
         OwnerScope._catalog = null;
+        OwnerScope.updateScopeLabels();
         if(this.sheets['sheet-summary']) this.sheets['sheet-summary'].colCount=Math.max(21,this.sheets['sheet-summary'].colCount||0);
         if(this.sheets['sheet-rooms']) this.sheets['sheet-rooms'].colCount=Math.max(22,this.sheets['sheet-rooms'].colCount||0);
         OwnerScope.refreshBuildingSheet();
@@ -14117,11 +14133,11 @@ const WorkbookManager = {
 
       // --- DB 파일 내보내기/저장 및 불러오기 ---
             // --- XLSB 전산 DB 자동 로드 & 양방향 파이프라인 매핑 엔진 ---
-      async loadXlsbDatabase() {
-        if(typeof XLSX==='undefined'){setTimeout(()=>this.loadXlsbDatabase(),300);return false;}
-        if(this.isDirty||OwnerScope.pending||this.webSaveInFlight)return false;
+      async loadXlsbDatabase(options = {}) {
+        if(typeof XLSX==='undefined'){setTimeout(()=>this.loadXlsbDatabase(options),300);return false;}
+        if(!options.force && (this.isDirty||OwnerScope.pending||this.webSaveInFlight))return false;
         if(this.databaseLoadPromise)return this.databaseLoadPromise;
-        const revision=OwnerScope.revision,unchanged=()=>{const valid=!this.isDirty&&!OwnerScope.pending&&!this.webSaveInFlight&&OwnerScope.revision===revision;if(!valid&&this.remoteLoadEvidence?.status==='loading')this.remoteLoadEvidence={status:'deferred',reason:'local-edits'};return valid;};
+        const revision=OwnerScope.revision,unchanged=()=>{const valid=options.force||(!this.isDirty&&!OwnerScope.pending&&!this.webSaveInFlight&&OwnerScope.revision===revision);if(!valid&&this.remoteLoadEvidence?.status==='loading')this.remoteLoadEvidence={status:'deferred',reason:'local-edits'};return valid;};
         const load=async()=>{
           let main,error;
           this.remoteLoadEvidence={status:'loading'};
