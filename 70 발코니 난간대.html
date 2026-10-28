@@ -18811,6 +18811,28 @@ const WorkbookManager = {
         const bQ = document.getElementById(`btn-qhb-d-${pr.id}`);
         if (bQ) bQ.classList.toggle('active', isAct);
       });
+
+      // [Phase 105] 직관 파이프(Standoff) 슬라이더 및 라벨도 깊이 변경 시 실시간 UI 동기화
+      if (typeof LEGACY_POINT_KEYS !== 'undefined' && typeof pointDefinition === 'function') {
+        const setValue = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+        const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+        LEGACY_POINT_KEYS.forEach(key => {
+          const k = pointDefinition(key).anchorKey;
+          setValue('slider-adjust-pipe-' + k, anchorPipeLengths[k]);
+          setValue('slider-pipe-' + k, anchorPipeLengths[k]);
+          setText('label-adjust-pipe-' + k, Math.round(anchorPipeLengths[k] * 1000) + 'mm');
+          setText('label-pipe-' + k, Math.round(anchorPipeLengths[k] * 1000) + 'mm');
+        });
+        ['left', 'right'].forEach(side => {
+          const keys = LEGACY_POINT_KEYS.map(k => pointDefinition(k).anchorKey).filter(k => k.startsWith(side));
+          const values = keys.map(k => anchorPipeLengths[k]);
+          const same = values.every(v => v === values[0]);
+          setValue('slider-adjust-pipe-' + side, values[0]);
+          setValue('slider-pipe-' + side, values[0]);
+          setText('label-adjust-pipe-' + side, same ? Math.round(values[0] * 1000) + 'mm' : '개별값');
+          setText('label-pipe-' + side, same ? Math.round(values[0] * 1000) + 'mm' : '개별값');
+        });
+      }
     }
 
     // [Phase 31] #3. 건물 외벽면 자동 모따기(Chamfer) 절단 포켓 시스템 & 미리보기 뷰
@@ -19532,10 +19554,9 @@ const WorkbookManager = {
         anchorGhostGroup.add(ghost);
         anchorHitTargets.push(discMesh);
 
-        // 2. [Phase 27 신규] 반달 돔 덮개 캡 가상 위치 링 인디케이터 (캡 숨김 시 직관적 복원 제공)
-        const pLen = anchorPipeLengths[key] || 0.097;
+        // 2. [Phase 105 신규] 반달 돔 덮개 캡 가상 위치 링 인디케이터 (앙카 베이스 깊이 연동 무결성 보장)
         const gBaseZ = anchorBaseZ(key);
-        const gCapBaseZ = gBaseZ + Math.min(0.024 + (pLen - 0.097) * 0.40, pLen - 0.015);
+        const gCapBaseZ = gBaseZ + 0.024;
         const ghostCap = new THREE.Group();
         ghostCap.name = `ghost-cap-${key}`;
         ghostCap.position.set(anchorX, anchorY, gCapBaseZ);
@@ -20074,10 +20095,9 @@ const WorkbookManager = {
         // -------------------------------------------------------------
         // Sub-group 3: 반달 돔(Dome) 회전체 덮개 캡 (Domed Escutcheon Cover Cap)
         // -------------------------------------------------------------
-        const pipeLen = anchorPipeLengths[key] || 0.097;
-        // [Phase 28] 직관 파이프 길이에 연동된 반달 돔 덮개 캡 Z위치 산출
-        // (직관 파이프 중간부에 유격 매달림 상태를 유지하며 파이프 길이에 따라 함께 슬라이딩 연동)
-        const capBaseZ = baseZ + Math.min(0.024 + (pipeLen - 0.097) * 0.40, pipeLen - 0.015);
+        // [Phase 105 무결성 동기화] 깊이(Depth) 및 피벗 변경에 따른 앙카 베이스(baseZ) 100% 완전 연동
+        // 앙카 베이스 위치와 일체화되어 어떠한 깊이 조정(0.08m~0.50m)에서도 덮개 캡이 이탈·고정·매립되지 않고 함께 동기화
+        const capBaseZ = baseZ + 0.024;
 
         const capGroup = new THREE.Group();
         capGroup.name = `flange-cover-cap-${key}`;
@@ -20179,14 +20199,13 @@ const WorkbookManager = {
       assemblyProgress = progress;
       const offsets = getExplosionOffsets(progress);
 
-      // 1. 베이스 플레이트 및 덮개 캡 Z축 변위 (Phase 27 덮개 캡 고스트 Z축 동기화 포함)
-      [...ANCHOR_BASE_KEYS,...BOTTOM_POINT_KEYS.map((key,index)=>'bottom-'+(index+1))].forEach(key => {
+      // 1. 베이스 플레이트 및 덮개 캡 Z축 변위 (Phase 105 덮개 캡 앙카 베이스 완전 연동 및 고스트 동기화)
+      physicalAnchorKeys().forEach(key => {
         if (anchorPlateSubGroups[key]) {
           anchorPlateSubGroups[key].position.z = offsets.deltaPlate;
         }
-        const pL = anchorPipeLengths[key] || 0.097;
         const aBaseZ = anchorBaseZ(key);
-        const cBaseZ = aBaseZ + Math.min(0.024 + (pL - 0.097) * 0.40, pL - 0.015);
+        const cBaseZ = aBaseZ + 0.024;
         if (anchorCapSubGroups[key]) {
           anchorCapSubGroups[key].position.z = cBaseZ + offsets.deltaCap;
         }
