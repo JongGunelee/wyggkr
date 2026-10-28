@@ -4630,7 +4630,6 @@
 .progress-section-header{background:#f8fafc;font-weight:700;color:#1e293b;border-top:2px solid #cbd5e1}
 .progress-subtotal-row{background:#f1f5f9;font-weight:700;color:#0f172a;border-top:1px solid #cbd5e1;border-bottom:2px solid #cbd5e1}
 .progress-grand-total-row{background:#e2e8f0;font-weight:800;color:#0f172a;border-top:2px solid #94a3b8;border-bottom:2px solid #94a3b8}
-.progress-dorm-row{color:#64748b;background:#fafafa}
 .room-inspection-metadata{display:flex;gap:16px;flex-wrap:wrap;margin:12px 0 16px;padding:12px;background:#172337;border:1px solid #334155;border-radius:7px}.room-inspection-metadata label{display:flex;align-items:center;gap:8px;font-size:12px;color:#cbd5e1}.room-inspection-metadata input{width:170px;padding:7px 9px;background:#0f172a;border:1px solid #475569;border-radius:5px;color:#f1f5f9}.room-inspection-metadata input[aria-invalid=true]{border-color:#ef4444}
 /* Phase 82: presentation changes chrome only; retain the same canvas and camera. */
 body.model-fullscreen #workbook-bottom-bar{display:none!important}
@@ -8341,16 +8340,16 @@ function syncExtendedPointGeometry() {
         data['M' + row] = selected.filter(e => e.owner === '에너지솔루션').length;
       }
       const total = OwnerScope.totals();
-      data.A1 = '건물 현황 · 선택 ' + total.buildings + '개동 ' + total.units + '세대 (등록 14개동)';
+      data.A1 = '건물 현황 · 선택 ' + total.buildings + '개동 ' + total.units + '세대';
       data.G2 = '선택 대상 세대'; data.H2 = '선택 화학'; data.I2 = '선택 에너지솔루션';
       data.N33 = data.G33; data.G33 = String(total.units); data.H33 = String(OwnerScope.totals('화학').units); data.I33 = String(OwnerScope.totals('에너지솔루션').units);
       data.B33 = '선택 대상 ' + total.buildings + '개동 합계';
-      data.J33 = '앙커 DB ' + total.inspection + '건 · 기숙사 배정 ' + total.dormitory + '세대';
+      data.J33 = '선택 점검 DB ' + total.inspection + '건';
       data.B35 = '선택 사택 ' + OwnerScope.inspectionTotals().buildings + '개동 ' + total.inspection + '세대';
-      data.C35 = '선택 기숙사 ' + total.dormitory + '세대'; data.D35 = '선택 화학 ' + OwnerScope.totals('화학').units + '세대';
+      data.C35 = '선택 대상만 집계'; data.D35 = '선택 화학 ' + OwnerScope.totals('화학').units + '세대';
       data.E35 = '선택 에너지솔루션 ' + OwnerScope.totals('에너지솔루션').units + '세대'; data.F35 = '선택 총 ' + total.units + '세대';
       data.K33 = total.units; data.L33 = OwnerScope.totals('화학').units; data.M33 = OwnerScope.totals('에너지솔루션').units;
-      data.K35 = '대상 ' + total.buildings + '개동'; data.L35 = '앙커 DB ' + total.inspection + '건'; data.M35 = '기숙사 ' + total.dormitory + '세대';
+      data.K35 = '대상 ' + total.buildings + '개동'; data.L35 = '앙커 DB ' + total.inspection + '건'; data.M35 = '비대상 시설 제외';
       data.K36 = '공식 원자료 총계 846'; data.L36 = 'DB 공부방 포함 847건'; data.M36 = 'A동 층별 합계 불일치: 소속 총계 기준';
       return data;
     }
@@ -8604,27 +8603,12 @@ function updateWorkbookScopeContext() {
  if(!strip){strip=document.createElement('div');strip.id='scope-context-strip';
   strip.innerHTML='<span class="scope-context-label">점검 대상</span><span id="scope-context-summary" aria-live="polite"></span><details id="scope-context-details"><summary title="소속별 선택 현황 펼치기">선택 상세</summary><div class="scope-context-popover"><div id="scope-context-breakdown"></div><button type="button" onclick="WorkbookManager.activateTab(\'owner\')">건물주에서 변경</button></div></details>';
   document.body.appendChild(strip);}
- const total=OwnerScope.totals(),inspection=OwnerScope.inspectionTotals();
- const activeOwners=['화학','에너지솔루션'].filter(o=>OwnerScope.state.owners.includes(o));
- let text='';
- if(activeOwners.length>1){
-  const ownerParts=activeOwners.map(owner=>{
-   const t=OwnerScope.totals(owner);
-   return owner+' '+t.buildings+'개동 · '+t.units+'세대 (사택 '+t.inspection+' · 기숙사 '+t.dormitory+')';
-  });
-  text=ownerParts.join(' | ')+' | 총 합계 '+total.buildings+'개동 · '+total.units+'세대 선택';
- }else if(activeOwners.length===1){
-  const owner=activeOwners[0],t=OwnerScope.totals(owner);
-  text=owner+' '+t.buildings+'개동 · '+t.units+'세대 (사택 '+t.inspection+' · 기숙사 '+t.dormitory+') | 총 합계 '+total.buildings+'개동 · '+total.units+'세대 선택';
- }else{
-  text='소속 미선택 | 총 합계 0개동 · 0세대 선택';
- }
+ const total=OwnerScope.totals(),active=['에너지솔루션','화학'].filter(o=>OwnerScope.totals(o).units>0);
+ const lines=active.map(owner=>{const t=OwnerScope.totals(owner);return owner+' '+t.buildings+'개동 · '+t.units+'세대';});
+ const text=lines.length?lines.join(' | ')+(lines.length>1?' | 합계 '+total.buildings+'개동 · '+total.units+'세대':''):'선택된 점검 대상 없음';
  const summary=document.getElementById('scope-context-summary');if(summary.textContent!==text)summary.textContent=text;
- strip.dataset.tab=WorkbookManager.activeTabId;
- strip.title='화학: 사택 '+OwnerScope.totals('화학').inspection+'세대(기숙사 '+OwnerScope.totals('화학').dormitory+'세대) · 에너지솔루션: 사택 '+OwnerScope.totals('에너지솔루션').inspection+'세대(기숙사 '+OwnerScope.totals('에너지솔루션').dormitory+'세대) · 총 합계 '+total.buildings+'개동 '+total.units+'세대';
- document.getElementById('scope-context-breakdown').textContent=['화학','에너지솔루션'].map(owner=>{
-  const t=OwnerScope.totals(owner);return owner+': '+t.buildings+'개동 · '+t.units+'/'+t.total+'세대 (사택 '+t.inspection+', 기숙사 '+t.dormitory+')';
- }).join('\n')+'\n──────────────────────────────\n총 합계: '+total.buildings+'개동 · '+total.units+'세대 (사택 점검 '+inspection.buildings+'개동 '+inspection.units+'세대, 기숙사 배정 '+total.dormitory+'세대)\n제외 대상의 기록은 보존하며 선택·계산에서 제외합니다.';
+ strip.dataset.tab=WorkbookManager.activeTabId;strip.title=text;
+ document.getElementById('scope-context-breakdown').textContent=lines.join('\n')+'\n제외 대상의 기록은 보존하며 선택·계산에서 제외합니다.';
  syncWebSaveButtons();
 }
 function syncWebSaveButtons() {
@@ -8779,8 +8763,8 @@ const GitHubSaveVerifier = {
   const model=JSON.parse(XLSX.utils.sheet_to_json(wb.Sheets['난간_모델_설정'])[0]['설정JSON']);
   const targets=XLSX.utils.sheet_to_json(wb.Sheets['건물주_대상']),selected=targets.filter(row=>row['점검대상']==='선택');
   const ids=new Set(selected.map(row=>row['세대ID'])),apt=rows.filter(row=>ids.has(row['세대ID']));
-  const excluded=new Set(scope.excluded||[]),catalog=new Set(OwnerScope.catalog().map(entry=>entry.id));
-  if(targets.length!==catalog.size||new Set(targets.map(row=>row['세대ID'])).size!==catalog.size||targets.some(row=>!catalog.has(row['세대ID'])||(row['점검대상']==='선택')!==(scope.owners.includes(row['소속'])&&!excluded.has(row['세대ID']))))throw Error('건물주 설정과 대상 세대 시트가 일치하지 않습니다.');
+  const excluded=new Set(scope.excluded||[]),catalog=new Map(OwnerScope.catalog().map(entry=>[entry.id,entry]));
+  if(targets.length!==catalog.size||new Set(targets.map(row=>row['세대ID'])).size!==catalog.size||targets.some(row=>!catalog.has(row['세대ID'])||(row['점검대상']==='선택')!==OwnerScope.selected(catalog.get(row['세대ID']),scope,excluded)))throw Error('건물주 설정과 대상 세대 시트가 일치하지 않습니다.');
   const expectedIds=new Set(generateDeterministicRooms().map(room=>room.id));
   const constructionHeaders=['시공사','시공일자'].filter(key=>headers.includes(key)).length;if(constructionHeaders===1)throw Error('시공 정보 열이 일부 누락되었습니다.');
   if(rows.length!==expectedIds.size||new Set(rows.map(r=>r['세대ID'])).size!==expectedIds.size||rows.some(row=>!expectedIds.has(row['세대ID']))||headers.length!==77+(model.storedCount-6)*5+constructionHeaders)throw Error('재조회 파일의 세대/열 수가 올바르지 않습니다.');
@@ -8859,7 +8843,7 @@ const ProgressDashboard={
  ensureSheet(){const wm=WorkbookManager;if(!wm.sheets[this.id])wm.sheets[this.id]={id:this.id,name:'진행 현황',type:'progress',data:{},activeCell:'A1',rowCount:1,colCount:1};if(!wm.sheetOrder.includes(this.id)){const at=wm.sheetOrder.indexOf('sheet-summary');wm.sheetOrder.splice(at<0?0:at,0,this.id);}},
  setOwnerFilter(owner){this.filterOwner=owner;this.render();},
  snapshot(archive=ROOMS_DATA,scope=OwnerScope.state,keys=INSPECTION_POINT_KEYS){
-  const excluded=new Set(scope.excluded),owners=new Set(scope.owners),selected=r=>owners.has(OwnerScope.ownerOf(r))&&!excluded.has(r.id),pointStage=p=>p.status!=='uninspected'&&p.progress!=='미점검'&&p.progress!=='점검중'?'complete':p.status!=='uninspected'||(p.progress&&p.progress!=='미점검')?'in_progress':'uninspected';
+  const excluded=new Set(scope.excluded),owners=new Set(scope.owners),selected=r=>OwnerScope.selected(r,scope,excluded),pointStage=p=>p.status!=='uninspected'&&p.progress!=='미점검'&&p.progress!=='점검중'?'complete':p.status!=='uninspected'||(p.progress&&p.progress!=='미점검')?'in_progress':'uninspected';
   const makeOwnerTotals=(owner)=>({owner,buildings:0,selectedBuildings:0,totalUnits:0,selectedUnits:0,excludedUnits:0,uninspected:0,in_progress:0,complete:0,cost:0,missing:0,rate:0,types:['P','BP','Hs'].map(id=>({id,total:0,uninspected:0,in_progress:0,complete:0,cost:0})),safety:{uninspected:0,danger:0,warning:0,good:0,repaired:0},progress:Object.fromEntries(['미점검','점검중','점검완료','조치진행','조치완료'].map(k=>[k,0]))});
   const s={
    version:1,owners:[...owners],keys:[...keys],
@@ -8920,127 +8904,20 @@ const ProgressDashboard={
   s.totals.points=s.totals.units*keys.length;
   s.totals.rate=s.totals.units?s.totals.complete/s.totals.units:0;
 
-  const dormCatalog=OwnerScope.catalog().filter(r=>!r.inspection);
-  const dormBuildings=[
-   {id:'dorm-3',name:'기숙사 3동',floors:5,total:145,esTotal:116,chemTotal:29,remark:'5층(29실) 화학, 1~4층(116실) 엔솔'},
-   {id:'dorm-a',name:'기숙사 A동',floors:11,total:203,esTotal:202,chemTotal:1,remark:'11층 6호실(1실) 화학, 2~10층+VIP 1~5(202실) 엔솔'},
-   {id:'dorm-b',name:'기숙사 B동',floors:10,total:190,esTotal:102,chemTotal:88,remark:'2~5층(88실) 화학, 6~10층(102실) 엔솔'}
-  ];
-  dormBuildings.forEach(d=>{
-   const entries=dormCatalog.filter(r=>r.buildingId===d.id);
-   d.selected=entries.filter(r=>OwnerScope.selected(r)).length;
-   d.esSelected=entries.filter(r=>r.owner==='에너지솔루션'&&OwnerScope.selected(r)).length;
-   d.chemSelected=entries.filter(r=>r.owner==='화학'&&OwnerScope.selected(r)).length;
-   d.excluded=d.total-d.selected;
-  });
-  s.dormitory={
-   buildings:3,
-   totalUnits:538,
-   selectedUnits:dormBuildings.reduce((sum,d)=>sum+d.selected,0),
-   esTotal:420,
-   esSelected:dormBuildings.reduce((sum,d)=>sum+d.esSelected,0),
-   chemTotal:118,
-   chemSelected:dormBuildings.reduce((sum,d)=>sum+d.chemSelected,0),
-   list:dormBuildings
-  };
-  s.grandTotals={
-   totalBuildings:14,
-   selectedBuildings:s.totals.buildings+dormBuildings.filter(d=>d.selected>0).length,
-   totalUnits:847,
-   selectedUnits:s.totals.units+s.dormitory.selectedUnits,
-   inspectionUnits:s.totals.units,
-   dormitoryUnits:s.dormitory.selectedUnits
-  };
   return s;
  },
  viewSnapshot(s, filter=this.filterOwner){
-  const activeOwners = ['에너지솔루션','화학'].filter(o => s.byOwner[o] && s.byOwner[o].selectedUnits > 0);
-  if (filter !== 'all' && s.byOwner[filter] && activeOwners.includes(filter)) {
-   const ob=s.byOwner[filter];
-   const bldgs=s.buildings.filter(b=>b.owner===filter && b.selected > 0);
-   return {
-    version:s.version,
-    owners:[filter],
-    filter,
-    keys:s.keys,
-    buildings:bldgs,
-    byOwner:s.byOwner,
-    types:ob.types,
-    safety:ob.safety,
-    progress:ob.progress,
-    rooms:s.rooms.filter(r=>r.owner===filter),
-    points:s.points.filter(p=>bldgs.some(b=>b.id===p.buildingId)),
-    totals:{
-     buildings:ob.selectedBuildings,
-     units:ob.selectedUnits,
-     uninspected:ob.uninspected,
-     in_progress:ob.in_progress,
-     complete:ob.complete,
-     cost:ob.cost,
-     missing:ob.missing,
-     points:ob.selectedUnits*s.keys.length,
-     rate:ob.rate
-    },
-    dormitory:s.dormitory,
-    grandTotals:s.grandTotals
-   };
-  }
-  if (activeOwners.length === 1) {
-   const single = activeOwners[0];
-   const ob = s.byOwner[single];
-   const bldgs = s.buildings.filter(b => b.owner === single && b.selected > 0);
-   return {
-    version:s.version,
-    owners:[single],
-    filter:single,
-    keys:s.keys,
-    buildings:bldgs,
-    byOwner:s.byOwner,
-    types:ob.types,
-    safety:ob.safety,
-    progress:ob.progress,
-    rooms:s.rooms.filter(r=>r.owner===single),
-    points:s.points.filter(p=>bldgs.some(b=>b.id===p.buildingId)),
-    totals:{
-     buildings:ob.selectedBuildings,
-     units:ob.selectedUnits,
-     uninspected:ob.uninspected,
-     in_progress:ob.in_progress,
-     complete:ob.complete,
-     cost:ob.cost,
-     missing:ob.missing,
-     points:ob.selectedUnits*s.keys.length,
-     rate:ob.rate
-    },
-    dormitory:s.dormitory,
-    grandTotals:s.grandTotals
-   };
-  }
-  if (activeOwners.length === 0) {
-   return {
-    version:s.version,
-    owners:[],
-    filter:'none',
-    keys:s.keys,
-    buildings:[],
-    byOwner:s.byOwner,
-    types:[{key:'P',label:'외벽 P',uninspected:0,in_progress:0,complete:0},{key:'BP',label:'하부 BP',uninspected:0,in_progress:0,complete:0},{key:'Hs',label:'수평 Hs',uninspected:0,in_progress:0,complete:0}],
-    safety:{uninspected:0,danger:0,warning:0,good:0,repaired:0},
-    progress:{'1단계':0,'2단계':0,'3단계':0,'4단계':0,'5단계':0},
-    rooms:[],
-    points:[],
-    totals:{buildings:0,units:0,uninspected:0,in_progress:0,complete:0,cost:0,missing:0,points:0,rate:0},
-    dormitory:s.dormitory,
-    grandTotals:s.grandTotals
-   };
-  }
-  return {
-   ...s,
-   buildings: s.buildings.filter(b => b.selected > 0)
-  };
+  const active=s.owners.filter(o=>s.byOwner[o]?.selectedUnits>0);
+  const owner=active.length===1?active[0]:active.includes(filter)?filter:null;
+  const buildings=s.buildings.filter(b=>b.selected>0&&(!owner||b.owner===owner));
+  if(!owner)return {...s,owners:active,filter:'all',buildings};
+  const o=s.byOwner[owner];
+  return {...s,owners:[owner],filter:owner,buildings,types:o.types,safety:o.safety,progress:o.progress,
+   totals:{buildings:o.selectedBuildings,units:o.selectedUnits,uninspected:o.uninspected,in_progress:o.in_progress,
+    complete:o.complete,cost:o.cost,missing:o.missing,points:o.selectedUnits*s.keys.length,rate:o.rate}};
  },
 
-  current(){const key=JSON.stringify([OwnerScope.revision,RoomIndex.version,OwnerScope.state,INSPECTION_POINT_KEYS,this.filterOwner]);if(this.cache?.key!==key)this.cache={key,value:this.snapshot()};return this.cache.value;},
+  current(){const key=JSON.stringify([OwnerScope.revision,RoomIndex.version,OwnerScope.state,INSPECTION_POINT_KEYS]);if(this.cache?.key!==key)this.cache={key,value:this.snapshot()};return this.cache.value;},
  charts(s){
   const c=this.colors,series=(name,color,values,column)=>({name,color,values,column});
   const showOwnerTag=s.buildings.some(b=>b.owner==='화학') && s.buildings.some(b=>b.owner==='에너지솔루션');
@@ -9071,151 +8948,40 @@ const ProgressDashboard={
  svg(s,width=1440){
   const view=this.viewSnapshot(s);
   const w=Math.max(340,Math.round(width)),cols=w<850?1:2,kCols=w<620?2:6,gap=16,pad=18,kHeight=Math.ceil(6/kCols)*76,chartTop=94+kHeight,cardW=(w-pad*2-gap*(cols-1))/cols,height=chartTop+Math.ceil(6/cols)*292+(w<620?110:86);
-  const titleSuffix=this.filterOwner==='에너지솔루션'?' · ⚡ 에너지솔루션 사택 (8개동 241세대)':this.filterOwner==='화학'?' · 🧪 화학 사택 (3개동 68세대)':' · 🏢 단지 전체 (엔솔 8개동 + 화학 3개동 · 기숙사 3개동 연계)';
-  let out=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${height}" viewBox="0 0 ${w} ${height}" role="img" aria-label="안전점검 진행 현황"><rect width="100%" height="100%" fill="#f1f5f9"/><g font-family="Malgun Gothic,Arial,sans-serif" fill="#17253b"><text x="${pad}" y="34" font-size="22" font-weight="700">안전점검 진행 현황${titleSuffix}</text><text x="${pad}" y="60" font-size="12" fill="#475569">건물주 탭 연동: 사택 11개동(309세대) 앙커 점검 DB + 기숙사 3개동(538세대) 배정 관리 · Hs는 세대당 1항목</text>`;
+  const titleSuffix=w<620?'': ' · '+this.esc(view.owners.join(' · ')||'선택 없음');
+  let out=`<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${height}" viewBox="0 0 ${w} ${height}" role="img" aria-label="안전점검 진행 현황"><rect width="100%" height="100%" fill="#f1f5f9"/><g font-family="Malgun Gothic,Arial,sans-serif" fill="#17253b"><text x="${pad}" y="34" font-size="22" font-weight="700">안전점검 진행 현황${titleSuffix}</text><text x="${pad}" y="60" font-size="12" fill="#475569">선택 ${view.totals.buildings}개동 · ${view.totals.units}세대 · Hs는 세대당 1항목</text>`;
   this.kpis(view).forEach(([label,value,unit],i)=>{const kw=(w-pad*2-gap*(kCols-1))/kCols,x=pad+(i%kCols)*(kw+gap),y=80+Math.floor(i/kCols)*76;out+=`<rect x="${x}" y="${y}" width="${kw}" height="62" rx="7" fill="#fff" stroke="#dce3ed"/><text x="${x+12}" y="${y+21}" font-size="11" fill="#64748b">${label}</text><text x="${x+12}" y="${y+47}" font-size="${kw<160?19:23}" font-weight="700">${value}<tspan font-size="11" font-weight="400"> ${unit}</tspan></text>`;});
   this.charts(view).forEach((c,i)=>out+=`<g transform="translate(${pad+(i%cols)*(cardW+gap)} ${chartTop+Math.floor(i/cols)*292})">${this.chartSvg(c,cardW)}</g>`);
-  out+=w<620?`<text x="${pad}" y="${height-70}" font-size="11" fill="#475569">점검완료: 세대 내 적용 부위 전체 점검 완료 · 집행비: 실제 입력 비용 합계</text><text x="${pad}" y="${height-48}" font-size="11" fill="#475569">점검인/날짜 확인 필요 ${view.totals.missing}세대</text><text x="${pad}" y="${height-26}" font-size="11" fill="#64748b">단지 14개동 847세대 연동 (사택 11개동 309세대 + 기숙사 3개동 538세대)</text></g></svg>`:`<text x="${pad}" y="${height-50}" font-size="12" fill="#475569">점검완료: 적용 부위 전체 점검 완료 · 점검중: 일부 부위 착수 · 집행비: 입력된 실제 보강비용 합계</text><text x="${pad}" y="${height-26}" font-size="12" fill="#475569">점검완료 세대 중 점검인/날짜 확인 필요 ${view.totals.missing}세대 · 단지 전체 14개동 847세대(사택 11개동 309세대 + 기숙사 3개동 538세대 층별배정) 건물주 탭 연동 완료</text></g></svg>`;
+  out+=w<620?`<text x="${pad}" y="${height-70}" font-size="11" fill="#475569">점검완료: 세대 내 적용 부위 전체 점검 완료 · 집행비: 실제 입력 비용 합계</text><text x="${pad}" y="${height-48}" font-size="11" fill="#475569">점검인/날짜 확인 필요 ${view.totals.missing}세대</text><text x="${pad}" y="${height-26}" font-size="11" fill="#64748b">건물주 선택 연동 · ${view.totals.buildings}개동 ${view.totals.units}세대</text></g></svg>`:`<text x="${pad}" y="${height-50}" font-size="12" fill="#475569">점검완료: 적용 부위 전체 점검 완료 · 점검중: 일부 부위 착수 · 집행비: 입력된 실제 보강비용 합계</text><text x="${pad}" y="${height-26}" font-size="12" fill="#475569">점검완료 세대 중 점검인/날짜 확인 필요 ${view.totals.missing}세대 · 건물주 선택 연동 · ${view.totals.buildings}개동 ${view.totals.units}세대</text></g></svg>`;
   return out;
  },
  render(){
-  if(WorkbookManager.activeTabId!==this.id)return;let root=document.getElementById('progress-workspace-container');if(!root){root=document.createElement('div');root.id='progress-workspace-container';document.getElementById('sheet-workspace').append(root);}root.style.display='block';
-  const s=this.current();
-  const es=s.byOwner['에너지솔루션'], chem=s.byOwner['화학'], dorm=s.dormitory, grand=s.grandTotals;
-  const esActive = es && es.selectedUnits > 0;
-  const chemActive = chem && chem.selectedUnits > 0;
-
-  if (this.filterOwner === '화학' && !chemActive) {
-    this.filterOwner = esActive ? '에너지솔루션' : 'all';
-  } else if (this.filterOwner === '에너지솔루션' && !esActive) {
-    this.filterOwner = chemActive ? '화학' : 'all';
-  }
-
+  if(WorkbookManager.activeTabId!==this.id)return;
+  let root=document.getElementById('progress-workspace-container');
+  if(!root){root=document.createElement('div');root.id='progress-workspace-container';document.getElementById('sheet-workspace').append(root);}
+  root.style.display='block';
+  const s=this.current(),active=s.owners.filter(o=>s.byOwner[o]?.selectedUnits>0);
+  if(active.length<2||!active.includes(this.filterOwner))this.filterOwner='all';
+  const view=this.viewSnapshot(s),money=n=>n.toLocaleString('ko-KR');
   this.lastWidth=Math.max(340,root.clientWidth-24);
-
-  const esBuildings=s.buildings.filter(b=>b.owner==='에너지솔루션');
-  const chemBuildings=s.buildings.filter(b=>b.owner==='화학');
-
-  const makeRow=(b)=>`<tr${b.selected?'':' class="owner-excluded" title="선택되지 않아 점검·계산에서 제외됩니다."'}><td>${this.esc(b.name)}</td>${[b.total,b.selected,b.uninspected,b.in_progress,b.complete,(b.rate*100).toFixed(1)+'%',b.cost.toLocaleString()].map(x=>'<td>'+x+'</td>').join('')}</tr>`;
-
-  const esRows=esBuildings.map(makeRow).join('');
-  const esSubtotal=`<tr class="progress-subtotal-row"><td>⚡ 에너지솔루션 소계 (${es.buildings}개동)</td><td>${es.totalUnits}</td><td>${es.selectedUnits}</td><td>${es.uninspected}</td><td>${es.in_progress}</td><td>${es.complete}</td><td>${(es.rate*100).toFixed(1)}%</td><td>${es.cost.toLocaleString()}</td></tr>`;
-
-  const chemRows=chemBuildings.map(makeRow).join('');
-  const chemSubtotal=`<tr class="progress-subtotal-row"><td>🧪 화학 소계 (${chem.buildings}개동)</td><td>${chem.totalUnits}</td><td>${chem.selectedUnits}</td><td>${chem.uninspected}</td><td>${chem.in_progress}</td><td>${chem.complete}</td><td>${(chem.rate*100).toFixed(1)}%</td><td>${chem.cost.toLocaleString()}</td></tr>`;
-
-  const dormRows=dorm.list.map(d=>`<tr class="progress-dorm-row${d.selected?'':' owner-excluded'}"><td>${this.esc(d.name)} (${d.floors}층)</td><td>${d.total}</td><td>${d.selected}</td><td colspan="4" style="text-align:center;color:#64748b;font-size:11px;">🏢 ${this.esc(d.remark)} · 층별 배정 관리 (앙커 DB 비대상)</td><td style="color:#94a3b8;">-</td></tr>`).join('');
-  const dormSubtotal=`<tr class="progress-subtotal-row" style="background:#f8fafc;color:#475569;"><td>🏢 기숙사 배정 소계 (3개동)</td><td>${dorm.totalUnits}</td><td>${dorm.selectedUnits}</td><td colspan="4" style="text-align:center;font-size:11px;color:#64748b;">엔솔 배정 ${dorm.esSelected}/${dorm.esTotal}실 · 화학 배정 ${dorm.chemSelected}/${dorm.chemTotal}실</td><td style="color:#94a3b8;">-</td></tr>`;
-
-  const bldgTotalRow=`<tr class="progress-subtotal-row" style="background:#e0f2fe;font-weight:800;color:#0369a1;"><td>🏢 사택 앙커 점검 DB 합계 (${s.buildings.reduce((a,b)=>a+(b.selected>0?1:0),0)}개동)</td><td>${s.buildings.reduce((a,b)=>a+b.total,0)}</td><td>${s.totals.units}</td><td>${s.totals.uninspected}</td><td>${s.totals.in_progress}</td><td>${s.totals.complete}</td><td>${(s.totals.rate*100).toFixed(1)}%</td><td>${s.totals.cost.toLocaleString()}</td></tr>`;
-  const grandTotalRow=`<tr class="progress-grand-total-row"><td>🌐 단지 전체 총계 (14개동 연동)</td><td>${grand.totalUnits}</td><td>${grand.selectedUnits}</td><td colspan="4" style="text-align:center;font-weight:700;color:#1e293b;">사택 11개동 (${s.totals.units}세대) + 기숙사 3개동 (${dorm.selectedUnits}세대)</td><td>${s.totals.cost.toLocaleString()}</td></tr>`;
-
-  root.innerHTML=`
-   <div class="progress-actions">
-     <button class="rooms-btn web-save-btn" onclick="WorkbookManager.executeWebSave()">☁️ 웹 저장</button>
-     <button class="rooms-btn excel-save-btn" onclick="WorkbookManager.exportExcelWithValidation()">Excel 차트·데이터</button>
-     <button class="rooms-btn" onclick="ProgressDashboard.downloadPng()">화면 PNG</button>
-   </div>
-   <div class="progress-owner-filter-bar">
-     <span class="pob-label">건물주별 분리 보기:</span>
-     ${(esActive && chemActive) ? `
-     <button type="button" class="pob-btn ${this.filterOwner==='all'?'active':''}" onclick="ProgressDashboard.setOwnerFilter('all')">🏢 전체 (${s.totals.buildings}개동 ${s.totals.units}세대 연동)</button>
-     <button type="button" class="pob-btn ${this.filterOwner==='에너지솔루션'?'active':''}" onclick="ProgressDashboard.setOwnerFilter('에너지솔루션')">⚡ 에너지솔루션 (${es.buildings}개동 ${es.selectedUnits}/${es.totalUnits}세대)</button>
-     <button type="button" class="pob-btn ${this.filterOwner==='화학'?'active':''}" onclick="ProgressDashboard.setOwnerFilter('화학')">🧪 화학 (${chem.buildings}개동 ${chem.selectedUnits}/${chem.totalUnits}세대)</button>
-     ` : (esActive ? `
-     <button type="button" class="pob-btn active" onclick="ProgressDashboard.setOwnerFilter('에너지솔루션')">⚡ 에너지솔루션 (${es.buildings}개동 ${es.selectedUnits}/${es.totalUnits}세대)</button>
-     ` : (chemActive ? `
-     <button type="button" class="pob-btn active" onclick="ProgressDashboard.setOwnerFilter('화학')">🧪 화학 (${chem.buildings}개동 ${chem.selectedUnits}/${chem.totalUnits}세대)</button>
-     ` : `
-     <span style="color:#94a3b8;font-size:12.5px;padding:4px 8px;">⚠️ 선택된 건물주가 없습니다. '건물주' 탭에서 세대를 선택해주세요.</span>
-     `))}
-   </div>
-   <div class="progress-owner-cards">
-     ${esActive ? `
-     <div class="progress-owner-card es">
-       <div class="poc-header">
-         <span class="poc-title">⚡ 에너지솔루션 사택</span>
-         <span class="poc-badge" style="background:#e0f2fe;color:#0369a1">${es.selectedBuildings} / ${es.buildings}개동 선택</span>
-       </div>
-       <div style="font-size:12px;color:#475569;margin-bottom:6px">사택 8개동 대상 앙커 점검 DB (총 ${es.totalUnits}세대)</div>
-       <div class="poc-stats">
-         <div class="poc-stat-item"><div class="poc-stat-val" style="color:#0284c7">${es.selectedUnits}</div><div class="poc-stat-lbl">선택 대상</div></div>
-         <div class="poc-stat-item"><div class="poc-stat-val" style="color:#10b981">${es.complete}</div><div class="poc-stat-lbl">점검완료 (${(es.rate*100).toFixed(1)}%)</div></div>
-         <div class="poc-stat-item"><div class="poc-stat-val" style="color:#f59e0b">${es.in_progress}</div><div class="poc-stat-lbl">점검중</div></div>
-       </div>
-       <div style="margin-top:8px;font-size:11px;color:#64748b;display:flex;justify-content:space-between">
-         <span>누적 집행비: ₩${es.cost.toLocaleString()}원</span>
-         <span>기숙사 연계: 420실 (배정 전용)</span>
-       </div>
-     </div>` : ''}
-     ${chemActive ? `
-     <div class="progress-owner-card chem">
-       <div class="poc-header">
-         <span class="poc-title">🧪 화학 사택</span>
-         <span class="poc-badge" style="background:#fef3c7;color:#b45309">${chem.selectedBuildings} / ${chem.buildings}개동 선택</span>
-       </div>
-       <div style="font-size:12px;color:#475569;margin-bottom:6px">사택 3개동 대상 앙커 점검 DB (총 ${chem.totalUnits}세대)</div>
-       <div class="poc-stats">
-         <div class="poc-stat-item"><div class="poc-stat-val" style="color:#d97706">${chem.selectedUnits}</div><div class="poc-stat-lbl">선택 대상</div></div>
-         <div class="poc-stat-item"><div class="poc-stat-val" style="color:#10b981">${chem.complete}</div><div class="poc-stat-lbl">점검완료 (${(chem.rate*100).toFixed(1)}%)</div></div>
-         <div class="poc-stat-item"><div class="poc-stat-val" style="color:#f59e0b">${chem.in_progress}</div><div class="poc-stat-lbl">점검중</div></div>
-       </div>
-       <div style="margin-top:8px;font-size:11px;color:#64748b;display:flex;justify-content:space-between">
-         <span>누적 집행비: ₩${chem.cost.toLocaleString()}원</span>
-         <span>기숙사 연계: 118실 (배정 전용)</span>
-       </div>
-     </div>` : ''}
-     ${(esActive && chemActive) ? `
-     <div class="progress-owner-card dorm">
-       <div class="poc-header">
-         <span class="poc-title">🏢 단지 연계 종합 (기숙사 배정)</span>
-         <span class="poc-badge" style="background:#f1f5f9;color:#334155">${grand.selectedBuildings} / ${grand.totalBuildings}개동 선택</span>
-       </div>
-       <div style="font-size:12px;color:#475569;margin-bottom:6px">단지 전체 14개동 847세대 건물주 연동</div>
-       <div class="poc-stats">
-         <div class="poc-stat-item"><div class="poc-stat-val" style="color:#475569">${grand.selectedUnits}</div><div class="poc-stat-lbl">단지 전체 선택</div></div>
-         <div class="poc-stat-item"><div class="poc-stat-val" style="color:#0284c7">${s.totals.units}</div><div class="poc-stat-lbl">사택 앙커 DB</div></div>
-         <div class="poc-stat-item"><div class="poc-stat-val" style="color:#64748b">${dorm.selectedUnits}</div><div class="poc-stat-lbl">기숙사 배정</div></div>
-       </div>
-       <div style="margin-top:8px;font-size:11px;color:#64748b;display:flex;justify-content:space-between">
-         <span>기숙사 3개동 538실: 엔솔 420실 / 화학 118실</span>
-         <span>발코니 앙커 점검 DB 비대상</span>
-       </div>
-     </div>` : ''}
-     ${(!esActive && !chemActive) ? `
-     <div style="padding:24px;text-align:center;color:#64748b;background:#f8fafc;border-radius:8px;border:1px dashed #cbd5e1;grid-column:1/-1;">선택된 건물주 또는 세대가 없습니다. '건물주' 탭에서 점검 대상을 선택해주세요.</div>
-     ` : ''}
-   </div>
+  const row=b=>`<tr data-progress-building="${this.esc(b.id)}"><td>${this.esc(b.name)}</td>${[b.total,b.selected,b.uninspected,b.in_progress,b.complete,(b.rate*100).toFixed(1)+'%',money(b.cost)].map(v=>'<td>'+v+'</td>').join('')}</tr>`;
+  const card=owner=>{const o=s.byOwner[owner];return `<div class="progress-owner-card ${owner==='화학'?'chem':'es'}">
+   <div class="poc-header"><span class="poc-title">${this.esc(owner)} · 안전점검</span><span class="poc-badge">${o.selectedBuildings}개동 선택</span></div>
+   <div class="poc-stats"><div class="poc-stat-item"><div class="poc-stat-val">${o.selectedUnits}</div><div class="poc-stat-lbl">점검 대상 세대</div></div><div class="poc-stat-item"><div class="poc-stat-val">${o.complete}</div><div class="poc-stat-lbl">점검완료 (${(o.rate*100).toFixed(1)}%)</div></div><div class="poc-stat-item"><div class="poc-stat-val">${o.in_progress}</div><div class="poc-stat-lbl">점검중</div></div></div>
+   <div>누적 집행비: ₩${money(o.cost)}</div></div>`;};
+  root.innerHTML=`<div class="progress-actions">
+   <button class="rooms-btn web-save-btn" onclick="WorkbookManager.executeWebSave()">☁️ 웹 저장</button>
+   <button class="rooms-btn excel-save-btn" onclick="WorkbookManager.exportExcelWithValidation()">Excel 차트·데이터</button>
+   <button class="rooms-btn" onclick="ProgressDashboard.downloadPng()">화면 PNG</button></div>
+   ${active.length>=2?`<div class="progress-owner-filter-bar"><span class="pob-label">건물주별 보기:</span>${['all',...active].map(o=>`<button type="button" class="pob-btn ${this.filterOwner===o?'active':''}" onclick="ProgressDashboard.setOwnerFilter('${o}')">${o==='all'?'선택 전체':this.esc(o)}</button>`).join('')}</div>`:''}
+   <div class="progress-owner-cards">${view.owners.map(card).join('')}
+   ${active.length>=2&&this.filterOwner==='all'?`<div class="progress-owner-card" data-progress-combined="true"><div class="poc-header"><span class="poc-title">🏢 선택 건물주 통합 안전점검</span><span class="poc-badge">${s.totals.buildings}개동 · ${s.totals.units}세대</span></div><div>점검완료 ${s.totals.complete}세대 · 점검중 ${s.totals.in_progress}세대</div><div>누적 집행비: ₩${money(s.totals.cost)}</div></div>`:''}
+   ${active.length?'':'<p>선택된 점검 대상이 없습니다. 건물주 탭에서 건물동·세대를 선택해주세요.</p>'}</div>
    <div id="progress-dashboard-visual">${this.svg(s,this.lastWidth)}</div>
-   <details class="progress-detail" open>
-     <summary>건물동별 수량·집행비 상세 (건물주별 분리 집계 및 단지 14개동 847세대 연동)</summary>
-     <div style="overflow:auto">
-       <table>
-         <thead>
-           <tr>${['건물동','전체','선택','미점검','점검중','점검완료','완료율','집행비(원)'].map(x=>'<th>'+x+'</th>').join('')}</tr>
-         </thead>
-         <tbody>
-           ${esActive ? `
-           <tr class="progress-section-header"><td colspan="8">⚡ 에너지솔루션 사택 (${es.buildings}개동 · 앙커 점검 대상)</td></tr>
-           ${esRows}
-           ${esSubtotal}` : ''}
-           ${chemActive ? `
-           <tr class="progress-section-header"><td colspan="8">🧪 화학 사택 (${chem.buildings}개동 · 앙커 점검 대상)</td></tr>
-           ${chemRows}
-           ${chemSubtotal}` : ''}
-           ${(esActive && chemActive) ? `
-           <tr class="progress-section-header"><td colspan="8">🏢 기숙사 층별 배정 관리 (3개동 538실 · 발코니 앙커 점검 DB 비대상 연계)</td></tr>
-           ${dormRows}
-           ${dormSubtotal}
-           ${bldgTotalRow}
-           ${grandTotalRow}` : ''}
-           ${(!esActive && !chemActive) ? `
-           <tr><td colspan="8" style="text-align:center;padding:24px;color:#64748b;">선택된 건물주 또는 세대가 없습니다. '건물주' 탭에서 점검 대상을 선택해주세요.</td></tr>` : ''}
-         </tbody>
-       </table>
-     </div>
-   </details>
-  `;
+   <details class="progress-detail" open><summary>선택 건물동별 수량·집행비 상세 (${view.totals.buildings}개동 · ${view.totals.units}세대)</summary><div style="overflow:auto"><table><thead><tr>${['건물동','등록 세대','선택','미점검','점검중','점검완료','완료율','집행비(원)'].map(v=>'<th>'+v+'</th>').join('')}</tr></thead><tbody>
+   ${view.owners.map(owner=>`<tr class="progress-section-header"><td colspan="8">${this.esc(owner)} · ${s.byOwner[owner].selectedBuildings}개동</td></tr>${view.buildings.filter(b=>b.owner===owner).map(row).join('')}`).join('')}
+   <tr class="progress-grand-total-row"><td>선택 합계</td><td>${view.buildings.reduce((n,b)=>n+b.total,0)}</td><td>${view.totals.units}</td><td>${view.totals.uninspected}</td><td>${view.totals.in_progress}</td><td>${view.totals.complete}</td><td>${(view.totals.rate*100).toFixed(1)}%</td><td>${money(view.totals.cost)}</td></tr>
+   </tbody></table></div></details>`;
   syncWebSaveButtons();
  },
 
@@ -9224,15 +8990,15 @@ const ProgressDashboard={
  async png(svg){const image=new Image(),url=URL.createObjectURL(new Blob([svg],{type:'image/svg+xml;charset=utf-8'}));try{await new Promise((resolve,reject)=>{image.onload=resolve;image.onerror=reject;image.src=url;});const c=document.createElement('canvas');c.width=image.naturalWidth;c.height=image.naturalHeight;c.getContext('2d').drawImage(image,0,0);return c.toDataURL('image/png');}finally{URL.revokeObjectURL(url);}},
  async downloadPng(){const source=document.querySelector('#progress-dashboard-visual svg')?.outerHTML||this.svg(this.current(),this.lastWidth),a=document.createElement('a');a.download='안전점검_진행현황.png';a.href=await this.png(source);a.click();},
  appendSheets(wb,s=this.snapshot()){
-  const rows=s.buildings.map(b=>({'건물동ID':b.id,'건물동':b.name,'전체세대':b.total,'선택세대':b.selected,'미점검':b.uninspected,'점검중':b.in_progress,'점검완료':b.complete,'완료율':b.rate,'집행비':b.cost,'점검인날짜확인필요':b.missing}));
+  const rows=s.buildings.filter(b=>b.selected>0).map(b=>({'건물동ID':b.id,'건물동':b.name,'전체세대':b.total,'선택세대':b.selected,'미점검':b.uninspected,'점검중':b.in_progress,'점검완료':b.complete,'완료율':b.rate,'집행비':b.cost,'점검인날짜확인필요':b.missing}));
   for(const [name,records]of [['진행_건물동별',rows],['진행_부위유형',s.types],['진행_안전상태',Object.entries(s.safety).map(([상태,부위수])=>({상태,부위수}))],['진행_조치단계',Object.entries(s.progress).map(([단계,부위수])=>({단계,부위수}))]]){const sheet=XLSX.utils.json_to_sheet(records);if(wb.Sheets[name])wb.Sheets[name]=sheet;else XLSX.utils.book_append_sheet(wb,sheet,name);}
  },
  excelScope(wb,scope){
   if(!wb.Sheets['진행_세대데이터']||!wb.Sheets['진행_목록'])return scope;
   const rows=XLSX.utils.sheet_to_json(wb.Sheets['건물주_대상']),catalog=new Map(OwnerScope.catalog().map(r=>[r.id,r])),seen=new Set(),owners=new Set(scope.owners),excluded=new Set(scope.excluded);let changed=false;
-  for(const row of rows){const id=row['세대ID'],entry=catalog.get(id),flag=row['점검대상'];if(!entry||seen.has(id)||!['선택','제외'].includes(flag))throw Error('Excel 건물주 대상 목록 누락/중복/선택값 오류');seen.add(id);const expected=scope.owners.includes(entry.owner)&&!scope.excluded.includes(id),selected=flag==='선택';if(selected===expected)continue;changed=true;if(selected){owners.add(entry.owner);excluded.delete(id);}else excluded.add(id);}
+  for(const row of rows){const id=row['세대ID'],entry=catalog.get(id),flag=row['점검대상'];if(!entry||seen.has(id)||!['선택','제외'].includes(flag))throw Error('Excel 건물주 대상 목록 누락/중복/선택값 오류');seen.add(id);if(!OwnerScope.isInspectionEntry(entry))continue;const expected=OwnerScope.selected(entry,scope),selected=flag==='선택';if(selected===expected)continue;changed=true;if(selected){owners.add(entry.owner);excluded.delete(id);}else excluded.add(id);}
   if(seen.size!==catalog.size)throw Error('Excel 건물주 대상 목록 수량 오류');
-  for(const row of rows){const entry=catalog.get(row['세대ID']);if(owners.has(entry.owner)&&!scope.owners.includes(entry.owner)){if(row['점검대상']==='선택')excluded.delete(entry.id);else excluded.add(entry.id);}}
+  for(const row of rows){const entry=catalog.get(row['세대ID']);if(OwnerScope.isInspectionEntry(entry)&&owners.has(entry.owner)&&!scope.owners.includes(entry.owner)){if(row['점검대상']==='선택')excluded.delete(entry.id);else excluded.add(entry.id);}}
   return changed?{...scope,owners:[...owners],excluded:[...excluded],updatedAt:new Date().toISOString()}:scope;
  }
 };
@@ -9244,6 +9010,13 @@ const ProgressExcel={
  progressFormula(ref,status){return `IF(${ref}="",IF(${status}="uninspected","미점검",IF(${status}="repaired","조치완료",IF(OR(${status}="danger",${status}="warning"),"조치진행","점검완료"))),VLOOKUP(${ref},RawProgressMapping,2,FALSE))`;},
  dataName:'진행_차트데이터',roomName:'진행_세대데이터',pointName:'진행_부위데이터',chartMeta:null,
  async addWorkbook(wb,s){
+  // Freeze the displayed owner filter while retaining every source row for round trips.
+  const view=ProgressDashboard.viewSnapshot(s,s.displayFilter||'all'),filter=s.displayFilter&&s.displayFilter!=='all'&&view.owners.includes(s.displayFilter)?s.displayFilter:'';
+  const inView=r=>!filter||r.owner===filter;
+  s={...s,...view,screenSvg:s.screenSvg,
+   buildings:s.buildings.map(b=>inView(b)?b:{...b,selected:0,excluded:b.total,uninspected:0,in_progress:0,complete:0,cost:0,missing:0,rate:0}),
+   rooms:s.rooms.map(r=>({...r,selected:r.selected&&inView(r)})),
+   points:s.points.map(p=>({...p,selected:p.selected&&(!filter||s.buildings.find(b=>b.id===p.buildingId)?.owner===filter)}))};
   const raw=wb.getWorksheet('호실별_정밀안전점검_DB');if(!raw)throw Error('진행 현황 원본 DB 누락');
   const headers=raw.getRow(1).values.slice(1).map(key=>String(key).replace(/^[^A-Za-z0-9가-힣]+/u,'').trim().replace(/^(P[1-6]상태).*$/,'$1').replace(/^(P[1-6]비용).*$/,'$1')),col=key=>{const i=headers.indexOf(key);if(i<0)throw Error('진행 현황 원본 열 누락: '+key);return XLSX.utils.encode_col(i);},q=name=>"'"+name.replace(/'/g,"''")+"'",rawRef=(key,row)=>'INDEX('+q(raw.name)+'!$'+col(key)+'$2:$'+col(key)+'$'+(s.rooms.length+1)+','+q(this.roomName)+'!$P$'+sourceHelper.get(row)+')',sourceRows=new Map();raw.eachRow((row,i)=>{if(i>1)sourceRows.set(row.getCell(headers.indexOf('세대ID')+1).value,i);});
   const sheet=(name,head)=>{const ws=wb.addWorksheet(name,{views:[{showGridLines:false,state:'frozen',ySplit:1}]});ws.columns=head.map((h,i)=>({header:h,key:'c'+i,width:i===0?23:18}));ws.getRow(1).font={name:'맑은 고딕',bold:true,color:{argb:'FFFFFFFF'}};ws.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF23364F'}};ws.getRow(1).height=24;return ws;};
@@ -9254,7 +9027,7 @@ const ProgressExcel={
   const lastRoom=s.rooms.length+1,lastPoint=s.points.length+1,pr=c=>q(points.name)+'!$'+c+'$2:$'+c+'$'+lastPoint,rr=c=>q(rooms.name)+'!$'+c+'$2:$'+c+'$'+lastRoom,f=(formula,result)=>({formula,result}),pointIds=new Map(s.rooms.map((r,i)=>[r.id,i+2]));
   const target=wb.getWorksheet('건물주_대상'),targetRows=new Map();target.eachRow((row,i)=>{if(i>1)targetRows.set(row.getCell(4).value,i);});
   let previousBuilding='';s.rooms.forEach((r,i)=>{const n=i+2,rawRow=sourceRows.get(r.id);if(!rawRow)throw Error('진행 현황 세대 매핑 누락');const meta=rawRef('점검책임자',rawRow),date=rawRef('점검일자',rawRow),contractor=rawRef('시공사',rawRow),constructDate=rawRef('시공일자',rawRow);
-   rooms.addRow([r.id,r.buildingId,r.building,r.owner,f(`--(INDEX(${q(target.name)}!$G$2:$G$${target.rowCount},MATCH(A${n},${q(target.name)}!$D$2:$D$${target.rowCount},0))="선택")`,r.selected?1:0),f(`IF(${meta}="","",${meta})`,r.inspector),f(this.dateFormula(date),r.date?(InspectionDate.excel(r.date)?Math.round((new Date(r.date+'T00:00:00Z')-new Date('1899-12-30T00:00:00Z'))/86400000):{error:'#VALUE!'}):''),r.count,f(`COUNTIFS(${pr('A')},A${n},${pr('J')},1)`,r.completePoints),f(`COUNTIFS(${pr('A')},A${n},${pr('K')},1)`,r.startedPoints),f(`IF(E${n}=1,--(J${n}=0),0)`,r.selected&&r.stage==='uninspected'?1:0),f(`IF(E${n}=1,--AND(J${n}>0,I${n}<H${n}),0)`,r.selected&&r.stage==='in_progress'?1:0),f(`IF(E${n}=1,--(I${n}=H${n}),0)`,r.selected&&r.stage==='complete'?1:0),f(`IF(E${n}=1,SUMIFS(${pr('I')},${pr('A')},A${n}),0)`,r.selected?r.cost:0),f(`IF(M${n}=1,--OR(F${n}="",NOT(ISNUMBER(G${n}))),0)`,r.selected?r.missing:0),f(`MATCH(A${n},${q(raw.name)}!$${col("세대ID")}$2:$${col("세대ID")}$${s.rooms.length+1},0)`,rawRow-1),f(`IF(${contractor}="","",${contractor})`,r.contractor),f(this.dateFormula(constructDate),r.constructDate?(InspectionDate.excel(r.constructDate)?Math.round((InspectionDate.excel(r.constructDate)-new Date('1899-12-30T00:00:00Z'))/86400000):{error:'#VALUE!'}):'')]);
+   rooms.addRow([r.id,r.buildingId,r.building,r.owner,f(`--(INDEX(${q(target.name)}!$G$2:$G$${target.rowCount},MATCH(A${n},${q(target.name)}!$D$2:$D$${target.rowCount},0))="선택")${filter?'*--(D'+n+'="'+filter+'")':''}`,r.selected?1:0),f(`IF(${meta}="","",${meta})`,r.inspector),f(this.dateFormula(date),r.date?(InspectionDate.excel(r.date)?Math.round((new Date(r.date+'T00:00:00Z')-new Date('1899-12-30T00:00:00Z'))/86400000):{error:'#VALUE!'}):''),r.count,f(`COUNTIFS(${pr('A')},A${n},${pr('J')},1)`,r.completePoints),f(`COUNTIFS(${pr('A')},A${n},${pr('K')},1)`,r.startedPoints),f(`IF(E${n}=1,--(J${n}=0),0)`,r.selected&&r.stage==='uninspected'?1:0),f(`IF(E${n}=1,--AND(J${n}>0,I${n}<H${n}),0)`,r.selected&&r.stage==='in_progress'?1:0),f(`IF(E${n}=1,--(I${n}=H${n}),0)`,r.selected&&r.stage==='complete'?1:0),f(`IF(E${n}=1,SUMIFS(${pr('I')},${pr('A')},A${n}),0)`,r.selected?r.cost:0),f(`IF(M${n}=1,--OR(F${n}="",NOT(ISNUMBER(G${n}))),0)`,r.selected?r.missing:0),f(`MATCH(A${n},${q(raw.name)}!$${col("세대ID")}$2:$${col("세대ID")}$${s.rooms.length+1},0)`,rawRow-1),f(`IF(${contractor}="","",${contractor})`,r.contractor),f(this.dateFormula(constructDate),r.constructDate?(InspectionDate.excel(r.constructDate)?Math.round((InspectionDate.excel(r.constructDate)-new Date('1899-12-30T00:00:00Z'))/86400000):{error:'#VALUE!'}):'')]);
    // Selection remains the captured web scope. Raw inspection inputs remain the authoritative editable cells.
    rooms.getRow(n).outlineLevel=previousBuilding===r.buildingId?1:0;previousBuilding=r.buildingId;rooms.getCell('G'+n).numFmt='yyyy-dd-mm';rooms.getCell('R'+n).numFmt='yyyy-mm-dd';rooms.getCell('N'+n).numFmt='#,##0"원"';
    const dateCell=raw.getCell(col('점검일자')+rawRow),dateValue=InspectionDate.excel(r.date);if(dateValue){dateCell.value=dateValue;dateCell.numFmt='yyyy-dd-mm';}const buildDateCell=raw.getCell(col('시공일자')+rawRow),buildDate=InspectionDate.excel(r.constructDate);if(buildDate)buildDateCell.value=buildDate;buildDateCell.numFmt='yyyy-mm-dd';
@@ -9270,20 +9043,30 @@ const ProgressExcel={
   const names=[...new Set(s.rooms.map(r=>r.inspector).filter(Boolean))];for(let i=0;i<Math.max(5,names.length);i++){lists.getCell(i+2,1).value=names[i]||'';lists.getCell(i+2,2).value=Object.keys(s.safety)[i]||'';lists.getCell(i+2,3).value=Object.keys(s.progress)[i]||'';}
   const companies=[...new Set(s.rooms.map(r=>r.contractor).filter(Boolean))];lists.getCell('I1').value='시공사';companies.forEach((name,i)=>lists.getCell(i+2,9).value=name);wb.definedNames.add(q(lists.name)+'!$I$2:$I$'+Math.max(2,companies.length+1),'ContractorNames');
   wb.definedNames.add(q(lists.name)+'!$A$2:$A$'+Math.max(2,names.length+1),'InspectionNames');wb.definedNames.add(q(lists.name)+'!$B$2:$B$6','InspectionStatuses');wb.definedNames.add(q(lists.name)+'!$C$2:$C$6','InspectionProgress');wb.definedNames.add(q(data.name)+'!$C$2:$C$12','ProgressTargets');wb.definedNames.add(q(data.name)+'!$I$2:$I$12','ProgressCosts');
-  target.getColumn(7).eachCell((cell,i)=>{if(i>1){cell.dataValidation={type:'list',allowBlank:false,formulae:['"선택,제외"'],showErrorMessage:true};cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFBEB'}};}});
+  target.getColumn(7).eachCell((cell,i)=>{if(i>1){const eligible=OwnerScope.isInspectionEntry({id:target.getRow(i).getCell(4).value});cell.dataValidation={type:'list',allowBlank:false,formulae:[eligible?'"선택,제외"':'"제외"'],showErrorMessage:true,errorStyle:'stop'};if(!eligible){cell.value='제외';target.getRow(i).hidden=true;}cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:eligible?'FFFFFBEB':'FFF1F5F9'}};}});
   const highlight={type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFBEB'}};s.rooms.forEach(r=>{const n=sourceRows.get(r.id);for(const key of ['점검책임자','점검일자','시공사','시공일자',...s.keys.flatMap(k=>[k+'상태',k+'진행현황',k+'비용'])])raw.getCell(col(key)+n).fill=highlight;raw.getCell(col('시공사')+n).dataValidation={type:'list',allowBlank:true,formulae:['ContractorNames'],showErrorMessage:false};raw.getCell(col('점검책임자')+n).dataValidation={type:'list',allowBlank:true,formulae:['InspectionNames'],showErrorMessage:false};for(const key of s.keys){raw.getCell(col(key+'상태')+n).dataValidation={type:'list',allowBlank:true,formulae:['InspectionStatuses'],showErrorMessage:true};raw.getCell(col(key+'진행현황')+n).dataValidation={type:'list',allowBlank:true,formulae:['InspectionProgress'],showErrorMessage:true};raw.getCell(col(key+'비용')+n).dataValidation={type:'decimal',operator:'greaterThanOrEqual',allowBlank:true,formulae:[0],showErrorMessage:true};}});
   for(const ws of [rooms,points,data,lists]){ws.autoFilter={from:'A1',to:{row:ws.rowCount,column:ws.columnCount}};ws.properties.outlineProperties={summaryBelow:false,summaryRight:false};ws.eachRow((row,i)=>{if(i>1){row.height=20;row.eachCell(cell=>{cell.font={name:'맑은 고딕',size:10,color:{argb:'FF17253B'}};});}});}
   data.addConditionalFormatting({ref:'A2:N12',rules:[{type:'expression',formulae:['$C2=0'],style:{font:{color:{argb:'FF94A3B8'}}}}]});data.addConditionalFormatting({ref:'H2:H12',rules:[{type:'cellIs',operator:'equal',formulae:[1],style:{fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFDCFCE7'}}}},{type:'cellIs',operator:'between',formulae:[0.000001,0.999999],style:{fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFEF3C7'}}}}]});rooms.addConditionalFormatting({ref:'O2:O'+lastRoom,rules:[{type:'cellIs',operator:'greaterThan',formulae:[0],style:{font:{color:{argb:'FFDC2626'},bold:true}}}]});
   const dashboard=wb.addWorksheet('진행 현황',{views:[{showGridLines:false}],pageSetup:{orientation:'landscape',paperSize:8,fitToPage:true,fitToWidth:1,fitToHeight:1,printArea:'A1:AB58'}});for(let c=1;c<=28;c++)dashboard.getColumn(c).width=6;for(let r=1;r<=58;r++)dashboard.getRow(r).height=18;dashboard.mergeCells('A1:AB2');dashboard.getCell('A1').value='안전점검 진행 현황';dashboard.getCell('A1').font={name:'맑은 고딕',size:20,bold:true,color:{argb:'FF17253B'}};dashboard.mergeCells('A3:AB3');dashboard.getCell('A3').value=s.owners.join(' · ')+' · 선택 사택 점검 현황 · 집행비는 실제 입력 비용';
   const kpiFormulas=[`COUNTIF(${q(data.name)}!C2:C12,">0")`,`SUM(${q(data.name)}!C2:C12)`,`SUM(${q(data.name)}!G2:G12)`,`SUM(${q(data.name)}!F2:F12)`,`IF(SUM(${q(data.name)}!C2:C12)=0,0,SUM(${q(data.name)}!G2:G12)/SUM(${q(data.name)}!C2:C12))`,`SUM(${q(data.name)}!I2:I12)`],kpiValues=[s.totals.buildings,s.totals.units,s.totals.complete,s.totals.in_progress,s.totals.rate,s.totals.cost];
-  const chartMeta={sheetId:dashboard.id,charts:ProgressDashboard.charts(s)};ProgressDashboard.kpis(s).forEach(([label],i)=>{const c=i*4+1;dashboard.mergeCells(5,c,5,c+3);dashboard.getCell(5,c).value=label;dashboard.mergeCells(6,c,7,c+3);const cell=dashboard.getCell(6,c);cell.value=f(kpiFormulas[i],kpiValues[i]);cell.numFmt=i===4?'0.0%':i===5?'#,##0"원"':'#,##0';cell.font={name:'맑은 고딕',bold:true,size:18,color:{argb:'FF0284C7'}};});
+  // Compact only selected buildings for native charts, including later Excel selection edits.
+  // AGGREGATE/INDEX work in Excel 2010+, without dynamic-array functions or macros.
+  const end=s.buildings.length+1,visible=s.buildings.filter(b=>b.selected>0),chartColumns=['A','C','D','E','F','G','I'];
+  for(let i=0;i<s.buildings.length;i++){
+   const n=40+i,rank=`AGGREGATE(15,6,(ROW($C$2:$C$${end})-ROW($C$2)+1)/($C$2:$C$${end}>0),${i+1})`;
+   for(const c of chartColumns){const key={A:'name',C:'selected',D:'excluded',E:'uninspected',F:'in_progress',G:'complete',I:'cost'}[c];data.getCell(c+n).value=f(`IFERROR(INDEX($${c}$2:$${c}$${end},${rank}),${c==='A'?'""':'0'})`,visible[i]?.[key]??(c==='A'?'':0));}
+  }
+  const dynamicNames=chartColumns.map(c=>({name:'ProgressVisible'+c,formula:`OFFSET(${q(data.name)}!$${c}$40,0,0,MAX(1,COUNTIF(${q(data.name)}!$C$2:$C$${end},">0")),1)`}));
+  const charts=ProgressDashboard.charts({...s,buildings:visible});
+  for(const index of [0,1,3]){const chart=charts[index];chart.categoryFormula=q(data.name)+'!ProgressVisibleA';for(const series of chart.series)series.rangeFormula=q(data.name)+'!ProgressVisible'+series.column;if(!chart.labels.length){chart.labels=[''];for(const series of chart.series)series.values=[0];}}
+  const chartMeta={sheetId:dashboard.id,charts,dynamicNames};ProgressDashboard.kpis(s).forEach(([label],i)=>{const c=i*4+1;dashboard.mergeCells(5,c,5,c+3);dashboard.getCell(5,c).value=label;dashboard.mergeCells(6,c,7,c+3);const cell=dashboard.getCell(6,c);cell.value=f(kpiFormulas[i],kpiValues[i]);cell.numFmt=i===4?'0.0%':i===5?'#,##0"원"':'#,##0';cell.font={name:'맑은 고딕',bold:true,size:18,color:{argb:'FF0284C7'}};});
   dashboard.mergeCells('A56:AB56');dashboard.getCell('A56').value='수정: 호실별_정밀안전점검_DB의 노란 입력 셀 → 세대/부위 계산 → 차트 자동 갱신';dashboard.mergeCells('A57:AB57');dashboard.getCell('A57').value='선택 변경: 건물주_대상의 선택/제외 목록. 화면 원본은 별도 시트의 고정 이미지입니다.';
   const imageSheet=wb.addWorksheet('진행현황_화면원본',{views:[{showGridLines:false}]});imageSheet.getCell('A1').value='내보내기 당시 화면 원본 (고정 이미지) · 수정 연동 차트는 진행 현황 시트';imageSheet.getColumn('A').width=110;const svg=s.screenSvg||ProgressDashboard.svg(s,ProgressDashboard.lastWidth),png=await ProgressDashboard.png(svg),image=wb.addImage({base64:png,extension:'png'}),dimensions=svg.match(/width="(\d+)" height="(\d+)"/);imageSheet.addImage(image,{tl:{col:0,row:2},ext:{width:+dimensions[1],height:+dimensions[2]}});
   wb.calcProperties={fullCalcOnLoad:true,forceFullCalc:true,calcMode:'auto'};wb.views=[{activeTab:wb.worksheets.indexOf(dashboard),firstSheet:0,visibility:'visible'}];return chartMeta;
  },
  chartXml(chart,index){
-  const esc=ProgressDashboard.esc,q=name=>"'"+name+"'",cat=q(this.dataName)+'!$A$'+chart.first+':$A$'+chart.last,rich=text=>`<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200"><a:latin typeface="Malgun Gothic"/><a:ea typeface="Malgun Gothic"/></a:rPr><a:t>${esc(text)}</a:t></a:r></a:p></c:rich></c:tx>`,fill=color=>`<c:spPr><a:solidFill><a:srgbClr val="${color.slice(1)}"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>`,cache=(values,numeric)=>`<c:${numeric?'num':'str'}Cache>${numeric?'<c:formatCode>0</c:formatCode>':''}<c:ptCount val="${values.length}"/>${values.map((v,i)=>`<c:pt idx="${i}"><c:v>${esc(v)}</c:v></c:pt>`).join('')}</c:${numeric?'num':'str'}Cache>`,txPr=`<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:latin typeface="Malgun Gothic"/><a:ea typeface="Malgun Gothic"/></a:defRPr></a:pPr></a:p></c:txPr>`;
-  const series=chart.series.map((s,i)=>`<c:ser><c:idx val="${i}"/><c:order val="${i}"/><c:tx><c:v>${esc(s.name)}</c:v></c:tx>${fill(s.color)}${chart.kind==='bar'?'<c:invertIfNegative val="0"/>':''}${chart.sliceColors?chart.sliceColors.map((color,j)=>`<c:dPt><c:idx val="${j}"/>${fill(color)}</c:dPt>`).join(''):''}<c:cat><c:strRef><c:f>${esc(cat)}</c:f>${cache(chart.labels,false)}</c:strRef></c:cat><c:val><c:numRef><c:f>${esc(q(this.dataName)+'!$'+s.column+'$'+chart.first+':$'+s.column+'$'+chart.last)}</c:f>${cache(s.values,true)}</c:numRef></c:val></c:ser>`).join('');
+  const esc=ProgressDashboard.esc,q=name=>"'"+name+"'",cat=chart.categoryFormula||q(this.dataName)+'!$A$'+chart.first+':$A$'+chart.last,rich=text=>`<c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr sz="1200"><a:latin typeface="Malgun Gothic"/><a:ea typeface="Malgun Gothic"/></a:rPr><a:t>${esc(text)}</a:t></a:r></a:p></c:rich></c:tx>`,fill=color=>`<c:spPr><a:solidFill><a:srgbClr val="${color.slice(1)}"/></a:solidFill><a:ln><a:noFill/></a:ln></c:spPr>`,cache=(values,numeric)=>`<c:${numeric?'num':'str'}Cache>${numeric?'<c:formatCode>0</c:formatCode>':''}<c:ptCount val="${values.length}"/>${values.map((v,i)=>`<c:pt idx="${i}"><c:v>${esc(v)}</c:v></c:pt>`).join('')}</c:${numeric?'num':'str'}Cache>`,txPr=`<c:txPr><a:bodyPr/><a:lstStyle/><a:p><a:pPr><a:defRPr sz="1000"><a:latin typeface="Malgun Gothic"/><a:ea typeface="Malgun Gothic"/></a:defRPr></a:pPr></a:p></c:txPr>`;
+  const series=chart.series.map((s,i)=>`<c:ser><c:idx val="${i}"/><c:order val="${i}"/><c:tx><c:v>${esc(s.name)}</c:v></c:tx>${fill(s.color)}${chart.kind==='bar'?'<c:invertIfNegative val="0"/>':''}${chart.sliceColors?chart.sliceColors.map((color,j)=>`<c:dPt><c:idx val="${j}"/>${fill(color)}</c:dPt>`).join(''):''}<c:cat><c:strRef><c:f>${esc(cat)}</c:f>${cache(chart.labels,false)}</c:strRef></c:cat><c:val><c:numRef><c:f>${esc(s.rangeFormula||q(this.dataName)+'!$'+s.column+'$'+chart.first+':$'+s.column+'$'+chart.last)}</c:f>${cache(s.values,true)}</c:numRef></c:val></c:ser>`).join('');
   const a=1000+index*2,b=a+1,max=Math.max(4,Math.ceil(Math.max(0,...chart.labels.map((_,i)=>chart.series.reduce((sum,s)=>sum+s.values[i],0)))/4)*4),bar=`<c:barChart><c:barDir val="bar"/><c:grouping val="${chart.series.length>1?'stacked':'clustered'}"/><c:varyColors val="0"/>${series}<c:gapWidth val="75"/>${chart.series.length>1?'<c:overlap val="100"/>':''}<c:axId val="${a}"/><c:axId val="${b}"/></c:barChart><c:catAx><c:axId val="${a}"/><c:scaling><c:orientation val="maxMin"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>${txPr}<c:crossAx val="${b}"/><c:crosses val="autoZero"/></c:catAx><c:valAx><c:axId val="${b}"/><c:scaling><c:orientation val="minMax"/><c:min val="0"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:majorGridlines><c:spPr><a:ln w="6350"><a:solidFill><a:srgbClr val="E5EAF1"/></a:solidFill></a:ln></c:spPr></c:majorGridlines><c:numFmt formatCode="#,##0" sourceLinked="0"/><c:majorTickMark val="none"/><c:minorTickMark val="none"/><c:tickLblPos val="nextTo"/>${txPr}<c:crossAx val="${a}"/><c:crosses val="max"/><c:crossBetween val="between"/></c:valAx>`,pie=`<c:doughnutChart><c:varyColors val="1"/>${series}<c:firstSliceAng val="270"/><c:holeSize val="62"/></c:doughnutChart>`;
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><c:chartSpace xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><c:lang val="ko-KR"/><c:roundedCorners val="0"/><c:chart><c:title>${rich(chart.title)}<c:overlay val="0"/></c:title><c:autoTitleDeleted val="0"/><c:plotArea><c:layout/>${chart.kind==='bar'?bar:pie}</c:plotArea><c:legend><c:legendPos val="${chart.kind==='doughnut'?'r':'t'}"/><c:overlay val="0"/>${txPr}</c:legend><c:plotVisOnly val="0"/><c:dispBlanksAs val="zero"/></c:chart><c:spPr><a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val="DCE3ED"/></a:solidFill></a:ln></c:spPr>${txPr}</c:chartSpace>`;
  },
@@ -9293,7 +9076,10 @@ const ProgressExcel={
   let rels=decode(relsPath)||`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="${typeNs}"></Relationships>`;rels=rels.replace('</Relationships>',`<Relationship Id="rIdProgressCharts" Type="${officeRel}/drawing" Target="../drawings/progress-dashboard.xml"/></Relationships>`);put(relsPath,rels);
   let drawing=`<?xml version="1.0" encoding="UTF-8"?><xdr:wsDr xmlns:xdr="http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">`,drawingRels=`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="${typeNs}">`,types=decode('[Content_Types].xml');
   meta.charts.forEach((chart,i)=>{const col=i%2?14:0,row=8+Math.floor(i/2)*15,id=i+1;drawing+=`<xdr:twoCellAnchor><xdr:from><xdr:col>${col}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${row}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>${col+14}</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${row+15}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="${id}" name="Progress Chart ${id}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/chart"><c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:r="${officeRel}" r:id="rId${id}"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>`;drawingRels+=`<Relationship Id="rId${id}" Type="${officeRel}/chart" Target="../charts/progress${id}.xml"/>`;put('xl/charts/progress'+id+'.xml',this.chartXml(chart,id));types=types.replace('</Types>',`<Override PartName="/xl/charts/progress${id}.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>`);});
-  const workbookXml=decode('xl/workbook.xml'),calcPr='<calcPr calcId="171027" calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"/>';put('xl/workbook.xml',/<calcPr\b/.test(workbookXml)?workbookXml.replace(/<calcPr\b[^>]*\/>/,calcPr):workbookXml.replace('</workbook>',calcPr+'</workbook>'));
+  let workbookXml=decode('xl/workbook.xml');
+  const names=(meta.dynamicNames||[]).map(n=>`<definedName name="${ProgressDashboard.esc(n.name)}">${ProgressDashboard.esc(n.formula)}</definedName>`).join('');
+  if(names)workbookXml=workbookXml.includes('</definedNames>')?workbookXml.replace('</definedNames>',names+'</definedNames>'):workbookXml.replace('</sheets>','</sheets><definedNames>'+names+'</definedNames>');
+  const calcPr='<calcPr calcId="171027" calcMode="auto" fullCalcOnLoad="1" forceFullCalc="1"/>';put('xl/workbook.xml',/<calcPr\b/.test(workbookXml)?workbookXml.replace(/<calcPr\b[^>]*\/>/,calcPr):workbookXml.replace('</workbook>',calcPr+'</workbook>'));
   put('xl/drawings/progress-dashboard.xml',drawing+'</xdr:wsDr>');put('xl/drawings/_rels/progress-dashboard.xml.rels',drawingRels+'</Relationships>');types=types.replace('</Types>','<Override PartName="/xl/drawings/progress-dashboard.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/></Types>');put('[Content_Types].xml',types);return XLSX.CFB.write(zip,{type:'array',fileType:'zip',compression:true});
  }
 };
@@ -9613,9 +9399,18 @@ const OwnerScope = {
     this._catalogSource = ROOMS_DATA; this._catalog = result;
     return result;
   },
-  selected(entry) {
-    if (!entry || !entry.inspection) return false;
-    return this.state.owners.includes(this.ownerOf(entry)) && !this.excludedSet().has(entry.id);
+  isInspectionEntry(entry) {
+    if (!entry || entry.inspection === false) return false;
+    if (this._inspectionSource !== ROOMS_DATA) {
+      this._inspectionSource = ROOMS_DATA;
+      this._inspectionIds = new Set(ROOMS_DATA.map(r => r.id));
+    }
+    return this._inspectionIds.has(entry.id);
+  },
+  selected(entry, scope = this.state, excluded = null) {
+    if (!this.isInspectionEntry(entry)) return false;
+    const omitted = excluded || (scope === this.state ? this.excludedSet() : new Set(scope.excluded || []));
+    return scope.owners.includes(this.ownerOf(entry)) && !omitted.has(entry.id);
   },
   excludedSet() {
     if (this._excludedSource !== this.state.excluded) {
@@ -9765,20 +9560,21 @@ const OwnerScope = {
     const host = document.getElementById('owner-workspace-container');
     if (!host) return;
     const catalog = this.catalog(), total = this.totals();
+    const buildingCounts = catalog.reduce((map, entry) => map.set(entry.buildingId, (map.get(entry.buildingId) || 0) + 1), new Map());
     const expanded = new Set([...host.querySelectorAll('details[open]')].map(e => e.dataset.key));
-    const activeOwners = ['화학', '에너지솔루션'].filter(o => this.state.owners.includes(o));
+    const activeOwners = ['화학', '에너지솔루션'].filter(o => this.totals(o).units > 0);
     let metricsHtml = '';
     if (activeOwners.length > 1) {
       const parts = activeOwners.map(owner => {
         const t = this.totals(owner);
-        return `<span class="owner-metric-chip"><strong>${owner}</strong> ${t.buildings}개동 · ${t.units}세대 (사택 점검 ${t.inspection} · 기숙사 배정 ${t.dormitory})</span>`;
+        return `<span class="owner-metric-chip"><strong>${owner}</strong> ${t.buildings}개동 · ${t.units}세대</span>`;
       });
       metricsHtml = parts.join('<span style="color:#64748b;margin:0 4px;">|</span>') +
-        `<span style="color:#64748b;margin:0 4px;">|</span><span class="owner-metric-chip" style="color:#38bdf8;font-weight:700;"><strong>총 합계</strong> ${total.buildings}개동 · ${total.units}세대 (사택 점검 ${total.inspection} · 기숙사 배정 ${total.dormitory})</span>`;
+        `<span style="color:#64748b;margin:0 4px;">|</span><span class="owner-metric-chip" style="color:#38bdf8;font-weight:700;"><strong>총 합계</strong> ${total.buildings}개동 · ${total.units}세대</span>`;
     } else if (activeOwners.length === 1) {
       const owner = activeOwners[0], t = this.totals(owner);
-      metricsHtml = `<span class="owner-metric-chip"><strong>${owner}</strong> ${t.buildings}개동 · ${t.units}세대 (사택 점검 ${t.inspection} · 기숙사 배정 ${t.dormitory})</span>` +
-        `<span style="color:#64748b;margin:0 4px;">|</span><span class="owner-metric-chip" style="color:#38bdf8;font-weight:700;"><strong>총 합계</strong> ${total.buildings}개동 · ${total.units}세대 (사택 점검 ${total.inspection} · 기숙사 배정 ${total.dormitory})</span>`;
+      metricsHtml = `<span class="owner-metric-chip"><strong>${owner}</strong> ${t.buildings}개동 · ${t.units}세대</span>` +
+        `<span style="color:#64748b;margin:0 4px;">|</span><span class="owner-metric-chip" style="color:#38bdf8;font-weight:700;"><strong>총 합계</strong> ${total.buildings}개동 · ${total.units}세대</span>`;
     } else {
       metricsHtml = `<span>소속 미선택</span><span style="color:#64748b;margin:0 4px;">|</span><span style="color:#94a3b8;"><strong>총 합계</strong> 0개동 · 0세대</span>`;
     }
@@ -9792,7 +9588,7 @@ const OwnerScope = {
       </div></div>
       <div class="owner-metrics" aria-live="polite">${metricsHtml}</div>
       <p id="owner-sync-status" role="status"></p>
-      <p class="owner-note">기숙사의 ‘배정 순번’은 실제 호실 번호가 아니며, 앙커 점검 DB·비용·점검률에는 포함되지 않습니다. A동은 원자료의 층별 합계(208실)와 총계(203실)가 달라 소속별 확정 총계 202+1실을 사용합니다. 사택 DB 309건에는 8동 101호 공부방 1건이 포함됩니다. 별도 공용부는 중복 합산하지 않습니다.</p>
+      <p class="owner-note">실제 점검 DB에 등록된 세대만 선택합니다. 8동 101호(공부방)와 201호(VIP)를 포함하며, 제외한 세대의 기존 점검 기록은 보존합니다.</p>
       <div class="owner-columns"></div>`;
     const columns = host.querySelector('.owner-columns');
     const dormNotice = "※ 기숙사는 층별 인원 배정 관리 전용 시설로, 발코니 난간대 앙커 정밀안전점검 DB 대상 세대가 아니므로 선택할 수 없습니다.";
@@ -9801,7 +9597,6 @@ const OwnerScope = {
       const allInOwner = catalog.filter(r => r.owner === owner);
       const inspInOwner = allInOwner.filter(r => r.inspection);
       const selInOwner = inspInOwner.filter(r => this.selected(r));
-      const dormInOwner = allInOwner.filter(r => !r.inspection);
       const isFull = selInOwner.length === inspInOwner.length && inspInOwner.length > 0;
       const isPart = selInOwner.length > 0 && selInOwner.length < inspInOwner.length;
       const section = document.createElement('section'); section.className = 'owner-section' + (selInOwner.length > 0 ? '' : ' owner-inactive');
@@ -9813,11 +9608,18 @@ const OwnerScope = {
       check.onchange = () => this.change('owner', owner, !isFull);
       const label = document.createElement('label'); label.append(check, document.createTextNode(owner)); heading.append(label); section.append(heading);
       const summary = document.createElement('p'); summary.className = 'owner-company-count';
-      summary.textContent = `${stats.buildings}개동 · 사택 점검 ${selInOwner.length} / ${inspInOwner.length}세대 선택` + (dormInOwner.length > 0 ? ` (기숙사 ${dormInOwner.length}실 배정 제외)` : '');
+      summary.textContent = `${stats.buildings}개동 · 사택 점검 ${selInOwner.length} / ${inspInOwner.length}세대 선택`;
       section.append(summary);
-      const buildings = [...new Set(catalog.filter(r => r.owner === owner).map(r => r.buildingId))];
-      buildings.forEach(id => {
-        const entries = catalog.filter(r => r.owner === owner && r.buildingId === id);
+      const byBuilding = new Map();
+      allInOwner.forEach(entry => {
+        if (!byBuilding.has(entry.buildingId)) byBuilding.set(entry.buildingId, []);
+        byBuilding.get(entry.buildingId).push(entry);
+      });
+      const dormCount = allInOwner.length - inspInOwner.length;
+      const notice = document.createElement('p'); notice.className = 'owner-note';
+      notice.textContent = `기숙사 배정 ${dormCount}실 · 참고용이며 점검 대상 수량에 포함되지 않습니다. 실제 호실이 미등록된 항목은 배정 순번으로 표시합니다.`;
+      section.append(notice);
+      byBuilding.forEach((entries, id) => {
         const isDorm = id.startsWith('dorm-') || entries.every(e => !e.inspection);
         const n = isDorm ? 0 : entries.filter(r => this.selected(r)).length;
         const details = document.createElement('details'); details.dataset.key = owner + id; details.open = expanded.has(owner + id);
@@ -9825,6 +9627,7 @@ const OwnerScope = {
         const cb = document.createElement('input'); cb.type = 'checkbox';
 
         if (isDorm) {
+          details.style.opacity = '1';
           cb.checked = false;
           cb.indeterminate = false;
           cb.disabled = true;
@@ -9840,7 +9643,7 @@ const OwnerScope = {
             e.stopPropagation();
             showToast(dormNotice);
           };
-          head.append(cbWrap, document.createTextNode(`${entries[0].buildingName} · 0 / ${entries.length}실 (배정 전용)`));
+          head.append(cbWrap, document.createTextNode(`${entries[0].buildingName} · 총 ${buildingCounts.get(id)}실 / ${owner} 배정 ${entries.length}실 (점검 대상 제외)`));
           const badge = document.createElement('span');
           badge.className = 'dorm-excl-badge';
           badge.style.cssText = 'background:rgba(148,163,184,0.18);color:#64748b;font-size:10.5px;padding:2px 7px;border-radius:4px;margin-left:8px;font-weight:600;vertical-align:middle;cursor:not-allowed;';
@@ -9860,6 +9663,17 @@ const OwnerScope = {
         }
         details.append(head);
         const list = document.createElement('div'); list.className = 'owner-room-list';
+        let populated = false;
+        const populate = () => {
+          if (populated) return;
+          populated = true;
+          const fragment = document.createDocumentFragment();
+          if (isDorm) {
+            const reason = document.createElement('p'); reason.className = 'owner-note';
+            reason.style.cssText = 'grid-column:1/-1;margin:0 0 6px;color:#cbd5e1;';
+            reason.textContent = dormNotice + ' 배정 순번은 실제 호실 번호가 아닙니다.';
+            fragment.append(reason);
+          }
         entries.forEach(entry => {
           const row = document.createElement('label'); const input = document.createElement('input'); input.type = 'checkbox';
           if (isDorm) {
@@ -9884,8 +9698,13 @@ const OwnerScope = {
             row.className = this.selected(entry) ? '' : 'owner-room-excluded';
             row.title = this.selected(entry) ? '안전점검 대상에 포함' : '세대 해제: 클릭 시 선택·점검 대상에 포함';
           }
-          row.append(input, document.createTextNode(entry.label)); list.append(row);
+          input.setAttribute('aria-label', `${owner} ${entry.buildingName} ${entry.label}`);
+          row.append(input, document.createTextNode(entry.label)); fragment.append(row);
         });
+          list.append(fragment);
+        };
+        if (!isDorm || details.open) populate();
+        if (isDorm) details.addEventListener('toggle', () => { if (details.open) populate(); });
         details.append(list); section.append(details);
       });
       columns.append(section);
@@ -9952,32 +9771,22 @@ const OwnerScope = {
   },
   settingsRows() { return [{ '설정버전': 1, '설정JSON': JSON.stringify(this.state) }]; },
   targetRows(scopeOverride = null) {
-    const isSelected = r => {
-      if (!scopeOverride) return this.selected(r);
-      const owners = scopeOverride.owners || [];
-      const excluded = new Set(scopeOverride.excluded || []);
-      const owner = this.ownerOf(r);
-      return owners.includes(owner) && !excluded.has(r.id);
-    };
+    const scope = scopeOverride || this.state, excluded = new Set(scope.excluded || []);
+    const isSelected = r => this.selected(r, scope, excluded);
     return this.catalog().map(r => ({ '소속': r.owner, '건물동ID': r.buildingId, '건물동': r.buildingName,
       '세대ID': r.id, '층수': r.floor, '세대표시': r.label, '점검대상': isSelected(r) ? '선택' : '제외',
       '자료구분': r.inspection ? '사택 앙커 점검 DB' : '기숙사 층별 배정 (호실 미등록)' }));
   },
   totalsRows(scopeOverride = null) {
-    const isSelected = r => {
-      if (!scopeOverride) return this.selected(r);
-      const owners = scopeOverride.owners || [];
-      const excluded = new Set(scopeOverride.excluded || []);
-      const owner = this.ownerOf(r);
-      return owners.includes(owner) && !excluded.has(r.id);
-    };
+    const scope = scopeOverride || this.state, excluded = new Set(scope.excluded || []);
+    const isSelected = r => this.selected(r, scope, excluded);
     const catalog = this.catalog();
     return ['', '에너지솔루션', '화학'].map(o => {
       const all = catalog.filter(r => !o || r.owner === o);
       const sel = all.filter(r => isSelected(r));
       return {
         '소속': o || '전체 (중복동 제외)', '선택건물동수': new Set(sel.map(r => r.buildingId)).size, '선택세대수': sel.length,
-        '앙커점검DB세대수': sel.filter(r => r.inspection).length, '기숙사배정세대수': sel.filter(r => !r.inspection).length
+        '앙커점검DB세대수': sel.length
       };
     });
   },
@@ -10080,10 +9889,10 @@ function getInspectionSummarySpreadsheetData() {
 
     const sumRow = 5 + BUILDING_SPECS.length;
     setCell('A' + sumRow, '합계', null, { bold: true, align: 'center' });
-    setCell('B' + sumRow, BUILDING_SPECS.length + '개동', null, { bold: true });
+    setCell('B' + sumRow, OwnerScope.inspectionTotals().buildings + '개동', null, { bold: true });
     setCell('C' + sumRow, '-', null, { align: 'center' });
     setCell('D' + sumRow, '-', null, { align: 'center' });
-    setCell('E' + sumRow, '4개동 리모델링', null, { align: 'center' });
+    setCell('E' + sumRow, '선택 대상 기준', null, { align: 'center' });
     setCell('F' + sumRow, '-', null, { align: 'center' });
     setCell('G' + sumRow, totUnits, null, { bold: true, align: 'center' });
     setCell('H' + sumRow, '-', null, { align: 'center' });
@@ -15036,10 +14845,10 @@ const WorkbookManager = {
           });
           s1_rows.push({
             'No.': '합계',
-            '건물동': BUILDING_SPECS.length + '개동',
+            '건물동': OwnerScope.inspectionTotals().buildings + '개동',
             'm2(평형)': '-',
             '건물사용승인일': '-',
-            '리모델링': '4개동 리모델링',
+            '리모델링': '선택 대상 기준',
             '층수': '-',
             '총 세대수': totUnits,
             '소속': '-',
@@ -15243,9 +15052,9 @@ const WorkbookManager = {
         const exportArchive = structuredClone(ROOMS_DATA);
         const exportRooms = exportArchive.filter(r => OwnerScope.selected(r));
         const exportScope = structuredClone(OwnerScope.state);
-        const exportProgress=ProgressDashboard.snapshot(exportArchive,exportScope);exportProgress.screenSvg=ProgressDashboard.svg(exportProgress,ProgressDashboard.lastWidth);
+        const exportProgress=ProgressDashboard.snapshot(exportArchive,exportScope);exportProgress.displayFilter=ProgressDashboard.filterOwner;exportProgress.screenSvg=ProgressDashboard.svg(exportProgress,ProgressDashboard.lastWidth);
         const exportTargets = OwnerScope.targetRows();
-        const exportTotals = ['', '에너지솔루션', '화학'].map(owner => ({ '소속': owner || '전체 (중복동 제외)', ...OwnerScope.totals(owner) }));
+        const exportTotals = OwnerScope.totalsRows(exportScope);
         const btnRooms = document.getElementById('btn-rooms-excel-save');
         const btnSheet = document.getElementById('btn-sheet-excel-save');
         const origRoomsHtml = btnRooms ? btnRooms.innerHTML : '';
@@ -15401,10 +15210,10 @@ const WorkbookManager = {
 
           const sumRow = ws1.addRow({
             no: '합계',
-            name: BUILDING_SPECS.length + '개동',
+            name: new Set(exportRooms.map(r => r.buildingId)).size + '개동',
             area: '-',
             approvalDate: '-',
-            remodeling: '4개동 리모델링',
+            remodeling: '선택 대상 기준',
             floors: '-',
             units: totalUnits,
             team: '-',
@@ -16272,10 +16081,10 @@ const WorkbookManager = {
           });
           s1_rows.push({
             'No.': '합계',
-            '건물동': BUILDING_SPECS.length + '개동',
+            '건물동': OwnerScope.inspectionTotals().buildings + '개동',
             'm2(평형)': '-',
             '건물사용승인일': '-',
-            '리모델링': '4개동 리모델링',
+            '리모델링': '선택 대상 기준',
             '층수': '-',
             '총 세대수': oldTotUnits,
             '소속': '-',
@@ -17185,7 +16994,8 @@ const WorkbookManager = {
         if (isCad) {
           const summaryTag = document.createElement('div');
           summaryTag.className = 'site-summary-overlay';
-          summaryTag.innerHTML = '14개동<br>(사  택 11개동<br>기숙사  3개동)';
+          const scope = OwnerScope.inspectionTotals();
+          summaryTag.textContent = '점검 대상 ' + scope.buildings + '개동 · ' + scope.units + '세대';
           layer.appendChild(summaryTag);
         }
 
