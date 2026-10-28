@@ -8600,14 +8600,26 @@ function updateWorkbookScopeContext() {
   strip.innerHTML='<span class="scope-context-label">점검 대상</span><span id="scope-context-summary" aria-live="polite"></span><details id="scope-context-details"><summary title="소속별 선택 현황 펼치기">선택 상세</summary><div class="scope-context-popover"><div id="scope-context-breakdown"></div><button type="button" onclick="WorkbookManager.activateTab(\'owner\')">건물주에서 변경</button></div></details>';
   document.body.appendChild(strip);}
  const total=OwnerScope.totals(),inspection=OwnerScope.inspectionTotals();
- const owners=OwnerScope.state.owners.join(' · ')||'소속 미선택';
- const text=owners+' | '+total.buildings+'개동 · '+total.units+'세대 선택';
+ const activeOwners=['화학','에너지솔루션'].filter(o=>OwnerScope.state.owners.includes(o));
+ let text='';
+ if(activeOwners.length>1){
+  const ownerParts=activeOwners.map(owner=>{
+   const t=OwnerScope.totals(owner);
+   return owner+' '+t.buildings+'개동 · '+t.units+'세대 (사택 '+t.inspection+' · 기숙사 '+t.dormitory+')';
+  });
+  text=ownerParts.join(' | ')+' | 총 합계 '+total.buildings+'개동 · '+total.units+'세대 선택';
+ }else if(activeOwners.length===1){
+  const owner=activeOwners[0],t=OwnerScope.totals(owner);
+  text=owner+' '+t.buildings+'개동 · '+t.units+'세대 (사택 '+t.inspection+' · 기숙사 '+t.dormitory+') | 총 합계 '+total.buildings+'개동 · '+total.units+'세대 선택';
+ }else{
+  text='소속 미선택 | 총 합계 0개동 · 0세대 선택';
+ }
  const summary=document.getElementById('scope-context-summary');if(summary.textContent!==text)summary.textContent=text;
  strip.dataset.tab=WorkbookManager.activeTabId;
- strip.title='선택한 사택 '+inspection.buildings+'개동 '+inspection.units+'세대만 점검·집행비 집계에 포함됩니다. 기숙사는 배정 수량으로 구분합니다.';
- document.getElementById('scope-context-breakdown').textContent=['에너지솔루션','화학'].map(owner=>{
-  const t=OwnerScope.totals(owner);return owner+': '+t.buildings+'개동 · '+t.units+'/'+t.total+'세대';
- }).join('\n')+'\n점검 사택: '+inspection.buildings+'개동 · '+inspection.units+'세대\n기숙사 배정: '+total.dormitory+'세대 (점검·집행비 제외)\n제외 대상의 기록은 보존하며 선택·계산에서 제외합니다.';
+ strip.title='화학: 사택 '+OwnerScope.totals('화학').inspection+'세대(기숙사 '+OwnerScope.totals('화학').dormitory+'세대) · 에너지솔루션: 사택 '+OwnerScope.totals('에너지솔루션').inspection+'세대(기숙사 '+OwnerScope.totals('에너지솔루션').dormitory+'세대) · 총 합계 '+total.buildings+'개동 '+total.units+'세대';
+ document.getElementById('scope-context-breakdown').textContent=['화학','에너지솔루션'].map(owner=>{
+  const t=OwnerScope.totals(owner);return owner+': '+t.buildings+'개동 · '+t.units+'/'+t.total+'세대 (사택 '+t.inspection+', 기숙사 '+t.dormitory+')';
+ }).join('\n')+'\n──────────────────────────────\n총 합계: '+total.buildings+'개동 · '+total.units+'세대 (사택 점검 '+inspection.buildings+'개동 '+inspection.units+'세대, 기숙사 배정 '+total.dormitory+'세대)\n제외 대상의 기록은 보존하며 선택·계산에서 제외합니다.';
  syncWebSaveButtons();
 }
 function syncWebSaveButtons() {
@@ -8817,18 +8829,18 @@ const InspectionDate={
   const match=String(value).trim().match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:T.*)?$/);return match?(this.checked(+match[1],+match[2],+match[3])||String(value).trim()):String(value).trim();
  },
  checked(y,m,d){const date=new Date(Date.UTC(y,m-1,d));return y>=1900&&y<=9999&&date.getUTCFullYear()===y&&date.getUTCMonth()===m-1&&date.getUTCDate()===d?`${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`:'';},
- display(value){const iso=this.iso(value),m=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m&&this.checked(+m[1],+m[2],+m[3])===iso?`${m[1]}-${m[3]}-${m[2]}`:iso;},
- input(text){if(!text.trim())return '';const m=text.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?this.checked(+m[1],+m[3],+m[2]):'';},
- excel(value){const iso=this.iso(value),m=iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);return m&&this.checked(+m[1],+m[2],+m[3])===iso?new Date(iso+'T00:00:00.000Z'):null;}
+ display(value){return this.iso(value);},
+ input(text){if(!text.trim())return '';const m=text.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);if(!m)return '';const iso=this.checked(+m[1],+m[2],+m[3]);return iso||this.checked(+m[1],+m[3],+m[2]);},
+ excel(value){const iso=this.iso(value);return iso?new Date(iso+'T00:00:00.000Z'):null;}
 };
 const RoomInspectionMetadata={
  fields:[['inspector','room-inspector-input'],['inspectDate','room-inspection-date-input'],['contractor','room-contractor-input'],['constructDate','room-construction-date-input']],
- display(room,field){return field==='inspectDate'?InspectionDate.display(room[field]):field==='constructDate'?InspectionDate.iso(room[field]):room[field]||'';},
+ display(room,field){return field==='inspectDate'||field==='constructDate'?InspectionDate.display(room[field]):room[field]||'';},
  flush(){const modal=document.getElementById('room-detail-modal');if(!modal||getComputedStyle(modal).display==='none')return true;const room=RoomIndex.get(WorkbookManager.activeRoomId);if(!room||!OwnerScope.selected(room))return true;for(const [field,id]of this.fields){const input=document.getElementById(id);if(input&&input.value!==this.display(room,field)&&this.change(field,input)===false)return false;}return true;},
  show(room){for(const [field,id]of this.fields){const input=document.getElementById(id);if(!input)continue;input.value=this.display(room,field);input.setCustomValidity('');input.removeAttribute('aria-invalid');}},
  change(field,input){
   const room=RoomIndex.get(WorkbookManager.activeRoomId);if(!room||!OwnerScope.selected(room))return false;let value=input.value.trim();
-  if(field==='inspectDate'||field==='constructDate'){const iso=field==='constructDate',m=value.match(/^(\d{4})-(\d{2})-(\d{2})$/),date=iso?(m?InspectionDate.checked(+m[1],+m[2],+m[3]):''):InspectionDate.input(value);if(value&&!date){input.setCustomValidity('실제 날짜를 '+(iso?'YYYY-MM-DD':'YYYY-DD-MM')+' 순서로 입력하세요.');input.setAttribute('aria-invalid','true');input.reportValidity();return false;}value=date;}
+  if(field==='inspectDate'||field==='constructDate'){const date=InspectionDate.input(value);if(value&&!date){input.setCustomValidity('실제 날짜를 YYYY-MM-DD 순서로 입력하세요.');input.setAttribute('aria-invalid','true');input.reportValidity();return false;}value=date;}
   else if(field==='inspector'||field==='contractor')value=value.replace(/[\u0000-\u001f]/g,'').slice(0,field==='contractor'?200:100);else return false;
   input.setCustomValidity('');input.removeAttribute('aria-invalid');if((room[field]||'')===value)return true;room[field]=value;WorkbookManager.notifyDataMutation();input.value=this.display(room,field);return true;
  }
@@ -9603,7 +9615,12 @@ const OwnerScope = {
   },
   updateStatus() {
     const el = document.getElementById('owner-sync-status');
-    if (el) {const proof=WorkbookManager.lastVerifiedWebSave;el.textContent=this.syncStatus+(proof?' · 최근 확인 '+new Date(proof.verifiedAt).toLocaleTimeString('ko-KR')+' · SHA '+proof.blobSha.slice(0,7)+' · 사택 '+proof.inspectionBuildings+'개동 '+proof.inspectionUnits+'세대':'');}
+    if (el) {
+      const proof=WorkbookManager.lastVerifiedWebSave;
+      const tChem=this.totals('화학'),tEs=this.totals('에너지솔루션'),total=this.totals();
+      const scopeSummary=(this.state.owners.length>1)?`화학 ${tChem.buildings}개동·${tChem.units}세대 | 에너지솔루션 ${tEs.buildings}개동·${tEs.units}세대 | 총 합계 ${total.buildings}개동·${total.units}세대`:(this.state.owners.length===1?`${this.state.owners[0]} ${this.totals(this.state.owners[0]).buildings}개동·${this.totals(this.state.owners[0]).units}세대 | 총 합계 ${total.buildings}개동·${total.units}세대`:'소속 미선택 | 총 합계 0개동·0세대');
+      el.textContent=this.syncStatus+' · ['+scopeSummary+']'+(proof?' · SHA '+proof.blobSha.slice(0,7)+' (최근 확인 '+new Date(proof.verifiedAt).toLocaleTimeString('ko-KR')+')':'');
+    }
     renderRemoteSaveState();
     syncWebSaveButtons();
   },
@@ -9612,12 +9629,27 @@ const OwnerScope = {
     if (!host) return;
     const catalog = this.catalog(), total = this.totals();
     const expanded = new Set([...host.querySelectorAll('details[open]')].map(e => e.dataset.key));
+    const activeOwners = ['화학', '에너지솔루션'].filter(o => this.state.owners.includes(o));
+    let metricsHtml = '';
+    if (activeOwners.length > 1) {
+      const parts = activeOwners.map(owner => {
+        const t = this.totals(owner);
+        return `<span class="owner-metric-chip"><strong>${owner}</strong> ${t.buildings}개동 · ${t.units}세대 (사택 점검 ${t.inspection} · 기숙사 배정 ${t.dormitory})</span>`;
+      });
+      metricsHtml = parts.join('<span style="color:#64748b;margin:0 4px;">|</span>') +
+        `<span style="color:#64748b;margin:0 4px;">|</span><span class="owner-metric-chip" style="color:#38bdf8;font-weight:700;"><strong>총 합계</strong> ${total.buildings}개동 · ${total.units}세대 (사택 점검 ${total.inspection} · 기숙사 배정 ${total.dormitory})</span>`;
+    } else if (activeOwners.length === 1) {
+      const owner = activeOwners[0], t = this.totals(owner);
+      metricsHtml = `<span class="owner-metric-chip"><strong>${owner}</strong> ${t.buildings}개동 · ${t.units}세대 (사택 점검 ${t.inspection} · 기숙사 배정 ${t.dormitory})</span>` +
+        `<span style="color:#64748b;margin:0 4px;">|</span><span class="owner-metric-chip" style="color:#38bdf8;font-weight:700;"><strong>총 합계</strong> ${total.buildings}개동 · ${total.units}세대 (사택 점검 ${total.inspection} · 기숙사 배정 ${total.dormitory})</span>`;
+    } else {
+      metricsHtml = `<span>소속 미선택</span><span style="color:#64748b;margin:0 4px;">|</span><span style="color:#94a3b8;"><strong>총 합계</strong> 0개동 · 0세대</span>`;
+    }
     host.innerHTML = `<div class="owner-heading"><div><h1>건물주 · 안전점검 대상</h1>
       <p>소속 → 건물동 → 세대를 선택하세요. 선택한 대상만 모든 워크북의 클릭·편집·집계에 반영됩니다.</p></div>
       <div class="owner-actions"><button type="button" id="btn-owner-web-save" onclick="WorkbookManager.executeWebSave()">☁️ 웹 저장 / 인증</button>
       <button type="button" onclick="WorkbookManager.exportExcelWithValidation()">📊 엑셀 내보내기</button></div></div>
-      <div class="owner-metrics" aria-live="polite"><strong>전체 대상 ${total.buildings}개동 · ${total.units}세대</strong>
-      <span>앙커 점검 DB ${total.inspection}세대 · 기숙사 배정 ${total.dormitory}세대</span></div>
+      <div class="owner-metrics" aria-live="polite">${metricsHtml}</div>
       <p id="owner-sync-status" role="status"></p>
       <p class="owner-note">기숙사의 ‘배정 순번’은 실제 호실 번호가 아니며, 앙커 점검 DB·비용·점검률에는 포함되지 않습니다. A동은 원자료의 층별 합계(208실)와 총계(203실)가 달라 소속별 확정 총계 202+1실을 사용합니다. 사택 DB 309건에는 8동 101호 공부방 1건이 포함됩니다. 별도 공용부는 중복 합산하지 않습니다.</p>
       <div class="owner-columns"></div>`;
@@ -14973,7 +15005,8 @@ const WorkbookManager = {
             saveRevision=OwnerScope.revision;
             OwnerScope.pending=false;this.markWebDirty(false);this.remoteSaveVerified=true;
             clearTimeout(OwnerScope.syncTimer);
-            OwnerScope.syncStatus='GitHub XLSB 저장 및 최신 DB 즉시 재매핑 동기화 완료 · SHA '+result.receipt.blobSha.slice(0,7);
+            const tChem=OwnerScope.totals('화학'),tEs=OwnerScope.totals('에너지솔루션');
+            OwnerScope.syncStatus='GitHub XLSB 저장 및 최신 DB 동기화 완료 · 화학 '+tChem.buildings+'개동·'+tChem.units+'세대 | 에너지솔루션 '+tEs.buildings+'개동·'+tEs.units+'세대 | 총 합계 '+result.receipt.inspectionBuildings+'개동·'+result.receipt.inspectionUnits+'세대 · SHA '+result.receipt.blobSha.slice(0,7);
           }else{this.isDirty=true;this.remoteSaveVerified=false;OwnerScope.syncStatus='요청 시점 저장은 검증됨 · 이후 변경은 추가 저장 대기';}
           this.viewCache.clear();
           OwnerScope.updateScopeLabels();OwnerScope.refreshBuildingSheet();OwnerScope.render();OwnerScope.decorate();
@@ -14981,8 +15014,8 @@ const WorkbookManager = {
           this.renderRoomsElevation();this.renderRoomsSummaryTable();this.renderKeyPlan();this.updateRoomsKpiPills();
           if(this.fullscreenBuildingId)this.renderBuildingFullscreen(this.fullscreenBuildingId);
           if(this.activeRoomId){const cur=RoomIndex.get(this.activeRoomId);if(cur){this.renderRoomPointsTable(cur);this.renderRoomLinks(cur);RoomInspectionMetadata.show(cur);this.renderRoomSchematic(cur);}}
-          const receipt=result.receipt;
-          showToast('☁️ 저장 및 최신 DB 즉시 매핑 완료 · 사택 '+receipt.inspectionBuildings+'개동 '+receipt.inspectionUnits+'세대 · SHA '+receipt.blobSha.slice(0,7)+(OwnerScope.pending?' · 추가 변경 미저장':''));
+          const receipt=result.receipt,tChem=OwnerScope.totals('화학'),tEs=OwnerScope.totals('에너지솔루션');
+          showToast('☁️ 저장 및 최신 DB 즉시 매핑 완료 · 화학 '+tChem.units+'세대 · 에너지솔루션 '+tEs.units+'세대 · 총 합계 사택 '+receipt.inspectionBuildings+'개동 '+receipt.inspectionUnits+'세대 · SHA '+receipt.blobSha.slice(0,7)+(OwnerScope.pending?' · 추가 변경 미저장':''));
           try{localStorage.setItem(WorkspaceStorage.key('cached_balcony_save_receipt'),JSON.stringify(receipt));}catch(error){}
         }catch(error){
           saveFailure=error.message;this.isDirty=true;OwnerScope.pending=true;this.remoteSaveVerified=false;
@@ -25138,10 +25171,10 @@ function setCameraView(name, animate = true) {
       </div>
 
       <div class="room-inspection-metadata">
-        <label>점검인 <input id="room-inspector-input" type="text" maxlength="100" autocomplete="off" placeholder="점검인 성명" onchange="RoomInspectionMetadata.change('inspector',this)"></label>
-        <label>시공사 <input id="room-contractor-input" type="text" maxlength="200" autocomplete="off" placeholder="시공사명" onchange="RoomInspectionMetadata.change('contractor',this)"></label>
-        <label>시공 날짜 (YYYY-MM-DD) <input id="room-construction-date-input" type="text" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="2026-10-28" onchange="RoomInspectionMetadata.change('constructDate',this)"></label>
-        <label>점검 날짜 (YYYY-DD-MM) <input id="room-inspection-date-input" type="text" inputmode="numeric" maxlength="10" placeholder="2026-28-10" autocomplete="off" onchange="RoomInspectionMetadata.change('inspectDate',this)"></label>
+        <label>점검인 <input id="room-inspector-input" type="text" maxlength="100" autocomplete="off" placeholder="점검인 성명" onchange="RoomInspectionMetadata.change('inspector',this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();document.getElementById('room-inspection-date-input')?.focus();}"></label>
+        <label>점검 날짜 (YYYY-MM-DD) <input id="room-inspection-date-input" type="text" inputmode="numeric" maxlength="10" placeholder="2026-10-28" autocomplete="off" onchange="RoomInspectionMetadata.change('inspectDate',this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();document.getElementById('room-contractor-input')?.focus();}"></label>
+        <label>시공사 <input id="room-contractor-input" type="text" maxlength="200" autocomplete="off" placeholder="시공사명" onchange="RoomInspectionMetadata.change('contractor',this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();document.getElementById('room-construction-date-input')?.focus();}"></label>
+        <label>시공 날짜 (YYYY-MM-DD) <input id="room-construction-date-input" type="text" inputmode="numeric" maxlength="10" autocomplete="off" placeholder="2026-10-28" onchange="RoomInspectionMetadata.change('constructDate',this)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"></label>
       </div>
       <!-- 외벽 앙커 6개소 3D 위치 매핑 다이어그램 (Schematic) -->
       <div class="room-schematic-wrap">
