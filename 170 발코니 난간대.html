@@ -10317,7 +10317,7 @@ const WorkbookManager = {
         render();this.viewCache.set(name,{key:makeKey(),source:this.sheets[name]});return true;
       },
       activateTab(tabId, save = true, options = {}) {
-        const enteringModel=options.presentModel!==false&&tabId==='model'&&(this.activeTabId!==tabId||!this._modelPresented);
+        const enteringModel=false; // Workbook navigation always opens the normal view; fullscreen remains explicit.
         if(this.activeTabId!==tabId)TabTransientUI.dismiss(this.activeTabId,tabId);
         this.activeTabId = tabId;
         const progressRoot=document.getElementById('progress-workspace-container');if(progressRoot)progressRoot.style.display='none';
