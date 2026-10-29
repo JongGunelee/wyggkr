@@ -2187,9 +2187,39 @@
       gap: 8px;
       box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 16px rgba(56, 189, 248, 0.2);
       animation: fadeIn 0.2s ease;
+      white-space: nowrap;
+      width: max-content;
+      max-width: 96vw;
+      box-sizing: border-box;
+    }
+    .assembly-hud-bar #assembly-hud-bar-head {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 800;
+      font-size: 11.5px;
+      color: #38bdf8;
+      cursor: grab;
+      user-select: none;
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+    .assembly-hud-bar #assembly-hud-body {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+      white-space: nowrap;
     }
     .assembly-hud-bar .rot-slider {
       accent-color: #38bdf8;
+      flex-shrink: 0;
+    }
+    .assembly-hud-bar .rooms-btn,
+    .assembly-hud-bar .win-btn,
+    .assembly-hud-bar .dock-sep {
+      flex-shrink: 0;
+      white-space: nowrap;
     }
     .quick-height-bar {
       position: absolute;
@@ -4912,14 +4942,15 @@ body.model-fullscreen #model-fullscreen-open{display:none}
   </div>
 
   <!-- [Phase 32] 상단 중앙 전용 독립 플로팅 조립도 HUD 슬라이더 바 (#assembly-hud-bar) : 독립 이동/접기/펴기/닫기 완벽 지원 -->
+  <!-- [Phase 109] flex-shrink: 0 및 white-space: nowrap 영구 적용으로 텍스트 수직 깨짐 차단 및 38px 슬림 단일 라인 무결성 보장 -->
   <div id="assembly-hud-bar" class="assembly-hud-bar" style="display: none;">
-    <div id="assembly-hud-bar-head" style="display: flex; align-items: center; gap: 5px; font-weight: 800; font-size: 11.5px; color: #38bdf8; cursor: grab; user-select: none;" title="시공 조립도 슬라이더 바 마우스 드래그 이동">
-      <span style="font-size: 13px; color: #94a3b8;">⠿</span>
-      <span style="font-size: 14px;">🏗️</span>
-      <span>시공 조립도</span>
+    <div id="assembly-hud-bar-head" style="display: flex; align-items: center; gap: 5px; font-weight: 800; font-size: 11.5px; color: #38bdf8; cursor: grab; user-select: none; flex-shrink: 0; white-space: nowrap;" title="시공 조립도 슬라이더 바 마우스 드래그 이동">
+      <span style="font-size: 13px; color: #94a3b8; flex-shrink: 0;">⠿</span>
+      <span style="font-size: 14px; flex-shrink: 0;">🏗️</span>
+      <span style="white-space: nowrap; flex-shrink: 0; display: inline-block;">시공 조립도</span>
     </div>
-    <div class="dock-sep" style="height: 16px; margin: 0 4px;"></div>
-    <div id="assembly-hud-body" style="display: flex; align-items: center; gap: 6px;">
+    <div class="dock-sep" style="height: 16px; margin: 0 4px; flex-shrink: 0;"></div>
+    <div id="assembly-hud-body" style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; white-space: nowrap;">
       <button class="rooms-btn" onclick="prevAssemblyStep()" style="padding: 3px 8px; font-size: 11px;" title="이전 시공 단계 (◀)">◀ 이전</button>
       <div style="display: flex; align-items: center; gap: 8px;">
         <input type="range" class="rot-slider" id="slider-assembly-hud" min="0" max="1" step="0.005" value="1.0" oninput="onAssemblySliderInput(this.value)" style="width: 140px; cursor: pointer;" title="시공 순서 슬라이더 (0% 완전 분해 ~ 100% 완전 조립)" />
@@ -20639,6 +20670,10 @@ const WorkbookManager = {
         setAssemblyHudVisible(true);
         if (btn) btn.classList.add('active');
 
+        // [Phase 109] 활성화 즉시 슬라이더 UI 수치·라벨 및 3D 모델 변환을 선제 동기화하여 수동 클릭 없이도 100% 정상 표시 보장
+        updateAssemblyUI(assemblyStep, assemblyProgress, true);
+        updateAssemblyTransforms(assemblyProgress);
+
         // #1. 마커 표시 상태: 기본값 숨김 유지 및 UI 동기화
         if (typeof AssemblyMarkerManager !== 'undefined') {
           AssemblyMarkerManager.apply();
@@ -20684,6 +20719,10 @@ const WorkbookManager = {
       assemblyHudVisible = !!show;
       const hud = document.getElementById('assembly-hud-bar');
       if (hud) hud.style.display = assemblyHudVisible ? 'flex' : 'none';
+      if (assemblyHudVisible) {
+        // [Phase 109] HUD 슬라이더 표시 즉시 UI 동기화
+        updateAssemblyUI(assemblyStep, assemblyProgress, true);
+      }
       if (typeof AssemblyMarkerManager !== 'undefined') {
         if (assemblyHudVisible) AssemblyMarkerManager.updateUI();
         else AssemblyMarkerManager.closeMenu();
