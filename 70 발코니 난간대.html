@@ -7179,8 +7179,8 @@ body.model-fullscreen #model-fullscreen-open{display:none}
         this.syncDockBtn(id, true);
         if (id === 'rot-panel') rotSettingsBarVisible = true;
         if (id === 'assembly-panel') {
-          // [Phase 32] assembly-panel 열기 시 HUD 바도 함께 열리도록 보장
-          if (!isAssemblyModeActive) setAssemblyMode(true);
+          // [Phase 32] assembly-panel 열기 시 HUD 바도 함께 열리도록 보장 (상세창 직접 열기)
+          if (!isAssemblyModeActive) setAssemblyMode(true, { showPanel: true, silent: true });
         }
       },
 
@@ -7248,7 +7248,13 @@ body.model-fullscreen #model-fullscreen-open{display:none}
         const btnId = map[id];
         if (btnId) {
           const btn = document.getElementById(btnId);
-          if (btn) btn.classList.toggle('active', isActive);
+          if (btn) {
+            if (id === 'assembly-panel') {
+              btn.classList.toggle('active', typeof isAssemblyModeActive !== 'undefined' ? isAssemblyModeActive : isActive);
+            } else {
+              btn.classList.toggle('active', isActive);
+            }
+          }
         }
       },
 
@@ -20619,13 +20625,17 @@ const WorkbookManager = {
     let isAssemblyModeActive = false;
 
     // [Phase 29] #1. '시공 조립도' 모드 전환 시 1P~6P 마커 숨기기 및 #4. 분해 조립도 뷰 자동 전환
+    // [Phase 108] '시공 조립도' 클릭 시 기본값으로 '상세창'(#assembly-panel)은 접힘/숨김 유지하고 상단 슬라이더 바(#assembly-hud-bar)만 표시
     function setAssemblyMode(isOpen, options = {}) {
       isAssemblyModeActive = !!isOpen;
       const panel = document.getElementById('assembly-panel');
       const btn = document.getElementById('btn-dock-assembly');
 
       if (isAssemblyModeActive) {
-        if (panel) panel.style.display = 'flex';
+        // [Phase 108] 기본값으로 상세창(#assembly-panel)은 접힌(숨김) 상태 유지, 상단의 슬라이드바(#assembly-hud-bar)만 단독 표시
+        if (panel) {
+          panel.style.display = options.showPanel ? 'flex' : 'none';
+        }
         setAssemblyHudVisible(true);
         if (btn) btn.classList.add('active');
 
@@ -20642,7 +20652,7 @@ const WorkbookManager = {
 
         // #4. 유첨 이미지 2의 분해 조립도 뷰(위치, 핸드레일 각도, 원근감)로 카메라 전환
         setCameraView('exploded', true);
-        if(!options.silent)showToast('🏗️ 시공 조립도 모드 활성화 (마커 숨김 기본 및 분해 시점 전환)');
+        if(!options.silent)showToast('🏗️ 시공 조립도 모드 활성화 (상단 슬라이더 바 표시 · 상세창 접힘)');
       } else {
         if (panel) panel.style.display = 'none';
         setAssemblyHudVisible(false);
@@ -20666,9 +20676,8 @@ const WorkbookManager = {
     }
 
     function toggleAssemblyMode() {
-      const panel = document.getElementById('assembly-panel');
-      const isShown = panel && (panel.style.display === 'flex' || window.getComputedStyle(panel).display === 'flex');
-      setAssemblyMode(!isShown);
+      // [Phase 108] 상세창 표시 여부와 무관하게, 시공 조립도 모드 활성화 상태를 직접 1:1 토글
+      setAssemblyMode(!isAssemblyModeActive);
     }
 
     function setAssemblyHudVisible(show) {
