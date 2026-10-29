@@ -4929,6 +4929,18 @@ body.model-fullscreen #model-fullscreen-open{display:none}
       <button class="rooms-btn primary" id="btn-assembly-hud-play" onclick="toggleAssemblyPlay()" style="padding: 3px 10px; font-size: 11px; font-weight: 700;" title="조립 애니메이션 자동 재생">▶ 자동재생</button>
       <button class="rooms-btn" onclick="setCameraView('exploded')" style="padding: 3px 8px; font-size: 11px;" title="추천 3/4 액소노메트릭 분해 시점">📷 시점</button>
       <button class="rooms-btn" onclick="WindowManager.toggle('assembly-panel')" style="padding: 3px 8px; font-size: 11px;" title="상세 시공 설명 및 단계 패널 열기/닫기">📋 상세창</button>
+      <div class="dock-sep" style="height: 16px; margin: 0 3px;"></div>
+      <div style="position: relative; display: inline-flex; align-items: center; gap: 3px;">
+        <button type="button" class="rooms-btn" id="btn-assembly-marker-menu" onclick="AssemblyMarkerManager.toggleMenu(event)" style="padding: 3px 7px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px;" title="시공 조립도 내 마커(P, BP, Hs) 개별/일괄 표시 및 숨김 설정">
+          <span>📍 마커</span>
+          <span id="badge-assembly-markers-status" style="font-size: 9.5px; padding: 1px 5px; border-radius: 8px; background: rgba(148,163,184,0.18); color: #94a3b8; font-weight: 600;">숨김 (기본)</span>
+          <span style="font-size: 9px; opacity: 0.7;">▾</span>
+        </button>
+        <button type="button" class="rooms-btn" id="btn-assembly-grp-p" onclick="AssemblyMarkerManager.toggleGroup('P')" style="padding: 3px 6px; font-size: 10.5px; font-weight: 700; color: #94a3b8;" title="P1~P6 외벽 앙커 마커 일괄 표시/숨김 토글">P</button>
+        <button type="button" class="rooms-btn" id="btn-assembly-grp-bp" onclick="AssemblyMarkerManager.toggleGroup('BP')" style="padding: 3px 6px; font-size: 10.5px; font-weight: 700; color: #94a3b8;" title="BP1~BP6 하부 지주 마커 일괄 표시/숨김 토글">BP</button>
+        <button type="button" class="rooms-btn" id="btn-assembly-grp-hs" onclick="AssemblyMarkerManager.toggleGroup('Hs')" style="padding: 3px 6px; font-size: 10.5px; font-weight: 700; color: #94a3b8;" title="Hs 수평 파이프 마커 표시/숨김 토글">Hs</button>
+        <div id="assembly-markers-dropdown" style="display: none; position: absolute; top: calc(100% + 8px); left: 0; min-width: 320px; background: rgba(15, 23, 42, 0.96); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; box-shadow: 0 14px 34px rgba(0,0,0,0.7), 0 0 16px rgba(56, 189, 248, 0.2); padding: 10px 12px; z-index: 10001; font-size: 11px; color: #e2e8f0;"></div>
+      </div>
     </div>
     <button class="win-btn" onclick="toggleAssemblyHudCollapse()" style="margin-left: 2px; padding: 0 4px; font-size: 11px;" title="슬라이더 바 접기/펴기">−</button>
     <button class="win-btn win-btn-close" onclick="setAssemblyHudVisible(false)" style="margin-left: 2px; padding: 0 4px; font-size: 11px;" title="슬라이더 바 닫기">✕</button>
@@ -17550,6 +17562,7 @@ const WorkbookManager = {
 
         function init() {
       ModelParameters.restoreLocal();
+      if (typeof AssemblyMarkerManager !== 'undefined') AssemblyMarkerManager.init();
       const canvas = document.getElementById('webgl-canvas');
       scene = new THREE.Scene();
       scene.background = new THREE.Color(0xa2bad2);
@@ -19202,10 +19215,15 @@ const WorkbookManager = {
       }
 
       // [Phase 30] 시공 조립도 또는 분해 조립도 뷰 모드 시 1P~6P 마커 및 타겟 펄스 링 100% 숨김 가드
+      // [Phase 106] 시공 조립도 툴바 마커 매니저 연동
       if ((typeof isAssemblyModeActive !== 'undefined' && isAssemblyModeActive) ||
           (typeof isExplodedViewActive !== 'undefined' && isExplodedViewActive)) {
         if (typeof defectPinGroups !== 'undefined') {
-          defectPinGroups.forEach(g => { if (g) g.visible = false; });
+          if (typeof AssemblyMarkerManager !== 'undefined') {
+            AssemblyMarkerManager.apply();
+          } else {
+            defectPinGroups.forEach(g => { if (g) g.visible = false; });
+          }
         }
         if (typeof targetIndicator !== 'undefined' && targetIndicator) {
           targetIndicator.visible = false;
@@ -20229,7 +20247,7 @@ const WorkbookManager = {
           if (defectPinGroups[idx]) {
             defectPinGroups[idx].position.z = d.markerPos.z + (d.pointKey === 'Hs' || d.pointKey.startsWith('BP') ? offsets.deltaRail : offsets.deltaPlate);
             if (isAssemblyModeActive || isExplodedViewActive) {
-              defectPinGroups[idx].visible = false;
+              defectPinGroups[idx].visible = typeof AssemblyMarkerManager !== 'undefined' ? AssemblyMarkerManager.isVisible(d.pointKey) : false;
             }
           }
         });
@@ -20611,8 +20629,11 @@ const WorkbookManager = {
         setAssemblyHudVisible(true);
         if (btn) btn.classList.add('active');
 
-        // #1. 1P ~ 6P 마커 전수 숨기기
-        if (typeof defectPinGroups !== 'undefined') {
+        // #1. 마커 표시 상태: 기본값 숨김 유지 및 UI 동기화
+        if (typeof AssemblyMarkerManager !== 'undefined') {
+          AssemblyMarkerManager.apply();
+          AssemblyMarkerManager.updateUI();
+        } else if (typeof defectPinGroups !== 'undefined') {
           defectPinGroups.forEach(g => { if (g) g.visible = false; });
         }
         if (typeof targetIndicator !== 'undefined' && targetIndicator) {
@@ -20621,7 +20642,7 @@ const WorkbookManager = {
 
         // #4. 유첨 이미지 2의 분해 조립도 뷰(위치, 핸드레일 각도, 원근감)로 카메라 전환
         setCameraView('exploded', true);
-        if(!options.silent)showToast('🏗️ 시공 조립도 모드 활성화 (1P~6P 마커 숨김 및 분해 시점 전환)');
+        if(!options.silent)showToast('🏗️ 시공 조립도 모드 활성화 (마커 숨김 기본 및 분해 시점 전환)');
       } else {
         if (panel) panel.style.display = 'none';
         setAssemblyHudVisible(false);
@@ -20654,6 +20675,10 @@ const WorkbookManager = {
       assemblyHudVisible = !!show;
       const hud = document.getElementById('assembly-hud-bar');
       if (hud) hud.style.display = assemblyHudVisible ? 'flex' : 'none';
+      if (typeof AssemblyMarkerManager !== 'undefined') {
+        if (assemblyHudVisible) AssemblyMarkerManager.updateUI();
+        else AssemblyMarkerManager.closeMenu();
+      }
     }
 
     /* =========================================================================
@@ -21554,6 +21579,9 @@ const WorkbookManager = {
         const menu = document.getElementById('view-menu');
         if (menu) menu.classList.remove('show');
       }
+      if (!e.target.closest('#btn-assembly-marker-menu') && !e.target.closest('#assembly-markers-dropdown')) {
+        if (typeof AssemblyMarkerManager !== 'undefined') AssemblyMarkerManager.closeMenu();
+      }
     });
 
     // =========================================================================
@@ -21845,13 +21873,267 @@ const WorkbookManager = {
       if (b0) b0.classList.toggle('active', Math.abs(x) < 0.02);
     }
 
+    // =========================================================================
+    // [Phase 106] 시공 조립도 플로팅 툴바 내 마커(P, BP, Hs) 개별/그룹 표시/숨김 제어 매니저
+    // - 기본값: 분해 조립 시야 확보를 위해 모든 마커 숨김 (false)
+    // - 툴바 상단 원클릭 그룹 토글: [P] (외벽 앙커 P1~P6), [BP] (하부 지주 BP1~BP6), [Hs] (수평 파이프)
+    // - 툴바 세부 드롭다운 팝업: 마커별 개별 토글 칩(고유 테마 색상 닷 및 체크마크), [👁️ 전체 표시], [🙈 전체 숨김 (기본)]
+    // - 시공 조립도 진행률(0%~100%) 애니메이션 및 부재 변위 이동 시 마커 위치 자동 동기화
+    // - 시공 조립도 모드 종료 시 일반 점검 뷰 마커 자동 복원 (100% 정상 표시)
+    // =========================================================================
+    const AssemblyMarkerManager = {
+      visibility: {},
+
+      init() {
+        this.reset(false);
+      },
+
+      reset(val = false) {
+        this.visibility = {};
+        const keys = (typeof INSPECTION_POINT_KEYS !== 'undefined' && Array.isArray(INSPECTION_POINT_KEYS))
+          ? INSPECTION_POINT_KEYS
+          : ['P1','P2','P3','P4','P5','P6','BP1','BP2','BP3','BP4','BP5','BP6','Hs'];
+        keys.forEach(k => { this.visibility[k] = !!val; });
+        this.updateUI();
+      },
+
+      isVisible(pointKey) {
+        return !!this.visibility[pointKey];
+      },
+
+      setMarker(key, visible) {
+        this.visibility[key] = !!visible;
+        this.apply();
+        this.updateUI();
+      },
+
+      toggleMarker(key) {
+        this.setMarker(key, !this.visibility[key]);
+      },
+
+      getGroupKeys(grp) {
+        if (grp === 'P') return (typeof LEGACY_POINT_KEYS !== 'undefined' ? LEGACY_POINT_KEYS : ['P1','P2','P3','P4','P5','P6']);
+        if (grp === 'BP') return (typeof BOTTOM_POINT_KEYS !== 'undefined' ? BOTTOM_POINT_KEYS : ['BP1','BP2','BP3','BP4','BP5','BP6']);
+        if (grp === 'Hs') return ['Hs'];
+        return [];
+      },
+
+      isGroupAllVisible(grp) {
+        const keys = this.getGroupKeys(grp);
+        if (!keys.length) return false;
+        return keys.every(k => !!this.visibility[k]);
+      },
+
+      isGroupAnyVisible(grp) {
+        const keys = this.getGroupKeys(grp);
+        return keys.some(k => !!this.visibility[k]);
+      },
+
+      setGroup(grp, visible) {
+        const keys = this.getGroupKeys(grp);
+        keys.forEach(k => { this.visibility[k] = !!visible; });
+        this.apply();
+        this.updateUI();
+      },
+
+      toggleGroup(grp) {
+        const allVis = this.isGroupAllVisible(grp);
+        this.setGroup(grp, !allVis);
+      },
+
+      setAll(visible) {
+        const keys = (typeof INSPECTION_POINT_KEYS !== 'undefined' && Array.isArray(INSPECTION_POINT_KEYS))
+          ? INSPECTION_POINT_KEYS
+          : Object.keys(this.visibility);
+        keys.forEach(k => { this.visibility[k] = !!visible; });
+        this.apply();
+        this.updateUI();
+      },
+
+      apply() {
+        const inAssembly = !!((typeof isAssemblyModeActive !== 'undefined' && isAssemblyModeActive) ||
+                              (typeof isExplodedViewActive !== 'undefined' && isExplodedViewActive));
+        if (typeof defectPinGroups !== 'undefined' && typeof DEFECT_DATA !== 'undefined') {
+          DEFECT_DATA.forEach((d, idx) => {
+            if (defectPinGroups[idx]) {
+              defectPinGroups[idx].visible = inAssembly ? !!this.visibility[d.pointKey] : true;
+            }
+          });
+        }
+        if (typeof RenderScheduler !== 'undefined' && RenderScheduler.request) {
+          RenderScheduler.request();
+        }
+      },
+
+      toggleMenu(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        const dd = document.getElementById('assembly-markers-dropdown');
+        if (!dd) return;
+        const isShown = dd.style.display !== 'none';
+        if (isShown) {
+          this.closeMenu();
+        } else {
+          this.renderMenu();
+          dd.style.display = 'block';
+        }
+      },
+
+      closeMenu() {
+        const dd = document.getElementById('assembly-markers-dropdown');
+        if (dd) dd.style.display = 'none';
+      },
+
+      updateUI() {
+        // 1. Group buttons styling
+        const pAll = this.isGroupAllVisible('P');
+        const pAny = this.isGroupAnyVisible('P');
+        const bpAll = this.isGroupAllVisible('BP');
+        const bpAny = this.isGroupAnyVisible('BP');
+        const hsAll = this.isGroupAllVisible('Hs');
+
+        const updateGrpBtn = (btnId, all, any, activeColor) => {
+          const btn = document.getElementById(btnId);
+          if (!btn) return;
+          if (all) {
+            btn.style.background = 'rgba(56, 189, 248, 0.28)';
+            btn.style.borderColor = activeColor || '#38bdf8';
+            btn.style.color = activeColor || '#38bdf8';
+            btn.style.boxShadow = '0 0 6px rgba(56, 189, 248, 0.4)';
+          } else if (any) {
+            btn.style.background = 'rgba(56, 189, 248, 0.12)';
+            btn.style.borderColor = 'rgba(56, 189, 248, 0.4)';
+            btn.style.color = '#7dd3fc';
+            btn.style.boxShadow = 'none';
+          } else {
+            btn.style.background = '';
+            btn.style.borderColor = '';
+            btn.style.color = '#94a3b8';
+            btn.style.boxShadow = 'none';
+          }
+        };
+
+        updateGrpBtn('btn-assembly-grp-p', pAll, pAny, '#38bdf8');
+        updateGrpBtn('btn-assembly-grp-bp', bpAll, bpAny, '#a3e635');
+        updateGrpBtn('btn-assembly-grp-hs', hsAll, hsAll, '#ffffff');
+
+        // 2. Status badge
+        const badge = document.getElementById('badge-assembly-markers-status');
+        if (badge) {
+          const keys = Object.keys(this.visibility);
+          const visibleCount = keys.filter(k => this.visibility[k]).length;
+          if (visibleCount === 0) {
+            badge.textContent = '숨김 (기본)';
+            badge.style.background = 'rgba(148, 163, 184, 0.18)';
+            badge.style.color = '#94a3b8';
+          } else if (keys.length > 0 && visibleCount === keys.length) {
+            badge.textContent = '전체 (' + visibleCount + ')';
+            badge.style.background = 'rgba(16, 185, 129, 0.25)';
+            badge.style.color = '#10b981';
+          } else {
+            badge.textContent = visibleCount + '개 표시';
+            badge.style.background = 'rgba(56, 189, 248, 0.22)';
+            badge.style.color = '#38bdf8';
+          }
+        }
+
+        // 3. Re-render dropdown if currently open
+        const dd = document.getElementById('assembly-markers-dropdown');
+        if (dd && dd.style.display !== 'none') {
+          this.renderMenu();
+        }
+      },
+
+      renderMenu() {
+        const dd = document.getElementById('assembly-markers-dropdown');
+        if (!dd) return;
+
+        const pKeys = this.getGroupKeys('P');
+        const bpKeys = this.getGroupKeys('BP');
+        const hsKeys = this.getGroupKeys('Hs');
+
+        const renderChip = (key) => {
+          const isVis = !!this.visibility[key];
+          const pDef = typeof pointDefinition === 'function' ? pointDefinition(key) : null;
+          const color = pDef ? pDef.color : (key.startsWith('BP') ? '#a3e635' : (key === 'Hs' ? '#ffffff' : '#38bdf8'));
+          const activeStyle = isVis 
+            ? 'background: rgba(56, 189, 248, 0.22); border: 1px solid ' + color + '; color: #ffffff; box-shadow: 0 0 6px ' + color + '55;' 
+            : 'background: rgba(30, 41, 59, 0.65); border: 1px solid rgba(148, 163, 184, 0.25); color: #94a3b8;';
+          const dot = '<span style="width: 7px; height: 7px; border-radius: 50%; background: ' + color + '; display: inline-block; box-shadow: 0 0 4px ' + color + ';"></span>';
+          const check = isVis ? '<span style="color:' + color + '; font-weight:800; font-size:10px; margin-left: 2px;">✓</span>' : '';
+          const title = pDef ? (pDef.badgeText || pDef.name) + ' (' + key + ')' : key;
+          return '<button type="button" class="rooms-btn" data-key="' + key + '" onclick="AssemblyMarkerManager.toggleMarker(this.dataset.key)" style="padding: 2px 7px; font-size: 10.5px; font-weight: 700; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; ' + activeStyle + '" title="' + title + ' 3D 표시/숨김 토글">' + dot + key + check + '</button>';
+        };
+
+        let html = '<div style="display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(148, 163, 184, 0.18); padding-bottom: 6px; margin-bottom: 8px;">'
+          + '<span style="font-weight: 800; font-size: 11.5px; color: #38bdf8; display: flex; align-items: center; gap: 5px;"><span>📍</span> 시공 조립도 마커 제어</span>'
+          + '<div style="display: flex; gap: 4px;">'
+          + '<button type="button" class="rooms-btn" onclick="AssemblyMarkerManager.setAll(true)" style="padding: 2px 6px; font-size: 10px; color: #38bdf8;" title="모든 마커 3D 표시">👁️ 전체 표시</button>'
+          + '<button type="button" class="rooms-btn" onclick="AssemblyMarkerManager.setAll(false)" style="padding: 2px 6px; font-size: 10px; color: #94a3b8;" title="모든 마커 숨김 (기본값)">🙈 전체 숨김</button>'
+          + '</div></div>'
+
+          // Group P
+          + '<div style="margin-bottom: 8px;">'
+          + '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">'
+          + '<span style="font-size: 10.5px; font-weight: 700; color: #cbd5e1;">외벽 앙커 접합부 (P1~P' + pKeys.length + ')</span>'
+          + '<div style="display: flex; gap: 3px;">'
+          + '<button type="button" class="rooms-btn" data-grp="P" onclick="AssemblyMarkerManager.setGroup(this.dataset.grp, true)" style="padding: 1px 5px; font-size: 9.5px;" title="P 마커 전체 표시">ON</button>'
+          + '<button type="button" class="rooms-btn" data-grp="P" onclick="AssemblyMarkerManager.setGroup(this.dataset.grp, false)" style="padding: 1px 5px; font-size: 9.5px;" title="P 마커 전체 숨김">OFF</button>'
+          + '</div></div>'
+          + '<div style="display: flex; flex-wrap: wrap; gap: 4px;">' + pKeys.map(k => renderChip(k)).join('') + '</div>'
+          + '</div>'
+
+          // Group BP
+          + '<div style="margin-bottom: 8px;">'
+          + '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">'
+          + '<span style="font-size: 10.5px; font-weight: 700; color: #cbd5e1;">하부 주 지주 베이스 (BP1~BP' + bpKeys.length + ')</span>'
+          + '<div style="display: flex; gap: 3px;">'
+          + '<button type="button" class="rooms-btn" data-grp="BP" onclick="AssemblyMarkerManager.setGroup(this.dataset.grp, true)" style="padding: 1px 5px; font-size: 9.5px;" title="BP 마커 전체 표시">ON</button>'
+          + '<button type="button" class="rooms-btn" data-grp="BP" onclick="AssemblyMarkerManager.setGroup(this.dataset.grp, false)" style="padding: 1px 5px; font-size: 9.5px;" title="BP 마커 전체 숨김">OFF</button>'
+          + '</div></div>'
+          + '<div style="display: flex; flex-wrap: wrap; gap: 4px;">' + bpKeys.map(k => renderChip(k)).join('') + '</div>'
+          + '</div>'
+
+          // Group Hs
+          + '<div style="margin-bottom: 4px;">'
+          + '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">'
+          + '<span style="font-size: 10.5px; font-weight: 700; color: #cbd5e1;">수평 파이프 부재 (Hs)</span>'
+          + '<div style="display: flex; gap: 3px;">'
+          + '<button type="button" class="rooms-btn" data-grp="Hs" onclick="AssemblyMarkerManager.setGroup(this.dataset.grp, true)" style="padding: 1px 5px; font-size: 9.5px;" title="Hs 마커 표시">ON</button>'
+          + '<button type="button" class="rooms-btn" data-grp="Hs" onclick="AssemblyMarkerManager.setGroup(this.dataset.grp, false)" style="padding: 1px 5px; font-size: 9.5px;" title="Hs 마커 숨김">OFF</button>'
+          + '</div></div>'
+          + '<div style="display: flex; flex-wrap: wrap; gap: 4px;">' + hsKeys.map(k => renderChip(k)).join('') + '</div>'
+          + '</div>'
+
+          // Footer
+          + '<div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid rgba(148, 163, 184, 0.14); display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #64748b;">'
+          + '<span>💡 기본값: 숨김 유지 (분해 조립 시야 확보)</span>'
+          + '<button type="button" class="rooms-btn" onclick="AssemblyMarkerManager.closeMenu()" style="padding: 1px 6px; font-size: 10px;">닫기</button>'
+          + '</div>';
+
+        dd.innerHTML = html;
+      }
+    };
+
 // [Phase 72] A normal inspection view always shows every active P/BP/Hs marker.
+// [Phase 106] In assembly mode, marker visibility is dynamically governed by AssemblyMarkerManager (default: hidden).
 let currentViewName='facade';
 function applyInspectionMarkerVisibility() {
- const visible=!(isAssemblyModeActive||isExplodedViewActive);
- defectPinGroups.forEach(group=>{if(group)group.visible=visible;});
- if(targetIndicator){const modal=document.getElementById('defect-modal');targetIndicator.visible=visible&&currentFocusDefect!==null&&!!modal&&getComputedStyle(modal).display!=='none';}
- return visible;
+ const inAssembly = !!((typeof isAssemblyModeActive !== 'undefined' && isAssemblyModeActive) ||
+                       (typeof isExplodedViewActive !== 'undefined' && isExplodedViewActive));
+ if (typeof defectPinGroups !== 'undefined' && typeof DEFECT_DATA !== 'undefined') {
+   DEFECT_DATA.forEach((d, idx) => {
+     if (defectPinGroups[idx]) {
+       defectPinGroups[idx].visible = inAssembly
+         ? (typeof AssemblyMarkerManager !== 'undefined' ? AssemblyMarkerManager.isVisible(d.pointKey) : false)
+         : true;
+     }
+   });
+ }
+ if (targetIndicator) {
+   const modal = document.getElementById('defect-modal');
+   targetIndicator.visible = !inAssembly && currentFocusDefect !== null && !!modal && getComputedStyle(modal).display !== 'none';
+ }
+ return !inAssembly;
 }
 function transitionInspectionView(name) {
  const leavingAssembly=name!=='exploded'&&(isAssemblyModeActive||isExplodedViewActive);
