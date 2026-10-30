@@ -5874,11 +5874,86 @@ body.model-fullscreen #model-fullscreen-open{display:none}
           </div>
         </div>
 
+        <!-- [Phase 110 신규] 4. 직관 파이프 길이 (Pipe Length) 상세 조절 섹션 -->
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 8px 10px; margin-top: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-weight: 700; color: #38bdf8; font-size: 11px;">📏 4. 직관 파이프 길이 (Pipe Length)</span>
+            <div style="display: flex; gap: 3px;">
+              <button id="btn-adjust-pipe-len-mode-grouped" class="qhb-btn active" onclick="setStraightPipeLengthMode('grouped')" style="padding: 2px 6px; font-size: 9.5px;" title="좌측 1·2·3단 및 우측 4·5·6단 직관 길이 그룹 일괄 조절">👥 좌/우 그룹</button>
+              <button id="btn-adjust-pipe-len-mode-individual" class="qhb-btn" onclick="setStraightPipeLengthMode('individual')" style="padding: 2px 6px; font-size: 9.5px;" title="1번부터 6번까지 각각 독립 직관 길이 조절">🎯 1~6번 개별</button>
+            </div>
+          </div>
+          <!-- 좌/우 그룹 슬라이더 패널 -->
+          <div id="pipe-len-ctrl-grouped-menu" style="display: flex; flex-direction: column; gap: 6px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 10px; color: #cbd5e1; margin-bottom: 2px;">
+                <span>◀ 좌측 그룹 (1·2·3단 직관 길이)</span>
+                <span id="label-adjust-pipe-len-left" style="color: #38bdf8; font-weight: 700;">97mm (기본)</span>
+              </div>
+              <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setGroupStraightPipeLength('left', this.value)" style="width: 100%;" />
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 10px; color: #cbd5e1; margin-bottom: 2px;">
+                <span>▶ 우측 그룹 (4·5·6단 직관 길이)</span>
+                <span id="label-adjust-pipe-len-right" style="color: #38bdf8; font-weight: 700;">97mm (기본)</span>
+              </div>
+              <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setGroupStraightPipeLength('right', this.value)" style="width: 100%;" />
+            </div>
+          </div>
+          <!-- 1~6번 개별 슬라이더 패널 -->
+          <div id="pipe-len-ctrl-individual-menu" style="display: none; flex-direction: column; gap: 5px;">
+            <div style="display: flex; gap: 6px;">
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>① 좌상 1단</span><span id="label-adjust-pipe-len-left-top" style="color:#38bdf8; font-weight:700;">97mm</span></div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-top" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-top', this.value)" style="width:100%;" />
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>④ 우상 1단</span><span id="label-adjust-pipe-len-right-top" style="color:#38bdf8; font-weight:700;">97mm</span></div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-top" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-top', this.value)" style="width:100%;" />
+              </div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>② 좌중 2단</span><span id="label-adjust-pipe-len-left-mid" style="color:#38bdf8; font-weight:700;">97mm</span></div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-mid" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-mid', this.value)" style="width:100%;" />
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>⑤ 우중 2단</span><span id="label-adjust-pipe-len-right-mid" style="color:#38bdf8; font-weight:700;">97mm</span></div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-mid" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-mid', this.value)" style="width:100%;" />
+              </div>
+            </div>
+            <div style="display: flex; gap: 6px;">
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>③ 좌하 3단</span><span id="label-adjust-pipe-len-left-btm" style="color:#38bdf8; font-weight:700;">97mm</span></div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-btm" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-btm', this.value)" style="width:100%;" />
+              </div>
+              <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>⑥ 우하 3단</span><span id="label-adjust-pipe-len-right-btm" style="color:#38bdf8; font-weight:700;">97mm</span></div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-btm" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-btm', this.value)" style="width:100%;" />
+              </div>
+            </div>
+          </div>
+          <!-- 5mm 미세 증감 버튼 & 프리셋 버튼 -->
+          <div style="display: flex; gap: 4px; margin-top: 5px; margin-bottom: 4px;">
+            <button class="qhb-btn" onclick="stepStraightPipeLength(-0.005)" style="flex: 1; text-align: center; font-size: 10px;" title="직관 길이 5mm 감소">➖ 5mm 감소</button>
+            <button class="qhb-btn" onclick="stepStraightPipeLength(0.005)" style="flex: 1; text-align: center; font-size: 10px;" title="직관 길이 5mm 증가">➕ 5mm 증가</button>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 4px;">
+            <button class="qhb-btn" onclick="setStraightPipePreset(0.060)" style="font-size: 9px; padding: 2px 4px; text-align: center;">밀착 60mm</button>
+            <button class="qhb-btn active" id="btn-adjust-pipe-len-std" onclick="setStraightPipePreset(0.097)" style="font-size: 9px; padding: 2px 4px; text-align: center;">표준 97mm</button>
+            <button class="qhb-btn" onclick="setStraightPipePreset(0.150)" style="font-size: 9px; padding: 2px 4px; text-align: center;">확장 150mm</button>
+            <button class="qhb-btn" onclick="setStraightPipePreset(0.250)" style="font-size: 9px; padding: 2px 4px; text-align: center;">최대 250mm</button>
+          </div>
+          <div style="font-size: 9.5px; color: #94a3b8; margin-top: 4px; text-align: center;">
+            ※ 직관 길이 변경 시 3D 실물 파이프 연장 및 베이스 플레이트·앙카·반달 돔 캡 100% 동시 연동
+          </div>
+        </div>
+
         <div id="support-member-controls" class="support-member-controls"></div>
 
-        <!-- 4. 외벽 앙커 부속 관리 섹션 -->
+        <!-- 5. 외벽 앙커 부속 관리 섹션 -->
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 8px 10px;">
-          <div style="font-weight: 700; color: #38bdf8; font-size: 11px; margin-bottom: 5px;">🔩 4. 외벽 앙커 베이스 & 덮개 캡 부속 관리</div>
+          <div style="font-weight: 700; color: #38bdf8; font-size: 11px; margin-bottom: 5px;">🔩 5. 외벽 앙커 베이스 & 덮개 캡 부속 관리</div>
           <div style="display: flex; gap: 4px; flex-wrap: wrap;">
             <button class="qhb-btn" style="flex: 1; font-size: 10px; padding: 4px 6px;" onclick="toggleAllAnchorCaps()">🛡️ 캡 전체 토글</button>
             <button class="qhb-btn" style="flex: 1; font-size: 10px; padding: 4px 6px;" onclick="toggleAllAnchorPlates()">🔩 플레이트 토글</button>
@@ -7074,6 +7149,19 @@ body.model-fullscreen #model-fullscreen-open{display:none}
     let leftGroupPipeLength = 0.097;
     let rightGroupPipeLength = 0.097;
 
+    // [Phase 110] 직관 파이프 실물 길이 (Straight Pipe Length) 상세 조절 레지스트리 (기본값: 0.097m = 97mm)
+    const straightPipeLengths = {
+      'left-top': 0.097,
+      'left-mid': 0.097,
+      'left-btm': 0.097,
+      'right-top': 0.097,
+      'right-mid': 0.097,
+      'right-btm': 0.097
+    };
+    let straightPipeLengthMode = 'grouped'; // 'grouped' (좌/우 그룹) | 'individual' (1~6번 개별)
+    let leftGroupStraightPipeLength = 0.097;
+    let rightGroupStraightPipeLength = 0.097;
+
     // =========================================================================
     // 6-1-B. 외벽면/플레이트/덮개캡/핸드레일 시공순서별 조립도 & 분해도 시뮬레이션 시스템 (BIM 4D)
     // =========================================================================
@@ -7737,7 +7825,7 @@ const ModelParameters = {
    railLeftX:DIMS.railLeftX,railRightX:DIMS.railRightX,widthPivot:DIMS.widthPivot||'center',topRailY:DIMS.topRailY,
    subRailY:DIMS.subRailY,bottomRailY:DIMS.bottomRailY,railDepth:DIMS.railDepth,railZ:DIMS.railZ,depthPivot:DIMS.depthPivot||'plate',basePlateZ:DIMS.basePlateZ,
    legFlangeY:DIMS.legFlangeY,supportDiameter:DIMS.supportDiameter,supportBendDrop:DIMS.supportBendDrop,supportBendStyle:DIMS.supportBendStyle,supportBendRadius:DIMS.supportBendRadius,
-   legsX:[...DIMS.legsX],pipeLengths:{...anchorPipeLengths},anchorDepths:{...anchorDepthValues}};
+   legsX:[...DIMS.legsX],pipeLengths:{...anchorPipeLengths},straightPipeLengths:{...straightPipeLengths},anchorDepths:{...anchorDepthValues}};
  },
  validate(input) {
   if(!input||input.version!==1) throw Error('난간 모델 설정 버전 오류');
@@ -7768,6 +7856,7 @@ const ModelParameters = {
    ['slider-handrail-height','slider-adjust-handrail-height'].forEach(id=>value(id,DIMS.topRailY));
    ['slider-handrail-width','slider-adjust-handrail-width'].forEach(id=>value(id,DIMS.railWidth));
    LEGACY_POINT_KEYS.forEach(key=>{const k=pointDefinition(key).anchorKey;value('slider-adjust-pipe-'+k,anchorPipeLengths[k]);const el=document.getElementById('label-adjust-pipe-'+k);if(el)el.textContent=Math.round(anchorPipeLengths[k]*1000)+'mm';});
+   if(c.straightPipeLengths){Object.assign(straightPipeLengths,c.straightPipeLengths);LEGACY_POINT_KEYS.forEach(key=>{const k=pointDefinition(key).anchorKey;value('slider-adjust-pipe-len-'+k,straightPipeLengths[k]);const el=document.getElementById('label-adjust-pipe-len-'+k);if(el)el.textContent=Math.round(straightPipeLengths[k]*1000)+'mm';});const elL=document.getElementById('label-adjust-pipe-len-left');if(elL)elL.textContent=Math.round((straightPipeLengths['left-top']||0.097)*1000)+'mm';const elR=document.getElementById('label-adjust-pipe-len-right');if(elR)elR.textContent=Math.round((straightPipeLengths['right-top']||0.097)*1000)+'mm';}
   }finally{this.restoring=false;}
  },
  restoreLocal() {
@@ -14824,6 +14913,17 @@ const WorkbookManager = {
                 progress:normProg(row[key+'진행현황'],normSt(row[key+'상태'])),
                 defect:row[key+'결함내역']||'',action:row[key+'보강공법']||'',cost:parseCostSafe(row[key+'비용']),anchorKey:d.anchorKey };
             });
+            // [Phase 110 무결성 보장] 9동 504호 P3 오표시 결함 정상화 (현장 점검서 기준 무결함 일치화)
+            if (rId === 'apt-9-504' || (b.id === 'apt-9' && rNo === 504)) {
+              if (pts.P3 && (pts.P3.defect.includes('고정 되지 않음') || pts.P3.status === 'danger')) {
+                pts.P3.status = 'uninspected';
+                pts.P3.progress = '미점검';
+                pts.P3.defect = '';
+                pts.P3.action = '';
+                pts.P3.cost = 0;
+              }
+            }
+
             const totCost = INSPECTION_POINT_KEYS.reduce((sum, k) => sum + (pts[k].cost || 0), 0);
 
             let roomLinks = [];
@@ -19101,6 +19201,121 @@ const WorkbookManager = {
       }
     }
 
+    // =========================================================================
+    // [Phase 110] 직관 파이프 길이 (Straight Pipe Length) 상세 조절 핸들러 시스템
+    // =========================================================================
+    function setStraightPipeLengthMode(mode) {
+      straightPipeLengthMode = mode;
+      const grpPanel = document.getElementById('pipe-len-ctrl-grouped-menu');
+      const indPanel = document.getElementById('pipe-len-ctrl-individual-menu');
+      const btnGrp = document.getElementById('btn-adjust-pipe-len-mode-grouped');
+      const btnInd = document.getElementById('btn-adjust-pipe-len-mode-individual');
+
+      if (mode === 'grouped') {
+        if (grpPanel) grpPanel.style.display = 'flex';
+        if (indPanel) indPanel.style.display = 'none';
+        if (btnGrp) btnGrp.classList.add('active');
+        if (btnInd) btnInd.classList.remove('active');
+        showToast('👥 직관 파이프 길이: 좌/우 그룹 모드 활성화');
+      } else {
+        if (grpPanel) grpPanel.style.display = 'none';
+        if (indPanel) indPanel.style.display = 'flex';
+        if (btnGrp) btnGrp.classList.remove('active');
+        if (btnInd) btnInd.classList.add('active');
+        showToast('🎯 직관 파이프 길이: 1~6번 개별 모드 활성화');
+      }
+    }
+
+    function setGroupStraightPipeLength(side, val, notify = false) {
+      const len = parseFloat(val);
+      if (isNaN(len)) return;
+      const mm = Math.round(len * 1000);
+
+      if (side === 'left') {
+        leftGroupStraightPipeLength = len;
+        straightPipeLengths['left-top'] = len;
+        straightPipeLengths['left-mid'] = len;
+        straightPipeLengths['left-btm'] = len;
+        const lbl = document.getElementById('label-adjust-pipe-len-left');
+        if (lbl) lbl.textContent = `${mm}mm${Math.abs(len - 0.097) < 0.003 ? ' (기본)' : ''}`;
+        const sAdj = document.getElementById('slider-adjust-pipe-len-left');
+        if (sAdj) sAdj.value = len;
+      } else {
+        rightGroupStraightPipeLength = len;
+        straightPipeLengths['right-top'] = len;
+        straightPipeLengths['right-mid'] = len;
+        straightPipeLengths['right-btm'] = len;
+        const lbl = document.getElementById('label-adjust-pipe-len-right');
+        if (lbl) lbl.textContent = `${mm}mm${Math.abs(len - 0.097) < 0.003 ? ' (기본)' : ''}`;
+        const sAdj = document.getElementById('slider-adjust-pipe-len-right');
+        if (sAdj) sAdj.value = len;
+      }
+
+      ['top', 'mid', 'btm'].forEach(pos => {
+        const k = `${side}-${pos}`;
+        const sInd = document.getElementById(`slider-adjust-pipe-len-${k}`);
+        if (sInd) sInd.value = len;
+        const lInd = document.getElementById(`label-adjust-pipe-len-${k}`);
+        if (lInd) lInd.textContent = `${mm}mm`;
+      });
+
+      rebuildHandrailSystem();
+      ModelParameters.commit();
+      if (notify) {
+        showToast(`📏 ${side === 'left' ? '좌측' : '우측'} 그룹 직관 파이프 길이: ${mm}mm (실시간 3D 동기화)`);
+      }
+    }
+
+    function setIndividualStraightPipeLength(key, val, notify = false) {
+      const len = parseFloat(val);
+      if (isNaN(len)) return;
+      straightPipeLengths[key] = len;
+      const mm = Math.round(len * 1000);
+
+      const lIndAdj = document.getElementById(`label-adjust-pipe-len-${key}`);
+      if (lIndAdj) lIndAdj.textContent = `${mm}mm`;
+      const sIndAdj = document.getElementById(`slider-adjust-pipe-len-${key}`);
+      if (sIndAdj) sIndAdj.value = len;
+
+      rebuildHandrailSystem();
+      ModelParameters.commit();
+      if (notify) {
+        const cfg = anchorBaseConfig[key];
+        showToast(`📏 ${cfg ? cfg.name : key} 직관 파이프 길이: ${mm}mm (실시간 3D 동기화)`);
+      }
+    }
+
+    function stepStraightPipeLength(delta) {
+      if (straightPipeLengthMode === 'grouped') {
+        const newLeft = Math.max(0.05, Math.min(0.35, leftGroupStraightPipeLength + delta));
+        const newRight = Math.max(0.05, Math.min(0.35, rightGroupStraightPipeLength + delta));
+        setGroupStraightPipeLength('left', newLeft);
+        setGroupStraightPipeLength('right', newRight, true);
+      } else {
+        Object.keys(straightPipeLengths).forEach(k => {
+          straightPipeLengths[k] = Math.max(0.05, Math.min(0.35, straightPipeLengths[k] + delta));
+          const mm = Math.round(straightPipeLengths[k] * 1000);
+          const s = document.getElementById(`slider-adjust-pipe-len-${k}`);
+          if (s) s.value = straightPipeLengths[k];
+          const l = document.getElementById(`label-adjust-pipe-len-${k}`);
+          if (l) l.textContent = `${mm}mm`;
+        });
+        rebuildHandrailSystem();
+        ModelParameters.commit();
+        showToast(`📏 전체 개별 직관 파이프 길이 ${delta > 0 ? '+' : ''}${Math.round(delta * 1000)}mm 조정`);
+      }
+    }
+
+    function setStraightPipePreset(val) {
+      setGroupStraightPipeLength('left', val);
+      setGroupStraightPipeLength('right', val, true);
+      const btns = ['btn-adjust-pipe-len-std'];
+      btns.forEach(id => {
+        const b = document.getElementById(id);
+        if (b) b.classList.toggle('active', Math.abs(val - 0.097) < 0.003);
+      });
+    }
+
     /* =========================================================================
        [Phase 100] 건축 구조물(외벽·창호·발코니 내부) 임시 숨김 및 난간대 단독 뷰 제어 시스템
        - 기본값: true (건축물 전체 정상 표시)
@@ -19741,11 +19956,16 @@ const WorkbookManager = {
         envMapIntensity: 1.6
       });
 
-      // [Phase 28] 직관 파이프(Standoff) 길이 적용
+      // [Phase 28/110] 직관 파이프(Standoff) 이격 및 실물 직관 파이프 길이 적용
       const lenL_top = anchorPipeLengths['left-top'] || 0.097;
       const lenL_mid = anchorPipeLengths['left-mid'] || 0.097;
       const lenR_top = anchorPipeLengths['right-top'] || 0.097;
       const lenR_mid = anchorPipeLengths['right-mid'] || 0.097;
+
+      const spLenL_top = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths['left-top']) || 0.097;
+      const spLenL_mid = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths['left-mid']) || 0.097;
+      const spLenR_top = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths['right-top']) || 0.097;
+      const spLenR_mid = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths['right-mid']) || 0.097;
 
       // [Phase 30/31] 베이스 플레이트 Z 및 횡주 배관 Z 동적 개별/그룹 연동
       const curPivot = DIMS.depthPivot || 'plate';
@@ -19761,10 +19981,14 @@ const WorkbookManager = {
       // 1) 최상부 메인 레일 (Ø48mm) - Y = 2.00m
       // -------------------------------------------------------------
       const topCurve = new THREE.CurvePath();
-      // 우측 꺾임부 (우측 직관 파이프 길이 lenR_top 적용)
-      topCurve.add(new THREE.CubicBezierCurve3(
+      // 우측 직관 파이프 실물 연장선 및 꺾임부 (spLenR_top 및 lenR_top 연동)
+      topCurve.add(new THREE.LineCurve3(
         new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, zRT.baseZ),
-        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, zRT.baseZ + lenR_top * 0.65),
+        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, zRT.baseZ + spLenR_top * 0.55)
+      ));
+      topCurve.add(new THREE.CubicBezierCurve3(
+        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, zRT.baseZ + spLenR_top * 0.55),
+        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, zRT.baseZ + spLenR_top * 0.85),
         new THREE.Vector3(DIMS.railRightX - 0.04, DIMS.topRailY, zRT.railZ),
         new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.topRailY, zRT.railZ)
       ));
@@ -19773,11 +19997,15 @@ const WorkbookManager = {
         new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.topRailY, zRT.railZ),
         new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.topRailY, zLT.railZ)
       ));
-      // 좌측 꺾임부 (좌측 직관 파이프 길이 lenL_top 적용)
+      // 좌측 꺾임부 및 직관 파이프 실물 연장선 (spLenL_top 및 lenL_top 연동)
       topCurve.add(new THREE.CubicBezierCurve3(
         new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.topRailY, zLT.railZ),
         new THREE.Vector3(DIMS.railLeftX + 0.04, DIMS.topRailY, zLT.railZ),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, zLT.baseZ + lenL_top * 0.65),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, zLT.baseZ + spLenL_top * 0.85),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, zLT.baseZ + spLenL_top * 0.55)
+      ));
+      topCurve.add(new THREE.LineCurve3(
+        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, zLT.baseZ + spLenL_top * 0.55),
         new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, zLT.baseZ)
       ));
 
@@ -19790,10 +20018,14 @@ const WorkbookManager = {
       // 2) 상부 2단 보조 횡대 (Ø34mm) - Y = 1.85m
       // -------------------------------------------------------------
       const subCurve = new THREE.CurvePath();
-      // 우측 꺾임 (lenR_mid 적용)
-      subCurve.add(new THREE.CubicBezierCurve3(
+      // 우측 직관 파이프 및 꺾임 (spLenR_mid 적용)
+      subCurve.add(new THREE.LineCurve3(
         new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, zRM.baseZ),
-        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, zRM.baseZ + lenR_mid * 0.65),
+        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, zRM.baseZ + spLenR_mid * 0.55)
+      ));
+      subCurve.add(new THREE.CubicBezierCurve3(
+        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, zRM.baseZ + spLenR_mid * 0.55),
+        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, zRM.baseZ + spLenR_mid * 0.85),
         new THREE.Vector3(DIMS.railRightX - 0.04, DIMS.subRailY, zRM.railZ),
         new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.subRailY, zRM.railZ)
       ));
@@ -19802,11 +20034,15 @@ const WorkbookManager = {
         new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.subRailY, zRM.railZ),
         new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.subRailY, zLM.railZ)
       ));
-      // 좌측 꺾임 (lenL_mid 적용)
+      // 좌측 꺾임 및 직관 파이프 (spLenL_mid 적용)
       subCurve.add(new THREE.CubicBezierCurve3(
         new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.subRailY, zLM.railZ),
         new THREE.Vector3(DIMS.railLeftX + 0.04, DIMS.subRailY, zLM.railZ),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, zLM.baseZ + lenL_mid * 0.65),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, zLM.baseZ + spLenL_mid * 0.85),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, zLM.baseZ + spLenL_mid * 0.55)
+      ));
+      subCurve.add(new THREE.LineCurve3(
+        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, zLM.baseZ + spLenL_mid * 0.55),
         new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, zLM.baseZ)
       ));
 
@@ -19890,12 +20126,18 @@ const WorkbookManager = {
       // -------------------------------------------------------------
       const lenL_btm = anchorPipeLengths['left-btm'] || 0.097;
       const lenR_btm = anchorPipeLengths['right-btm'] || 0.097;
+      const spLenL_btm = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths['left-btm']) || 0.097;
+      const spLenR_btm = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths['right-btm']) || 0.097;
 
       const bottomCurve = new THREE.CurvePath();
-      // 우측 꺾임 (lenR_btm 적용)
-      bottomCurve.add(new THREE.CubicBezierCurve3(
+      // 우측 직관 파이프 및 꺾임 (spLenR_btm 적용)
+      bottomCurve.add(new THREE.LineCurve3(
         new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, zRB.baseZ),
-        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, zRB.baseZ + lenR_btm * 0.65),
+        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, zRB.baseZ + spLenR_btm * 0.55)
+      ));
+      bottomCurve.add(new THREE.CubicBezierCurve3(
+        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, zRB.baseZ + spLenR_btm * 0.55),
+        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, zRB.baseZ + spLenR_btm * 0.85),
         new THREE.Vector3(DIMS.railRightX - 0.04, DIMS.bottomRailY, zRB.railZ),
         new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.bottomRailY, zRB.railZ)
       ));
@@ -19904,11 +20146,15 @@ const WorkbookManager = {
         new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.bottomRailY, zRB.railZ),
         new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.bottomRailY, zLB.railZ)
       ));
-      // 좌측 꺾임부 (현장 사진 1 실사: 용접 탈락으로 20mm 공중 부유 - zLB.baseZ + 0.020m)
+      // 좌측 꺾임부 및 직관 파이프 (현장 사진 1 실사: 용접 탈락으로 20mm 공중 부유 - zLB.baseZ + 0.020m)
       bottomCurve.add(new THREE.CubicBezierCurve3(
         new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.bottomRailY, zLB.railZ),
         new THREE.Vector3(DIMS.railLeftX + 0.04, DIMS.bottomRailY, zLB.railZ),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, zLB.baseZ + lenL_btm * 0.65),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, zLB.baseZ + spLenL_btm * 0.85),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, zLB.baseZ + spLenL_btm * 0.55)
+      ));
+      bottomCurve.add(new THREE.LineCurve3(
+        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, zLB.baseZ + spLenL_btm * 0.55),
         new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, zLB.baseZ + 0.020)
       ));
 
@@ -22380,7 +22626,9 @@ function setCameraView(name, animate = true) {
           if (r.points && r.points[pt]) {
             const pInfo = r.points[pt];
             const st = pInfo.status;
-            const prog = pInfo.progress || r.progress || '미점검';
+            const hasPtDefect = !!(pInfo.defect && pInfo.defect.trim().length > 0);
+            // [Phase 110 무결성 보장] 포인트별 진행현황은 해당 포인트의 독립 진행상태 및 결함 유무만을 엄격히 반영
+            const prog = (pInfo.progress && pInfo.progress !== '미점검') ? pInfo.progress : (st === 'repaired' ? '조치완료' : ((st === 'danger' || st === 'warning' || hasPtDefect) ? '조치진행' : (st === 'good' ? '점검완료' : '미점검')));
 
             // [Phase 57] 회계 숫자 정밀 파싱 (천단위 콤마 및 문자열 완전 정제)
             const rawCost = parseInt(String(pInfo.cost || 0).replace(/[^0-9]/g, ''), 10) || 0;
@@ -22396,15 +22644,15 @@ function setCameraView(name, animate = true) {
               goodRooms.push(r);
             }
 
-            // 진행 현황 5단계 분류
-            if (prog === '조치완료') {
+            // 진행 현황 5단계 분류 (해당 부위에 실제 결함이나 점검 내역이 있는 세대만 엄격 분류)
+            if (prog === '조치완료' || st === 'repaired') {
               if (!repairedRooms.includes(r)) repairedRooms.push(r);
-            } else if (prog === '조치진행') {
-              actionProgRooms.push(r);
-            } else if (prog === '점검완료') {
+            } else if (prog === '조치진행' || st === 'danger' || st === 'warning' || hasPtDefect) {
+              if (!actionProgRooms.includes(r)) actionProgRooms.push(r);
+            } else if (prog === '점검완료' || st === 'good') {
               if (!goodRooms.includes(r)) goodRooms.push(r);
             } else if (prog === '점검중') {
-              inspectingRooms.push(r);
+              if (!inspectingRooms.includes(r)) inspectingRooms.push(r);
             } else {
               uninspectedRooms.push(r);
             }
@@ -22521,14 +22769,18 @@ function setCameraView(name, animate = true) {
 
         bAllRooms.forEach(r => {
           const ptInfo = (r.points && r.points[pt]) ? r.points[pt] : null;
-          const prog = (ptInfo && ptInfo.progress) ? ptInfo.progress : (r.progress || '미점검');
-          if (prog === '조치완료' || (ptInfo && ptInfo.status === 'repaired')) {
+          const hasPtDefect = !!(ptInfo && ptInfo.defect && ptInfo.defect.trim().length > 0);
+          const ptStatus = ptInfo ? ptInfo.status : 'uninspected';
+          const ptProg = ptInfo ? (ptInfo.progress || '미점검') : '미점검';
+
+          // [Phase 110 무결성 보장] 해당 포인트(pt)에 실제 결함/조치가 있는 세대만 엄격 분기
+          if (ptProg === '조치완료' || ptStatus === 'repaired') {
             bRepaired.push(r);
-          } else if (prog === '조치진행' || (ptInfo && (ptInfo.status === 'danger' || ptInfo.status === 'warning'))) {
+          } else if (ptProg === '조치진행' || ptStatus === 'danger' || ptStatus === 'warning' || (hasPtDefect && ptProg !== '점검완료')) {
             bAction.push(r);
-          } else if (prog === '점검완료' || (ptInfo && ptInfo.status === 'good')) {
+          } else if (ptProg === '점검완료' || ptStatus === 'good') {
             bInspected.push(r);
-          } else if (prog === '점검중') {
+          } else if (ptProg === '점검중' || ptStatus === 'inspecting') {
             bInspecting.push(r);
           } else {
             bUninspected.push(r);
