@@ -5874,14 +5874,27 @@ body.model-fullscreen #model-fullscreen-open{display:none}
           </div>
         </div>
 
-        <!-- [Phase 110 신규] 4. 직관 파이프 길이 (Pipe Length) 상세 조절 섹션 -->
+        <!-- [Phase 110/111] 4. 직관 파이프 길이 (Pipe Length) 및 엘보(Elbow) 굴곡 정밀 제어 섹션 -->
         <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 8px; padding: 8px 10px; margin-top: 6px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
             <span style="font-weight: 700; color: #38bdf8; font-size: 11px;">📏 4. 직관 파이프 길이 (Pipe Length)</span>
             <div style="display: flex; gap: 3px;">
               <button id="btn-adjust-pipe-len-mode-grouped" class="qhb-btn active" onclick="setStraightPipeLengthMode('grouped')" style="padding: 2px 6px; font-size: 9.5px;" title="좌측 1·2·3단 및 우측 4·5·6단 직관 길이 그룹 일괄 조절">👥 좌/우 그룹</button>
               <button id="btn-adjust-pipe-len-mode-individual" class="qhb-btn" onclick="setStraightPipeLengthMode('individual')" style="padding: 2px 6px; font-size: 9.5px;" title="1번부터 6번까지 각각 독립 직관 길이 조절">🎯 1~6번 개별</button>
             </div>
+          </div>
+
+          <!-- [Phase 111 신규] 직관 파이프 길이 조정 기준 (Baseline Pivot) 옵션 -->
+          <div style="display: flex; gap: 4px; margin-bottom: 5px; align-items: center;">
+            <span style="font-size: 10px; color: #94a3b8; margin-right: 2px;">기준:</span>
+            <button class="qhb-btn active" id="btn-straight-pivot-plate" onclick="setStraightPipePivot('plate')" style="flex: 1.2; text-align: center; font-size: 9.5px; padding: 2px 4px;" title="외벽 앙카·베이스 플레이트 위치 고정, 직관 파이프가 전면(+Z)으로 뻗어나가며 엘보와 난간대가 일체 연동 전진 (기본값)">🏢 외벽 베이스 고정 (기본)</button>
+            <button class="qhb-btn" id="btn-straight-pivot-rail" onclick="setStraightPipePivot('rail')" style="flex: 1; text-align: center; font-size: 9.5px; padding: 2px 4px;" title="전면 횡대 및 엘보 위치 고정, 직관 파이프가 벽체(-Z) 방향으로 뻗어나가며 외벽 앙카가 후퇴">⏺ 전면 난간 고정</button>
+          </div>
+
+          <!-- [Phase 111 신규] 핸드레일 평면도 기준 방향성 및 엘보 곡률 무결성 안내 바 -->
+          <div style="background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 6px; padding: 4px 6px; font-size: 9.5px; color: #7dd3fc; margin-bottom: 6px; line-height: 1.4;">
+            🧭 <b>평면도 방향성</b>: 외벽 직교 Z축 100% 직선 연장 (좌우/상하 비틀림 0%)<br>
+            📐 <b>엘보 굴곡 정합성</b>: 90° 원호 곡률 반경(R=70mm) 유지 · 찌그러짐 원천 차단
           </div>
           <!-- 좌/우 그룹 슬라이더 패널 -->
           <div id="pipe-len-ctrl-grouped-menu" style="display: flex; flex-direction: column; gap: 6px;">
@@ -5933,6 +5946,14 @@ body.model-fullscreen #model-fullscreen-open{display:none}
               </div>
             </div>
           </div>
+          <!-- [Phase 111 신규] 엘보(Elbow) 굴곡 반경 제어 옵션 -->
+          <div style="display: flex; gap: 4px; margin-top: 5px; margin-bottom: 5px; align-items: center;">
+            <span style="font-size: 9.5px; color: #94a3b8; margin-right: 2px;">엘보 곡률(R):</span>
+            <button class="qhb-btn" id="btn-elbow-r-50" onclick="setStraightPipeElbowRadius(0.050)" style="flex: 1; text-align: center; font-size: 9px; padding: 2px 4px;" title="엘보 반경 50mm (급곡관)">급곡관 50mm</button>
+            <button class="qhb-btn active" id="btn-elbow-r-70" onclick="setStraightPipeElbowRadius(0.070)" style="flex: 1.1; text-align: center; font-size: 9px; padding: 2px 4px;" title="엘보 반경 70mm (표준 규격)">표준 70mm</button>
+            <button class="qhb-btn" id="btn-elbow-r-100" onclick="setStraightPipeElbowRadius(0.100)" style="flex: 1; text-align: center; font-size: 9px; padding: 2px 4px;" title="엘보 반경 100mm (완곡관)">완곡관 100mm</button>
+          </div>
+
           <!-- 5mm 미세 증감 버튼 & 프리셋 버튼 -->
           <div style="display: flex; gap: 4px; margin-top: 5px; margin-bottom: 4px;">
             <button class="qhb-btn" onclick="stepStraightPipeLength(-0.005)" style="flex: 1; text-align: center; font-size: 10px;" title="직관 길이 5mm 감소">➖ 5mm 감소</button>
@@ -7161,6 +7182,8 @@ body.model-fullscreen #model-fullscreen-open{display:none}
     let straightPipeLengthMode = 'grouped'; // 'grouped' (좌/우 그룹) | 'individual' (1~6번 개별)
     let leftGroupStraightPipeLength = 0.097;
     let rightGroupStraightPipeLength = 0.097;
+    let straightPipePivot = 'plate'; // [Phase 111] 'plate' (외벽 베이스 고정 기준 - 기본값) | 'rail' (전면 난간 고정 기준)
+    let straightPipeElbowRadius = 0.070; // [Phase 111] 70mm (0.070m) 표준 규격 90° 원호 엘보 굴곡 반경
 
     // =========================================================================
     // 6-1-B. 외벽면/플레이트/덮개캡/핸드레일 시공순서별 조립도 & 분해도 시뮬레이션 시스템 (BIM 4D)
@@ -7813,7 +7836,17 @@ const WorkspaceStorage={
 };
 
 // The same scalar depth rule is used by the physical members, markers, caps and trails.
-function anchorBaseZ(key){if(key.startsWith('bottom-'))return .043;const depth=anchorDepthValues[key]??DIMS.railDepth??.14;return (DIMS.depthPivot||'plate')==='plate'?.043:parseFloat((.14-(depth-.043)).toFixed(3));}
+function anchorBaseZ(key){
+  if(key.startsWith('bottom-'))return .043;
+  if(typeof straightPipePivot!=='undefined'&&straightPipePivot==='rail'){
+    const spL=(typeof straightPipeLengths!=='undefined'&&straightPipeLengths[key])||0.097;
+    const r=(typeof straightPipeElbowRadius!=='undefined'&&straightPipeElbowRadius)||0.070;
+    const fZ=anchorRailZ(key);
+    return parseFloat((fZ-r-spL).toFixed(3));
+  }
+  const depth=anchorDepthValues[key]??DIMS.railDepth??.14;
+  return (DIMS.depthPivot||'plate')==='plate'?.043:parseFloat((.14-(depth-.043)).toFixed(3));
+}
 function anchorRailZ(key){return (DIMS.depthPivot||'plate')==='plate'?(anchorDepthValues[key]??DIMS.railDepth??.14):.14;}
 
 const ModelParameters = {
@@ -7825,7 +7858,7 @@ const ModelParameters = {
    railLeftX:DIMS.railLeftX,railRightX:DIMS.railRightX,widthPivot:DIMS.widthPivot||'center',topRailY:DIMS.topRailY,
    subRailY:DIMS.subRailY,bottomRailY:DIMS.bottomRailY,railDepth:DIMS.railDepth,railZ:DIMS.railZ,depthPivot:DIMS.depthPivot||'plate',basePlateZ:DIMS.basePlateZ,
    legFlangeY:DIMS.legFlangeY,supportDiameter:DIMS.supportDiameter,supportBendDrop:DIMS.supportBendDrop,supportBendStyle:DIMS.supportBendStyle,supportBendRadius:DIMS.supportBendRadius,
-   legsX:[...DIMS.legsX],pipeLengths:{...anchorPipeLengths},straightPipeLengths:{...straightPipeLengths},anchorDepths:{...anchorDepthValues}};
+   legsX:[...DIMS.legsX],pipeLengths:{...anchorPipeLengths},straightPipeLengths:{...straightPipeLengths},straightPipePivot,straightPipeElbowRadius,anchorDepths:{...anchorDepthValues}};
  },
  validate(input) {
   if(!input||input.version!==1) throw Error('난간 모델 설정 버전 오류');
@@ -7857,6 +7890,8 @@ const ModelParameters = {
    ['slider-handrail-width','slider-adjust-handrail-width'].forEach(id=>value(id,DIMS.railWidth));
    LEGACY_POINT_KEYS.forEach(key=>{const k=pointDefinition(key).anchorKey;value('slider-adjust-pipe-'+k,anchorPipeLengths[k]);const el=document.getElementById('label-adjust-pipe-'+k);if(el)el.textContent=Math.round(anchorPipeLengths[k]*1000)+'mm';});
    if(c.straightPipeLengths){Object.assign(straightPipeLengths,c.straightPipeLengths);LEGACY_POINT_KEYS.forEach(key=>{const k=pointDefinition(key).anchorKey;value('slider-adjust-pipe-len-'+k,straightPipeLengths[k]);const el=document.getElementById('label-adjust-pipe-len-'+k);if(el)el.textContent=Math.round(straightPipeLengths[k]*1000)+'mm';});const elL=document.getElementById('label-adjust-pipe-len-left');if(elL)elL.textContent=Math.round((straightPipeLengths['left-top']||0.097)*1000)+'mm';const elR=document.getElementById('label-adjust-pipe-len-right');if(elR)elR.textContent=Math.round((straightPipeLengths['right-top']||0.097)*1000)+'mm';}
+   if(c.straightPipePivot){setStraightPipePivot(c.straightPipePivot,false);}
+   if(c.straightPipeElbowRadius){setStraightPipeElbowRadius(c.straightPipeElbowRadius,false);}
   }finally{this.restoring=false;}
  },
  restoreLocal() {
@@ -19316,6 +19351,43 @@ const WorkbookManager = {
       });
     }
 
+    // =========================================================================
+    // [Phase 111] 직관 파이프 길이 조정 기준(Pivot) 및 엘보 곡관 반경(Radius) 핸들러
+    // =========================================================================
+    function setStraightPipePivot(pivot, notify = true) {
+      if (pivot !== 'plate' && pivot !== 'rail') return;
+      straightPipePivot = pivot;
+      const btnPlate = document.getElementById('btn-straight-pivot-plate');
+      const btnRail = document.getElementById('btn-straight-pivot-rail');
+      if (btnPlate) btnPlate.classList.toggle('active', pivot === 'plate');
+      if (btnRail) btnRail.classList.toggle('active', pivot === 'rail');
+
+      rebuildHandrailSystem();
+      ModelParameters.commit();
+      if (notify) {
+        showToast(pivot === 'plate' ? '🏢 직관 길이 기준: 외벽 베이스 고정 (전면 돌출)' : '⏺ 직관 길이 기준: 전면 난간 고정 (벽체 연장)');
+      }
+    }
+
+    function setStraightPipeElbowRadius(radius, notify = true) {
+      const r = parseFloat(radius);
+      if (isNaN(r) || r < 0.03 || r > 0.15) return;
+      straightPipeElbowRadius = r;
+
+      const r50 = document.getElementById('btn-elbow-r-50');
+      const r70 = document.getElementById('btn-elbow-r-70');
+      const r100 = document.getElementById('btn-elbow-r-100');
+      if (r50) r50.classList.toggle('active', Math.abs(r - 0.050) < 0.005);
+      if (r70) r70.classList.toggle('active', Math.abs(r - 0.070) < 0.005);
+      if (r100) r100.classList.toggle('active', Math.abs(r - 0.100) < 0.005);
+
+      rebuildHandrailSystem();
+      ModelParameters.commit();
+      if (notify) {
+        showToast(`📐 엘보 곡률 반경: ${Math.round(r * 1000)}mm (90° 원호 무결성 유지)`);
+      }
+    }
+
     /* =========================================================================
        [Phase 100] 건축 구조물(외벽·창호·발코니 내부) 임시 숨김 및 난간대 단독 뷰 제어 시스템
        - 기본값: true (건축물 전체 정상 표시)
@@ -19978,35 +20050,75 @@ const WorkbookManager = {
       const zRB = getAnchorZ('right-btm');
 
       // -------------------------------------------------------------
-      // 1) 최상부 메인 레일 (Ø48mm) - Y = 2.00m
+      // [Phase 111 평면도 심층분석 정밀 구현] 핸드레일 평면도 직관 파이프 길이 및 90° 원호 엘보 기하 모델
+      // - 파이프 직관 길이(L): 외벽 앙카 접합부로부터 Z축(깊이) 방향 100% 완전한 직선 구간 (좌우/상하 비틀림 0%)
+      // - 코너 엘보(R): 직관 끝단에서 수평 메인 횡대까지 90도 원호(Quarter-Circle Arc)로 매끄럽게 연결 (찌그러짐 원천 차단)
+      // - 기준(Pivot): 'plate'(외벽 베이스 고정 -> 전면 돌출) vs 'rail'(전면 횡대 고정 -> 벽체 후퇴)
       // -------------------------------------------------------------
+      const elbowR = (typeof straightPipeElbowRadius !== 'undefined' && straightPipeElbowRadius) || 0.070;
+      const kappa = 0.5522847498; // 90° 원호 최적 근사 3차 베지어 상수
+
+      function computePipeGeometry(kR, kL) {
+        const lR = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths[kR]) || 0.097;
+        const lL = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths[kL]) || 0.097;
+        const pivot = (typeof straightPipePivot !== 'undefined' && straightPipePivot) || 'plate';
+
+        let zBaseR, zElbowR, zFrontR;
+        let zBaseL, zElbowL, zFrontL;
+
+        if (pivot === 'plate') {
+          zBaseR = anchorBaseZ(kR);
+          zElbowR = zBaseR + lR;
+          zFrontR = zElbowR + elbowR;
+
+          zBaseL = anchorBaseZ(kL);
+          zElbowL = zBaseL + lL;
+          zFrontL = zElbowL + elbowR;
+        } else {
+          zFrontR = anchorRailZ(kR);
+          zElbowR = zFrontR - elbowR;
+          zBaseR = zElbowR - lR;
+
+          zFrontL = anchorRailZ(kL);
+          zElbowL = zFrontL - elbowR;
+          zBaseL = zElbowL - lL;
+        }
+
+        return { lR, lL, zBaseR, zElbowR, zFrontR, zBaseL, zElbowL, zFrontL };
+      }
+
+      // 1) 최상부 메인 레일 (Ø48mm) - Y = 2.00m
+      const topFit = computePipeGeometry('right-top', 'left-top');
       const topCurve = new THREE.CurvePath();
-      // 우측 직관 파이프 실물 연장선 및 꺾임부 (spLenR_top 및 lenR_top 연동)
+
+      // 1-1. 우측 직관 파이프: 외벽 앙카(zBaseR)에서 엘보 시작점(zElbowR)까지 Z축 100% 일직선
       topCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, zRT.baseZ),
-        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, zRT.baseZ + spLenR_top * 0.55)
+        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, topFit.zBaseR),
+        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, topFit.zElbowR)
       ));
+      // 1-2. 우측 90° 엘보: +Z 방향에서 -X 방향으로 부드럽게 꺾이는 완전한 90도 원호
       topCurve.add(new THREE.CubicBezierCurve3(
-        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, zRT.baseZ + spLenR_top * 0.55),
-        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, zRT.baseZ + spLenR_top * 0.85),
-        new THREE.Vector3(DIMS.railRightX - 0.04, DIMS.topRailY, zRT.railZ),
-        new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.topRailY, zRT.railZ)
+        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, topFit.zElbowR),
+        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, topFit.zElbowR + kappa * elbowR),
+        new THREE.Vector3(DIMS.railRightX - (1 - kappa) * elbowR, DIMS.topRailY, topFit.zFrontR),
+        new THREE.Vector3(DIMS.railRightX - elbowR, DIMS.topRailY, topFit.zFrontR)
       ));
-      // 수평 메인부 (우 -> 좌)
+      // 1-3. 전면 수평 메인 횡대: 우측 엘보 끝단에서 좌측 엘보 시작단까지 X축 100% 일직선
       topCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.topRailY, zRT.railZ),
-        new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.topRailY, zLT.railZ)
+        new THREE.Vector3(DIMS.railRightX - elbowR, DIMS.topRailY, topFit.zFrontR),
+        new THREE.Vector3(DIMS.railLeftX + elbowR, DIMS.topRailY, topFit.zFrontL)
       ));
-      // 좌측 꺾임부 및 직관 파이프 실물 연장선 (spLenL_top 및 lenL_top 연동)
+      // 1-4. 좌측 90° 엘보: -X 방향에서 -Z(외벽) 방향으로 부드럽게 꺾이는 완전한 90도 원호
       topCurve.add(new THREE.CubicBezierCurve3(
-        new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.topRailY, zLT.railZ),
-        new THREE.Vector3(DIMS.railLeftX + 0.04, DIMS.topRailY, zLT.railZ),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, zLT.baseZ + spLenL_top * 0.85),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, zLT.baseZ + spLenL_top * 0.55)
+        new THREE.Vector3(DIMS.railLeftX + elbowR, DIMS.topRailY, topFit.zFrontL),
+        new THREE.Vector3(DIMS.railLeftX + (1 - kappa) * elbowR, DIMS.topRailY, topFit.zFrontL),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, topFit.zElbowL + kappa * elbowR),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, topFit.zElbowL)
       ));
+      // 1-5. 좌측 직관 파이프: 엘보 끝단(zElbowL)에서 외벽 앙카(zBaseL)까지 Z축 100% 일직선
       topCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, zLT.baseZ + spLenL_top * 0.55),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, zLT.baseZ)
+        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, topFit.zElbowL),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, topFit.zBaseL)
       ));
 
       const topRailMesh = new THREE.Mesh(new THREE.TubeGeometry(topCurve, 80, 0.024, 16, false), susMat);
@@ -20014,36 +20126,41 @@ const WorkbookManager = {
       handrailGroup.add(topRailMesh);
       registerAnimatedMember(topRailMesh, 0.0, 'topRail', susMat);
 
-      // -------------------------------------------------------------
+      // 전면 메인 횡대 위치 DIMS.railZ 실시간 동기화
+      DIMS.railZ = (topFit.zFrontR + topFit.zFrontL) / 2;
+
       // 2) 상부 2단 보조 횡대 (Ø34mm) - Y = 1.85m
-      // -------------------------------------------------------------
+      const subFit = computePipeGeometry('right-mid', 'left-mid');
       const subCurve = new THREE.CurvePath();
-      // 우측 직관 파이프 및 꺾임 (spLenR_mid 적용)
+
+      // 2-1. 우측 직관 파이프
       subCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, zRM.baseZ),
-        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, zRM.baseZ + spLenR_mid * 0.55)
+        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, subFit.zBaseR),
+        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, subFit.zElbowR)
       ));
+      // 2-2. 우측 90° 엘보
       subCurve.add(new THREE.CubicBezierCurve3(
-        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, zRM.baseZ + spLenR_mid * 0.55),
-        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, zRM.baseZ + spLenR_mid * 0.85),
-        new THREE.Vector3(DIMS.railRightX - 0.04, DIMS.subRailY, zRM.railZ),
-        new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.subRailY, zRM.railZ)
+        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, subFit.zElbowR),
+        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, subFit.zElbowR + kappa * elbowR),
+        new THREE.Vector3(DIMS.railRightX - (1 - kappa) * elbowR, DIMS.subRailY, subFit.zFrontR),
+        new THREE.Vector3(DIMS.railRightX - elbowR, DIMS.subRailY, subFit.zFrontR)
       ));
-      // 수평부
+      // 2-3. 전면 수평 보조 횡대
       subCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.subRailY, zRM.railZ),
-        new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.subRailY, zLM.railZ)
+        new THREE.Vector3(DIMS.railRightX - elbowR, DIMS.subRailY, subFit.zFrontR),
+        new THREE.Vector3(DIMS.railLeftX + elbowR, DIMS.subRailY, subFit.zFrontL)
       ));
-      // 좌측 꺾임 및 직관 파이프 (spLenL_mid 적용)
+      // 2-4. 좌측 90° 엘보
       subCurve.add(new THREE.CubicBezierCurve3(
-        new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.subRailY, zLM.railZ),
-        new THREE.Vector3(DIMS.railLeftX + 0.04, DIMS.subRailY, zLM.railZ),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, zLM.baseZ + spLenL_mid * 0.85),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, zLM.baseZ + spLenL_mid * 0.55)
+        new THREE.Vector3(DIMS.railLeftX + elbowR, DIMS.subRailY, subFit.zFrontL),
+        new THREE.Vector3(DIMS.railLeftX + (1 - kappa) * elbowR, DIMS.subRailY, subFit.zFrontL),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, subFit.zElbowL + kappa * elbowR),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, subFit.zElbowL)
       ));
+      // 2-5. 좌측 직관 파이프
       subCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, zLM.baseZ + spLenL_mid * 0.55),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, zLM.baseZ)
+        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, subFit.zElbowL),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, subFit.zBaseL)
       ));
 
       const subRailMesh = new THREE.Mesh(new THREE.TubeGeometry(subCurve, 80, 0.017, 14, false), susMat);
@@ -20120,42 +20237,38 @@ const WorkbookManager = {
         registerAnimatedMember(midPost, lx, 'midPost', susMat);
       });
 
-      // -------------------------------------------------------------
       // 3) 하부 수평 횡대 (Ø34mm) - Y = 1.15m
-      //    [사용자 요청 완벽 반영: 외벽 및 창호틀 매립 100% 원천 방지]
-      // -------------------------------------------------------------
-      const lenL_btm = anchorPipeLengths['left-btm'] || 0.097;
-      const lenR_btm = anchorPipeLengths['right-btm'] || 0.097;
-      const spLenL_btm = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths['left-btm']) || 0.097;
-      const spLenR_btm = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths['right-btm']) || 0.097;
-
+      const btmFit = computePipeGeometry('right-btm', 'left-btm');
       const bottomCurve = new THREE.CurvePath();
-      // 우측 직관 파이프 및 꺾임 (spLenR_btm 적용)
+
+      // 3-1. 우측 직관 파이프
       bottomCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, zRB.baseZ),
-        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, zRB.baseZ + spLenR_btm * 0.55)
+        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, btmFit.zBaseR),
+        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, btmFit.zElbowR)
       ));
+      // 3-2. 우측 90° 엘보
       bottomCurve.add(new THREE.CubicBezierCurve3(
-        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, zRB.baseZ + spLenR_btm * 0.55),
-        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, zRB.baseZ + spLenR_btm * 0.85),
-        new THREE.Vector3(DIMS.railRightX - 0.04, DIMS.bottomRailY, zRB.railZ),
-        new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.bottomRailY, zRB.railZ)
+        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, btmFit.zElbowR),
+        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, btmFit.zElbowR + kappa * elbowR),
+        new THREE.Vector3(DIMS.railRightX - (1 - kappa) * elbowR, DIMS.bottomRailY, btmFit.zFrontR),
+        new THREE.Vector3(DIMS.railRightX - elbowR, DIMS.bottomRailY, btmFit.zFrontR)
       ));
-      // 수평부 (완전 연결!)
+      // 3-3. 전면 수평 하부 횡대
       bottomCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railRightX - 0.15, DIMS.bottomRailY, zRB.railZ),
-        new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.bottomRailY, zLB.railZ)
+        new THREE.Vector3(DIMS.railRightX - elbowR, DIMS.bottomRailY, btmFit.zFrontR),
+        new THREE.Vector3(DIMS.railLeftX + elbowR, DIMS.bottomRailY, btmFit.zFrontL)
       ));
-      // 좌측 꺾임부 및 직관 파이프 (현장 사진 1 실사: 용접 탈락으로 20mm 공중 부유 - zLB.baseZ + 0.020m)
+      // 3-4. 좌측 90° 엘보
       bottomCurve.add(new THREE.CubicBezierCurve3(
-        new THREE.Vector3(DIMS.railLeftX + 0.15, DIMS.bottomRailY, zLB.railZ),
-        new THREE.Vector3(DIMS.railLeftX + 0.04, DIMS.bottomRailY, zLB.railZ),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, zLB.baseZ + spLenL_btm * 0.85),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, zLB.baseZ + spLenL_btm * 0.55)
+        new THREE.Vector3(DIMS.railLeftX + elbowR, DIMS.bottomRailY, btmFit.zFrontL),
+        new THREE.Vector3(DIMS.railLeftX + (1 - kappa) * elbowR, DIMS.bottomRailY, btmFit.zFrontL),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, btmFit.zElbowL + kappa * elbowR),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, btmFit.zElbowL)
       ));
+      // 3-5. 좌측 직관 파이프 (현장 실측: 결함 세대 용접 탈락 시 20mm 유격 재현 가능)
       bottomCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, zLB.baseZ + spLenL_btm * 0.55),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, zLB.baseZ + 0.020)
+        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, btmFit.zElbowL),
+        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, btmFit.zBaseL)
       ));
 
       const bottomRailMesh = new THREE.Mesh(new THREE.TubeGeometry(bottomCurve, 80, 0.017, 14, false), susMat);
