@@ -5634,12 +5634,25 @@ body.model-fullscreen #model-fullscreen-open{display:none}
         <span style="font-size:13px;">📐</span>
         <span style="font-weight:700; color:#f1f5f9; font-size:11.5px;">난간대 통합 치수 및 부재 조정</span>
       </div>
-      <div class="window-actions">
+      <div class="window-actions" style="display:flex; align-items:center; gap:4px;">
+        <button class="win-btn" id="btn-adjust-reset-all-head" onclick="resetAllAdjustParameters()" title="모든 사용자 옵션 조정값 전수 초기화 (기본값 복원)" style="color:#fbbf24; border-color:rgba(245,158,11,0.5); font-size:10px; padding:1px 6px; display:inline-flex; align-items:center; gap:3px;">
+          <span>🔄</span><span>전수 초기화</span>
+        </button>
         <button class="win-btn" onclick="WindowManager.toggleCollapse('adjust-menu')" title="창 접기/펴기 (헤더 더블클릭 가능)">−</button>
         <button class="win-btn win-btn-close" onclick="WindowManager.close('adjust-menu')" title="닫기">✕</button>
       </div>
     </div>
     <div class="window-body" style="padding: 10px 12px; display: flex; flex-direction: column; gap: 8px;">
+
+        <!-- [Phase 112] 상단 옵션 전수 초기화 퀵 액션 바 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 6px; padding: 5px 8px;">
+          <span style="font-size: 10px; color: #fcd34d; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+            <span>⚙️</span><span>설정값 변경 상태 점검 및 원클릭 복구</span>
+          </span>
+          <button type="button" class="qhb-btn" id="btn-adjust-reset-all-top" onclick="resetAllAdjustParameters()" style="padding: 2px 8px; font-size: 10px; font-weight: 700; background: rgba(245, 158, 11, 0.25); border-color: #f59e0b; color: #fbbf24;" title="모든 사용자 옵션 조정값을 표준 기본값으로 전수 초기화합니다">
+            🔄 전수 초기화
+          </button>
+        </div>
 
         <!-- 0. [Phase 100] 건축 구조물 가시성 (외벽·발코니 내부 숨김 및 난간대 단독 뷰) 제어 섹션 -->
         <div style="background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(56, 189, 248, 0.35); border-radius: 8px; padding: 8px 10px;">
@@ -5983,6 +5996,23 @@ body.model-fullscreen #model-fullscreen-open{display:none}
           <div style="margin-top: 5px; text-align: center;">
             <button class="rooms-btn" style="width: 100%; font-size: 10.5px; padding: 4px 8px;" onclick="WindowManager.open('anchor-panel')">🔧 고정부 12개소 상세 제어창 열기</button>
           </div>
+        </div>
+
+        <!-- [Phase 112] 6. 난간대 모든 옵션 조정값 전수 초기화 (Full Reset) 섹션 -->
+        <div style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.35); border-radius: 8px; padding: 8px 10px; margin-top: 2px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <span style="font-weight: 700; color: #fbbf24; font-size: 11.5px; display: flex; align-items: center; gap: 5px;">
+              <span>🔄</span> 6. 모든 옵션 조정값 전수 초기화
+            </span>
+            <span style="font-size: 9.5px; padding: 2px 6px; border-radius: 4px; font-weight: 700; background: rgba(245, 158, 11, 0.2); color: #fcd34d; border: 1px solid rgba(245, 158, 11, 0.4);">원클릭 초기 표준 복원</span>
+          </div>
+          <div style="font-size: 9.5px; color: #94a3b8; line-height: 1.4; margin-bottom: 6px;">
+            건축물 가시성, 높이·폭·깊이, 직관 파이프 이격·길이, 엘보 곡률, 주 지주 부재 및 앙커 캡 등 <strong>사용자가 조정한 모든 설정을 표준 기본값으로 일괄 복원</strong>합니다.
+          </div>
+          <button type="button" class="qhb-btn" id="btn-adjust-reset-all-bottom" onclick="resetAllAdjustParameters()" style="width: 100%; text-align: center; font-size: 11px; font-weight: 700; padding: 6px 10px; background: linear-gradient(135deg, rgba(245, 158, 11, 0.25) 0%, rgba(217, 119, 6, 0.35) 100%); border: 1px solid #f59e0b; color: #fff; border-radius: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);" title="모든 사용자 옵션 조정값을 시스템 기본값으로 전수 초기화합니다">
+            <span style="font-size: 12px;">🔄</span>
+            <span>모든 옵션 조정값 전수 초기화 (기본값 복원)</span>
+          </button>
         </div>
     </div>
   </div>
@@ -7853,6 +7883,7 @@ const ModelParameters = {
  version:1,storedCount:6,restoring:false,
  sameConfiguration(a,b){const canonical=v=>v&&typeof v==='object'?(Array.isArray(v)?v.map(canonical):Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])]))):v;return JSON.stringify(canonical(a))===JSON.stringify(canonical(b));},
  needsBendUpgrade(input) {return !input||input.supportBendStyle==null||input.supportBendRadius==null;},
+ resetToDefault(skipConfirm = false) { if (typeof resetAllAdjustParameters === 'function') resetAllAdjustParameters(skipConfirm); },
  snapshot() {
   return {version:1,supportCount:DIMS.supportCount,storedCount:this.storedCount,railWidth:DIMS.railWidth,
    railLeftX:DIMS.railLeftX,railRightX:DIMS.railRightX,widthPivot:DIMS.widthPivot||'center',topRailY:DIMS.topRailY,
@@ -19682,6 +19713,110 @@ const WorkbookManager = {
       showToast(`${sideName} 앙커 ${nextState ? '일괄 완전 복원' : '일괄 숨김'}`);
       updateAnchorBaseUI();
     }
+
+    function restoreAllAnchorsCompletely() {
+      toggleAnchorBaseVisibility('all', true);
+    }
+    window.restoreAllAnchorsCompletely = restoreAllAnchorsCompletely;
+
+    /* =========================================================================
+       [Phase 112] 난간대 조정 창 내 모든 사용자 임의 설정 옵션 조정값 전수 초기화 (Full Reset)
+       ========================================================================= */
+    function resetAllAdjustParameters(skipConfirm = false) {
+      if (!skipConfirm) {
+        if (!confirm('난간대 조정 창의 모든 사용자 임의 변경 옵션을 초기 표준 기본값으로 전수 초기화하시겠습니까?')) {
+          return;
+        }
+      }
+
+      // 1. [건축 구조물 가시성] 전체 표시 (외벽·발코니 내부 표시) 기본값 복원
+      setBuildingStructureVisibility(true, false);
+
+      // 2. [1. 핸드레일 높이] 기본 2.00m (-0.5m) 및 빠른 높이 바 숨김 기본값 복원
+      setHandrailHeight(2.00, false);
+      setQuickHeightBarVisible(false, false);
+      const btnH200 = document.getElementById('btn-adjust-preset-200'); if (btnH200) btnH200.classList.add('active');
+      ['btn-adjust-preset-250', 'btn-adjust-preset-170'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.classList.remove('active');
+      });
+      const qhbOff = document.getElementById('btn-qhb-opt-off'); if (qhbOff) qhbOff.classList.add('active');
+      const qhbOn = document.getElementById('btn-qhb-opt-on'); if (qhbOn) qhbOn.classList.remove('active');
+
+      // 3. [2. 핸드레일 폭] 표준 4.20m 및 중간(center) 기준축 기본값 복원
+      setHandrailWidth(4.20, 'center', false);
+      const btnWStd = document.getElementById('btn-adjust-w-std'); if (btnWStd) btnWStd.classList.add('active');
+      ['btn-adjust-w-shrink', 'btn-adjust-w-ext'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.classList.remove('active');
+      });
+      const btnPvCenter = document.getElementById('btn-adjust-pivot-center'); if (btnPvCenter) btnPvCenter.classList.add('active');
+      ['btn-adjust-pivot-left', 'btn-adjust-pivot-right'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.classList.remove('active');
+      });
+
+      // 4. [3. 핸드레일 깊이] 표준 14cm (0.14m), 베이스 플레이트 기준('plate'), 전체 일괄 모드('all'), 외벽 모따기 OFF 복원
+      setDepthMode('all');
+      setHandrailDepth(0.14, 'all', 'plate', false);
+      toggleWallChamfer(false);
+      const btnDpPlate = document.getElementById('btn-adjust-depth-pivot-plate'); if (btnDpPlate) btnDpPlate.classList.add('active');
+      const btnDpRail = document.getElementById('btn-adjust-depth-pivot-rail'); if (btnDpRail) btnDpRail.classList.remove('active');
+      ['btn-adjust-d-08', 'btn-adjust-d-10', 'btn-adjust-d-25', 'btn-adjust-d-35', 'btn-adjust-d-50'].forEach(id => {
+        const el = document.getElementById(id); if (el) el.classList.remove('active');
+      });
+      const btnD15 = document.getElementById('btn-adjust-d-15'); if (btnD15) btnD15.classList.add('active');
+
+      // 5. [4. 직관 파이프 이격] 표준 97mm (0.097m) 및 좌/우 그룹('grouped') 모드 기본값 복원
+      setPipeLengthMode('grouped');
+      setGroupPipeLength('left', 0.097, false);
+      setGroupPipeLength('right', 0.097, false);
+      ANCHOR_BASE_KEYS.forEach(k => {
+        anchorPipeLengths[k] = 0.097;
+        const s = document.getElementById('slider-adjust-pipe-' + k); if (s) s.value = 0.097;
+        const l = document.getElementById('label-adjust-pipe-' + k); if (l) l.textContent = '97mm';
+      });
+
+      // 6. [4. 직관 파이프 길이 & 엘보] 표준 97mm (0.097m), 외벽 베이스 고정('plate'), 엘보 70mm, 좌/우 그룹 모드 복원
+      setStraightPipeLengthMode('grouped');
+      setStraightPipePivot('plate', false);
+      setStraightPipeElbowRadius(0.070, false);
+      setGroupStraightPipeLength('left', 0.097, false);
+      setGroupStraightPipeLength('right', 0.097, false);
+      ANCHOR_BASE_KEYS.forEach(k => {
+        straightPipeLengths[k] = 0.097;
+        const s = document.getElementById('slider-adjust-pipe-len-' + k); if (s) s.value = 0.097;
+        const l = document.getElementById('label-adjust-pipe-len-' + k); if (l) l.textContent = '97mm';
+      });
+      const btnSplStd = document.getElementById('btn-adjust-pipe-len-std'); if (btnSplStd) btnSplStd.classList.add('active');
+
+      // 7. [◆ 3-B. 주 지주 · 하부 BP 부재] 주 지주 6개, 하부 고정 높이 0.95m, 외경 38mm, 장곡관 70mm, BP 직관 97mm 복원
+      DIMS.supportCount = 6;
+      ModelParameters.storedCount = Math.max(ModelParameters.storedCount, 6);
+      DIMS.legFlangeY = 0.95;
+      DIMS.supportDiameter = 0.038;
+      DIMS.supportBendStyle = 'long-radius';
+      DIMS.supportBendRadius = 0.070;
+      DIMS.supportBendDrop = 0.120;
+      for (let i = 1; i <= ModelParameters.storedCount; i++) {
+        anchorPipeLengths['bottom-' + i] = 0.097;
+      }
+      configureInspectionPoints(6, ModelParameters.storedCount);
+      DIMS.legsX = computeKoshaLegsAndBalusters(DIMS.railLeftX, DIMS.railRightX).legsX;
+
+      // 8. [5. 외벽 앙커 베이스 & 덮개 캡 부속 관리] 100% 완전 복원
+      toggleAnchorBaseVisibility('all', true);
+
+      // 9. 3D 기하 시스템 및 트랜스폼 일괄 리빌드
+      rebuildHandrailSystem();
+      buildInspectionPins();
+      updateAssemblyTransforms(assemblyProgress);
+      syncLegacyPointGeometry();
+      ModelParameters.syncUI();
+      syncDepthUI(DIMS.railDepth, 'all', DIMS.depthPivot);
+
+      // 10. 데이터 영속성 동기화 및 알림
+      ModelParameters.commit({ pointsChanged: true });
+      showToast('✨ 난간대 조정 창의 모든 사용자 옵션 조정값이 표준 기본값으로 전수 초기화되었습니다.');
+    }
+    window.resetAllAdjustParameters = resetAllAdjustParameters;
 
     function updateAnchorBaseUI() {
       let capCount = 0;
