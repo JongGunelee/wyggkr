@@ -14979,17 +14979,7 @@ const WorkbookManager = {
                 progress:normProg(row[key+'진행현황'],normSt(row[key+'상태'])),
                 defect:row[key+'결함내역']||'',action:row[key+'보강공법']||'',cost:parseCostSafe(row[key+'비용']),anchorKey:d.anchorKey };
             });
-            // [Phase 110 무결성 보장] 9동 504호 P3 오표시 결함 정상화 (현장 점검서 기준 무결함 일치화)
-            if (rId === 'apt-9-504' || (b.id === 'apt-9' && rNo === 504)) {
-              if (pts.P3 && (pts.P3.defect.includes('고정 되지 않음') || pts.P3.status === 'danger')) {
-                pts.P3.status = 'uninspected';
-                pts.P3.progress = '미점검';
-                pts.P3.defect = '';
-                pts.P3.action = '';
-                pts.P3.cost = 0;
-              }
-            }
-
+                        // [Phase 113] apt-9-504 P3 강제 소거 코드 제거 - xlsb DB 점검서 기준 데이터 직접 반영 (무결성 보장)
             const totCost = INSPECTION_POINT_KEYS.reduce((sum, k) => sum + (pts[k].cost || 0), 0);
 
             let roomLinks = [];
