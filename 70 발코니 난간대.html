@@ -22830,7 +22830,30 @@ function setCameraView(name, animate = true) {
     }
 
     // 선택된 앙커 부위의 결함 이력 및 동별 조치 필요 세대 종합 분석창 렌더링
-    function updateDefectModal(id) {
+    
+// [Phase 113] 실제 부위 결함 유무 엄격 판정 함수 (무결함 텍스트의 오탐 방지)
+function isPointActualDefect(ptInfo) {
+  if (!ptInfo) return false;
+  const st = ptInfo.status;
+  if (st === 'danger' || st === 'warning') return true;
+  if (st === 'good' || st === 'repaired' || st === 'uninspected') {
+    // 상태가 good/repaired/uninspected일 때 defect 텍스트가 정상/양호 표준 문구이면 결함 아님
+    const defectText = (ptInfo.defect || '').trim();
+    if (!defectText) return false;
+    if (/특이\s*결함\s*없음|이상\s*없음|특이사항\s*없음|결함\s*없음|양호|정상|견고|해당\s*없음/i.test(defectText)) {
+      return false;
+    }
+    // '탈락', '부식', '균열', '박락', '풀림', '파단', '변형' 등 명백한 결함 키워드가 있는 경우만 true
+    if (/탈락|부식|균열|박락|풀림|파단|변형|유격|이탈|손상|파손/.test(defectText)) return true;
+    return false;
+  }
+  const d = (ptInfo.defect || '').trim();
+  if (!d) return false;
+  if (/특이\s*결함\s*없음|이상\s*없음|특이사항\s*없음|결함\s*없음|양호|정상|견고|해당\s*없음/i.test(d)) return false;
+  return true;
+}
+
+function updateDefectModal(id) {
       const d = DEFECT_DATA[id];
       if (!d) return;
 
@@ -22864,9 +22887,11 @@ function setCameraView(name, animate = true) {
           if (r.points && r.points[pt]) {
             const pInfo = r.points[pt];
             const st = pInfo.status;
-            const hasPtDefect = !!(pInfo.defect && pInfo.defect.trim().length > 0);
-            // [Phase 110 무결성 보장] 포인트별 진행현황은 해당 포인트의 독립 진행상태 및 결함 유무만을 엄격히 반영
-            const prog = (pInfo.progress && pInfo.progress !== '미점검') ? pInfo.progress : (st === 'repaired' ? '조치완료' : ((st === 'danger' || st === 'warning' || hasPtDefect) ? '조치진행' : (st === 'good' ? '점검완료' : '미점검')));
+            const hasPtDefect = isPointActualDefect(pInfo);
+            // [Phase 113 무결성 보장] 정상/무결함 문구 오탐 방지 및 포인트별 정밀 진행현황 반영
+            const prog = (pInfo.progress && pInfo.progress !== '미점검') ? 
+              ((pInfo.progress === '점검완료' && hasPtDefect) ? '조치진행' : (pInfo.progress === '조치진행' && !hasPtDefect && st === 'good' ? '점검완료' : pInfo.progress)) : 
+              (st === 'repaired' ? '조치완료' : ((st === 'danger' || st === 'warning' || hasPtDefect) ? '조치진행' : (st === 'good' ? '점검완료' : '미점검')));
 
             // [Phase 57] 회계 숫자 정밀 파싱 (천단위 콤마 및 문자열 완전 정제)
             const rawCost = parseInt(String(pInfo.cost || 0).replace(/[^0-9]/g, ''), 10) || 0;
@@ -22963,7 +22988,7 @@ function setCameraView(name, animate = true) {
       }
 
       // [Phase 56] 현재 진행 현황(동-호실: 예 '5-506') 실시간 동기화
-      let currentSyncRoom = '5-506';
+      let currentSyncRoom = '선택 세대';
       let currentSyncProg = '미점검';
       if (typeof WorkbookManager !== 'undefined' && WorkbookManager.activeRoomId) {
         const actRoom = (typeof ROOMS_DATA !== 'undefined' && ROOMS_DATA) ? ROOMS_DATA.find(r => r.id === WorkbookManager.activeRoomId) : null;
@@ -22980,6 +23005,12 @@ function setCameraView(name, animate = true) {
       } else if (repairedRooms.length > 0) {
         currentSyncRoom = formatRoomShorthand(repairedRooms[0]);
         currentSyncProg = '조치완료';
+      } else if (goodRooms.length > 0) {
+        currentSyncRoom = formatRoomShorthand(goodRooms[0]);
+        currentSyncProg = '점검완료';
+      } else if (uninspectedRooms.length > 0) {
+        currentSyncRoom = formatRoomShorthand(uninspectedRooms[0]);
+        currentSyncProg = '미점검';
       }
 
       // 건물동 순차 정렬: 1동부터 11동 순서
@@ -23007,14 +23038,14 @@ function setCameraView(name, animate = true) {
 
         bAllRooms.forEach(r => {
           const ptInfo = (r.points && r.points[pt]) ? r.points[pt] : null;
-          const hasPtDefect = !!(ptInfo && ptInfo.defect && ptInfo.defect.trim().length > 0);
+          const hasPtDefect = isPointActualDefect(ptInfo);
           const ptStatus = ptInfo ? ptInfo.status : 'uninspected';
           const ptProg = ptInfo ? (ptInfo.progress || '미점검') : '미점검';
 
-          // [Phase 110 무결성 보장] 해당 포인트(pt)에 실제 결함/조치가 있는 세대만 엄격 분기
+          // [Phase 113 무결성 보장] 해당 포인트(pt)에 실제 결함/조치가 있는 세대만 엄격 분기 (정상 문구 오탐 방지)
           if (ptProg === '조치완료' || ptStatus === 'repaired') {
             bRepaired.push(r);
-          } else if (ptProg === '조치진행' || ptStatus === 'danger' || ptStatus === 'warning' || (hasPtDefect && ptProg !== '점검완료')) {
+          } else if (ptStatus === 'danger' || ptStatus === 'warning' || hasPtDefect || (ptProg === '조치진행' && ptStatus !== 'good')) {
             bAction.push(r);
           } else if (ptProg === '점검완료' || ptStatus === 'good') {
             bInspected.push(r);
@@ -23042,15 +23073,15 @@ function setCameraView(name, animate = true) {
         const chipsInspected = makeChips(bInspected, '🟢', 'rgba(34, 197, 94, 0.14)', '#22c55e', '#bbf7d0', '점검완료');
         const chipsInspecting = makeChips(bInspecting, '🟡', 'rgba(234, 179, 8, 0.14)', '#eab308', '#fef08a', '점검중');
 
-        // 세대 칩이 하나라도 있을 때만 동별 카드 노출
-        if (bRepaired.length > 0 || bAction.length > 0 || bInspected.length > 0 || bInspecting.length > 0) {
+        // [Phase 113 무결성 보장] 해당 부위(pt)에 실제 결함/조치가 있는 세대(조치진행/조치완료)가 있는 동만 엄격 노출
+        if (bRepaired.length > 0 || bAction.length > 0) {
           bldgsHtml += `
             <div class="defect-building-sec" style="margin-bottom: 7px; padding: 7px 9px; background: rgba(15, 23, 42, 0.65); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px;">
               <div class="defect-bldg-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
                 <span style="font-size: 11px; font-weight: 700; color: #f8fafc;">
                   🏢 ${bName}
                   <small style="font-size: 9.5px; color: #94a3b8; font-weight: normal; margin-left: 4px;">
-                    (완료 <b style="color: #34d399;">${bRepaired.length}</b> · 진행 <b style="color: #fb923c;">${bAction.length}</b> · 완료대기 <b style="color: #4ade80;">${bInspected.length}</b> · 미점검 <b style="color: #cbd5e1;">${bUninspected.length}</b>)
+                    (완료 <b style="color: #34d399;">${bRepaired.length}</b> · 진행 <b style="color: #fb923c;">${bAction.length}</b> · 점검완료 <b style="color: #4ade80;">${bInspected.length}</b> · 미점검 <b style="color: #cbd5e1;">${bUninspected.length}</b>)
                   </small>
                 </span>
                 <span style="font-size: 9.5px; color: ${d.color}; font-weight: 700;">${d.pointKey} 조치현황</span>
