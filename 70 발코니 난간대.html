@@ -6351,6 +6351,166 @@ body.model-fullscreen #model-fullscreen-open{display:none}
           </div>
         </div>
 
+        <!-- [Phase 114] 모든 마커(P, BP, Hs) 대상 물체 이격거리 개별 또는 그룹(좌/우) 실시간 조정 메뉴 -->
+        <div style="padding: 2px 8px 6px 8px;">
+          <button class="dock-menu-item" id="btn-dock-marker-offset" onclick="MarkerOffsetManager.toggleSubbar()" style="margin: 0; padding: 7px 10px; border-radius: 6px; background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.35); display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; cursor: pointer;" title="모든 마커(P, BP, Hs)의 부착 대상물체로부터 이격거리(Offset) 개별 또는 그룹(좌/우) 실시간 미세조정">
+            <span style="font-weight: 700; color: #34d399; font-size: 11px; display: flex; align-items: center; gap: 5px;">
+              <span>📍</span> 마커 이격거리 조정
+            </span>
+            <span id="marker-offset-badge" style="font-weight: 800; color: #10b981; background: rgba(16, 185, 129, 0.15); padding: 1px 6px; border-radius: 4px; font-size: 10px;">기본값</span>
+          </button>
+        </div>
+
+        <div id="marker-offset-subbar" style="display: none; padding: 0 8px 8px 8px;">
+          <div style="background: rgba(15, 23, 42, 0.92); padding: 8px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.3); font-size: 11px; box-shadow: 0 4px 12px rgba(0,0,0,0.35);">
+            <!-- 서브바 상단 탭 및 초기화 버튼 -->
+            <div style="display: flex; gap: 4px; margin-bottom: 8px; align-items: center;">
+              <button class="rooms-btn active" id="tab-offset-group" onclick="MarkerOffsetManager.setTab('group')" style="flex: 1; padding: 4px 6px; font-size: 10px; background: rgba(16, 185, 129, 0.3); border-color: rgba(16, 185, 129, 0.5);">👥 그룹(좌/우)</button>
+              <button class="rooms-btn" id="tab-offset-indiv" onclick="MarkerOffsetManager.setTab('indiv')" style="flex: 1; padding: 4px 6px; font-size: 10px; background: transparent; border-color: rgba(148, 163, 184, 0.3);">🔍 개별(P·BP·Hs)</button>
+              <button class="rooms-btn" onclick="MarkerOffsetManager.resetAll()" style="padding: 4px 6px; font-size: 10px; background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #fca5a5;" title="현재의 기본 상태(P:20mm, BP:50mm, Hs:80mm)로 전체 초기화">🔄 초기화</button>
+            </div>
+
+            <!-- 패널 1: 그룹 조정 (좌/우/전체) -->
+            <div id="panel-offset-group" style="display: block;">
+              <!-- 좌측 그룹 -->
+              <div style="margin-bottom: 7px; background: rgba(30, 41, 59, 0.6); padding: 6px; border-radius: 5px; border-left: 3px solid #38bdf8;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: 700; color: #bae6fd;">
+                  <span>👈 좌측 그룹 (P1~3, BP1~3)</span>
+                  <span id="val-offset-grp-left" style="color: #38bdf8; font-family: monospace;">+0mm</span>
+                </div>
+                <input type="range" id="slider-offset-grp-left" min="-20" max="100" step="1" value="0" oninput="MarkerOffsetManager.setGroupDelta('left', this.value)" style="width: 100%; height: 4px; accent-color: #38bdf8; cursor: pointer;">
+                <div style="display: flex; justify-content: space-between; font-size: 9px; color: #64748b; margin-top: 2px;">
+                  <span>-20mm (밀착)</span>
+                  <span>0 (기본)</span>
+                  <span>+100mm (돌출)</span>
+                </div>
+              </div>
+
+              <!-- 우측 그룹 -->
+              <div style="margin-bottom: 7px; background: rgba(30, 41, 59, 0.6); padding: 6px; border-radius: 5px; border-left: 3px solid #f472b6;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: 700; color: #fbcfe8;">
+                  <span>👉 우측 그룹 (P4~6, BP4~6)</span>
+                  <span id="val-offset-grp-right" style="color: #f472b6; font-family: monospace;">+0mm</span>
+                </div>
+                <input type="range" id="slider-offset-grp-right" min="-20" max="100" step="1" value="0" oninput="MarkerOffsetManager.setGroupDelta('right', this.value)" style="width: 100%; height: 4px; accent-color: #f472b6; cursor: pointer;">
+                <div style="display: flex; justify-content: space-between; font-size: 9px; color: #64748b; margin-top: 2px;">
+                  <span>-20mm (밀착)</span>
+                  <span>0 (기본)</span>
+                  <span>+100mm (돌출)</span>
+                </div>
+              </div>
+
+              <!-- 전체 일괄 -->
+              <div style="background: rgba(30, 41, 59, 0.6); padding: 6px; border-radius: 5px; border-left: 3px solid #34d399;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: 700; color: #a7f3d0;">
+                  <span>🌐 전체 마커 공통 (P, BP, Hs)</span>
+                  <span id="val-offset-grp-all" style="color: #34d399; font-family: monospace;">+0mm</span>
+                </div>
+                <input type="range" id="slider-offset-grp-all" min="-20" max="100" step="1" value="0" oninput="MarkerOffsetManager.setGroupDelta('all', this.value)" style="width: 100%; height: 4px; accent-color: #34d399; cursor: pointer;">
+                <div style="display: flex; justify-content: space-between; font-size: 9px; color: #64748b; margin-top: 2px;">
+                  <span>-20mm (밀착)</span>
+                  <span>0 (기본)</span>
+                  <span>+100mm (돌출)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 패널 2: 개별 마커 정밀 조정 -->
+            <div id="panel-offset-indiv" style="display: none; max-height: 220px; overflow-y: auto; padding-right: 4px;">
+              <!-- P계열 (외벽 앙커) -->
+              <div style="font-weight: 800; color: #38bdf8; font-size: 10px; margin: 4px 0 2px 2px;">🔩 외벽 앙커 마커 (P1~P6, 기본: 20mm)</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 6px;">
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>P1 (좌상)</span><span id="val-offset-P1" style="color: #38bdf8;">20mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-P1" min="0" max="120" step="1" value="20" oninput="MarkerOffsetManager.setIndividualGap('P1', this.value)" style="width: 100%; height: 3px; accent-color: #38bdf8; cursor: pointer;">
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>P4 (우상)</span><span id="val-offset-P4" style="color: #f472b6;">20mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-P4" min="0" max="120" step="1" value="20" oninput="MarkerOffsetManager.setIndividualGap('P4', this.value)" style="width: 100%; height: 3px; accent-color: #f472b6; cursor: pointer;">
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>P2 (좌중)</span><span id="val-offset-P2" style="color: #38bdf8;">20mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-P2" min="0" max="120" step="1" value="20" oninput="MarkerOffsetManager.setIndividualGap('P2', this.value)" style="width: 100%; height: 3px; accent-color: #38bdf8; cursor: pointer;">
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>P5 (우중)</span><span id="val-offset-P5" style="color: #f472b6;">20mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-P5" min="0" max="120" step="1" value="20" oninput="MarkerOffsetManager.setIndividualGap('P5', this.value)" style="width: 100%; height: 3px; accent-color: #f472b6; cursor: pointer;">
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>P3 (좌하)</span><span id="val-offset-P3" style="color: #38bdf8;">20mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-P3" min="0" max="120" step="1" value="20" oninput="MarkerOffsetManager.setIndividualGap('P3', this.value)" style="width: 100%; height: 3px; accent-color: #38bdf8; cursor: pointer;">
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>P6 (우하)</span><span id="val-offset-P6" style="color: #f472b6;">20mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-P6" min="0" max="120" step="1" value="20" oninput="MarkerOffsetManager.setIndividualGap('P6', this.value)" style="width: 100%; height: 3px; accent-color: #f472b6; cursor: pointer;">
+                </div>
+              </div>
+
+              <!-- BP계열 (하부 지주 베이스) -->
+              <div style="font-weight: 800; color: #fbbf24; font-size: 10px; margin: 4px 0 2px 2px;">⚓ 하부 지주 베이스 (BP1~BP6, 기본: 50mm)</div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 6px;">
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>BP1 (1지주)</span><span id="val-offset-BP1" style="color: #fbbf24;">50mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-BP1" min="0" max="150" step="1" value="50" oninput="MarkerOffsetManager.setIndividualGap('BP1', this.value)" style="width: 100%; height: 3px; accent-color: #fbbf24; cursor: pointer;">
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>BP4 (4지주)</span><span id="val-offset-BP4" style="color: #fbbf24;">50mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-BP4" min="0" max="150" step="1" value="50" oninput="MarkerOffsetManager.setIndividualGap('BP4', this.value)" style="width: 100%; height: 3px; accent-color: #fbbf24; cursor: pointer;">
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>BP2 (2지주)</span><span id="val-offset-BP2" style="color: #fbbf24;">50mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-BP2" min="0" max="150" step="1" value="50" oninput="MarkerOffsetManager.setIndividualGap('BP2', this.value)" style="width: 100%; height: 3px; accent-color: #fbbf24; cursor: pointer;">
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>BP5 (5지주)</span><span id="val-offset-BP5" style="color: #fbbf24;">50mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-BP5" min="0" max="150" step="1" value="50" oninput="MarkerOffsetManager.setIndividualGap('BP5', this.value)" style="width: 100%; height: 3px; accent-color: #fbbf24; cursor: pointer;">
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>BP3 (3지주)</span><span id="val-offset-BP3" style="color: #fbbf24;">50mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-BP3" min="0" max="150" step="1" value="50" oninput="MarkerOffsetManager.setIndividualGap('BP3', this.value)" style="width: 100%; height: 3px; accent-color: #fbbf24; cursor: pointer;">
+                </div>
+                <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                    <span>BP6 (6지주)</span><span id="val-offset-BP6" style="color: #fbbf24;">50mm</span>
+                  </div>
+                  <input type="range" id="slider-offset-BP6" min="0" max="150" step="1" value="50" oninput="MarkerOffsetManager.setIndividualGap('BP6', this.value)" style="width: 100%; height: 3px; accent-color: #fbbf24; cursor: pointer;">
+                </div>
+              </div>
+
+              <!-- Hs계열 (수평 파이프) -->
+              <div style="font-weight: 800; color: #a78bfa; font-size: 10px; margin: 4px 0 2px 2px;">📏 수평 레일 마커 (Hs, 기본: 80mm)</div>
+              <div style="background: rgba(30, 41, 59, 0.5); padding: 4px; border-radius: 4px; margin-bottom: 4px;">
+                <div style="display: flex; justify-content: space-between; font-size: 9.5px; font-weight: 700; color: #94a3b8;">
+                  <span>Hs (수평 파이프 전체)</span><span id="val-offset-Hs" style="color: #a78bfa;">80mm</span>
+                </div>
+                <input type="range" id="slider-offset-Hs" min="0" max="180" step="1" value="80" oninput="MarkerOffsetManager.setIndividualGap('Hs', this.value)" style="width: 100%; height: 3px; accent-color: #a78bfa; cursor: pointer;">
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="dock-menu-sep"></div>
         <div class="dock-menu-category">📸 3D 시점 카메라 프리셋</div>
         <!-- [Phase 50] 하단 좌측 툴바에서 이동 배치된 '전체 닫기' 버튼 ('전경 뷰' 바로 상부 배치) -->
@@ -8109,9 +8269,198 @@ function renderInspectionMatrix(container) {
   if (table) { table.classList.add('inspection-matrix-13');const oldId=table.tBodies[0] && table.tBodies[0].id; table.innerHTML = inspectionMatrixHtml().replace(/^<table[^>]*>|<\/table>$/g,''); if(oldId)table.tBodies[0].id=oldId; }
   else container.innerHTML = inspectionMatrixHtml();
 }
+
+/* =========================================================================
+   [Phase 114] 마커 이격거리(Offset) 개별 및 그룹(좌/우) 통합 관리자 (MarkerOffsetManager)
+   - 대상: P1~P6 (외벽 앙커 접합부 6개), BP1~BP6 (하부 지주 베이스플레이트 6개), Hs (수평 레일 1개)
+   - 기본값: 현재 상태를 100% 기본값으로 유지
+     * P1~P6: 20mm (0.02m)
+     * BP1~BP6: 50mm (0.05m)
+     * Hs: 80mm (0.08m)
+   - 그룹 조정: 좌측(P1~P3, BP1~BP3), 우측(P4~P6, BP4~BP6), 전체(All)
+   - 개별 조정: 13개 포인트 각각 독립 미세 조정
+   - 실시간 3D 씬 동기화 및 렌더링
+   ========================================================================= */
+var MarkerOffsetManager = {
+  defaults: {
+    P1: 0.02, P2: 0.02, P3: 0.02,
+    P4: 0.02, P5: 0.02, P6: 0.02,
+    BP1: 0.05, BP2: 0.05, BP3: 0.05,
+    BP4: 0.05, BP5: 0.05, BP6: 0.05,
+    Hs: 0.08
+  },
+  currentGaps: {
+    P1: 0.02, P2: 0.02, P3: 0.02,
+    P4: 0.02, P5: 0.02, P6: 0.02,
+    BP1: 0.05, BP2: 0.05, BP3: 0.05,
+    BP4: 0.05, BP5: 0.05, BP6: 0.05,
+    Hs: 0.08
+  },
+  groupDeltas: {
+    left: 0,
+    right: 0,
+    all: 0
+  },
+  activeTab: 'group',
+
+  getGap: function(key) {
+    if (this.currentGaps && this.currentGaps[key] !== undefined) {
+      return this.currentGaps[key];
+    }
+    return this.defaults[key] !== undefined ? this.defaults[key] : (key.startsWith('P') ? 0.02 : key.startsWith('BP') ? 0.05 : 0.08);
+  },
+
+  setIndividualGap: function(key, mmVal) {
+    var meters = parseFloat(mmVal) / 1000;
+    if (isNaN(meters)) return;
+    this.currentGaps[key] = meters;
+    this.apply();
+    this.updateUI();
+  },
+
+  setGroupDelta: function(group, deltaMm) {
+    var deltaM = parseFloat(deltaMm) / 1000;
+    if (isNaN(deltaM)) return;
+    this.groupDeltas[group] = deltaM;
+
+    if (group === 'left') {
+      var leftKeys = ['P1', 'P2', 'P3', 'BP1', 'BP2', 'BP3'];
+      for (var i = 0; i < leftKeys.length; i++) {
+        var k = leftKeys[i];
+        this.currentGaps[k] = Math.max(0, this.defaults[k] + deltaM);
+      }
+    } else if (group === 'right') {
+      var rightKeys = ['P4', 'P5', 'P6', 'BP4', 'BP5', 'BP6'];
+      for (var j = 0; j < rightKeys.length; j++) {
+        var rk = rightKeys[j];
+        this.currentGaps[rk] = Math.max(0, this.defaults[rk] + deltaM);
+      }
+    } else if (group === 'all') {
+      var allKeys = Object.keys(this.defaults);
+      for (var m = 0; m < allKeys.length; m++) {
+        var ak = allKeys[m];
+        this.currentGaps[ak] = Math.max(0, this.defaults[ak] + deltaM);
+      }
+    }
+    this.apply();
+    this.updateUI();
+  },
+
+  resetAll: function() {
+    this.currentGaps = Object.assign({}, this.defaults);
+    this.groupDeltas = { left: 0, right: 0, all: 0 };
+    this.apply();
+    this.updateUI();
+  },
+
+  apply: function() {
+    if (typeof syncLegacyPointGeometry === 'function') syncLegacyPointGeometry();
+    if (typeof syncExtendedPointGeometry === 'function') syncExtendedPointGeometry();
+    if (typeof layoutBottomInspectionMarkers === 'function') layoutBottomInspectionMarkers();
+    if (typeof RenderScheduler !== 'undefined' && RenderScheduler.requestRender) {
+      RenderScheduler.requestRender();
+    } else if (typeof renderer !== 'undefined' && typeof scene !== 'undefined' && typeof camera !== 'undefined') {
+      renderer.render(scene, camera);
+    }
+  },
+
+  toggleSubbar: function() {
+    var el = document.getElementById('marker-offset-subbar');
+    if (!el) return;
+    var isOpen = el.style.display !== 'none';
+    el.style.display = isOpen ? 'none' : 'block';
+    var btn = document.getElementById('btn-dock-marker-offset');
+    if (btn) {
+      if (isOpen) {
+        btn.classList.remove('active');
+        btn.style.background = 'rgba(16, 185, 129, 0.08)';
+      } else {
+        btn.classList.add('active');
+        btn.style.background = 'rgba(16, 185, 129, 0.22)';
+      }
+    }
+  },
+
+  setTab: function(tab) {
+    this.activeTab = tab;
+    var groupTab = document.getElementById('tab-offset-group');
+    var indivTab = document.getElementById('tab-offset-indiv');
+    var groupPanel = document.getElementById('panel-offset-group');
+    var indivPanel = document.getElementById('panel-offset-indiv');
+    if (tab === 'group') {
+      if (groupTab) { groupTab.classList.add('active'); groupTab.style.background = 'rgba(16, 185, 129, 0.3)'; }
+      if (indivTab) { indivTab.classList.remove('active'); indivTab.style.background = 'transparent'; }
+      if (groupPanel) groupPanel.style.display = 'block';
+      if (indivPanel) indivPanel.style.display = 'none';
+    } else {
+      if (groupTab) { groupTab.classList.remove('active'); groupTab.style.background = 'transparent'; }
+      if (indivTab) { indivTab.classList.add('active'); indivTab.style.background = 'rgba(16, 185, 129, 0.3)'; }
+      if (groupPanel) groupPanel.style.display = 'none';
+      if (indivPanel) indivPanel.style.display = 'block';
+    }
+  },
+
+  updateUI: function() {
+    // 1. Group sliders & labels
+    var sLeft = document.getElementById('slider-offset-grp-left');
+    var lLeft = document.getElementById('val-offset-grp-left');
+    if (sLeft) sLeft.value = Math.round(this.groupDeltas.left * 1000);
+    if (lLeft) {
+      var dL = Math.round(this.groupDeltas.left * 1000);
+      lLeft.textContent = (dL >= 0 ? '+' : '') + dL + 'mm';
+    }
+
+    var sRight = document.getElementById('slider-offset-grp-right');
+    var lRight = document.getElementById('val-offset-grp-right');
+    if (sRight) sRight.value = Math.round(this.groupDeltas.right * 1000);
+    if (lRight) {
+      var dR = Math.round(this.groupDeltas.right * 1000);
+      lRight.textContent = (dR >= 0 ? '+' : '') + dR + 'mm';
+    }
+
+    var sAll = document.getElementById('slider-offset-grp-all');
+    var lAll = document.getElementById('val-offset-grp-all');
+    if (sAll) sAll.value = Math.round(this.groupDeltas.all * 1000);
+    if (lAll) {
+      var dA = Math.round(this.groupDeltas.all * 1000);
+      lAll.textContent = (dA >= 0 ? '+' : '') + dA + 'mm';
+    }
+
+    // 2. Individual sliders & labels
+    var allKeys = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'BP1', 'BP2', 'BP3', 'BP4', 'BP5', 'BP6', 'Hs'];
+    var isModified = false;
+    for (var i = 0; i < allKeys.length; i++) {
+      var k = allKeys[i];
+      var mm = Math.round((this.currentGaps[k] !== undefined ? this.currentGaps[k] : this.defaults[k]) * 1000);
+      var defMm = Math.round(this.defaults[k] * 1000);
+      if (mm !== defMm) isModified = true;
+
+      var s = document.getElementById('slider-offset-' + k);
+      var l = document.getElementById('val-offset-' + k);
+      if (s) s.value = mm;
+      if (l) l.textContent = mm + 'mm';
+    }
+
+    // 3. Status Badge
+    var badge = document.getElementById('marker-offset-badge');
+    if (badge) {
+      if (isModified || this.groupDeltas.left !== 0 || this.groupDeltas.right !== 0 || this.groupDeltas.all !== 0) {
+        badge.textContent = '조정됨';
+        badge.style.color = '#38bdf8';
+        badge.style.background = 'rgba(56, 189, 248, 0.2)';
+      } else {
+        badge.textContent = '기본값';
+        badge.style.color = '#10b981';
+        badge.style.background = 'rgba(16, 185, 129, 0.15)';
+      }
+    }
+  }
+};
+
 function syncLegacyPointGeometry() {
  LEGACY_POINT_KEYS.forEach(key=>{const d=pointDefinition(key),c=anchorBaseConfig[d.anchorKey];
-  const x=c.side==='left'?DIMS.railLeftX:DIMS.railRightX,y=DIMS[c.yKey],z=anchorBaseZ(d.anchorKey)+(anchorPipeLengths[d.anchorKey]||.097)+InspectionMarkerStyle.surfaceGap;
+  const gap = (typeof MarkerOffsetManager !== 'undefined' ? MarkerOffsetManager.getGap(key) : (typeof InspectionMarkerStyle !== 'undefined' && InspectionMarkerStyle.getGap ? InspectionMarkerStyle.getGap(key) : .02));
+  const x=c.side==='left'?DIMS.railLeftX:DIMS.railRightX,y=DIMS[c.yKey],z=anchorBaseZ(d.anchorKey)+(anchorPipeLengths[d.anchorKey]||.097)+gap;
   d.markerPos.set(x,y,z);d.targetPos.set(x,y,anchorBaseZ(d.anchorKey)-.005);d.camPos.set(x+(c.side==='left'?.45:-.45),y+.02,z+.35);const pin=defectPinGroups[d.id];if(pin)pin.position.copy(d.markerPos);
  });
 }
@@ -8120,12 +8469,14 @@ function syncExtendedPointGeometry() {
     const d = pointDefinition(key);
     if (key === 'Hs') {
       const x=(DIMS.railLeftX+DIMS.railRightX)/2;
-      d.markerPos.set(x,DIMS.subRailY+0.06,DIMS.railZ+0.08);
+      const gap = (typeof MarkerOffsetManager !== 'undefined' ? MarkerOffsetManager.getGap('Hs') : (typeof InspectionMarkerStyle !== 'undefined' && InspectionMarkerStyle.getGap ? InspectionMarkerStyle.getGap('Hs') : 0.08));
+      d.markerPos.set(x,DIMS.subRailY+0.06,DIMS.railZ+gap);
       d.targetPos.set(x,DIMS.subRailY,DIMS.railZ); d.camPos.set(x,DIMS.subRailY+0.15,DIMS.railZ+1.1);
     } else {
       const index=BOTTOM_POINT_KEYS.indexOf(key);
       bottomSupportInspectionCenter(index,undefined,undefined,d.targetPos);
-      d.markerPos.copy(d.targetPos);d.markerPos.z+=DIMS.supportDiameter/2+InspectionMarkerStyle.bottomSurfaceGap;
+      const gap = (typeof MarkerOffsetManager !== 'undefined' ? MarkerOffsetManager.getGap(key) : (typeof InspectionMarkerStyle !== 'undefined' && InspectionMarkerStyle.getGap ? InspectionMarkerStyle.getGap(key) : (typeof InspectionMarkerStyle !== 'undefined' ? InspectionMarkerStyle.bottomSurfaceGap : 0.05)));
+      d.markerPos.copy(d.targetPos);d.markerPos.z+=DIMS.supportDiameter/2+gap;
       d.camPos.set(d.targetPos.x,d.targetPos.y+.12,d.targetPos.z+.58);
     }
     const marker=defectPinGroups[d.id]; if(marker) marker.position.copy(d.markerPos);
@@ -8977,14 +9328,17 @@ const RenderScheduler = {
 };
 
 // P/BP/Hs share world-space size; BP uses its own clearance and follows its actual curved member.
-const InspectionMarkerStyle={badgeSize:.075,badgeOffsetZ:.028,hitRadius:.08,surfaceGap:.02,bottomSurfaceGap:.05,labelFontSize:42,badgeExtent:58};
+const InspectionMarkerStyle={badgeSize:.075,badgeOffsetZ:.028,hitRadius:.08,surfaceGap:.02,bottomSurfaceGap:.05,labelFontSize:42,badgeExtent:58,getGap:function(k){return typeof MarkerOffsetManager!=='undefined'?MarkerOffsetManager.getGap(k):(k.startsWith('P')?0.02:k.startsWith('BP')?0.05:0.08);}};
 function layoutBottomInspectionMarkers(){
  for(const key of BOTTOM_POINT_KEYS){
   const d=pointDefinition(key),pin=defectPinGroups[d.id];if(!pin)continue;
   const bend=handrailGroup?.getObjectByName('support-bend-'+key);
+  const gap = (typeof MarkerOffsetManager !== 'undefined' ? MarkerOffsetManager.getGap(key) : InspectionMarkerStyle.bottomSurfaceGap);
+  const delta = gap - InspectionMarkerStyle.bottomSurfaceGap;
   if(bend?.userData.inspectionMarkerLocal){
    bend.updateWorldMatrix(true,false);pin.position.copy(bend.userData.inspectionMarkerLocal).applyMatrix4(bend.matrixWorld);
-  }else {pin.position.copy(d.markerPos);pin.position.z+=handrailGroup?.position.z||0;}
+   pin.position.z += delta;
+  }else {pin.position.copy(d.markerPos);pin.position.z+=delta+(handrailGroup?.position.z||0);}
  }
 }
 
@@ -19713,6 +20067,7 @@ const WorkbookManager = {
        [Phase 112] 난간대 조정 창 내 모든 사용자 임의 설정 옵션 조정값 전수 초기화 (Full Reset)
        ========================================================================= */
     function resetAllAdjustParameters(skipConfirm = false) {
+      if (typeof MarkerOffsetManager !== 'undefined') MarkerOffsetManager.resetAll();
       if (!skipConfirm) {
         if (!confirm('난간대 조정 창의 모든 사용자 임의 변경 옵션을 초기 표준 기본값으로 전수 초기화하시겠습니까?')) {
           return;
@@ -22872,71 +23227,75 @@ function updateDefectModal(id) {
         headTitle.textContent = `[${d.pointKey}] ${d.name} 결함 종합 분석`;
       }
 
-      // 11개 단지 데이터 실시간 취합 (5단계 진행 현황 완벽 분류 및 집행비 무결성 집계)
+      // [Phase 113.2 무결성 보장] 점검서에서 '미점검' 상태인 세대(예: 9동 9-504 등 내용 미입력 세대)는 분석 모달 대상에서 완전 제외
+      // 오직 사용자가 점검하여 내용이 입력되어 있거나 조치한 세대(실제 점검 세대)만을 엄격 집계
       let dangerRooms = [];
       let warningRooms = [];
       let goodRooms = [];
       let repairedRooms = [];
       let actionProgRooms = [];
       let inspectingRooms = [];
-      let uninspectedRooms = [];
+      let uninspectedRooms = []; // [Phase 113.2] 미점검 세대 분리 보관 (분석 모달 집계에서는 제외)
       let totalPtCost = 0;
 
-      if (typeof ROOMS_DATA !== 'undefined' && ROOMS_DATA && getInspectionRooms().length) {
-        getInspectionRooms().forEach(r => {
-          if (r.points && r.points[pt]) {
-            const pInfo = r.points[pt];
-            const st = pInfo.status;
-            const hasPtDefect = isPointActualDefect(pInfo);
-            // [Phase 113 무결성 보장] 정상/무결함 문구 오탐 방지 및 포인트별 정밀 진행현황 반영
-            const prog = (pInfo.progress && pInfo.progress !== '미점검') ? 
-              ((pInfo.progress === '점검완료' && hasPtDefect) ? '조치진행' : (pInfo.progress === '조치진행' && !hasPtDefect && st === 'good' ? '점검완료' : pInfo.progress)) : 
-              (st === 'repaired' ? '조치완료' : ((st === 'danger' || st === 'warning' || hasPtDefect) ? '조치진행' : (st === 'good' ? '점검완료' : '미점검')));
+      // 점검서 내용 입력 및 실제 점검 완료/진행 여부 판정 함수
+      const isRoomPointInspected = (r) => {
+        if (!r || !r.points || !r.points[pt]) return false;
+        const p = r.points[pt];
+        const hasText = !!((p.defect && p.defect.trim().length > 0) || (p.action && p.action.trim().length > 0));
+        const hasCost = Number(p.cost || 0) > 0;
+        const isNotUninspected = (p.status && p.status !== 'uninspected') || (p.progress && p.progress !== '미점검');
+        return isNotUninspected || hasText || hasCost;
+      };
 
-            // [Phase 57] 회계 숫자 정밀 파싱 (천단위 콤마 및 문자열 완전 정제)
-            const rawCost = parseInt(String(pInfo.cost || 0).replace(/[^0-9]/g, ''), 10) || 0;
-            let effectiveCost = rawCost;
+      const inspectedScopeRooms = (typeof ROOMS_DATA !== 'undefined' && ROOMS_DATA && getInspectionRooms().length) ?
+        getInspectionRooms().filter(isRoomPointInspected) : [];
 
-            if (st === 'danger') {
-              dangerRooms.push(r);
-            } else if (st === 'warning') {
-              warningRooms.push(r);
-            } else if (st === 'repaired') {
-              repairedRooms.push(r);
-            } else if (st === 'good') {
-              goodRooms.push(r);
-            }
+      inspectedScopeRooms.forEach(r => {
+        const pInfo = r.points[pt];
+        const st = pInfo.status;
+        const hasPtDefect = isPointActualDefect(pInfo);
+        const prog = (pInfo.progress && pInfo.progress !== '미점검') ? 
+          ((pInfo.progress === '점검완료' && hasPtDefect) ? '조치진행' : (pInfo.progress === '조치진행' && !hasPtDefect && st === 'good' ? '점검완료' : pInfo.progress)) : 
+          (st === 'repaired' ? '조치완료' : ((st === 'danger' || st === 'warning' || hasPtDefect) ? '조치진행' : (st === 'good' ? '점검완료' : '점검중')));
 
-            // 진행 현황 5단계 분류 (해당 부위에 실제 결함이나 점검 내역이 있는 세대만 엄격 분류)
-            if (prog === '조치완료' || st === 'repaired') {
-              if (!repairedRooms.includes(r)) repairedRooms.push(r);
-            } else if (prog === '조치진행' || st === 'danger' || st === 'warning' || hasPtDefect) {
-              if (!actionProgRooms.includes(r)) actionProgRooms.push(r);
-            } else if (prog === '점검완료' || st === 'good') {
-              if (!goodRooms.includes(r)) goodRooms.push(r);
-            } else if (prog === '점검중') {
-              if (!inspectingRooms.includes(r)) inspectingRooms.push(r);
-            } else {
-              uninspectedRooms.push(r);
-            }
+        const rawCost = parseInt(String(pInfo.cost || 0).replace(/[^0-9]/g, ''), 10) || 0;
+        let effectiveCost = rawCost;
 
-            // [Phase 57] 집행비 무결성 연동 집계: 조치 필요 세대(위험/주의/조치진행) 또는 실제 비용 입력 세대
-            if (rawCost > 0) {
-              totalPtCost += rawCost;
-            } else if (st === 'danger' || st === 'warning' || prog === '조치진행') {
-              totalPtCost += effectiveCost;
-            }
-          } else {
-            uninspectedRooms.push(r);
-          }
-        });
-      }
+        if (st === 'danger') {
+          dangerRooms.push(r);
+        } else if (st === 'warning') {
+          warningRooms.push(r);
+        } else if (st === 'repaired') {
+          repairedRooms.push(r);
+        } else if (st === 'good') {
+          goodRooms.push(r);
+        }
 
-      const totalRooms = (typeof ROOMS_DATA !== 'undefined' && ROOMS_DATA) ? getInspectionRooms().length : 309;
-      const inspectedCount = totalRooms - uninspectedRooms.length;
+        // 진행 현황 4단계 분류 (점검된 세대 기준 엄격 분류)
+        if (prog === '조치완료' || st === 'repaired') {
+          if (!repairedRooms.includes(r)) repairedRooms.push(r);
+        } else if (prog === '조치진행' || st === 'danger' || st === 'warning' || hasPtDefect) {
+          if (!actionProgRooms.includes(r)) actionProgRooms.push(r);
+        } else if (prog === '점검완료' || st === 'good') {
+          if (!goodRooms.includes(r)) goodRooms.push(r);
+        } else if (prog === '점검중' || st === 'inspecting') {
+          if (!inspectingRooms.includes(r)) inspectingRooms.push(r);
+        }
+
+        if (rawCost > 0) {
+          totalPtCost += rawCost;
+        } else if (st === 'danger' || st === 'warning' || prog === '조치진행') {
+          totalPtCost += effectiveCost;
+        }
+      });
+
+      // [Phase 113.2] 모달창 분모 및 카운트는 오직 점검서에 실제 입력된 세대 수 기준 (미점검 세대 제외)
+      const totalInspected = inspectedScopeRooms.length;
+      const inspectedCount = totalInspected;
       const affectedRooms = dangerRooms.concat(warningRooms);
 
-      // 동적 뱃지 판정
+      // 동적 뱃지 판정 (점검서 입력 세대 기준)
       let dynamicBadge = '';
       let dynamicBadgeClass = '';
       if (dangerRooms.length > 0) {
@@ -22945,14 +23304,14 @@ function updateDefectModal(id) {
       } else if (warningRooms.length > 0) {
         dynamicBadge = `⚠️ 주의 ${warningRooms.length}세대`;
         dynamicBadgeClass = 'badge-warning';
-      } else if (inspectedCount === 0) {
-        dynamicBadge = '⚪ 미점검 (' + getInspectionRooms().length + '세대 대기)';
+      } else if (totalInspected === 0) {
+        dynamicBadge = '⚪ 점검 데이터 대기 (0세대)';
         dynamicBadgeClass = 'badge-uninspected';
-      } else if (uninspectedRooms.length > 0) {
-        dynamicBadge = `🟡 점검 진행중 (${inspectedCount}/${totalRooms})`;
+      } else if (affectedRooms.length > 0) {
+        dynamicBadge = `🟠 조치 필요 (${affectedRooms.length}/${totalInspected}세대)`;
         dynamicBadgeClass = 'badge-inspecting';
       } else {
-        dynamicBadge = '🟢 전 세대 양호';
+        dynamicBadge = `🟢 점검 세대 양호 (${totalInspected}세대)`;
         dynamicBadgeClass = 'badge-success';
       }
 
@@ -22965,25 +23324,20 @@ function updateDefectModal(id) {
       let dynamicActionText = '';
       let dynamicPulloutText = '';
 
-      if (inspectedCount === 0) {
-        dynamicStatusText = '⚪ 현장 정밀안전점검 미실시 (점검 대기 중)';
-        dynamicPulloutText = totalPtCost > 0 ? `설계 기준 충족 점검 (집행비 ₩${totalPtCost.toLocaleString()}원)` : `설계 기준 충족 점검 대기 (${d.designSpec || '설계 기준 14.0 kN'})`;
-        dynamicDescText = `선택 ${OwnerScope.inspectionTotals().buildings}개동 ${getInspectionRooms().length}세대의 ${d.pointKey} 부위에 대한 현장 안전점검이 아직 실시되지 않았습니다. 세대별 점검표를 통해 앙커 상태를 입력하세요.`;
-        dynamicActionText = '현장 정밀 육안점검 및 토크/인발력 점검 실시 후 보강 공법 결정';
+      if (totalInspected === 0) {
+        dynamicStatusText = '⚪ 선택 세대 중 점검서에 입력된 해당 부위 점검 데이터가 없습니다.';
+        dynamicPulloutText = '점검 데이터 입력 대기';
+        dynamicDescText = '해당 부위에 대한 세대별 안전점검서 작성이 아직 진행되지 않았습니다. 점검서에서 상태를 입력하십시오.';
+        dynamicActionText = '현장 정밀점검 실시 후 점검서에 상태 및 결함 내용 기록';
       } else if (affectedRooms.length > 0) {
-        dynamicStatusText = `🚨 조치 필요 총 ${affectedRooms.length}세대 (위험 ${dangerRooms.length}건, 주의 ${warningRooms.length}건)`;
-        dynamicPulloutText = `조치 필요 세대 점검 요망 (총 집행비 ₩${totalPtCost.toLocaleString()}원)`;
-        dynamicDescText = uniqueDefects.length ? `[현장 실측 결함] ${uniqueDefects.join(' · ')}` : '결함 세부내용 직접 입력 필요';
-        dynamicActionText = uniqueActions.length ? `[권장 보강공법] ${uniqueActions.join(' · ')}` : '보강 공법 및 조치방안 수립 필요';
-      } else if (uninspectedRooms.length > 0) {
-        dynamicStatusText = `🟡 점검 진행 세대(${inspectedCount}세대) 결함 없음 (잔여 미점검: ${uninspectedRooms.length}세대)`;
-        dynamicPulloutText = totalPtCost > 0 ? `점검 완료 세대 건전 (집행비 ₩${totalPtCost.toLocaleString()}원)` : '점검 완료 세대 설계 기준 충족 (미점검 세대 지속 점검)';
-        dynamicDescText = `현재까지 점검 완료된 ${inspectedCount}개 세대에서는 해당 부위 결함이 발견되지 않았습니다.`;
-        dynamicActionText = '잔여 미점검 세대 현장 정밀점검 지속 진행';
+        dynamicStatusText = `🚨 점검 완료 세대 중 조치 필요 총 ${affectedRooms.length}세대 (위험 ${dangerRooms.length}건, 주의 ${warningRooms.length}건)`;
+        dynamicPulloutText = `조치 대상 세대 설계 기준 충족 보강 (예상 집행비 ₩${totalPtCost.toLocaleString()}원)`;
+        dynamicDescText = uniqueDefects.length ? `[실측 주요 결함] ${uniqueDefects.join(' · ')}` : '외벽 접합부 고정 상태 불량';
+        dynamicActionText = uniqueActions.length ? `[권장 보강공법] ${uniqueActions.join(' · ')}` : 'M12 고강도 STS316L 앵커 재시공';
       } else {
-        dynamicStatusText = '🟢 선택 세대(' + getInspectionRooms().length + '세대) 점검 완료 · 결함 없음 (건전 상태)';
-        dynamicPulloutText = totalPtCost > 0 ? `전 세대 완료 (집행비 ₩${totalPtCost.toLocaleString()}원)` : '전 세대 설계 기준 충족 (건전 상태 유지)';
-        dynamicDescText = '모든 점검 세대에서 해당 부위 앙커 체결 상태 및 내력이 건전한 것으로 점검 완료되었습니다.';
+        dynamicStatusText = `🟢 점검 완료 세대(${totalInspected}세대) 결함 없음 (설계 기준 충족)`;
+        dynamicPulloutText = totalPtCost > 0 ? `점검 세대 건전 (집행비 ₩${totalPtCost.toLocaleString()}원)` : '점검 세대 설계 기준 충족 (건전 상태 유지)';
+        dynamicDescText = `점검서에 입력된 ${totalInspected}개 세대 모두 해당 부위 앙커 체결 상태 및 접합부가 건전한 것으로 확인되었습니다.`;
         dynamicActionText = '정기 안전 점검 지속 유지 관리';
       }
 
@@ -23008,8 +23362,8 @@ function updateDefectModal(id) {
       } else if (goodRooms.length > 0) {
         currentSyncRoom = formatRoomShorthand(goodRooms[0]);
         currentSyncProg = '점검완료';
-      } else if (uninspectedRooms.length > 0) {
-        currentSyncRoom = formatRoomShorthand(uninspectedRooms[0]);
+      } else {
+        currentSyncRoom = '선택 세대';
         currentSyncProg = '미점검';
       }
 
@@ -23022,7 +23376,8 @@ function updateDefectModal(id) {
       // [Phase 56] '동별 세부 현황 섹션' 내 5단계 진행 현황 완벽 연동
       let bldgsHtml = '';
       bldgOrder.forEach(bId => {
-        const bAllRooms = (typeof ROOMS_DATA !== 'undefined' && ROOMS_DATA) ? getInspectionRooms().filter(r => r.buildingId === bId) : [];
+        // [Phase 113.2] 미점검 세대 완전 배제: 점검서에 실제 점검/입력/조치된 세대만 필터링
+        const bAllRooms = inspectedScopeRooms.filter(r => r.buildingId === bId);
         if (bAllRooms.length === 0) return;
 
         const bSample = bAllRooms[0];
@@ -23101,7 +23456,7 @@ function updateDefectModal(id) {
         if (inspectedCount === 0) {
           bldgsHtml = `<div style="padding:14px; text-align:center; color:#94a3b8; font-weight:600; background:rgba(30,41,59,0.5); border:1px dashed #475569; border-radius:6px;">⚪ 선택 ${OwnerScope.inspectionTotals().buildings}개동 ${getInspectionRooms().length}세대 현장 정밀안전점검 미실시 상태입니다.<br/><small style="color:#64748b; font-weight:normal; margin-top:4px; display:block;">호실별 점검표에서 결함 및 보강 조치방안을 입력하면 조치 세대가 이곳에 자동 취합됩니다.</small></div>`;
         } else {
-          bldgsHtml = `<div style="padding:14px; text-align:center; color:#10b981; font-weight:700; background:rgba(16,185,129,0.08); border:1px dashed #059669; border-radius:6px;">🟢 점검 완료된 ${inspectedCount}개 세대 모두 결함 없음 (건전 상태)<br/><small style="color:#94a3b8; font-weight:normal; margin-top:4px; display:block;">(잔여 미점검: ${uninspectedRooms.length}세대)</small></div>`;
+          bldgsHtml = `<div style="padding:14px; text-align:center; color:#10b981; font-weight:700; background:rgba(16,185,129,0.08); border:1px dashed #059669; border-radius:6px;">🟢 점검 완료된 ${inspectedCount}개 세대 모두 결함 없음 (건전 상태)<br/></div>`;
         }
       }
 
@@ -23129,9 +23484,9 @@ function updateDefectModal(id) {
             <div class="defect-kpi-title">⚠️ 주의 관찰</div>
             <div class="defect-kpi-val" style="color:#fbbf24;">${warningRooms.length}<small style="font-size:10px; font-weight:normal; color:#94a3b8;">세대</small></div>
           </div>
-          <div class="defect-kpi-card" style="border-left: 2px solid #94a3b8;">
-            <div class="defect-kpi-title">⚪ 미점검 대기</div>
-            <div class="defect-kpi-val" style="color:#cbd5e1;">${uninspectedRooms.length}<small style="font-size:10px; font-weight:normal; color:#94a3b8;">세대</small></div>
+          <div class="defect-kpi-card" style="border-left: 2px solid #0284c7;">
+            <div class="defect-kpi-title">📋 점검 완료</div>
+            <div class="defect-kpi-val" style="color:#38bdf8;">${totalInspected}<small style="font-size:10px; font-weight:normal; color:#94a3b8;">세대</small></div>
           </div>
           <div class="defect-kpi-card" style="border-left: 2px solid #10b981;">
             <div class="defect-kpi-title">🟢 양호/완료</div>
@@ -23176,7 +23531,7 @@ function updateDefectModal(id) {
               <span style="color: #fb923c;">🟠 진행 <b>${actionProgRooms.length}</b></span>
               <span style="color: #4ade80;">🟢 점검완료 <b>${goodRooms.length}</b></span>
               <span style="color: #facc15;">🟡 점검중 <b>${inspectingRooms.length}</b></span>
-              <span style="color: #cbd5e1;">⚪ 미점검 <b>${uninspectedRooms.length}</b></span>
+              <span style="color: #38bdf8;">📋 총 점검 <b>${totalInspected}</b></span>
             </div>
           </div>
 
