@@ -8455,20 +8455,26 @@ var MarkerOffsetManager = {
   }
 };
 function syncLegacyPointGeometry() {
+ // [Phase 115] 마커 위치를 깊이(Depth) 변경에 무관하게 고정 — 기본 플레이트 기준 0.043 + 기본 파이프 길이 0.097 = 0.14m 고정 기준점 사용
+ // 깊이 조정 시 직관 파이프(단관) 메시만 변경되고, 마커(P1~P6)는 항상 동일 위치에 유지
+ const MARKER_FIXED_BASE_Z = 0.043; // 베이스 플레이트 고정 기준 Z (외벽면)
+ const MARKER_FIXED_PIPE_LEN = 0.097; // 기본 직관 파이프 길이 (깊이 무관 고정)
  LEGACY_POINT_KEYS.forEach(key=>{const d=pointDefinition(key),c=anchorBaseConfig[d.anchorKey];
   const gap = (typeof MarkerOffsetManager !== 'undefined' ? MarkerOffsetManager.getGap(key) : (typeof InspectionMarkerStyle !== 'undefined' && InspectionMarkerStyle.getGap ? InspectionMarkerStyle.getGap(key) : .02));
-  const x=c.side==='left'?DIMS.railLeftX:DIMS.railRightX,y=DIMS[c.yKey],z=anchorBaseZ(d.anchorKey)+(anchorPipeLengths[d.anchorKey]||.097)+gap;
-  d.markerPos.set(x,y,z);d.targetPos.set(x,y,anchorBaseZ(d.anchorKey)-.005);d.camPos.set(x+(c.side==='left'?.45:-.45),y+.02,z+.35);const pin=defectPinGroups[d.id];if(pin)pin.position.copy(d.markerPos);
+  const x=c.side==='left'?DIMS.railLeftX:DIMS.railRightX,y=DIMS[c.yKey],z=MARKER_FIXED_BASE_Z+MARKER_FIXED_PIPE_LEN+gap;
+  d.markerPos.set(x,y,z);d.targetPos.set(x,y,MARKER_FIXED_BASE_Z-.005);d.camPos.set(x+(c.side==='left'?.45:-.45),y+.02,z+.35);const pin=defectPinGroups[d.id];if(pin)pin.position.copy(d.markerPos);
  });
 }
 function syncExtendedPointGeometry() {
+  // [Phase 115] Hs 마커도 깊이(Depth) 변경에 무관하게 고정 기준 Z 사용
+  const HS_FIXED_RAIL_Z = 0.14; // 기본 횡주 배관 Z 위치 (깊이 무관 고정)
   EXTRA_POINT_KEYS.forEach(key => {
     const d = pointDefinition(key);
     if (key === 'Hs') {
       const x=(DIMS.railLeftX+DIMS.railRightX)/2;
       const gap = (typeof MarkerOffsetManager !== 'undefined' ? MarkerOffsetManager.getGap('Hs') : (typeof InspectionMarkerStyle !== 'undefined' && InspectionMarkerStyle.getGap ? InspectionMarkerStyle.getGap('Hs') : 0.08));
-      d.markerPos.set(x,DIMS.subRailY+0.06,DIMS.railZ+gap);
-      d.targetPos.set(x,DIMS.subRailY,DIMS.railZ); d.camPos.set(x,DIMS.subRailY+0.15,DIMS.railZ+1.1);
+      d.markerPos.set(x,DIMS.subRailY+0.06,HS_FIXED_RAIL_Z+gap);
+      d.targetPos.set(x,DIMS.subRailY,HS_FIXED_RAIL_Z); d.camPos.set(x,DIMS.subRailY+0.15,HS_FIXED_RAIL_Z+1.1);
     } else {
       const index=BOTTOM_POINT_KEYS.indexOf(key);
       bottomSupportInspectionCenter(index,undefined,undefined,d.targetPos);
@@ -19252,12 +19258,23 @@ const WorkbookManager = {
         anchorDepthValues[target] = d;
       }
 
-      // 2) 각 포인트별 직관 파이프 길이 동기화
+      // 2) 각 포인트별 직관 파이프(스텐레스 단관 배관) 길이 동기화 [Phase 115]
+      // 핸드레일 깊이(Depth) 조정 시 곡관 엘보의 단관 배관(외벽 플레이트 앙카와 접속되는 직관 파이프) 길이 정밀 동기화
       ANCHOR_BASE_KEYS.forEach(k => {
         const dk = anchorDepthValues[k];
         const pipeLen = parseFloat((dk - 0.043).toFixed(3));
-        anchorPipeLengths[k] = Math.max(0.05, Math.min(0.25, pipeLen));
+        const clampedLen = Math.max(0.035, Math.min(0.46, pipeLen));
+        anchorPipeLengths[k] = clampedLen;
+        if (typeof straightPipeLengths !== 'undefined') {
+          straightPipeLengths[k] = clampedLen;
+        }
       });
+      if (typeof leftGroupStraightPipeLength !== 'undefined') {
+        leftGroupStraightPipeLength = (anchorPipeLengths['left-top'] + anchorPipeLengths['left-mid'] + anchorPipeLengths['left-btm']) / 3;
+      }
+      if (typeof rightGroupStraightPipeLength !== 'undefined') {
+        rightGroupStraightPipeLength = (anchorPipeLengths['right-top'] + anchorPipeLengths['right-mid'] + anchorPipeLengths['right-btm']) / 3;
+      }
 
       // 3) 좌/우 평균 깊이 및 전체 평균 깊이 산출
       const avgLeftD = (anchorDepthValues['left-top'] + anchorDepthValues['left-mid'] + anchorDepthValues['left-btm']) / 3;
@@ -19369,25 +19386,30 @@ const WorkbookManager = {
         if (bQ) bQ.classList.toggle('active', isAct);
       });
 
-      // [Phase 105] 직관 파이프(Standoff) 슬라이더 및 라벨도 깊이 변경 시 실시간 UI 동기화
+      // [Phase 105 / Phase 115] 직관 파이프(Standoff / 단관 배관) 슬라이더 및 라벨도 깊이 변경 시 실시간 UI 완벽 동기화
       if (typeof LEGACY_POINT_KEYS !== 'undefined' && typeof pointDefinition === 'function') {
         const setValue = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
         const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
         LEGACY_POINT_KEYS.forEach(key => {
           const k = pointDefinition(key).anchorKey;
-          setValue('slider-adjust-pipe-' + k, anchorPipeLengths[k]);
-          setValue('slider-pipe-' + k, anchorPipeLengths[k]);
-          setText('label-adjust-pipe-' + k, Math.round(anchorPipeLengths[k] * 1000) + 'mm');
-          setText('label-pipe-' + k, Math.round(anchorPipeLengths[k] * 1000) + 'mm');
+          const pLen = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths[k]) ? straightPipeLengths[k] : anchorPipeLengths[k];
+          setValue('slider-adjust-pipe-' + k, pLen);
+          setValue('slider-pipe-' + k, pLen);
+          setText('label-adjust-pipe-' + k, Math.round(pLen * 1000) + 'mm');
+          setText('label-pipe-' + k, Math.round(pLen * 1000) + 'mm');
+          setValue('slider-adjust-pipe-len-' + k, pLen);
+          setText('label-adjust-pipe-len-' + k, Math.round(pLen * 1000) + 'mm');
         });
         ['left', 'right'].forEach(side => {
           const keys = LEGACY_POINT_KEYS.map(k => pointDefinition(k).anchorKey).filter(k => k.startsWith(side));
-          const values = keys.map(k => anchorPipeLengths[k]);
+          const values = keys.map(k => (typeof straightPipeLengths !== 'undefined' && straightPipeLengths[k]) ? straightPipeLengths[k] : anchorPipeLengths[k]);
           const same = values.every(v => v === values[0]);
           setValue('slider-adjust-pipe-' + side, values[0]);
           setValue('slider-pipe-' + side, values[0]);
           setText('label-adjust-pipe-' + side, same ? Math.round(values[0] * 1000) + 'mm' : '개별값');
           setText('label-pipe-' + side, same ? Math.round(values[0] * 1000) + 'mm' : '개별값');
+          setValue('slider-adjust-pipe-len-' + side, values[0]);
+          setText('label-adjust-pipe-len-' + side, same ? Math.round(values[0] * 1000) + 'mm' : '개별값');
         });
       }
     }
