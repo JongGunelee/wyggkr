@@ -103961,6 +103961,10 @@ function showPendingSettlementModal(periodType, projects) {
             // =======================================================================
             function syncWorkItemsToStorage() {
                 try {
+                    // The import pipeline owns workItems until its completion promise settles.
+                    if (window.isBulkImporting || window.__coreDataLoadInProgress) {
+                        return { synced: 0, projects: 0, deferred: true, reason: 'import-in-progress' };
+                    }
                     var workItems = window.workItems;
                     if (!Array.isArray(workItems) || workItems.length === 0) {
                         console.log(LOG, 'No workItems to sync');
@@ -104080,11 +104084,16 @@ function showPendingSettlementModal(periodType, projects) {
                 window.processMappedData = function () {
                     var result = original.apply(this, arguments);
 
-                    // After processing, sync workItems to storage
-                    setTimeout(function () {
+                    // Preserve the original promise and sync only after successful completion.
+                    var syncAfterProcessing = function () {
                         console.log(LOG, 'processMappedData completed, syncing workItems...');
                         syncWorkItemsToStorage();
-                    }, 500);
+                    };
+                    if (result && typeof result.then === 'function') {
+                        result.then(syncAfterProcessing, function () {});
+                    } else {
+                        setTimeout(syncAfterProcessing, 500);
+                    }
 
                     return result;
                 };
@@ -137919,7 +137928,7 @@ window.openAddNewProjectModal = function(editProject) {
             }
             function renderHouseholdMainToolsHtml(visible) {
                 return '<div style="flex-wrap:wrap !important" class="work-content-household-fullscreen-tools work-content-household-main-tools" data-household-main-tools="1">' +
-                    '<label class="work-content-household-fullscreen-search work-content-household-main-search"><span aria-hidden="true">\u2315</span><input id="workContentHouseholdMainSearch" type="search" value="' + escapeHtml(state.householdMainQuery) + '" placeholder="동·호(예: 5-101, 5동 101호) 또는 작업명·번호 검색" autocomplete="off"></label>' +
+                    '<label class="work-content-household-fullscreen-search work-content-household-main-search"><span aria-hidden="true">\u2315</span><input id="workContentHouseholdMainSearch" type="search" value="' + escapeHtml(state.householdMainQuery) + '" placeholder="' + escapeHtml(householdSearchPlaceholder('Main')) + '" title="' + escapeHtml(householdSearchDescription('Main')) + '" autocomplete="off"></label>' +
                     householdSearchOptionsHtml('Main') +
                     '<button type="button" class="work-content-household-search-submit" data-household-search-submit="main" title="\uc138\ub300\ub0b4 \uc791\uc5c5 \uac80\uc0c9" aria-label="\uc138\ub300\ub0b4 \uc791\uc5c5 \uac80\uc0c9">\ud83d\udd0d</button>' +
                     '<div class="work-content-popup-summary" data-household-main-summary>' + householdMainSummaryText(visible) + '</div>' +
@@ -138603,7 +138612,7 @@ window.openAddNewProjectModal = function(editProject) {
                 });
             }
             function handleWorkContentMobileCellTap(target, event) {
-                if (!isWorkContentMobilePointer() || !workContentCellScope(target)) return false;
+                if (!workContentCellScope(target) || !isWorkContentMobilePointer()) return false;
                 var expanded = target.closest && target.closest('.work-content-cell-expanded');
                 if (expanded) {
                     event.preventDefault();
@@ -140926,6 +140935,21 @@ window.openAddNewProjectModal = function(editProject) {
                 return { other: true, projects: projects, buildings: projects.length ? [{ building: '', buildingGroupKey: 'other-work', buildingGroupLabel: '기타 작업',
                     households: [{ household: 'N/A', projects: projects }], projects: projects }] : [] };
             }
+            function householdSearchPlaceholder(scope) {
+                if (state['household' + scope + 'Target'] !== 'other') return '동·호(예: 5-101, 5동 101호) 또는 작업명·번호 검색';
+                return state['household' + scope + 'Match'] === 'phrase' ? '순서대로 연속 일치 (예: 보일러 교체)' : '순서 무관·모두 포함 (예: 보일러 교체)';
+            }
+            function householdSearchDescription(scope) {
+                if (state['household' + scope + 'Target'] !== 'other') return householdSearchPlaceholder(scope);
+                return state['household' + scope + 'Match'] === 'phrase' ? '보일러 교체: 입력한 순서대로 이어진 문구를 검색합니다. 보일러 배관 교체는 제외됩니다.' : '보일러 교체: 보일러 배관 교체도 검색됩니다. 두 단어가 모두 있으면 순서와 간격은 달라도 됩니다.';
+            }
+            function syncHouseholdSearchHint(modal, scope) {
+                var input = modal.querySelector('#workContentHousehold' + scope + 'Search');
+                if (!input) return;
+                var hint = householdSearchPlaceholder(scope), description = householdSearchDescription(scope);
+                if (input.placeholder !== hint) input.placeholder = hint;
+                if (input.title !== description) input.title = description;
+            }
             function householdSearchOptionsHtml(scope) {
                 var other = state['household' + scope + 'Target'] === 'other';
                 var mode = state['household' + scope + 'Match'] || 'all';
@@ -141000,6 +141024,7 @@ window.openAddNewProjectModal = function(editProject) {
             function updateHouseholdMainResults() {
                 var modal = $('workContentSearchModal');
                 if (!modal || modal.classList.contains('hidden') || state.viewMode !== 'household') return;
+                syncHouseholdSearchHint(modal, 'Main');
                 var household = state.lastHousehold || analyzeHousehold(true);
                 var visible = filterHouseholdAnalysis(household, state.householdMainQuery);
                 var summary = modal.querySelector('[data-household-main-summary]');
@@ -141072,7 +141097,7 @@ window.openAddNewProjectModal = function(editProject) {
                     var household = state.lastHousehold || analyzeHousehold(true);
                     var visible = filterHouseholdAnalysis(household, state.householdFullscreenQuery, 'Fullscreen');
                     return '<div style="flex-wrap:wrap !important" class="work-content-household-fullscreen-tools">' +
-                        '<label class="work-content-household-fullscreen-search"><span aria-hidden="true">⌕</span><input id="workContentHouseholdFullscreenSearch" type="search" value="' + escapeHtml(state.householdFullscreenQuery) + '" placeholder="동·호(예: 5-101, 5동 101호) 또는 작업명·번호 검색" autocomplete="off"></label>' +
+                        '<label class="work-content-household-fullscreen-search"><span aria-hidden="true">⌕</span><input id="workContentHouseholdFullscreenSearch" type="search" value="' + escapeHtml(state.householdFullscreenQuery) + '" placeholder="' + escapeHtml(householdSearchPlaceholder('Fullscreen')) + '" title="' + escapeHtml(householdSearchDescription('Fullscreen')) + '" autocomplete="off"></label>' +
                     householdSearchOptionsHtml('Fullscreen') +
                         '<div class="work-content-popup-summary" data-household-fullscreen-summary>' + formatNumber(visible.buildings.length) + '개 동 · ' + formatNumber(visible.householdCount) + '세대 · PO ' + formatNumber(visible.totalPo) + '원</div>' +
                         '<button type="button" class="work-content-household-toggle-all" data-household-toggle="buildings" aria-pressed="' + (state.householdBuildingsExpanded ? 'true' : 'false') + '" title="동 전체 ' + (state.householdBuildingsExpanded ? '접기' : '펼치기') + '">동' + (state.householdBuildingsExpanded ? '−' : '+') + '</button>' +
@@ -141114,6 +141139,7 @@ window.openAddNewProjectModal = function(editProject) {
             function updateHouseholdFullscreenResults() {
                 var modal = $('workContentResultFullscreenModal');
                 if (!modal || modal.classList.contains('hidden') || state.viewMode !== 'household') return;
+                syncHouseholdSearchHint(modal, 'Fullscreen');
                 var household = state.lastHousehold || analyzeHousehold(true);
                 var visible = filterHouseholdAnalysis(household, state.householdFullscreenQuery, 'Fullscreen');
                 var summary = modal.querySelector('[data-household-fullscreen-summary]');
@@ -141705,9 +141731,8 @@ window.openAddNewProjectModal = function(editProject) {
                     document.head.appendChild(style);
                 }
                 document.addEventListener('pointerover', function(event) {
-                    if (isWorkContentMobilePointer()) return;
                     var cell = workContentDataCellFromTarget(event.target);
-                    if (!cell || cell === workContentTooltipCell || !workContentCellIsEllipsized(cell)) return;
+                    if (!cell || cell === workContentTooltipCell || isWorkContentMobilePointer() || !workContentCellIsEllipsized(cell)) return;
                     showWorkContentCellTooltip(cell, event);
                 }, true);
                 document.addEventListener('pointermove', function(event) {
@@ -141814,12 +141839,16 @@ window.openAddNewProjectModal = function(editProject) {
                         var toggleTarget = householdToggleButton.getAttribute('data-household-toggle');
                         var toggleScope = householdToggleButton.getAttribute('data-household-toggle-scope') === 'main' ? 'main' : 'fullscreen';
                         if (toggleScope === 'main') {
-                            if (toggleTarget === 'buildings') state.householdMainBuildingsExpanded = !state.householdMainBuildingsExpanded;
-                            if (toggleTarget === 'units') state.householdMainUnitsExpanded = !state.householdMainUnitsExpanded;
+                            if (toggleTarget === 'buildings' || toggleTarget === 'units') {
+                                var nextHouseholdMainExpanded = !(toggleTarget === 'units' ? state.householdMainUnitsExpanded : state.householdMainBuildingsExpanded);
+                                state.householdMainBuildingsExpanded = state.householdMainUnitsExpanded = nextHouseholdMainExpanded;
+                            }
                             updateHouseholdMainResults();
                         } else {
-                            if (toggleTarget === 'buildings') state.householdBuildingsExpanded = !state.householdBuildingsExpanded;
-                            if (toggleTarget === 'units') state.householdUnitsExpanded = !state.householdUnitsExpanded;
+                            if (toggleTarget === 'buildings' || toggleTarget === 'units') {
+                                var nextHouseholdFullscreenExpanded = !(toggleTarget === 'units' ? state.householdUnitsExpanded : state.householdBuildingsExpanded);
+                                state.householdBuildingsExpanded = state.householdUnitsExpanded = nextHouseholdFullscreenExpanded;
+                            }
                             updateHouseholdFullscreenResults();
                         }
                         return;
@@ -144415,6 +144444,11 @@ window.openAddNewProjectModal = function(editProject) {
                 rafId = requestAnimationFrame(function() {
                     rafId = requestAnimationFrame(function() {
                         rafId = 0;
+                        if (reason === 'desktop-gantt-pane-resize-drift' || reason === 'desktop-gantt-pane-resize-drift-settled') {
+                            var currentWrapper = document.getElementById('ganttChartWrapper');
+                            var currentPane = currentWrapper && currentWrapper.querySelector('.gantt-titles');
+                            if (enforceEmptyPoBaseline(currentWrapper, currentPane, 'desktop-gantt-pane-resize-frame')) return;
+                        }
                         apply(reason);
                     });
                 });
@@ -144533,10 +144567,11 @@ window.openAddNewProjectModal = function(editProject) {
                 observedResizePane = pane;
                 paneResizeObserver = new ResizeObserver(function() {
                     if (!isDesktop() || wrapper.dataset.codexManualTitleWidth === '1' || wrapper.dataset.codexTitleResizeActive === '1') return;
-                    if (enforceEmptyPoBaseline(wrapper, pane, 'desktop-gantt-pane-resize-microtask')) return;
-                    var expected = Number(wrapper.dataset.codexAutoTitleWidth || wrapper.dataset.codexDesktopPostTightWidth || 0);
+                    // Resize delivery only measures; existing frame scheduling owns width writes.
+                    var baseline = wrapper.dataset.codexDesktopPoHasValue !== '1' ? Number(wrapper.dataset.codexDesktopEmptyPoBaselineWidth || 0) : 0;
+                    var expected = baseline > 0 ? baseline : Number(wrapper.dataset.codexAutoTitleWidth || wrapper.dataset.codexDesktopPostTightWidth || 0);
                     var actual = pane.getBoundingClientRect ? pane.getBoundingClientRect().width : 0;
-                    if (!(expected > 0) || !(actual > 0) || Math.abs(actual - expected) < 2) return;
+                    if (!(expected > 0) || !(actual > 0) || Math.abs(actual - expected) < (baseline > 0 ? 1 : 2)) return;
                     schedule('desktop-gantt-pane-resize-drift', 0);
                     schedule('desktop-gantt-pane-resize-drift-settled', 120);
                 });
