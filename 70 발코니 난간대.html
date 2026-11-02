@@ -20968,11 +20968,9 @@ const WorkbookManager = {
         anchorGhostGroup.add(ghost);
         anchorHitTargets.push(discMesh);
 
-        // 2. [Phase 105 신규 / Phase 124 직결 동기화] 반달 돔 덮개 캡 가상 위치 링 인디케이터 (앙카 베이스 깊이 연동 무결성 보장)
+        // 2. [Phase 105 신규] 반달 돔 덮개 캡 가상 위치 링 인디케이터 (앙카 베이스 깊이 연동 무결성 보장)
         const gBaseZ = anchorBaseZ(key);
-        const isBottomKey = (key.startsWith('bottom-') || (anchorBaseConfig[key] && anchorBaseConfig[key].side === 'bottom'));
-        const isDirectKey = (typeof directElbowCoupling !== 'undefined' && !!directElbowCoupling[key]);
-        const gCapBaseZ = (isBottomKey || isDirectKey) ? (gBaseZ + 0.004) : (gBaseZ + 0.024);
+        const gCapBaseZ = gBaseZ + 0.024;
         const ghostCap = new THREE.Group();
         ghostCap.name = `ghost-cap-${key}`;
         ghostCap.position.set(anchorX, anchorY, gCapBaseZ);
@@ -21041,10 +21039,7 @@ const WorkbookManager = {
         const anchorY = DIMS[cfg.yKey] || 1.85;
         const isVis = !!anchorBaseVisibility[key];
 
-        const isBottomHover = (cfg.side === 'bottom' || key.startsWith('bottom-'));
-        const isDirectHover = (typeof directElbowCoupling !== 'undefined' && !!directElbowCoupling[key]);
-        const hoverCapOffset = (isBottomHover || isDirectHover) ? 0.006 : 0.024;
-        anchorHoverRing.position.set(anchorX, anchorY, anchorBaseZ(key)-.043+(isVis ? hoverCapOffset : 0.013));
+        anchorHoverRing.position.set(anchorX, anchorY, anchorBaseZ(key)-.043+(isVis ? 0.024 : 0.013));
         anchorHoverRing.material.color.setHex(isLeft ? 0xf97316 : 0x38bdf8);
         anchorHoverRing.visible = true;
       } else {
@@ -21617,10 +21612,9 @@ const WorkbookManager = {
         // -------------------------------------------------------------
         // Sub-group 3: 반달 돔(Dome) 회전체 덮개 캡 (Domed Escutcheon Cover Cap)
         // -------------------------------------------------------------
-        // [Phase 105 무결성 동기화 / Phase 124 직결 덮개 캡 밀착 연동]
-        const isBottomCap = (cfg?.side === 'bottom' || key.startsWith('bottom-'));
-        const isDirectCap = (typeof directElbowCoupling !== 'undefined' && !!directElbowCoupling[key]);
-        const capBaseZ = (isBottomCap || isDirectCap) ? (baseZ + 0.004) : (baseZ + 0.024);
+        // [Phase 105 무결성 동기화] 깊이(Depth) 및 피벗 변경에 따른 앙카 베이스(baseZ) 100% 완전 연동
+        // 앙카 베이스 위치와 일체화되어 어떠한 깊이 조정(0.08m~0.50m)에서도 덮개 캡이 이탈·고정·매립되지 않고 함께 동기화
+        const capBaseZ = baseZ + 0.024;
 
         const capGroup = new THREE.Group();
         capGroup.name = `flange-cover-cap-${key}`;
@@ -21728,9 +21722,7 @@ const WorkbookManager = {
           anchorPlateSubGroups[key].position.z = offsets.deltaPlate;
         }
         const aBaseZ = anchorBaseZ(key);
-        const isBottomCap = (key.startsWith('bottom-') || (anchorBaseConfig[key] && anchorBaseConfig[key].side === 'bottom'));
-        const isDirectCap = (typeof directElbowCoupling !== 'undefined' && !!directElbowCoupling[key]);
-        const cBaseZ = (isBottomCap || isDirectCap) ? (aBaseZ + 0.004) : (aBaseZ + 0.024);
+        const cBaseZ = aBaseZ + 0.024;
         if (anchorCapSubGroups[key]) {
           anchorCapSubGroups[key].position.z = cBaseZ + offsets.deltaCap;
         }
