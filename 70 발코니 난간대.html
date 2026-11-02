@@ -5002,7 +5002,7 @@ body.model-fullscreen #model-fullscreen-open{display:none}
       </div>
 
       <!-- 4단계 인터랙티브 스텝 컨트롤 바 (3D 시공 조립도 슬라이더 실시간 연계) -->
-      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr) auto; gap: 4px;">
         <button type="button" class="qhb-btn" id="btn-guide-step-0" onclick="ConstructionSpoolGuideManager.gotoStep(0)" style="padding: 5px 3px; font-size: 9.5px; text-align: center; border-radius: 5px; display: flex; flex-direction: column; gap: 2px; align-items: center; justify-content: center;" title="추정 1단계: 외벽 앙카 고정 및 원형 플레이트 안착">
           <span style="font-weight: 800; color: #38bdf8;">추정 1단계</span>
           <span style="font-size: 8.5px; color: #94a3b8;">앙카·플레이트</span>
@@ -5019,20 +5019,34 @@ body.model-fullscreen #model-fullscreen-open{display:none}
           <span style="font-weight: 800; color: #38bdf8;">추정 4단계</span>
           <span style="font-size: 8.5px; color: #94a3b8;">핸드레일 용접</span>
         </button>
+        <button type="button" class="qhb-btn" id="btn-guide-step-all" onclick="ConstructionSpoolGuideManager.toggleFullView()" style="padding: 5px 8px; font-size: 9.5px; text-align: center; border-radius: 5px; display: flex; flex-direction: column; gap: 2px; align-items: center; justify-content: center; min-width: 62px; background: rgba(56, 189, 248, 0.12); border-color: rgba(56, 189, 248, 0.35);" title="4단계 시공 다이어그램 전체 보기 (Full View)">
+          <span style="font-weight: 800; color: #38bdf8;">⛶ 전체 뷰</span>
+          <span style="font-size: 8.5px; color: #94a3b8;">4단계 종합</span>
+        </button>
       </div>
 
-      <!-- 고화질 4분할 시공 추정 이미지 뷰어 (클릭 시 구글 포토 앨범 웹 링크 연결) -->
-      <div style="position: relative; border-radius: 8px; overflow: hidden; border: 1px solid rgba(56, 189, 248, 0.35); background: #000; cursor: pointer; transition: transform 0.18s, box-shadow 0.18s;" onclick="ConstructionSpoolGuideManager.openAlbum()" title="클릭 시 구글 포토 현장 실사 앨범(사택 발코니 난간대 고정 설치 구조) 웹페이지로 이동합니다.">
-        <img id="img-construction-spool-guide" src="https://lh3.googleusercontent.com/pw/AP1GczPoxnirQXZHSuSSorI_Dyhm65cu5gsUQycvSZiTkMGeOhL6gVkWtiiCg2s8bFUibJMpHQU2QDpZgtSWa97zt814vuiU1ytXLpcvLiyRbMsPYD7b5KIn=w1200" alt="발코니 난간대 외벽 접합부 현장 시공 매커니즘 4단계 추정 다이어그램" loading="lazy" referrerpolicy="no-referrer" style="width: 100%; height: auto; display: block; object-fit: contain;" />
+      <!-- 고화질 4분할 시공 추정 이미지 뷰어 (단계별 동적 크롭 및 전체 뷰 전환) -->
+      <div id="guide-img-viewport" style="position: relative; width: 100%; aspect-ratio: 1200 / 670; border-radius: 8px; overflow: hidden; border: 1px solid rgba(56, 189, 248, 0.4); background: #050b14; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,0.5);" onclick="ConstructionSpoolGuideManager.handleImageClick(event)" title="클릭 시 구글 포토 현장 실사 앨범(사택 발코니 난간대 고정 설치 구조) 웹페이지로 이동합니다.">
+        <img id="img-construction-spool-guide" src="https://lh3.googleusercontent.com/pw/AP1GczPoxnirQXZHSuSSorI_Dyhm65cu5gsUQycvSZiTkMGeOhL6gVkWtiiCg2s8bFUibJMpHQU2QDpZgtSWa97zt814vuiU1ytXLpcvLiyRbMsPYD7b5KIn=w1200" alt="발코니 난간대 외벽 접합부 현장 시공 매커니즘 4단계 추정 다이어그램" loading="lazy" referrerpolicy="no-referrer" style="width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: 0% 0%; transform: scale(2.02); transition: transform 0.32s cubic-bezier(0.25, 1, 0.5, 1);" />
         
-        <!-- 오버레이 뱃지 (클릭 시 앨범 이동 안내) -->
-        <div style="position: absolute; bottom: 8px; right: 8px; background: rgba(15, 23, 42, 0.90); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(56, 189, 248, 0.55); border-radius: 6px; padding: 3px 8px; font-size: 9.5px; color: #38bdf8; font-weight: 700; display: flex; align-items: center; gap: 4px; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.6);">
-          <span>🔗</span><span>클릭 시 현장 실사 앨범 웹 접속 (새 창)</span>
+        <!-- 현재 활성화된 시공 단계 인디케이터 배너 (좌상단) -->
+        <div id="guide-active-step-badge" style="position: absolute; top: 8px; left: 8px; z-index: 8; background: rgba(2, 132, 199, 0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid #38bdf8; border-radius: 6px; padding: 4px 9px; font-size: 10px; color: #ffffff; font-weight: 800; box-shadow: 0 4px 12px rgba(0,0,0,0.6); pointer-events: none; display: flex; align-items: center; gap: 5px;">
+          <span>📍</span><span id="guide-active-step-text">현재 단계: [추정 1단계] 외벽 앙카 고정 및 원형 플레이트 안착</span>
         </div>
-        
-        <!-- 현재 활성화된 시공 단계 인디케이터 배너 -->
-        <div id="guide-active-step-badge" style="position: absolute; top: 8px; left: 8px; background: rgba(2, 132, 199, 0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid #38bdf8; border-radius: 6px; padding: 4px 9px; font-size: 10px; color: #ffffff; font-weight: 800; box-shadow: 0 4px 12px rgba(0,0,0,0.6); pointer-events: none; display: flex; align-items: center; gap: 5px;">
-          <span>📍</span><span id="guide-active-step-text">현재 조립 단계: [추정 4단계] 수평 부재 정렬 및 알곤 용접</span>
+
+        <!-- 전체 뷰 모드일 때 나타나는 'X' 닫기 (이전 단계 복원) 버튼 (우상단) -->
+        <button type="button" id="btn-guide-close-fullview" class="win-btn win-btn-close" onclick="ConstructionSpoolGuideManager.exitFullView(event)" style="display: none; position: absolute; top: 8px; right: 8px; z-index: 10; padding: 4px 9px; height: auto; width: auto; font-size: 10.5px; font-weight: 800; background: rgba(225, 29, 72, 0.95); border: 1px solid #f43f5e; border-radius: 6px; color: #ffffff; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,0.7); align-items: center; gap: 4px;" title="전체 뷰를 닫고 직전 단계별 확대 뷰(이전 화면)로 복원합니다.">
+          <span>✕</span><span>전체 뷰 닫기 (복원)</span>
+        </button>
+
+        <!-- 우측 상단 모달 확대 버튼 (단계별 뷰일 때 표시) -->
+        <button type="button" id="btn-guide-modal-open" class="win-btn" onclick="ConstructionSpoolGuideManager.openLightbox(event)" style="position: absolute; top: 8px; right: 8px; z-index: 9; padding: 3px 8px; height: auto; width: auto; font-size: 10px; font-weight: 700; background: rgba(15, 23, 42, 0.88); border: 1px solid rgba(56, 189, 248, 0.5); border-radius: 6px; color: #38bdf8; cursor: pointer; box-shadow: 0 3px 10px rgba(0,0,0,0.6); display: flex; align-items: center; gap: 3px;" title="전체화면 고화질 라이트박스 팝업 열기">
+          <span>⛶ 전체 확대</span>
+        </button>
+
+        <!-- 오버레이 뱃지 (클릭 시 앨범 이동 안내 - 우하단) -->
+        <div style="position: absolute; bottom: 8px; right: 8px; z-index: 8; background: rgba(15, 23, 42, 0.90); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(56, 189, 248, 0.55); border-radius: 6px; padding: 3px 8px; font-size: 9.5px; color: #38bdf8; font-weight: 700; display: flex; align-items: center; gap: 4px; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.6);">
+          <span>🔗</span><span>클릭 시 실사 앨범 웹 접속</span>
         </div>
       </div>
 
@@ -5044,6 +5058,34 @@ body.model-fullscreen #model-fullscreen-open{display:none}
         <button type="button" class="rooms-btn" onclick="ConstructionSpoolGuideManager.togglePlay()" style="padding: 6px 12px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px;" title="4단계 시공 조립도 자동 재생 및 가이드 동기화">
           <span id="guide-play-icon">▶</span> <span id="guide-play-text">자동 재생</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- [Phase 118.1] 외벽 접합부 현장 시공 매커니즘 4단계 다이어그램 고화질 전체화면 뷰어 모달 (#guide-lightbox-modal) -->
+  <div id="guide-lightbox-modal" style="display: none; position: fixed; inset: 0; z-index: 10020; background: rgba(5, 11, 20, 0.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); align-items: center; justify-content: center; padding: 24px;" onclick="ConstructionSpoolGuideManager.handleLightboxBackdropClick(event)">
+    <div style="position: relative; max-width: 1100px; width: 100%; max-height: 92vh; background: #0f172a; border: 1px solid rgba(56, 189, 248, 0.5); border-radius: 12px; box-shadow: 0 25px 60px rgba(0,0,0,0.85), 0 0 30px rgba(56, 189, 248, 0.25); display: flex; flex-direction: column; overflow: hidden;" onclick="event.stopPropagation()">
+      <!-- 모달 헤더 -->
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: linear-gradient(90deg, #1e293b 0%, #0f172a 100%); border-bottom: 1px solid rgba(56, 189, 248, 0.25);">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 15px;">📸</span>
+          <span style="font-weight: 800; color: #f1f5f9; font-size: 13px;">발코니 난간대 외벽 접합부 현장 시공 매커니즘 4단계 전체 종합 뷰 (추정 다이어그램)</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <button type="button" class="rooms-btn primary" onclick="ConstructionSpoolGuideManager.openAlbum()" style="padding: 4px 10px; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px;" title="구글 포토 현장 실사 앨범 웹 접속">
+            <span>🌐 실사 앨범 열기 ↗</span>
+          </button>
+          <button type="button" class="win-btn win-btn-close" onclick="ConstructionSpoolGuideManager.closeLightbox()" style="width: 28px; height: 28px; font-size: 14px; font-weight: 800;" title="전체 뷰 닫기 (이전 화면으로 복원)">✕</button>
+        </div>
+      </div>
+      <!-- 모달 이미지 뷰어 -->
+      <div style="position: relative; padding: 12px; background: #000; overflow: auto; display: flex; align-items: center; justify-content: center;">
+        <img src="https://lh3.googleusercontent.com/pw/AP1GczPoxnirQXZHSuSSorI_Dyhm65cu5gsUQycvSZiTkMGeOhL6gVkWtiiCg2s8bFUibJMpHQU2QDpZgtSWa97zt814vuiU1ytXLpcvLiyRbMsPYD7b5KIn=w1200" alt="발코니 난간대 외벽 접합부 현장 시공 매커니즘 4단계 추정 전체 다이어그램" style="max-width: 100%; max-height: calc(90vh - 120px); height: auto; object-fit: contain; border-radius: 6px; cursor: pointer;" onclick="ConstructionSpoolGuideManager.openAlbum()" title="클릭 시 구글 포토 현장 실사 앨범으로 연결됩니다." />
+      </div>
+      <!-- 모달 풋터 안내 -->
+      <div style="padding: 8px 16px; background: #0b1322; border-top: 1px solid rgba(56, 189, 248, 0.2); font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; align-items: center;">
+        <span>💡 <strong>[안내]</strong> '✕' 닫기 버튼 또는 바깥 배경을 클릭하면 이전 화면으로 즉시 복원됩니다.</span>
+        <button type="button" class="rooms-btn" onclick="ConstructionSpoolGuideManager.closeLightbox()" style="padding: 4px 12px; font-size: 11px; font-weight: 700;">닫기 (복원)</button>
       </div>
     </div>
   </div>
@@ -21686,17 +21728,23 @@ const WorkbookManager = {
        - 제안 1: BIM 4D 시공 조립도 동기화형 인터랙티브 가이드 윈도우 컨트롤
        - 구글 포토 현장 실사 앨범 웹 링크: https://photos.app.goo.gl/BKhWxHySoDoX8sgh8
        - 4단계 추정 공법(외벽 앙카 고정 -> 엘보 스풀 정렬 -> 360도 회전 체결 -> 알곤 용접)과 3D 시공 조립도 슬라이더 실시간 연계
+       - [Phase 118.1] 4단계 고화질 다이어그램 '완벽한 전체 뷰' 및 '단계별 부분 이미지 단독 표시' 동적 줌/크롭 엔진
        ========================================================================= */
     const ConstructionSpoolGuideManager = {
       albumUrl: 'https://photos.app.goo.gl/BKhWxHySoDoX8sgh8',
       panelId: 'assembly-spool-guide-panel',
+      lightboxId: 'guide-lightbox-modal',
       isCollapsed: false,
       dragInitialized: false,
+      currentStepIdx: 3,
+      lastStepIdx: 3,
+      isFullView: false,
+
       steps: [
-        { name: '추정 1단계', title: '외벽 앙카 고정 및 원형 플레이트 안착', p: 0.25 },
-        { name: '추정 2단계', title: '엘보 스풀(장곡관) 정렬 및 회전 준비', p: 0.50 },
-        { name: '추정 3단계', title: '엘보 스풀 360도 회전 체결', p: 0.75 },
-        { name: '추정 4단계', title: '수평 부재 정렬 및 알곤(티그) 용접', p: 1.00 }
+        { name: '추정 1단계', title: '외벽 앙카 고정 및 원형 플레이트 안착', p: 0.25, origin: '0% 0%' },
+        { name: '추정 2단계', title: '엘보 스풀(장곡관) 정렬 및 회전 준비', p: 0.50, origin: '100% 0%' },
+        { name: '추정 3단계', title: '엘보 스풀 360도 회전 체결', p: 0.75, origin: '0% 100%' },
+        { name: '추정 4단계', title: '수평 부재 정렬 및 알곤(티그) 용접', p: 1.00, origin: '100% 100%' }
       ],
 
       toggle() {
@@ -21717,6 +21765,7 @@ const WorkbookManager = {
         if (el) el.style.display = 'none';
         const btn = document.getElementById('btn-assembly-spool-guide');
         if (btn) btn.classList.remove('active');
+        this.closeLightbox();
       },
 
       toggleCollapse() {
@@ -21730,8 +21779,15 @@ const WorkbookManager = {
         window.open(this.albumUrl, '_blank', 'noopener,noreferrer');
       },
 
+      handleImageClick(e) {
+        if (e && e.target && e.target.closest('button')) return;
+        this.openAlbum();
+      },
+
       gotoStep(idx) {
         idx = Math.max(0, Math.min(3, parseInt(idx, 10)));
+        this.isFullView = false;
+        this.lastStepIdx = idx;
         const targetP = this.steps[idx].p;
         if (typeof animateProgressTo === 'function') {
           animateProgressTo(targetP, Math.min(4, Math.round(targetP * 4)));
@@ -21739,6 +21795,87 @@ const WorkbookManager = {
           setAssemblyProgress(targetP, true);
         }
         this.syncStep(targetP, idx);
+      },
+
+      // [Phase 118.1] 전체 4단계 종합 뷰 토글
+      toggleFullView() {
+        if (this.isFullView) {
+          this.exitFullView();
+        } else {
+          this.enterFullView();
+        }
+      },
+
+      enterFullView() {
+        this.isFullView = true;
+        this.updateViewModeUI();
+      },
+
+      // [Phase 118.1] 'X' 닫기 클릭 시 이전 단계별 화면(사분면 뷰)으로 100% 복원
+      exitFullView(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        this.isFullView = false;
+        this.updateViewModeUI();
+      },
+
+      updateViewModeUI() {
+        const img = document.getElementById('img-construction-spool-guide');
+        const badgeText = document.getElementById('guide-active-step-text');
+        const btnCloseFull = document.getElementById('btn-guide-close-fullview');
+        const btnModalOpen = document.getElementById('btn-guide-modal-open');
+        const btnAll = document.getElementById('btn-guide-step-all');
+
+        if (this.isFullView) {
+          // 전체 뷰: 전체 4단계 2x2 종합 다이어그램 표시
+          if (img) {
+            img.style.transformOrigin = 'center center';
+            img.style.transform = 'scale(1)';
+          }
+          if (badgeText) {
+            badgeText.textContent = '현재 뷰: [전체 4단계 종합] 외벽 접합부 현장 시공 매커니즘 전체 다이어그램';
+          }
+          if (btnCloseFull) btnCloseFull.style.display = 'inline-flex';
+          if (btnModalOpen) btnModalOpen.style.display = 'none';
+          if (btnAll) {
+            btnAll.classList.add('active');
+            btnAll.style.background = 'rgba(2, 132, 199, 0.45)';
+            btnAll.style.borderColor = '#38bdf8';
+          }
+          for (let i = 0; i < 4; i++) {
+            const btn = document.getElementById('btn-guide-step-' + i);
+            if (btn) {
+              btn.classList.remove('active');
+              btn.style.background = '';
+              btn.style.borderColor = '';
+            }
+          }
+        } else {
+          // 단계별 뷰: 현재 진행 단계에 해당하는 사분면만 단독 크롭 표시
+          const idx = this.currentStepIdx;
+          if (img && this.steps[idx]) {
+            img.style.transformOrigin = this.steps[idx].origin;
+            img.style.transform = 'scale(2.02)';
+          }
+          if (badgeText && this.steps[idx]) {
+            badgeText.textContent = '현재 단계: [' + this.steps[idx].name + '] ' + this.steps[idx].title;
+          }
+          if (btnCloseFull) btnCloseFull.style.display = 'none';
+          if (btnModalOpen) btnModalOpen.style.display = 'inline-flex';
+          if (btnAll) {
+            btnAll.classList.remove('active');
+            btnAll.style.background = 'rgba(56, 189, 248, 0.12)';
+            btnAll.style.borderColor = 'rgba(56, 189, 248, 0.35)';
+          }
+          for (let i = 0; i < 4; i++) {
+            const btn = document.getElementById('btn-guide-step-' + i);
+            if (btn) {
+              const act = (i === idx);
+              btn.classList.toggle('active', act);
+              btn.style.background = act ? 'rgba(2, 132, 199, 0.45)' : '';
+              btn.style.borderColor = act ? '#38bdf8' : '';
+            }
+          }
+        }
       },
 
       syncStep(progress, forcedIdx = null) {
@@ -21749,18 +21886,28 @@ const WorkbookManager = {
           else if (progress < 0.88) idx = 2;
           else idx = 3;
         }
-        for (let i = 0; i < 4; i++) {
-          const btn = document.getElementById('btn-guide-step-' + i);
-          if (btn) {
-            const act = (i === idx);
-            btn.classList.toggle('active', act);
-            btn.style.background = act ? 'rgba(2, 132, 199, 0.45)' : '';
-            btn.style.borderColor = act ? '#38bdf8' : '';
-          }
+        this.currentStepIdx = idx;
+        if (!this.isFullView) {
+          this.lastStepIdx = idx;
         }
-        const textEl = document.getElementById('guide-active-step-text');
-        if (textEl && this.steps[idx]) {
-          textEl.textContent = '현재 조립 단계: [' + this.steps[idx].name + '] ' + this.steps[idx].title;
+        this.updateViewModeUI();
+      },
+
+      // [Phase 118.1] 전체화면 고화질 라이트박스 모달 컨트롤
+      openLightbox(e) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        const m = document.getElementById(this.lightboxId);
+        if (m) m.style.display = 'flex';
+      },
+
+      closeLightbox() {
+        const m = document.getElementById(this.lightboxId);
+        if (m) m.style.display = 'none';
+      },
+
+      handleLightboxBackdropClick(e) {
+        if (e && e.target && e.target.id === this.lightboxId) {
+          this.closeLightbox();
         }
       },
 
@@ -21801,6 +21948,13 @@ const WorkbookManager = {
           if (isDragging) {
             isDragging = false;
             document.body.style.userSelect = '';
+          }
+        });
+
+        // ESC 키로 라이트박스 모달 닫기
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape') {
+            ConstructionSpoolGuideManager.closeLightbox();
           }
         });
       }
