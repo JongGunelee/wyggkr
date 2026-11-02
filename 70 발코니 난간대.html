@@ -6168,51 +6168,51 @@ body.model-fullscreen #model-fullscreen-open{display:none}
             🧭 <b>평면도 방향성</b>: 외벽 직교 Z축 100% 직선 연장 (좌우/상하 비틀림 0%)<br>
             📐 <b>엘보 굴곡 정합성</b>: 90° 원호 곡률 반경(R=70mm) 유지 · 찌그러짐 원천 차단
           </div>
-          <!-- [Phase 122] 좌/우 그룹 슬라이더 패널 (90° 엘보 직결 옵션 탑재) -->
+          <!-- [Phase 122/123] 좌/우 그룹 슬라이더 패널 (90° 엘보 직결 기본 활성화 탑재) -->
           <div id="pipe-len-ctrl-grouped-menu" style="display: flex; flex-direction: column; gap: 6px;">
             <div>
               <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #cbd5e1; margin-bottom: 2px;">
                 <span>◀ 좌측 그룹 (1·2·3단 직관)</span>
                 <div style="display: flex; align-items: center; gap: 4px;">
-                  <span id="label-adjust-pipe-len-left" style="color: #38bdf8; font-weight: 700;">97mm (기본)</span>
-                  <button type="button" class="qhb-btn" id="btn-direct-elbow-left" onclick="toggleGroupDirectElbow('left')" style="padding: 1px 5px; font-size: 8.5px;" title="직관 파이프 없이 90도 엘보에 직접 체결 (선택 시 직관 길이 조절 비활성화)">⚡ 90° 직결</button>
+                  <span id="label-adjust-pipe-len-left" style="color: #fbbf24; font-weight: 700;">⚡ 90° 직결 (직관 없음)</span>
+                  <button type="button" class="qhb-btn active" id="btn-direct-elbow-left" onclick="toggleGroupDirectElbow('left')" style="padding: 1px 5px; font-size: 8.5px; background: rgba(245, 158, 11, 0.35); border-color: #f59e0b; color: #fbbf24;" title="직관 파이프 없이 90도 엘보에 직접 체결 (선택 시 직관 길이 조절 비활성화)">⚡ 90° 직결</button>
                 </div>
               </div>
-              <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setGroupStraightPipeLength('left', this.value)" style="width: 100%; transition: opacity 0.2s;" />
+              <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left" min="0.05" max="0.35" step="0.005" value="0.097" disabled oninput="setGroupStraightPipeLength('left', this.value)" style="width: 100%; transition: opacity 0.2s; opacity: 0.35;" />
             </div>
             <div>
               <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #cbd5e1; margin-bottom: 2px;">
                 <span>▶ 우측 그룹 (4·5·6단 직관)</span>
                 <div style="display: flex; align-items: center; gap: 4px;">
-                  <span id="label-adjust-pipe-len-right" style="color: #38bdf8; font-weight: 700;">97mm (기본)</span>
-                  <button type="button" class="qhb-btn" id="btn-direct-elbow-right" onclick="toggleGroupDirectElbow('right')" style="padding: 1px 5px; font-size: 8.5px;" title="직관 파이프 없이 90도 엘보에 직접 체결 (선택 시 직관 길이 조절 비활성화)">⚡ 90° 직결</button>
+                  <span id="label-adjust-pipe-len-right" style="color: #fbbf24; font-weight: 700;">⚡ 90° 직결 (직관 없음)</span>
+                  <button type="button" class="qhb-btn active" id="btn-direct-elbow-right" onclick="toggleGroupDirectElbow('right')" style="padding: 1px 5px; font-size: 8.5px; background: rgba(245, 158, 11, 0.35); border-color: #f59e0b; color: #fbbf24;" title="직관 파이프 없이 90도 엘보에 직접 체결 (선택 시 직관 길이 조절 비활성화)">⚡ 90° 직결</button>
                 </div>
               </div>
-              <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setGroupStraightPipeLength('right', this.value)" style="width: 100%; transition: opacity 0.2s;" />
+              <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right" min="0.05" max="0.35" step="0.005" value="0.097" disabled oninput="setGroupStraightPipeLength('right', this.value)" style="width: 100%; transition: opacity 0.2s; opacity: 0.35;" />
             </div>
           </div>
-          <!-- [Phase 122] 1~6번 개별 슬라이더 패널 (포인트별 독립 90° 엘보 직결 옵션) -->
+          <!-- [Phase 122/123] 1~6번 개별 슬라이더 패널 (포인트별 독립 90° 엘보 직결 기본 선택) -->
           <div id="pipe-len-ctrl-individual-menu" style="display: none; flex-direction: column; gap: 5px;">
             <div style="display: flex; gap: 6px;">
               <div style="flex: 1;">
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
                   <span>① 좌상 1단</span>
                   <div style="display: flex; align-items: center; gap: 3px;">
-                    <span id="label-adjust-pipe-len-left-top" style="color:#38bdf8; font-weight:700;">97mm</span>
-                    <button type="button" class="qhb-btn" id="btn-direct-elbow-left-top" onclick="toggleIndividualDirectElbow('left-top')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                    <span id="label-adjust-pipe-len-left-top" style="color:#fbbf24; font-weight:700;">⚡90°직결</span>
+                    <button type="button" class="qhb-btn active" id="btn-direct-elbow-left-top" onclick="toggleIndividualDirectElbow('left-top')" style="padding: 1px 4px; font-size: 8px; background: rgba(245, 158, 11, 0.35); border-color: #f59e0b; color: #fbbf24;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
                   </div>
                 </div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-top" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-top', this.value)" style="width:100%; transition: opacity 0.2s;" />
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-top" min="0.05" max="0.35" step="0.005" value="0.097" disabled oninput="setIndividualStraightPipeLength('left-top', this.value)" style="width:100%; transition: opacity 0.2s; opacity: 0.35;" />
               </div>
               <div style="flex: 1;">
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
                   <span>④ 우상 1단</span>
                   <div style="display: flex; align-items: center; gap: 3px;">
-                    <span id="label-adjust-pipe-len-right-top" style="color:#38bdf8; font-weight:700;">97mm</span>
-                    <button type="button" class="qhb-btn" id="btn-direct-elbow-right-top" onclick="toggleIndividualDirectElbow('right-top')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                    <span id="label-adjust-pipe-len-right-top" style="color:#fbbf24; font-weight:700;">⚡90°직결</span>
+                    <button type="button" class="qhb-btn active" id="btn-direct-elbow-right-top" onclick="toggleIndividualDirectElbow('right-top')" style="padding: 1px 4px; font-size: 8px; background: rgba(245, 158, 11, 0.35); border-color: #f59e0b; color: #fbbf24;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
                   </div>
                 </div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-top" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-top', this.value)" style="width:100%; transition: opacity 0.2s;" />
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-top" min="0.05" max="0.35" step="0.005" value="0.097" disabled oninput="setIndividualStraightPipeLength('right-top', this.value)" style="width:100%; transition: opacity 0.2s; opacity: 0.35;" />
               </div>
             </div>
             <div style="display: flex; gap: 6px;">
@@ -6220,21 +6220,21 @@ body.model-fullscreen #model-fullscreen-open{display:none}
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
                   <span>② 좌중 2단</span>
                   <div style="display: flex; align-items: center; gap: 3px;">
-                    <span id="label-adjust-pipe-len-left-mid" style="color:#38bdf8; font-weight:700;">97mm</span>
-                    <button type="button" class="qhb-btn" id="btn-direct-elbow-left-mid" onclick="toggleIndividualDirectElbow('left-mid')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                    <span id="label-adjust-pipe-len-left-mid" style="color:#fbbf24; font-weight:700;">⚡90°직결</span>
+                    <button type="button" class="qhb-btn active" id="btn-direct-elbow-left-mid" onclick="toggleIndividualDirectElbow('left-mid')" style="padding: 1px 4px; font-size: 8px; background: rgba(245, 158, 11, 0.35); border-color: #f59e0b; color: #fbbf24;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
                   </div>
                 </div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-mid" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-mid', this.value)" style="width:100%; transition: opacity 0.2s;" />
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-mid" min="0.05" max="0.35" step="0.005" value="0.097" disabled oninput="setIndividualStraightPipeLength('left-mid', this.value)" style="width:100%; transition: opacity 0.2s; opacity: 0.35;" />
               </div>
               <div style="flex: 1;">
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
                   <span>⑤ 우중 2단</span>
                   <div style="display: flex; align-items: center; gap: 3px;">
-                    <span id="label-adjust-pipe-len-right-mid" style="color:#38bdf8; font-weight:700;">97mm</span>
-                    <button type="button" class="qhb-btn" id="btn-direct-elbow-right-mid" onclick="toggleIndividualDirectElbow('right-mid')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                    <span id="label-adjust-pipe-len-right-mid" style="color:#fbbf24; font-weight:700;">⚡90°직결</span>
+                    <button type="button" class="qhb-btn active" id="btn-direct-elbow-right-mid" onclick="toggleIndividualDirectElbow('right-mid')" style="padding: 1px 4px; font-size: 8px; background: rgba(245, 158, 11, 0.35); border-color: #f59e0b; color: #fbbf24;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
                   </div>
                 </div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-mid" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-mid', this.value)" style="width:100%; transition: opacity 0.2s;" />
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-mid" min="0.05" max="0.35" step="0.005" value="0.097" disabled oninput="setIndividualStraightPipeLength('right-mid', this.value)" style="width:100%; transition: opacity 0.2s; opacity: 0.35;" />
               </div>
             </div>
             <div style="display: flex; gap: 6px;">
@@ -6242,21 +6242,21 @@ body.model-fullscreen #model-fullscreen-open{display:none}
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
                   <span>③ 좌하 3단</span>
                   <div style="display: flex; align-items: center; gap: 3px;">
-                    <span id="label-adjust-pipe-len-left-btm" style="color:#38bdf8; font-weight:700;">97mm</span>
-                    <button type="button" class="qhb-btn" id="btn-direct-elbow-left-btm" onclick="toggleIndividualDirectElbow('left-btm')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                    <span id="label-adjust-pipe-len-left-btm" style="color:#fbbf24; font-weight:700;">⚡90°직결</span>
+                    <button type="button" class="qhb-btn active" id="btn-direct-elbow-left-btm" onclick="toggleIndividualDirectElbow('left-btm')" style="padding: 1px 4px; font-size: 8px; background: rgba(245, 158, 11, 0.35); border-color: #f59e0b; color: #fbbf24;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
                   </div>
                 </div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-btm" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-btm', this.value)" style="width:100%; transition: opacity 0.2s;" />
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-btm" min="0.05" max="0.35" step="0.005" value="0.097" disabled oninput="setIndividualStraightPipeLength('left-btm', this.value)" style="width:100%; transition: opacity 0.2s; opacity: 0.35;" />
               </div>
               <div style="flex: 1;">
                 <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
                   <span>⑥ 우하 3단</span>
                   <div style="display: flex; align-items: center; gap: 3px;">
-                    <span id="label-adjust-pipe-len-right-btm" style="color:#38bdf8; font-weight:700;">97mm</span>
-                    <button type="button" class="qhb-btn" id="btn-direct-elbow-right-btm" onclick="toggleIndividualDirectElbow('right-btm')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                    <span id="label-adjust-pipe-len-right-btm" style="color:#fbbf24; font-weight:700;">⚡90°직결</span>
+                    <button type="button" class="qhb-btn active" id="btn-direct-elbow-right-btm" onclick="toggleIndividualDirectElbow('right-btm')" style="padding: 1px 4px; font-size: 8px; background: rgba(245, 158, 11, 0.35); border-color: #f59e0b; color: #fbbf24;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
                   </div>
                 </div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-btm" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-btm', this.value)" style="width:100%; transition: opacity 0.2s;" />
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-btm" min="0.05" max="0.35" step="0.005" value="0.097" disabled oninput="setIndividualStraightPipeLength('right-btm', this.value)" style="width:100%; transition: opacity 0.2s; opacity: 0.35;" />
               </div>
             </div>
           </div>
@@ -7689,17 +7689,17 @@ body.model-fullscreen #model-fullscreen-open{display:none}
     let straightPipePivot = 'plate'; // [Phase 111] 'plate' (외벽 베이스 고정 기준 - 기본값) | 'rail' (전면 난간 고정 기준)
     let straightPipeElbowRadius = 0.070; // [Phase 111] 70mm (0.070m) 표준 규격 90° 원호 엘보 굴곡 반경
 
-    // [Phase 122 신규] 직관 파이프 없이 90° 엘보 직접 체결 (Direct Elbow Coupling) 레지스트리
+    // [Phase 122/123] 직관 파이프 없이 90° 엘보 직접 체결 (Direct Elbow Coupling) 레지스트리 (기본값: 90° 직결 기본 선택)
     const directElbowCoupling = {
-      'left-top': false,
-      'left-mid': false,
-      'left-btm': false,
-      'right-top': false,
-      'right-mid': false,
-      'right-btm': false
+      'left-top': true,
+      'left-mid': true,
+      'left-btm': true,
+      'right-top': true,
+      'right-mid': true,
+      'right-btm': true
     };
-    let leftGroupDirectElbow = false;
-    let rightGroupDirectElbow = false;
+    let leftGroupDirectElbow = true;
+    let rightGroupDirectElbow = true;
 
     // =========================================================================
     // 6-1-B. 외벽면/플레이트/덮개캡/핸드레일 시공순서별 조립도 & 분해도 시뮬레이션 시스템 (BIM 4D)
@@ -8398,9 +8398,9 @@ const ModelParameters = {
   const wallKeys=physicalAnchorKeys().slice(0,6);
   c.straightPipeLengths=c.straightPipeLengths??Object.fromEntries(wallKeys.map(k=>[k,c.pipeLengths[k]]));
   c.straightPipePivot=c.straightPipePivot??'plate';c.straightPipeElbowRadius=c.straightPipeElbowRadius??.07;
-  c.directElbowCoupling=c.directElbowCoupling??Object.fromEntries(wallKeys.map(k=>[k,false]));
-  c.leftGroupDirectElbow=!!c.leftGroupDirectElbow;
-  c.rightGroupDirectElbow=!!c.rightGroupDirectElbow;
+  c.directElbowCoupling=c.directElbowCoupling??Object.fromEntries(wallKeys.map(k=>[k,true]));
+  c.leftGroupDirectElbow=c.leftGroupDirectElbow!==undefined?!!c.leftGroupDirectElbow:true;
+  c.rightGroupDirectElbow=c.rightGroupDirectElbow!==undefined?!!c.rightGroupDirectElbow:true;
   if(!['plate','rail'].includes(c.straightPipePivot)||!Number.isFinite(c.straightPipeElbowRadius)||c.straightPipeElbowRadius<.03||c.straightPipeElbowRadius>.15||
     !c.straightPipeLengths||wallKeys.some(k=>!Number.isFinite(c.straightPipeLengths[k])||c.straightPipeLengths[k]<.035||c.straightPipeLengths[k]>.46))throw Error('접합 직관/엘보 설정 오류');
   return c;
@@ -20614,10 +20614,10 @@ const WorkbookManager = {
         const l = document.getElementById('label-adjust-pipe-' + k); if (l) l.textContent = '97mm';
       });
 
-      // [Phase 122] 직관 없이 90° 엘보 직결 옵션 전수 초기화
-      Object.keys(directElbowCoupling).forEach(k => { directElbowCoupling[k] = false; });
-      leftGroupDirectElbow = false;
-      rightGroupDirectElbow = false;
+      // [Phase 122/123] 직관 없이 90° 엘보 직결 기본 옵션(true)으로 복원
+      Object.keys(directElbowCoupling).forEach(k => { directElbowCoupling[k] = true; });
+      leftGroupDirectElbow = true;
+      rightGroupDirectElbow = true;
       if (typeof updateDirectElbowUI === 'function') updateDirectElbowUI();
 
       // 6. [4. 직관 파이프 길이 & 엘보] 표준 97mm (0.097m), 외벽 베이스 고정('plate'), 엘보 70mm, 좌/우 그룹 모드 복원
@@ -21448,23 +21448,25 @@ const WorkbookManager = {
         const plateSub = new THREE.Group();
         plateSub.name = `plate-sub-${key}`;
 
-        // 돌출된 M12 나사산 부식 스터드
-        const stud = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.05, 10), boltRustMat);
+        // [Phase 123 원형 베이스 앙카 길이 최적화] 90° 엘보 관통 원천 방지
+        // 베이스 플레이트(7mm) 관통 및 M12 너트(9mm) 체결 후 2mm 돌출 규격(총 24mm)으로 스터드 길이 단축
+        // 90° 엘보 내부 곡률(R=70mm)과 P2·P3·P5·P6(Ø34mm) 기준에서도 8.1mm의 안전 유격을 확보하여 엘보 관통 100% 완전 해결
+        const stud = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.024, 10), boltRustMat);
         stud.rotation.x = Math.PI / 2;
-        stud.position.set(anchorX, y, z + 0.025);
+        stud.position.set(anchorX, y, z + 0.012);
         stud.castShadow = true;
         plateSub.add(stud);
 
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 4; i++) {
           const th = new THREE.Mesh(new THREE.TorusGeometry(0.0063, 0.001, 4, 14), boltRustMat);
-          th.position.set(anchorX, y, z + 0.008 + i * 0.005);
+          th.position.set(anchorX, y, z + 0.008 + i * 0.004);
           plateSub.add(th);
         }
 
-        // 이탈된 너트
+        // 베이스 플레이트 고정 너트 (M12 규격, 두께 9mm)
         const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.009, 6), boltRustMat);
         nut.rotation.x = Math.PI / 2;
-        nut.position.set(anchorX, y, z + 0.022);
+        nut.position.set(anchorX, y, z + 0.017);
         nut.castShadow = true;
         plateSub.add(nut);
 
