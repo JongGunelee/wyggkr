@@ -3803,6 +3803,21 @@
 }
 
 /* [Phase 118.2] 데스크탑 모드 및 모바일 세로 모드 반응형 최적화 */
+@media (max-width: 768px) {
+  .assembly-hud-bar {
+    max-width: calc(100vw - 16px) !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding: 4px 10px !important;
+    border-radius: 20px !important;
+    top: 50px !important;
+  }
+  .assembly-hud-bar::-webkit-scrollbar {
+    display: none !important;
+  }
+}
+
 @media (max-width: 640px) {
   #assembly-spool-guide-panel:not(.fullscreen-modal) {
     top: 56px !important;
@@ -3831,6 +3846,25 @@
   .guide-step-grid .qhb-btn span:last-child {
     font-size: 7.5px !important;
   }
+  #guide-active-step-badge {
+    max-width: calc(100% - 110px) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 9px !important;
+    padding: 3px 6px !important;
+  }
+  #guide-active-step-text {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    display: inline-block !important;
+    max-width: 100% !important;
+  }
+  #btn-guide-modal-open {
+    font-size: 9.5px !important;
+    padding: 3px 6px !important;
+  }
 
   /* 모바일 세로 모드 라이트박스 팝업 전체화면 최적화 */
   #guide-lightbox-modal {
@@ -3846,6 +3880,14 @@
   }
   #guide-lightbox-modal .modal-header-title {
     font-size: 11px !important;
+  }
+  #lightbox-active-step-badge {
+    font-size: 9.5px !important;
+    padding: 3px 7px !important;
+    max-width: calc(100% - 20px) !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 }
 
@@ -5164,7 +5206,7 @@ body.model-fullscreen #model-fullscreen-open{display:none}
 
       <!-- 모달 이미지 뷰어 (단계별 동적 크롭 & 전체 뷰 동기화) -->
       <div class="modal-viewport-wrap" style="position: relative; flex: 1; min-height: 0; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 6px;">
-        <div id="lightbox-img-viewport" style="position: relative; width: 100%; height: 100%; max-height: 100%; aspect-ratio: 1200 / 670; overflow: hidden; border-radius: 6px; display: flex; align-items: center; justify-content: center;" onclick="ConstructionSpoolGuideManager.openAlbum()" title="클릭 시 구글 포토 현장 실사 앨범 웹페이지로 이동합니다.">
+        <div id="lightbox-img-viewport" style="position: relative; width: 100%; max-width: 100%; max-height: 100%; aspect-ratio: 1200 / 670; overflow: hidden; border-radius: 6px; display: flex; align-items: center; justify-content: center;" onclick="ConstructionSpoolGuideManager.openAlbum()" title="클릭 시 구글 포토 현장 실사 앨범 웹페이지로 이동합니다.">
           <img id="img-lightbox-guide" src="https://lh3.googleusercontent.com/pw/AP1GczPoxnirQXZHSuSSorI_Dyhm65cu5gsUQycvSZiTkMGeOhL6gVkWtiiCg2s8bFUibJMpHQU2QDpZgtSWa97zt814vuiU1ytXLpcvLiyRbMsPYD7b5KIn=w1200" alt="발코니 난간대 외벽 접합부 현장 시공 매커니즘 고화질 뷰" style="width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: 0% 0%; transform: scale(2.02); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); cursor: pointer;" />
           
           <!-- 라이트박스 오버레이 배너 -->
@@ -21861,9 +21903,18 @@ const WorkbookManager = {
 
       close() {
         const el = document.getElementById(this.panelId);
-        if (el) el.style.display = 'none';
-        const btn = document.getElementById('btn-assembly-spool-guide');
-        if (btn) btn.classList.remove('active');
+        if (el) {
+          el.style.display = 'none';
+          el.classList.remove('fullscreen-modal');
+          this.isWindowFullscreen = false;
+          const btn = document.getElementById('btn-guide-window-fs');
+          if (btn) {
+            btn.innerHTML = '⛶';
+            btn.title = '전체 화면으로 확대';
+          }
+        }
+        const btnSpool = document.getElementById('btn-assembly-spool-guide');
+        if (btnSpool) btnSpool.classList.remove('active');
         this.closeLightbox();
       },
 
@@ -21880,6 +21931,11 @@ const WorkbookManager = {
         const btn = document.getElementById('btn-guide-window-fs');
         if (!panel) return;
         this.isWindowFullscreen = panel.classList.toggle('fullscreen-modal');
+        if (this.isWindowFullscreen) {
+          panel.style.left = '';
+          panel.style.right = '';
+          panel.style.top = '';
+        }
         if (btn) {
           btn.innerHTML = this.isWindowFullscreen ? '❐' : '⛶';
           btn.title = this.isWindowFullscreen ? '일반 화면 크기 복원' : '전체 화면으로 확대';
@@ -22103,6 +22159,7 @@ const WorkbookManager = {
         this.dragInitialized = true;
         let isDragging = false, startX = 0, startY = 0, initialLeft = 0, initialTop = 0;
         head.addEventListener('mousedown', (e) => {
+          if (window.innerWidth <= 640) return; // 모바일 세로 모드 고정 도킹 보장
           if (this.isWindowFullscreen) return; // 전체화면 모드일 때는 드래그 방지
           if (e.target.closest('button')) return;
           isDragging = true;
@@ -22127,6 +22184,15 @@ const WorkbookManager = {
           if (isDragging) {
             isDragging = false;
             document.body.style.userSelect = '';
+          }
+        });
+
+        // 뷰포트 크기 변경 시 모바일 세로 모드 진입 시 인라인 좌표 초기화
+        window.addEventListener('resize', () => {
+          if (window.innerWidth <= 640 && panel) {
+            panel.style.left = '';
+            panel.style.right = '';
+            panel.style.top = '';
           }
         });
 
