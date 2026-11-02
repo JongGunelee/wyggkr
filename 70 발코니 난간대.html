@@ -1065,6 +1065,17 @@
       border-color: #38bdf8;
     }
 
+    /* [Phase 122] 모바일 세로 모드(390px 등) 플로팅 치수 조정창 반응형 최적화 */
+    @media (max-width: 480px) {
+      #adjust-menu {
+        right: 8px !important;
+        left: 8px !important;
+        width: auto !important;
+        max-width: calc(100vw - 16px) !important;
+        top: 65px !important;
+      }
+    }
+
     /* [Phase 33] 하단 2대 툴바 등분배 및 비중첩 조화 래퍼 (#bottom-dock-wrapper) */
     /* [Phase 33/34/61] 하단 2대 툴바 등분배 및 비중첩 조화 래퍼 (#bottom-dock-wrapper) - bottom 16px로 하향하여 하단 작업 영역 100% 확보 */
     .bottom-dock-wrapper {
@@ -6157,53 +6168,95 @@ body.model-fullscreen #model-fullscreen-open{display:none}
             🧭 <b>평면도 방향성</b>: 외벽 직교 Z축 100% 직선 연장 (좌우/상하 비틀림 0%)<br>
             📐 <b>엘보 굴곡 정합성</b>: 90° 원호 곡률 반경(R=70mm) 유지 · 찌그러짐 원천 차단
           </div>
-          <!-- 좌/우 그룹 슬라이더 패널 -->
+          <!-- [Phase 122] 좌/우 그룹 슬라이더 패널 (90° 엘보 직결 옵션 탑재) -->
           <div id="pipe-len-ctrl-grouped-menu" style="display: flex; flex-direction: column; gap: 6px;">
             <div>
-              <div style="display: flex; justify-content: space-between; font-size: 10px; color: #cbd5e1; margin-bottom: 2px;">
-                <span>◀ 좌측 그룹 (1·2·3단 직관 길이)</span>
-                <span id="label-adjust-pipe-len-left" style="color: #38bdf8; font-weight: 700;">97mm (기본)</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #cbd5e1; margin-bottom: 2px;">
+                <span>◀ 좌측 그룹 (1·2·3단 직관)</span>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <span id="label-adjust-pipe-len-left" style="color: #38bdf8; font-weight: 700;">97mm (기본)</span>
+                  <button type="button" class="qhb-btn" id="btn-direct-elbow-left" onclick="toggleGroupDirectElbow('left')" style="padding: 1px 5px; font-size: 8.5px;" title="직관 파이프 없이 90도 엘보에 직접 체결 (선택 시 직관 길이 조절 비활성화)">⚡ 90° 직결</button>
+                </div>
               </div>
-              <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setGroupStraightPipeLength('left', this.value)" style="width: 100%;" />
+              <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setGroupStraightPipeLength('left', this.value)" style="width: 100%; transition: opacity 0.2s;" />
             </div>
             <div>
-              <div style="display: flex; justify-content: space-between; font-size: 10px; color: #cbd5e1; margin-bottom: 2px;">
-                <span>▶ 우측 그룹 (4·5·6단 직관 길이)</span>
-                <span id="label-adjust-pipe-len-right" style="color: #38bdf8; font-weight: 700;">97mm (기본)</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; font-size: 10px; color: #cbd5e1; margin-bottom: 2px;">
+                <span>▶ 우측 그룹 (4·5·6단 직관)</span>
+                <div style="display: flex; align-items: center; gap: 4px;">
+                  <span id="label-adjust-pipe-len-right" style="color: #38bdf8; font-weight: 700;">97mm (기본)</span>
+                  <button type="button" class="qhb-btn" id="btn-direct-elbow-right" onclick="toggleGroupDirectElbow('right')" style="padding: 1px 5px; font-size: 8.5px;" title="직관 파이프 없이 90도 엘보에 직접 체결 (선택 시 직관 길이 조절 비활성화)">⚡ 90° 직결</button>
+                </div>
               </div>
-              <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setGroupStraightPipeLength('right', this.value)" style="width: 100%;" />
+              <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setGroupStraightPipeLength('right', this.value)" style="width: 100%; transition: opacity 0.2s;" />
             </div>
           </div>
-          <!-- 1~6번 개별 슬라이더 패널 -->
+          <!-- [Phase 122] 1~6번 개별 슬라이더 패널 (포인트별 독립 90° 엘보 직결 옵션) -->
           <div id="pipe-len-ctrl-individual-menu" style="display: none; flex-direction: column; gap: 5px;">
             <div style="display: flex; gap: 6px;">
               <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>① 좌상 1단</span><span id="label-adjust-pipe-len-left-top" style="color:#38bdf8; font-weight:700;">97mm</span></div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-top" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-top', this.value)" style="width:100%;" />
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
+                  <span>① 좌상 1단</span>
+                  <div style="display: flex; align-items: center; gap: 3px;">
+                    <span id="label-adjust-pipe-len-left-top" style="color:#38bdf8; font-weight:700;">97mm</span>
+                    <button type="button" class="qhb-btn" id="btn-direct-elbow-left-top" onclick="toggleIndividualDirectElbow('left-top')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                  </div>
+                </div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-top" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-top', this.value)" style="width:100%; transition: opacity 0.2s;" />
               </div>
               <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>④ 우상 1단</span><span id="label-adjust-pipe-len-right-top" style="color:#38bdf8; font-weight:700;">97mm</span></div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-top" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-top', this.value)" style="width:100%;" />
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
+                  <span>④ 우상 1단</span>
+                  <div style="display: flex; align-items: center; gap: 3px;">
+                    <span id="label-adjust-pipe-len-right-top" style="color:#38bdf8; font-weight:700;">97mm</span>
+                    <button type="button" class="qhb-btn" id="btn-direct-elbow-right-top" onclick="toggleIndividualDirectElbow('right-top')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                  </div>
+                </div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-top" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-top', this.value)" style="width:100%; transition: opacity 0.2s;" />
               </div>
             </div>
             <div style="display: flex; gap: 6px;">
               <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>② 좌중 2단</span><span id="label-adjust-pipe-len-left-mid" style="color:#38bdf8; font-weight:700;">97mm</span></div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-mid" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-mid', this.value)" style="width:100%;" />
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
+                  <span>② 좌중 2단</span>
+                  <div style="display: flex; align-items: center; gap: 3px;">
+                    <span id="label-adjust-pipe-len-left-mid" style="color:#38bdf8; font-weight:700;">97mm</span>
+                    <button type="button" class="qhb-btn" id="btn-direct-elbow-left-mid" onclick="toggleIndividualDirectElbow('left-mid')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                  </div>
+                </div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-mid" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-mid', this.value)" style="width:100%; transition: opacity 0.2s;" />
               </div>
               <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>⑤ 우중 2단</span><span id="label-adjust-pipe-len-right-mid" style="color:#38bdf8; font-weight:700;">97mm</span></div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-mid" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-mid', this.value)" style="width:100%;" />
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
+                  <span>⑤ 우중 2단</span>
+                  <div style="display: flex; align-items: center; gap: 3px;">
+                    <span id="label-adjust-pipe-len-right-mid" style="color:#38bdf8; font-weight:700;">97mm</span>
+                    <button type="button" class="qhb-btn" id="btn-direct-elbow-right-mid" onclick="toggleIndividualDirectElbow('right-mid')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                  </div>
+                </div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-mid" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-mid', this.value)" style="width:100%; transition: opacity 0.2s;" />
               </div>
             </div>
             <div style="display: flex; gap: 6px;">
               <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>③ 좌하 3단</span><span id="label-adjust-pipe-len-left-btm" style="color:#38bdf8; font-weight:700;">97mm</span></div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-btm" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-btm', this.value)" style="width:100%;" />
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
+                  <span>③ 좌하 3단</span>
+                  <div style="display: flex; align-items: center; gap: 3px;">
+                    <span id="label-adjust-pipe-len-left-btm" style="color:#38bdf8; font-weight:700;">97mm</span>
+                    <button type="button" class="qhb-btn" id="btn-direct-elbow-left-btm" onclick="toggleIndividualDirectElbow('left-btm')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                  </div>
+                </div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-left-btm" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('left-btm', this.value)" style="width:100%; transition: opacity 0.2s;" />
               </div>
               <div style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; font-size: 9.5px; color: #cbd5e1;"><span>⑥ 우하 3단</span><span id="label-adjust-pipe-len-right-btm" style="color:#38bdf8; font-weight:700;">97mm</span></div>
-                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-btm" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-btm', this.value)" style="width:100%;" />
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 9.5px; color: #cbd5e1; margin-bottom: 2px;">
+                  <span>⑥ 우하 3단</span>
+                  <div style="display: flex; align-items: center; gap: 3px;">
+                    <span id="label-adjust-pipe-len-right-btm" style="color:#38bdf8; font-weight:700;">97mm</span>
+                    <button type="button" class="qhb-btn" id="btn-direct-elbow-right-btm" onclick="toggleIndividualDirectElbow('right-btm')" style="padding: 1px 4px; font-size: 8px;" title="직관 없이 90° 엘보 직접 체결">⚡직결</button>
+                  </div>
+                </div>
+                <input type="range" class="rot-slider" id="slider-adjust-pipe-len-right-btm" min="0.05" max="0.35" step="0.005" value="0.097" oninput="setIndividualStraightPipeLength('right-btm', this.value)" style="width:100%; transition: opacity 0.2s;" />
               </div>
             </div>
           </div>
@@ -7636,6 +7689,18 @@ body.model-fullscreen #model-fullscreen-open{display:none}
     let straightPipePivot = 'plate'; // [Phase 111] 'plate' (외벽 베이스 고정 기준 - 기본값) | 'rail' (전면 난간 고정 기준)
     let straightPipeElbowRadius = 0.070; // [Phase 111] 70mm (0.070m) 표준 규격 90° 원호 엘보 굴곡 반경
 
+    // [Phase 122 신규] 직관 파이프 없이 90° 엘보 직접 체결 (Direct Elbow Coupling) 레지스트리
+    const directElbowCoupling = {
+      'left-top': false,
+      'left-mid': false,
+      'left-btm': false,
+      'right-top': false,
+      'right-mid': false,
+      'right-btm': false
+    };
+    let leftGroupDirectElbow = false;
+    let rightGroupDirectElbow = false;
+
     // =========================================================================
     // 6-1-B. 외벽면/플레이트/덮개캡/핸드레일 시공순서별 조립도 & 분해도 시뮬레이션 시스템 (BIM 4D)
     // =========================================================================
@@ -8290,7 +8355,8 @@ const WorkspaceStorage={
 function anchorBaseZ(key){
   if(key.startsWith('bottom-'))return .043;
   if(typeof straightPipePivot!=='undefined'&&straightPipePivot==='rail'){
-    const spL=(typeof straightPipeLengths!=='undefined'&&straightPipeLengths[key])||0.097;
+    const isDirect = (typeof directElbowCoupling !== 'undefined' && directElbowCoupling[key]);
+    const spL = isDirect ? 0 : ((typeof straightPipeLengths!=='undefined'&&straightPipeLengths[key])||0.097);
     const r=(typeof straightPipeElbowRadius!=='undefined'&&straightPipeElbowRadius)||0.070;
     const fZ=anchorRailZ(key);
     return parseFloat((fZ-r-spL).toFixed(3));
@@ -8310,7 +8376,7 @@ const ModelParameters = {
    railLeftX:DIMS.railLeftX,railRightX:DIMS.railRightX,widthPivot:DIMS.widthPivot||'center',topRailY:DIMS.topRailY,
    subRailY:DIMS.subRailY,bottomRailY:DIMS.bottomRailY,railDepth:DIMS.railDepth,railZ:DIMS.railZ,depthPivot:DIMS.depthPivot||'plate',basePlateZ:DIMS.basePlateZ,
    legFlangeY:DIMS.legFlangeY,supportDiameter:DIMS.supportDiameter,supportBendDrop:DIMS.supportBendDrop,supportBendStyle:DIMS.supportBendStyle,supportBendRadius:DIMS.supportBendRadius,
-   legsX:[...DIMS.legsX],pipeLengths:{...anchorPipeLengths},straightPipeLengths:{...straightPipeLengths},straightPipePivot,straightPipeElbowRadius,anchorDepths:{...anchorDepthValues}};
+   legsX:[...DIMS.legsX],pipeLengths:{...anchorPipeLengths},straightPipeLengths:{...straightPipeLengths},straightPipePivot,straightPipeElbowRadius,directElbowCoupling:{...directElbowCoupling},leftGroupDirectElbow,rightGroupDirectElbow,anchorDepths:{...anchorDepthValues}};
  },
  validate(input) {
   if(!input||input.version!==1) throw Error('난간 모델 설정 버전 오류');
@@ -8332,6 +8398,9 @@ const ModelParameters = {
   const wallKeys=physicalAnchorKeys().slice(0,6);
   c.straightPipeLengths=c.straightPipeLengths??Object.fromEntries(wallKeys.map(k=>[k,c.pipeLengths[k]]));
   c.straightPipePivot=c.straightPipePivot??'plate';c.straightPipeElbowRadius=c.straightPipeElbowRadius??.07;
+  c.directElbowCoupling=c.directElbowCoupling??Object.fromEntries(wallKeys.map(k=>[k,false]));
+  c.leftGroupDirectElbow=!!c.leftGroupDirectElbow;
+  c.rightGroupDirectElbow=!!c.rightGroupDirectElbow;
   if(!['plate','rail'].includes(c.straightPipePivot)||!Number.isFinite(c.straightPipeElbowRadius)||c.straightPipeElbowRadius<.03||c.straightPipeElbowRadius>.15||
     !c.straightPipeLengths||wallKeys.some(k=>!Number.isFinite(c.straightPipeLengths[k])||c.straightPipeLengths[k]<.035||c.straightPipeLengths[k]>.46))throw Error('접합 직관/엘보 설정 오류');
   return c;
@@ -8339,9 +8408,10 @@ const ModelParameters = {
  restore(input,{rebuild=true}={}) {
   const c=this.validate(input),changed=!this.sameConfiguration(c,this.snapshot());this.restoring=true;
   try {
-   const {version,storedCount,pipeLengths,anchorDepths,straightPipeLengths:savedStraight,straightPipePivot:savedPivot,straightPipeElbowRadius:savedRadius,...dims}=c;
+   const {version,storedCount,pipeLengths,anchorDepths,straightPipeLengths:savedStraight,straightPipePivot:savedPivot,straightPipeElbowRadius:savedRadius,directElbowCoupling:savedDirect,leftGroupDirectElbow:savedGrpL,rightGroupDirectElbow:savedGrpR,...dims}=c;
    Object.assign(DIMS,dims);this.storedCount=storedCount;
    Object.assign(straightPipeLengths,savedStraight);straightPipePivot=savedPivot;straightPipeElbowRadius=savedRadius;
+   if(savedDirect){Object.assign(directElbowCoupling,savedDirect);leftGroupDirectElbow=!!savedGrpL;rightGroupDirectElbow=!!savedGrpR;}
    Object.assign(anchorPipeLengths,pipeLengths);if(anchorDepths)Object.assign(anchorDepthValues,anchorDepths);configureInspectionPoints(c.supportCount,storedCount);
    if(rebuild&&changed&&scene&&handrailGroup){rebuildHandrailSystem();buildInspectionPins();updateAssemblyTransforms(assemblyProgress);}
    syncLegacyPointGeometry();this.syncUI();
@@ -8352,6 +8422,7 @@ const ModelParameters = {
    if(c.straightPipeLengths){Object.assign(straightPipeLengths,c.straightPipeLengths);LEGACY_POINT_KEYS.forEach(key=>{const k=pointDefinition(key).anchorKey;value('slider-adjust-pipe-len-'+k,straightPipeLengths[k]);const el=document.getElementById('label-adjust-pipe-len-'+k);if(el)el.textContent=Math.round(straightPipeLengths[k]*1000)+'mm';});const elL=document.getElementById('label-adjust-pipe-len-left');if(elL)elL.textContent=Math.round((straightPipeLengths['left-top']||0.097)*1000)+'mm';const elR=document.getElementById('label-adjust-pipe-len-right');if(elR)elR.textContent=Math.round((straightPipeLengths['right-top']||0.097)*1000)+'mm';}
    if(c.straightPipePivot){setStraightPipePivot(c.straightPipePivot,false);}
    if(c.straightPipeElbowRadius){setStraightPipeElbowRadius(c.straightPipeElbowRadius,false);}
+   if(c.directElbowCoupling){Object.assign(directElbowCoupling,c.directElbowCoupling);leftGroupDirectElbow=!!c.leftGroupDirectElbow;rightGroupDirectElbow=!!c.rightGroupDirectElbow;if(typeof updateDirectElbowUI==='function')updateDirectElbowUI();}
   }finally{this.restoring=false;}
  },
  restoreLocal() {
@@ -8413,6 +8484,7 @@ const ModelParameters = {
   if(typeof syncDepthUI==='function')syncDepthUI(DIMS.railDepth,'all',DIMS.depthPivot);
   LEGACY_POINT_KEYS.forEach(key=>{const k=pointDefinition(key).anchorKey;setValue('slider-adjust-pipe-'+k,anchorPipeLengths[k]);setValue('slider-pipe-'+k,anchorPipeLengths[k]);setText('label-adjust-pipe-'+k,Math.round(anchorPipeLengths[k]*1000)+'mm');});
   ['left','right'].forEach(side=>{const keys=LEGACY_POINT_KEYS.map(k=>pointDefinition(k).anchorKey).filter(k=>k.startsWith(side)),values=keys.map(k=>anchorPipeLengths[k]);const same=values.every(v=>v===values[0]);setValue('slider-adjust-pipe-'+side,values[0]);setText('label-adjust-pipe-'+side,same?Math.round(values[0]*1000)+'mm':'개별값');});
+  if(typeof updateDirectElbowUI==='function')updateDirectElbowUI();
   const host=document.getElementById('support-member-controls');if(!host)return;
   const active=host.querySelector('#bp-member-target')?.value||'all';
   host.innerHTML=`<div class="support-section-title">◆ 3-B. 주 지주 · 하부 BP 부재</div>
@@ -19907,6 +19979,130 @@ const WorkbookManager = {
     }
 
     // =========================================================================
+    // [Phase 122] 직관 파이프 없이 90도 엘보 직접 체결 (Direct Elbow Coupling) 핸들러
+    // =========================================================================
+    function toggleGroupDirectElbow(side) {
+      if (side === 'left') {
+        leftGroupDirectElbow = !leftGroupDirectElbow;
+        directElbowCoupling['left-top'] = leftGroupDirectElbow;
+        directElbowCoupling['left-mid'] = leftGroupDirectElbow;
+        directElbowCoupling['left-btm'] = leftGroupDirectElbow;
+        showToast(leftGroupDirectElbow 
+          ? '⚡ 좌측 그룹 (1·2·3단): 직관 없이 90° 엘보 직접 체결 활성화 (직관 길이 비활성화)'
+          : '📏 좌측 그룹 (1·2·3단): 직관 파이프 사용 모드로 복원 (직관 길이 활성화)');
+      } else {
+        rightGroupDirectElbow = !rightGroupDirectElbow;
+        directElbowCoupling['right-top'] = rightGroupDirectElbow;
+        directElbowCoupling['right-mid'] = rightGroupDirectElbow;
+        directElbowCoupling['right-btm'] = rightGroupDirectElbow;
+        showToast(rightGroupDirectElbow 
+          ? '⚡ 우측 그룹 (4·5·6단): 직관 없이 90° 엘보 직접 체결 활성화 (직관 길이 비활성화)'
+          : '📏 우측 그룹 (4·5·6단): 직관 파이프 사용 모드로 복원 (직관 길이 활성화)');
+      }
+      rebuildHandrailSystem();
+      ModelParameters.commit();
+      updateDirectElbowUI();
+    }
+
+    function toggleIndividualDirectElbow(key) {
+      directElbowCoupling[key] = !directElbowCoupling[key];
+      const cfg = anchorBaseConfig[key];
+      const name = cfg ? cfg.name : key;
+
+      // 좌/우 그룹 동기화 상태 갱신
+      leftGroupDirectElbow = (directElbowCoupling['left-top'] && directElbowCoupling['left-mid'] && directElbowCoupling['left-btm']);
+      rightGroupDirectElbow = (directElbowCoupling['right-top'] && directElbowCoupling['right-mid'] && directElbowCoupling['right-btm']);
+
+      showToast(directElbowCoupling[key]
+        ? `⚡ ${name}: 직관 없이 90° 엘보 직접 체결 활성화`
+        : `📏 ${name}: 직관 파이프 사용 모드로 복원`);
+
+      rebuildHandrailSystem();
+      ModelParameters.commit();
+      updateDirectElbowUI();
+    }
+
+    function updateDirectElbowUI() {
+      // 1. 좌측 그룹
+      const btnGrpL = document.getElementById('btn-direct-elbow-left');
+      const sGrpL = document.getElementById('slider-adjust-pipe-len-left');
+      const lGrpL = document.getElementById('label-adjust-pipe-len-left');
+      if (btnGrpL) {
+        btnGrpL.classList.toggle('active', leftGroupDirectElbow);
+        btnGrpL.style.background = leftGroupDirectElbow ? 'rgba(245, 158, 11, 0.35)' : '';
+        btnGrpL.style.borderColor = leftGroupDirectElbow ? '#f59e0b' : '';
+        btnGrpL.style.color = leftGroupDirectElbow ? '#fbbf24' : '';
+      }
+      if (sGrpL) {
+        sGrpL.disabled = leftGroupDirectElbow;
+        sGrpL.style.opacity = leftGroupDirectElbow ? '0.35' : '1.0';
+      }
+      if (lGrpL) {
+        if (leftGroupDirectElbow) {
+          lGrpL.textContent = '⚡ 90° 직결 (직관 없음)';
+          lGrpL.style.color = '#fbbf24';
+        } else {
+          const mm = Math.round(leftGroupStraightPipeLength * 1000);
+          lGrpL.textContent = `${mm}mm${Math.abs(leftGroupStraightPipeLength - 0.097) < 0.003 ? ' (기본)' : ''}`;
+          lGrpL.style.color = '#38bdf8';
+        }
+      }
+
+      // 2. 우측 그룹
+      const btnGrpR = document.getElementById('btn-direct-elbow-right');
+      const sGrpR = document.getElementById('slider-adjust-pipe-len-right');
+      const lGrpR = document.getElementById('label-adjust-pipe-len-right');
+      if (btnGrpR) {
+        btnGrpR.classList.toggle('active', rightGroupDirectElbow);
+        btnGrpR.style.background = rightGroupDirectElbow ? 'rgba(245, 158, 11, 0.35)' : '';
+        btnGrpR.style.borderColor = rightGroupDirectElbow ? '#f59e0b' : '';
+        btnGrpR.style.color = rightGroupDirectElbow ? '#fbbf24' : '';
+      }
+      if (sGrpR) {
+        sGrpR.disabled = rightGroupDirectElbow;
+        sGrpR.style.opacity = rightGroupDirectElbow ? '0.35' : '1.0';
+      }
+      if (lGrpR) {
+        if (rightGroupDirectElbow) {
+          lGrpR.textContent = '⚡ 90° 직결 (직관 없음)';
+          lGrpR.style.color = '#fbbf24';
+        } else {
+          const mm = Math.round(rightGroupStraightPipeLength * 1000);
+          lGrpR.textContent = `${mm}mm${Math.abs(rightGroupStraightPipeLength - 0.097) < 0.003 ? ' (기본)' : ''}`;
+          lGrpR.style.color = '#38bdf8';
+        }
+      }
+
+      // 3. 1~6 개별 포인트
+      ['left-top', 'right-top', 'left-mid', 'right-mid', 'left-btm', 'right-btm'].forEach(k => {
+        const isDirect = !!directElbowCoupling[k];
+        const btn = document.getElementById(`btn-direct-elbow-${k}`);
+        const slider = document.getElementById(`slider-adjust-pipe-len-${k}`);
+        const label = document.getElementById(`label-adjust-pipe-len-${k}`);
+        if (btn) {
+          btn.classList.toggle('active', isDirect);
+          btn.style.background = isDirect ? 'rgba(245, 158, 11, 0.35)' : '';
+          btn.style.borderColor = isDirect ? '#f59e0b' : '';
+          btn.style.color = isDirect ? '#fbbf24' : '';
+        }
+        if (slider) {
+          slider.disabled = isDirect;
+          slider.style.opacity = isDirect ? '0.35' : '1.0';
+        }
+        if (label) {
+          if (isDirect) {
+            label.textContent = '⚡90°직결';
+            label.style.color = '#fbbf24';
+          } else {
+            const mm = Math.round((straightPipeLengths[k] || 0.097) * 1000);
+            label.textContent = `${mm}mm`;
+            label.style.color = '#38bdf8';
+          }
+        }
+      });
+    }
+
+    // =========================================================================
     // [Phase 110] 직관 파이프 길이 (Straight Pipe Length) 상세 조절 핸들러 시스템
     // =========================================================================
     function setStraightPipeLengthMode(mode) {
@@ -19992,18 +20188,24 @@ const WorkbookManager = {
 
     function stepStraightPipeLength(delta) {
       if (straightPipeLengthMode === 'grouped') {
-        const newLeft = Math.max(0.05, Math.min(0.35, leftGroupStraightPipeLength + delta));
-        const newRight = Math.max(0.05, Math.min(0.35, rightGroupStraightPipeLength + delta));
-        setGroupStraightPipeLength('left', newLeft);
-        setGroupStraightPipeLength('right', newRight, true);
+        if (!leftGroupDirectElbow) {
+          const newLeft = Math.max(0.05, Math.min(0.35, leftGroupStraightPipeLength + delta));
+          setGroupStraightPipeLength('left', newLeft);
+        }
+        if (!rightGroupDirectElbow) {
+          const newRight = Math.max(0.05, Math.min(0.35, rightGroupStraightPipeLength + delta));
+          setGroupStraightPipeLength('right', newRight, true);
+        }
       } else {
         Object.keys(straightPipeLengths).forEach(k => {
-          straightPipeLengths[k] = Math.max(0.05, Math.min(0.35, straightPipeLengths[k] + delta));
-          const mm = Math.round(straightPipeLengths[k] * 1000);
-          const s = document.getElementById(`slider-adjust-pipe-len-${k}`);
-          if (s) s.value = straightPipeLengths[k];
-          const l = document.getElementById(`label-adjust-pipe-len-${k}`);
-          if (l) l.textContent = `${mm}mm`;
+          if (!directElbowCoupling[k]) {
+            straightPipeLengths[k] = Math.max(0.05, Math.min(0.35, straightPipeLengths[k] + delta));
+            const mm = Math.round(straightPipeLengths[k] * 1000);
+            const s = document.getElementById(`slider-adjust-pipe-len-${k}`);
+            if (s) s.value = straightPipeLengths[k];
+            const l = document.getElementById(`label-adjust-pipe-len-${k}`);
+            if (l) l.textContent = `${mm}mm`;
+          }
         });
         rebuildHandrailSystem();
         ModelParameters.commit();
@@ -20411,6 +20613,12 @@ const WorkbookManager = {
         const s = document.getElementById('slider-adjust-pipe-' + k); if (s) s.value = 0.097;
         const l = document.getElementById('label-adjust-pipe-' + k); if (l) l.textContent = '97mm';
       });
+
+      // [Phase 122] 직관 없이 90° 엘보 직결 옵션 전수 초기화
+      Object.keys(directElbowCoupling).forEach(k => { directElbowCoupling[k] = false; });
+      leftGroupDirectElbow = false;
+      rightGroupDirectElbow = false;
+      if (typeof updateDirectElbowUI === 'function') updateDirectElbowUI();
 
       // 6. [4. 직관 파이프 길이 & 엘보] 표준 97mm (0.097m), 외벽 베이스 고정('plate'), 엘보 70mm, 좌/우 그룹 모드 복원
       setStraightPipeLengthMode('grouped');
@@ -20832,8 +21040,10 @@ const WorkbookManager = {
       const kappa = 0.5522847498; // 90° 원호 최적 근사 3차 베지어 상수
 
       function computePipeGeometry(kR, kL) {
-        const lR = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths[kR]) || 0.097;
-        const lL = (typeof straightPipeLengths !== 'undefined' && straightPipeLengths[kL]) || 0.097;
+        const isDirectR = (typeof directElbowCoupling !== 'undefined' && !!directElbowCoupling[kR]);
+        const isDirectL = (typeof directElbowCoupling !== 'undefined' && !!directElbowCoupling[kL]);
+        const lR = isDirectR ? 0 : ((typeof straightPipeLengths !== 'undefined' && straightPipeLengths[kR]) || 0.097);
+        const lL = isDirectL ? 0 : ((typeof straightPipeLengths !== 'undefined' && straightPipeLengths[kL]) || 0.097);
         const pivot = (typeof straightPipePivot !== 'undefined' && straightPipePivot) || 'plate';
 
         let zBaseR, zElbowR, zFrontR;
@@ -20857,18 +21067,20 @@ const WorkbookManager = {
           zBaseL = zElbowL - lL;
         }
 
-        return { lR, lL, zBaseR, zElbowR, zFrontR, zBaseL, zElbowL, zFrontL };
+        return { lR, lL, isDirectR, isDirectL, zBaseR, zElbowR, zFrontR, zBaseL, zElbowL, zFrontL };
       }
 
       // 1) 최상부 메인 레일 (Ø48mm) - Y = 2.00m
       const topFit = computePipeGeometry('right-top', 'left-top');
       const topCurve = new THREE.CurvePath();
 
-      // 1-1. 우측 직관 파이프: 외벽 앙카(zBaseR)에서 엘보 시작점(zElbowR)까지 Z축 100% 일직선
-      topCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, topFit.zBaseR),
-        new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, topFit.zElbowR)
-      ));
+      // 1-1. 우측 직관 파이프: 90° 직결이 아닐 때만 Z축 일직선 구간 추가 (퇴화 선분 원천 방지)
+      if (!topFit.isDirectR && topFit.lR > 0.001) {
+        topCurve.add(new THREE.LineCurve3(
+          new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, topFit.zBaseR),
+          new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, topFit.zElbowR)
+        ));
+      }
       // 1-2. 우측 90° 엘보: +Z 방향에서 -X 방향으로 부드럽게 꺾이는 완전한 90도 원호
       topCurve.add(new THREE.CubicBezierCurve3(
         new THREE.Vector3(DIMS.railRightX, DIMS.topRailY, topFit.zElbowR),
@@ -20888,11 +21100,13 @@ const WorkbookManager = {
         new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, topFit.zElbowL + kappa * elbowR),
         new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, topFit.zElbowL)
       ));
-      // 1-5. 좌측 직관 파이프: 엘보 끝단(zElbowL)에서 외벽 앙카(zBaseL)까지 Z축 100% 일직선
-      topCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, topFit.zElbowL),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, topFit.zBaseL)
-      ));
+      // 1-5. 좌측 직관 파이프: 90° 직결이 아닐 때만 Z축 일직선 구간 추가
+      if (!topFit.isDirectL && topFit.lL > 0.001) {
+        topCurve.add(new THREE.LineCurve3(
+          new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, topFit.zElbowL),
+          new THREE.Vector3(DIMS.railLeftX, DIMS.topRailY, topFit.zBaseL)
+        ));
+      }
 
       const topRailMesh = new THREE.Mesh(new THREE.TubeGeometry(topCurve, 80, 0.024, 16, false), susMat);
       topRailMesh.castShadow = true;
@@ -20906,11 +21120,13 @@ const WorkbookManager = {
       const subFit = computePipeGeometry('right-mid', 'left-mid');
       const subCurve = new THREE.CurvePath();
 
-      // 2-1. 우측 직관 파이프
-      subCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, subFit.zBaseR),
-        new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, subFit.zElbowR)
-      ));
+      // 2-1. 우측 직관 파이프: 90° 직결이 아닐 때만 Z축 일직선 구간 추가
+      if (!subFit.isDirectR && subFit.lR > 0.001) {
+        subCurve.add(new THREE.LineCurve3(
+          new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, subFit.zBaseR),
+          new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, subFit.zElbowR)
+        ));
+      }
       // 2-2. 우측 90° 엘보
       subCurve.add(new THREE.CubicBezierCurve3(
         new THREE.Vector3(DIMS.railRightX, DIMS.subRailY, subFit.zElbowR),
@@ -20930,11 +21146,13 @@ const WorkbookManager = {
         new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, subFit.zElbowL + kappa * elbowR),
         new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, subFit.zElbowL)
       ));
-      // 2-5. 좌측 직관 파이프
-      subCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, subFit.zElbowL),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, subFit.zBaseL)
-      ));
+      // 2-5. 좌측 직관 파이프: 90° 직결이 아닐 때만 Z축 일직선 구간 추가
+      if (!subFit.isDirectL && subFit.lL > 0.001) {
+        subCurve.add(new THREE.LineCurve3(
+          new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, subFit.zElbowL),
+          new THREE.Vector3(DIMS.railLeftX, DIMS.subRailY, subFit.zBaseL)
+        ));
+      }
 
       const subRailMesh = new THREE.Mesh(new THREE.TubeGeometry(subCurve, 80, 0.017, 14, false), susMat);
       subRailMesh.castShadow = true;
@@ -21014,11 +21232,13 @@ const WorkbookManager = {
       const btmFit = computePipeGeometry('right-btm', 'left-btm');
       const bottomCurve = new THREE.CurvePath();
 
-      // 3-1. 우측 직관 파이프
-      bottomCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, btmFit.zBaseR),
-        new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, btmFit.zElbowR)
-      ));
+      // 3-1. 우측 직관 파이프: 90° 직결이 아닐 때만 Z축 일직선 구간 추가
+      if (!btmFit.isDirectR && btmFit.lR > 0.001) {
+        bottomCurve.add(new THREE.LineCurve3(
+          new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, btmFit.zBaseR),
+          new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, btmFit.zElbowR)
+        ));
+      }
       // 3-2. 우측 90° 엘보
       bottomCurve.add(new THREE.CubicBezierCurve3(
         new THREE.Vector3(DIMS.railRightX, DIMS.bottomRailY, btmFit.zElbowR),
@@ -21038,11 +21258,13 @@ const WorkbookManager = {
         new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, btmFit.zElbowL + kappa * elbowR),
         new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, btmFit.zElbowL)
       ));
-      // 3-5. 좌측 직관 파이프 (현장 실측: 결함 세대 용접 탈락 시 20mm 유격 재현 가능)
-      bottomCurve.add(new THREE.LineCurve3(
-        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, btmFit.zElbowL),
-        new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, btmFit.zBaseL)
-      ));
+      // 3-5. 좌측 직관 파이프: 90° 직결이 아닐 때만 Z축 일직선 구간 추가
+      if (!btmFit.isDirectL && btmFit.lL > 0.001) {
+        bottomCurve.add(new THREE.LineCurve3(
+          new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, btmFit.zElbowL),
+          new THREE.Vector3(DIMS.railLeftX, DIMS.bottomRailY, btmFit.zBaseL)
+        ));
+      }
 
       const bottomRailMesh = new THREE.Mesh(new THREE.TubeGeometry(bottomCurve, 80, 0.017, 14, false), susMat);
       bottomRailMesh.castShadow = true;
