@@ -21894,21 +21894,64 @@ const WorkbookManager = {
       currentStepIdx: 3,
       isFullView: false,
 
-      // [Phase 120] 타 로컬 컴퓨터/오프라인 환경 무결성 보장 이미지 페일오버 핸들러
-      handleImageError(imgEl) {
+      // [Phase 121] 제로-타임아웃 지능형 오프라인 및 인터넷 보안 차단망 감지 상태
+      isOfflineOrBlocked: (typeof navigator !== 'undefined' && navigator.onLine === false),
+
+      // [Phase 121] 지능형 제로-타임아웃 이미지 로딩 및 백그라운드 디코딩 보장
+      ensureImageLoaded(imgEl) {
         if (!imgEl) return;
-        const fallback = ConstructionSpoolGuideManager.fallbackDataUri;
-        if (imgEl.src !== fallback) {
-          console.warn('[ConstructionSpoolGuide] Primary CDN failed or 403 Forbidden. Swapping to autonomous inline high-def fallback.');
-          imgEl.onerror = null;
-          imgEl.src = fallback;
+        const fallback = this.fallbackDataUri;
+
+        // 1. 이미 오프라인이거나 사내 보안 차단망으로 판정된 경우 즉시 0ms Fallback 할당 (네트워크 대기열 완전 배제)
+        if (this.isOfflineOrBlocked || (typeof navigator !== 'undefined' && navigator.onLine === false)) {
+          this.isOfflineOrBlocked = true;
+          if (imgEl.src !== fallback) {
+            imgEl.onerror = null;
+            imgEl.src = fallback;
+            if (typeof imgEl.decode === 'function') {
+              imgEl.decode().catch(() => {});
+            }
+          }
+          return;
         }
-        const otherId = imgEl.id === 'img-construction-spool-guide' ? 'img-lightbox-guide' : 'img-construction-spool-guide';
-        const otherImg = document.getElementById(otherId);
-        if (otherImg && otherImg.src !== fallback) {
-          otherImg.onerror = null;
-          otherImg.src = fallback;
+
+        // 2. 이미 정상 로드 완료된 경우
+        if (imgEl.complete && imgEl.naturalWidth > 0) return;
+
+        // 3. 인터넷 라인이 보안으로 차단된 환경(패킷 드롭/DNS 홀) 대비 750ms 패스트 가드 타이머
+        // 브라우저의 10~30초 네트워크 프리징을 원천 차단하고 750ms 이내에 자립 폴백 가동
+        if (!imgEl._watchdogTimer) {
+          imgEl._watchdogTimer = setTimeout(() => {
+            if (!imgEl.complete || imgEl.naturalWidth === 0) {
+              console.warn('[ConstructionSpoolGuide] Security network drop detected (>750ms). Activating autonomous offline fallback.');
+              ConstructionSpoolGuideManager.isOfflineOrBlocked = true;
+              ConstructionSpoolGuideManager.handleImageError(imgEl);
+            }
+          }, 750);
         }
+      },
+
+      // [Phase 120/121] 타 로컬 컴퓨터/오프라인/보안차단망 무결성 보장 이미지 페일오버 핸들러
+      handleImageError(imgEl) {
+        this.isOfflineOrBlocked = true;
+        const fallback = this.fallbackDataUri;
+        const img1 = document.getElementById('img-construction-spool-guide');
+        const img2 = document.getElementById('img-lightbox-guide');
+        [img1, img2].forEach(img => {
+          if (img) {
+            if (img._watchdogTimer) {
+              clearTimeout(img._watchdogTimer);
+              img._watchdogTimer = null;
+            }
+            img.onerror = null;
+            if (img.src !== fallback) {
+              img.src = fallback;
+              if (typeof img.decode === 'function') {
+                img.decode().catch(() => {});
+              }
+            }
+          }
+        });
       },
 
       steps: [
@@ -21926,6 +21969,7 @@ const WorkbookManager = {
         const btn = document.getElementById('btn-assembly-spool-guide');
         if (btn) btn.classList.toggle('active', !isVis);
         if (!isVis) {
+          this.ensureImageLoaded(document.getElementById('img-construction-spool-guide'));
           this.syncStep(typeof assemblyProgress !== 'undefined' ? assemblyProgress : 1.0);
           this.initDrag();
         }
@@ -22012,6 +22056,7 @@ const WorkbookManager = {
 
       updateViewModeUI() {
         const img = document.getElementById('img-construction-spool-guide');
+        this.ensureImageLoaded(img);
         const badgeText = document.getElementById('guide-active-step-text');
         const btnAll = document.getElementById('btn-guide-step-all');
 
@@ -22090,12 +22135,14 @@ const WorkbookManager = {
         const m = document.getElementById(this.lightboxId);
         if (!m) return;
         m.style.display = 'flex';
+        this.ensureImageLoaded(document.getElementById('img-lightbox-guide'));
         this.syncLightboxView();
       },
 
       // 라이트박스 내부 뷰(이미지 줌/크롭, 타이틀, 탭 버튼)를 현재 상태와 100% 동기화
       syncLightboxView() {
         const img = document.getElementById('img-lightbox-guide');
+        this.ensureImageLoaded(img);
         const titleEl = document.getElementById('lightbox-modal-title');
         const badgeEl = document.getElementById('lightbox-active-step-text');
         const btnAll = document.getElementById('btn-lb-step-all');
