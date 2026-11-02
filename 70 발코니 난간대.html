@@ -4,9 +4,9 @@
   <!-- Same-version boot dependencies: fetch early without changing script execution order. -->
   <link rel="preconnect" href="https://cdnjs.cloudflare.com">
   <link rel="preconnect" href="https://cdn.jsdelivr.net">
-  <link rel="preload" as="script" href="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
   <link rel="preload" as="script" href="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
   <link rel="preload" as="script" href="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js">
+  <link rel="prefetch" as="script" href="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -4857,10 +4857,9 @@ body.model-fullscreen #model-fullscreen-open{display:none}
 
 #web-save-progress{position:fixed;right:16px;bottom:16px;z-index:1999999;width:min(360px,calc(100vw - 32px));box-sizing:border-box;background:#101c2d;color:#e2e8f0;border:1px solid #38bdf8;border-radius:9px;padding:12px;box-shadow:0 8px 30px #0009;font:12px/1.5 sans-serif}#web-save-progress[hidden]{display:none!important}#web-save-progress.in-dialog{position:static;width:auto;flex-shrink:0;box-shadow:none;padding:8px 10px}#web-save-progress[data-stage=error]{border-color:#f59e0b}#web-save-progress[data-stage=done]{border-color:#10b981}.wsp-head{display:flex;align-items:center;gap:10px}.wsp-head strong{flex:1}.wsp-head button{background:none;border:0;color:inherit;cursor:pointer;font-size:18px}#wsp-detail{color:#b7c8dc;margin-top:3px;overflow-wrap:anywhere}.wsp-track{height:4px;background:#334155;border-radius:4px;margin-top:8px;overflow:hidden}.wsp-track i{display:block;height:100%;background:#38bdf8;transition:width .2s}#web-save-progress[data-stage=done] .wsp-track i{background:#10b981}.web-saving::after{content:' · 저장 중';font-size:10px;opacity:.85}#sync-conflict-modal{position:fixed;inset:5% 4%;z-index:2000000;background:#101c2d;border:1px solid #64748b;border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px;color:#e2e8f0;box-shadow:0 12px 60px #000b;box-sizing:border-box}#sync-conflict-modal h3,#sync-conflict-modal p{margin:0}.sync-conflict-body{overflow:auto;flex:1;min-height:0;overscroll-behavior:contain}.sync-conflict-row{display:grid;grid-template-columns:2fr 2fr 2fr minmax(150px,1fr);gap:10px;padding:8px;border-bottom:1px solid #334155;overflow-wrap:anywhere}.sync-conflict-row select{background:#1e293b;color:#f1f5f9;border:1px solid #64748b;border-radius:4px;padding:6px;max-width:100%}.sync-conflict-actions{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}.sync-conflict-actions button:disabled{opacity:.4;cursor:not-allowed}#sync-conflict-count{font-size:12px;color:#7dd3fc;flex-shrink:0}@media(max-width:700px){#sync-conflict-modal{inset:8px;padding:12px;gap:8px}#sync-conflict-modal h3{font-size:16px}.sync-conflict-row{grid-template-columns:1fr 1fr}.sync-conflict-row>span:first-child{grid-column:1/-1}.sync-conflict-row select{grid-column:1/-1}.sync-conflict-actions button{flex:1 1 42%;padding:9px!important}}
 </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <style>
 /* Phase 69: 건물주 범위 선택. 제외 요소도 hover 툴팁을 제공한다. */
 #owner-workspace-container { display:none; overflow:auto; flex:1; min-height:0; padding:24px; background:#0f172a; color:#e2e8f0; }
@@ -5207,7 +5206,7 @@ body.model-fullscreen #model-fullscreen-open{display:none}
       <!-- 모달 이미지 뷰어 (단계별 동적 크롭 & 전체 뷰 동기화) -->
       <div class="modal-viewport-wrap" style="position: relative; flex: 1; min-height: 0; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; padding: 6px;">
         <div id="lightbox-img-viewport" style="position: relative; width: 100%; max-width: 100%; max-height: 100%; aspect-ratio: 1200 / 670; overflow: hidden; border-radius: 6px; display: flex; align-items: center; justify-content: center;" onclick="ConstructionSpoolGuideManager.openAlbum()" title="클릭 시 구글 포토 현장 실사 앨범 웹페이지로 이동합니다.">
-          <img id="img-lightbox-guide" src="https://lh3.googleusercontent.com/pw/AP1GczPoxnirQXZHSuSSorI_Dyhm65cu5gsUQycvSZiTkMGeOhL6gVkWtiiCg2s8bFUibJMpHQU2QDpZgtSWa97zt814vuiU1ytXLpcvLiyRbMsPYD7b5KIn=w1200" alt="발코니 난간대 외벽 접합부 현장 시공 매커니즘 고화질 뷰" style="width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: 0% 0%; transform: scale(2.02); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); cursor: pointer;" />
+          <img id="img-lightbox-guide" src="https://lh3.googleusercontent.com/pw/AP1GczPoxnirQXZHSuSSorI_Dyhm65cu5gsUQycvSZiTkMGeOhL6gVkWtiiCg2s8bFUibJMpHQU2QDpZgtSWa97zt814vuiU1ytXLpcvLiyRbMsPYD7b5KIn=w1200" alt="발코니 난간대 외벽 접합부 현장 시공 매커니즘 고화질 뷰" loading="lazy" referrerpolicy="no-referrer" style="width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: 0% 0%; transform: scale(2.02); transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1); cursor: pointer;" />
           
           <!-- 라이트박스 오버레이 배너 -->
           <div id="lightbox-active-step-badge" style="position: absolute; top: 10px; left: 10px; z-index: 8; background: rgba(2, 132, 199, 0.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid #38bdf8; border-radius: 6px; padding: 5px 10px; font-size: 11px; color: #ffffff; font-weight: 800; box-shadow: 0 4px 12px rgba(0,0,0,0.6); pointer-events: none;">
@@ -11585,7 +11584,8 @@ const WorkbookManager = {
           id: 'sheet-site',
           name: '평면 배치',
           type: 'sitemap',
-          data: getSiteMapCatalogData(),
+          get data() { return this._data || (this._data = getSiteMapCatalogData()); },
+          set data(v) { this._data = v; },
           activeCell: 'A1',
           rowCount: 22,
           colCount: 12
@@ -11594,7 +11594,8 @@ const WorkbookManager = {
           id: 'sheet-summary',
           name: '점검 집계표',
           type: 'summary',
-          data: getInspectionSummarySpreadsheetData(),
+          get data() { return this._data || (this._data = getInspectionSummarySpreadsheetData()); },
+          set data(v) { this._data = v; },
           activeCell: 'A1',
           rowCount: 35,
           colCount: 16
@@ -11603,7 +11604,8 @@ const WorkbookManager = {
           id: 'sheet-1',
           name: '건물동 현황',
           type: 'grid',
-          data: getBuildingStatusData(),
+          get data() { return this._data || (this._data = getBuildingStatusData()); },
+          set data(v) { this._data = v; },
           activeCell: 'A1',
           rowCount: 45,
           colCount: 15
@@ -11612,7 +11614,8 @@ const WorkbookManager = {
           id: 'sheet-rooms',
           name: '입면 배치',
           type: 'rooms',
-          data: getRoomsSpreadsheetData(),
+          get data() { return this._data || (this._data = getRoomsSpreadsheetData()); },
+          set data(v) { this._data = v; },
           activeCell: 'A1',
           rowCount: 320,
           colCount: 16
@@ -18410,54 +18413,61 @@ const WorkbookManager = {
       RenderScheduler.install();
       setupDaylight();
 
-      // 건축 파사드 & 창호 & 난간대 구축
+      // [Phase 119 OPTIMIZED] 1단계: 핵심 3D 건축 파사드 및 난간대 즉각 구축 (0ms 즉시 표출)
       buildRealFacade();
       buildHandrail();
-      buildAnchorDefects();
-      buildLadderBracket();
-      buildInspectionPins();
-      buildAxisIndicator();
-      buildXAxisIndicator(); // [Phase 35] 3D 중심 X축 가이드 인디케이터 초기화
-      buildAnchorClickTargets();
 
-      // 시작 시점: 사람이 지상 아래에서 2층 베란다 창호 및 난간대를 위로 올려다보는 실사 상향 시선 뷰 (Low-Angle Upward View, 팝업창 없이 100% 클린한 화면으로 시작!)
+      // 시작 시점: 사람이 지상 아래에서 2층 베란다 창호 및 난간대를 위로 올려다보는 실사 상향 시선 뷰
       setCameraView('facade', false);
 
-      // [Phase 74] 첫 화면부터 같은 정밀 재질·전체 형상을 한 번에 표시한다. 실제 지연은 성능 보고서로 확인한다.
+      // [Phase 119] 1단계: 3D 모델링 첫 프레임 즉각 렌더링 (블로킹 지연 완전 제거)
       if (renderer && scene && camera) {
         renderFirstModelFrame();
       }
-      requestAnimationFrame(()=>requestAnimationFrame(()=>{
 
-      // 통합 윈도우 매니저 시스템 초기화 및 하단 도크 드래그/물방울 접기 활성화
-      WindowManager.initAll();
-      // [Phase 32] Autodesk Viewer 3D 카메라 히스토리 매니저 초기화
-      CameraHistoryManager.init();
-      updateAnchorBaseUI();
-      renderAnchorDefectList();
-      initMinimapInteraction();
-      initDraggableDock();
-      initRotPanelWheelControls(); // [Phase 35] 마우스 휠 민감도 실시간 연동 초기화
-      initToolbarHorizontalWheelScroll(); // [Phase 37] 하단 2대 툴바 마우스 휠 가로 스크롤 초기화
-      WorkbookManager.init();
+      // [Phase 119 OPTIMIZED] 2단계: 첫 프레임 표출 직후 보조 부재 및 매니저 비차단 백그라운드 로드
+      requestAnimationFrame(() => {
+        buildAnchorDefects();
+        buildLadderBracket();
+        buildInspectionPins();
+        buildAxisIndicator();
+        buildXAxisIndicator();
+        buildAnchorClickTargets();
 
-      PivotDragController.install();
-      window.addEventListener('resize', onResize);
-      renderer.domElement.addEventListener('click', onCanvasClick);
-      renderer.domElement.addEventListener('dblclick', (e) => {
-        stopAll3DMotion();
+        if (typeof RenderScheduler !== 'undefined' && RenderScheduler) {
+          RenderScheduler.shadowDirty = true;
+          RenderScheduler.request(true);
+        }
+
+        // 통합 윈도우 매니저 시스템 초기화 및 하단 도크 드래그/물방울 접기 활성화
+        WindowManager.initAll();
+        CameraHistoryManager.init();
+        updateAnchorBaseUI();
+        renderAnchorDefectList();
+        initMinimapInteraction();
+        initDraggableDock();
+        initRotPanelWheelControls();
+        initToolbarHorizontalWheelScroll();
+        WorkbookManager.init();
+
+        PivotDragController.install();
+        window.addEventListener('resize', onResize);
+        renderer.domElement.addEventListener('click', onCanvasClick);
+        renderer.domElement.addEventListener('dblclick', (e) => {
+          stopAll3DMotion();
+        });
+        window.addEventListener('pointerdown', onCanvasMouseDown, { capture: true });
+        renderer.domElement.addEventListener('mousedown', onCanvasMouseDown);
+        window.addEventListener('mouseup', onCanvasMouseUp);
+        renderer.domElement.addEventListener('mousemove', onCanvasMouseMove);
+        window.addEventListener('keydown', onKeyDown);
+        window.addEventListener('keyup', onKeyUp);
+
+        start3DAnimationLoop();
+        if (window.RAIL_STARTUP_METRICS) {
+          window.RAIL_STARTUP_METRICS.interactiveAt = performance.now();
+        }
       });
-      window.addEventListener('pointerdown', onCanvasMouseDown, { capture: true });
-      renderer.domElement.addEventListener('mousedown', onCanvasMouseDown);
-      window.addEventListener('mouseup', onCanvasMouseUp);
-      renderer.domElement.addEventListener('mousemove', onCanvasMouseMove);
-      window.addEventListener('keydown', onKeyDown);
-      window.addEventListener('keyup', onKeyUp);
-
-      // [Phase 68] 3D 루프 관리자 호출 (모델링 탭 진입 시에만 60FPS 가동)
-      start3DAnimationLoop();
-      RAIL_STARTUP_METRICS.interactiveAt=performance.now();
-      }));
     }
 
     function setupDaylight() {
