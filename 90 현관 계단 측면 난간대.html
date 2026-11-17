@@ -1216,7 +1216,7 @@
         <span>📷</span> <span>도면·사진</span>
       </button>
       <button id="btnToggleXray" class="px-2 py-1 rounded-md text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-600 transition whitespace-nowrap">
-        🔍 X-Ray: OFF
+        🔍 시공 단면: OFF
       </button>
       <button id="btnToggleLabels" class="px-2 py-1 rounded-md text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-600 transition whitespace-nowrap">
         📏 치수: OFF
@@ -1234,6 +1234,7 @@
     <div id="viewportContainer" class="flex-1 relative overflow-hidden bg-[#829bb0]">
       <canvas id="threeCanvas" class="w-full h-full block"></canvas>
 
+      <div id="constructionInspectionNote" style="display:none;position:absolute;left:12px;top:12px;z-index:20;max-width:75%;padding:8px 12px;border-radius:8px;background:rgba(15,23,42,.92);color:#e2e8f0;font-size:12px;pointer-events:none"></div>
       <!-- 3D 동적 라벨 오버레이 레이어 -->
       <div id="labelsContainer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
 
@@ -1342,6 +1343,7 @@
             <button data-cam="coreCutaway" class="cam-btn px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-600/40 transition whitespace-nowrap">
               5. 습식코어 타공 단면뷰
             </button>
+            <button data-cam="underside" class="cam-btn px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-amber-300 border border-amber-600/40 transition whitespace-nowrap">계단 하부 점검</button>
             <button data-cam="walkthrough" id="btnWalkMode" class="cam-btn px-2.5 py-1 rounded-md text-xs font-semibold bg-slate-800/90 hover:bg-slate-700 text-emerald-300 border border-emerald-600/40 transition whitespace-nowrap">
               🚶 6. 1인칭 보행 워크뷰
             </button>
@@ -2427,7 +2429,7 @@
     controls.enableDamping = true;
     controls.dampingFactor = 0.06;
     controls.target.set(0.1, 0.45, -0.30);
-    controls.maxPolarAngle = Math.PI * 0.52; // 지하 단면도 볼 수 있도록 약간 허용
+    controls.maxPolarAngle = Math.PI * 0.90; // 지하 단면도 볼 수 있도록 약간 허용
     controls.minDistance = 0.35;
     controls.maxDistance = 14;
 
@@ -2730,6 +2732,26 @@
       return geometry;
     }
 
+    function createConstructionGrain(base, spread) {
+      const c = document.createElement('canvas'); c.width = c.height = 256;
+      const ctx = c.getContext('2d'); const pixels = ctx.createImageData(256,256);
+      let seed = 417;
+      for (let i = 0; i < pixels.data.length; i += 4) {
+        seed = (1664525*seed + 1013904223) >>> 0;
+        const grain = ((seed / 4294967296) - 0.5) * spread;
+        for (let k = 0; k < 3; k++) pixels.data[i+k] = base[k] + grain;
+        pixels.data[i+3] = 255;
+      }
+      ctx.putImageData(pixels,0,0);
+      const texture = new THREE.CanvasTexture(c);
+      texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+      texture.repeat.set(3,3);
+      return texture;
+    }
+    const concreteGrain = createConstructionGrain([164,168,161],35);
+    const mortarGrain = createConstructionGrain([191,186,174],20);
+    const sandGrain = createConstructionGrain([187,168,126],55);
+
     const envMapTex = createDaylightEquirectEnvMap();
     const stsHairlineTex = createStainlessHairlineTexture();
     const granitePocheonTex = createPocheonGraniteTexture();
@@ -2768,12 +2790,15 @@
         metalness: 0.0
       }),
       concreteSub: new THREE.MeshStandardMaterial({
-        color: 0xa5a097,
+        map: concreteGrain,
+        color: 0xb0b0b0,
         roughness: 0.85,
         metalness: 0.04,
         transparent: false,
         opacity: 1.0
       }),
+      beddingMortar: new THREE.MeshStandardMaterial({map: mortarGrain, roughness: 0.98, side: THREE.DoubleSide}),
+      compactedSand: new THREE.MeshStandardMaterial({map: sandGrain, roughness: 1, side: THREE.DoubleSide}),
       asphalt: new THREE.MeshStandardMaterial({
         color: 0x2e343d,
         roughness: 0.90,
@@ -2834,11 +2859,10 @@
         side: THREE.DoubleSide
       }),
       groutMortar: new THREE.MeshStandardMaterial({
-        color: 0xf59e0b,
-        roughness: 0.6,
-        metalness: 0.1,
-        emissive: 0x78350f,
-        emissiveIntensity: 0.28
+        color: 0xc1beb2,
+        roughness: 0.95,
+        metalness: 0,
+        side: THREE.DoubleSide
       }),
       welcomeMat: new THREE.MeshStandardMaterial({
         color: 0x1e293b,
@@ -2949,12 +2973,75 @@
       // Z = 0 : 1단 계단 챌면(Riser) 시작선 (전면 도로 측)
       // Z = -totalRun : 최상단 포치 바닥(Landing) 시작선
 
-      // X-Ray 투명도 반영
-      const isCutawayOrXray = state.xrayMode || state.activeCamPreset === 'coreCutaway';
-      materials.graniteStep.transparent = isCutawayOrXray;
-      materials.graniteStep.opacity = isCutawayOrXray ? 0.38 : 1.0;
-      materials.graniteRamp.transparent = isCutawayOrXray;
-      materials.graniteRamp.opacity = isCutawayOrXray ? 0.45 : 1.0;
+      // 점검은 불투명 절단 형상으로 표시한다.
+      const sectionView = state.xrayMode || state.activeCamPreset === 'coreCutaway';
+      const undersideView = state.activeCamPreset === 'underside';
+      const inspectionView = sectionView || undersideView;
+      const sectionButton = document.getElementById('btnToggleXray');
+      sectionButton.textContent = `🔍 시공 단면: ${sectionView ? 'ON' : 'OFF'}`;
+      sectionButton.setAttribute('aria-pressed', String(sectionView));
+      const sectionX = -offsetEdge;
+      const borePositions = Array.from({length: N + 1}, (_, i) => ({
+        x: sectionX, z: i === 0 ? 0.5 * T : -(i - 0.5) * T,
+        floorY: i * R
+      }));
+      for (const mat of [materials.graniteStep, materials.graniteRamp, materials.concreteSub]) {
+        mat.transparent = false; mat.opacity = 1; mat.depthWrite = true;
+        mat.side = THREE.DoubleSide; mat.needsUpdate = true;
+      }
+      gridHelper.visible = !inspectionView;
+      const inspectionNote = document.getElementById('constructionInspectionNote');
+      inspectionNote.style.display = inspectionView ? 'block' : 'none';
+      inspectionNote.textContent = sectionView
+        ? '추정 시공 단면 · 석재 30 / 모르타르 35mm · 콘크리트 · 기초 하부 모래 50mm | 코어 Ø' + state.coreHoleDia + ' · 매립 ' + state.coreHoleDepth + 'mm (현장 단면 미확인)'
+        : '하부 점검 · 도로를 숨겨 불투명 기초 저면 표시 | 내부 매립부는 상단 「시공 단면」으로 확인';
+
+      // Closed layer solids with actual bores; section outlines include semicircular bore notches.
+      const addConstructionLayer = (name, xMin, xMax, zMin, zMax, yMin, yMax, material, drill = true) => {
+        if (sectionView) xMax = Math.min(xMax, sectionX);
+        if (xMax <= xMin || yMax <= yMin) return;
+        const candidates = drill ? borePositions.filter(pt => pt.x > xMin && pt.x <= xMax && pt.z > zMin && pt.z < zMax) : [];
+        const levels = [yMin, yMax];
+        for (const pt of candidates) {
+          const bottom = pt.floorY - H_core;
+          if (bottom > yMin && bottom < yMax) levels.push(bottom);
+          if (pt.floorY > yMin && pt.floorY < yMax) levels.push(pt.floorY);
+        }
+        levels.sort((a,b) => a-b);
+        for (let k = 0; k < levels.length - 1; k++) {
+          const low = levels[k], high = levels[k+1];
+          if (high - low < 0.000001) continue;
+          const active = candidates.filter(pt => (low + high) / 2 > pt.floorY - H_core && (low + high) / 2 < pt.floorY);
+          const edgeBores = active.filter(pt => Math.abs(pt.x - xMax) < 1e-8).sort((a,b) => a.z-b.z);
+          const shape = new THREE.Shape();
+          shape.moveTo(xMin, -zMin); shape.lineTo(xMax, -zMin);
+          const radius = D_core / 2;
+          for (const pt of edgeBores) {
+            shape.lineTo(xMax, -(pt.z - radius));
+            for (let j = 1; j <= 32; j++) {
+              const t = j / 32 * Math.PI;
+              shape.lineTo(pt.x - radius * Math.sin(t), -(pt.z - radius * Math.cos(t)));
+            }
+          }
+          shape.lineTo(xMax, -zMax); shape.lineTo(xMin, -zMax); shape.closePath();
+          for (const pt of active.filter(pt => pt.x < xMax - radius)) {
+            const hole = new THREE.Path(); hole.absarc(pt.x, -pt.z, radius, 0, Math.PI * 2, true); shape.holes.push(hole);
+          }
+          const geo = new THREE.ExtrudeGeometry(shape, {depth: high-low, bevelEnabled: false, curveSegments: 32});
+          geo.rotateX(-Math.PI / 2); geo.translate(0, low, 0);
+          const mesh = new THREE.Mesh(stoneWorldUV(geo), material);
+          mesh.name = name; mesh.castShadow = mesh.receiveShadow = true;
+          mesh.userData.constructionLayer = true;
+          mesh.userData.bounds = {xMin,xMax,zMin,zMax,yMin:low,yMax:high};
+          envGroup.add(mesh);
+        }
+      };
+      const addFinishedFloor = (name, xMin, xMax, zMin, zMax, floorY, riser = false) => {
+        const backingZMax = riser ? zMax - 0.025 : zMax;
+        addConstructionLayer(name + '-concrete', xMin,xMax,zMin,backingZMax,0,floorY-0.065,materials.concreteSub);
+        addConstructionLayer(name + '-mortar', xMin,xMax,zMin,backingZMax,floorY-0.065,floorY-0.030,materials.beddingMortar);
+        addConstructionLayer(name + '-stone', xMin,xMax,zMin,zMax,floorY-0.030,floorY,materials.graniteStep);
+      };
 
       // 1) 전면 아스팔트 도로 및 콘크리트 앞마당(Apron)
       const roadGeo = new THREE.BoxGeometry(12, 0.16, 8);
@@ -2970,69 +3057,27 @@
       apronMesh.receiveShadow = true;
       envGroup.add(apronMesh);
 
-      // 계단 1단 앞마당 화강석 바닥 포장 판석 (X: -W_stair ~ 0, Z: 0 ~ +0.70m, Y = 0)
-      // [현장 실사 사진 1(media_1794884518154_8f3b94e2.jpg) 100% 동일]
-      // 계단 1단 전면에 깔려 있는 대형 화강석 바닥 판석 포장 (P1 지주가 코어로 타공 매립되는 하부 바닥)
-      const frontPaveGeo = new THREE.BoxGeometry(W_stair, 0.030, 0.70);
-      const frontPaveMesh = new THREE.Mesh(stoneWorldUV(frontPaveGeo), materials.graniteStep);
-      frontPaveMesh.position.set(-W_stair / 2, -0.015, 0.35);
-      frontPaveMesh.receiveShadow = true;
-      envGroup.add(frontPaveMesh);
-
-      // 2) 계단(Steps) 생성 (중간 디딤판 N-1개 생성: X in [-W_stair, 0])
+      roadMesh.visible = apronMesh.visible = !inspectionView;
+      // 추정 시공 단면. 마감 높이를 공유하고 체적이 겹치지 않도록 분리.
+      addFinishedFloor('front-paving', -W_stair, 0, 0, 0.70, 0);
       for (let i = 0; i < N - 1; i++) {
-        const stepH = (i + 1) * R;
-        const zFront = -i * T;
-        const zBack = -(i + 1) * T;
-        const stepGeo = new THREE.BoxGeometry(W_stair, stepH, T);
-        const stepMesh = new THREE.Mesh(stoneWorldUV(stepGeo), materials.graniteStep);
-        stepMesh.position.set(-W_stair / 2, stepH / 2, (zFront + zBack) / 2);
-        stepMesh.castShadow = true;
-        stepMesh.receiveShadow = true;
-        envGroup.add(stepMesh);
-
-        // 계단 디딤판 코(Nosing) 줄눈 디테일
-        const nosingGeo = new THREE.BoxGeometry(W_stair, 0.03, 0.015);
-        const nosingMesh = new THREE.Mesh(nosingGeo, materials.graniteStep);
-        nosingMesh.position.set(-W_stair / 2, stepH - 0.015, zFront + 0.004);
-        envGroup.add(nosingMesh);
+        addFinishedFloor('stair-' + (i+1), -W_stair, 0, -(i+1)*T, -i*T, (i+1)*R, true);
+        // 챌면 석재는 기존 외곽 안에서만 배치한다.
+        addConstructionLayer('stair-riser', -W_stair, 0, -i*T-0.025, -i*T,
+          0, (i+1)*R-0.030, materials.graniteStep, false);
       }
-
-      // 추정 시공층: 다짐 모래 위 시멘트 모르타르. 실측 단면 자료 없음.
-      const sandMat = new THREE.MeshStandardMaterial({color: 0xb7aa8d, roughness: 1});
-      const mortarMat = new THREE.MeshStandardMaterial({color: 0xaaa69d, roughness: 0.95});
-      for (let i = 0; i < N - 1; i++) {
-        const height = (i + 1) * R;
-        const fillHeight = Math.max(0.01, height - 0.065);
-        const fill = new THREE.Mesh(new THREE.BoxGeometry(W_stair, fillHeight, T), sandMat);
-        fill.position.set(-W_stair / 2, fillHeight / 2, -(i + 0.5) * T);
-        envGroup.add(fill);
-        const bed = new THREE.Mesh(new THREE.BoxGeometry(W_stair, 0.035, T), mortarMat);
-        bed.position.set(-W_stair / 2, height - 0.0475, -(i + 0.5) * T);
-        envGroup.add(bed);
-      }
-
-      // 하부 콘크리트 기초 슬래브 (단면/X-ray 시 코어홀 매립부 확인용)
-      const subBaseGeo = new THREE.BoxGeometry(W_stair + W_ramp, 0.25, totalRun + 2.5);
-      const subBaseMesh = new THREE.Mesh(subBaseGeo, materials.concreteSub);
-      subBaseMesh.position.set((-W_stair + W_ramp) / 2, -0.125, -(totalRun + 1.2) / 2 + 0.3);
-      envGroup.add(subBaseMesh);
-
-      // 3) 상부 포치 슬래브 (Landing, Z: -totalRun ~ -totalRun - 2.2, 높이 totalRise)
       const landingDepth = 2.2;
       const landingWidth = W_stair + W_ramp + 0.8;
-      const landingGeo = new THREE.BoxGeometry(landingWidth, totalRise, landingDepth);
-      const landingMesh = new THREE.Mesh(stoneWorldUV(landingGeo), materials.graniteStep);
-      landingMesh.position.set((-W_stair + W_ramp) / 2, totalRise / 2, -totalRun - landingDepth / 2);
-      landingMesh.receiveShadow = true;
-      landingMesh.castShadow = true;
-      envGroup.add(landingMesh);
-
-      // 상부 포치 전면 챌면 줄눈
-      const landingNosingGeo = new THREE.BoxGeometry(W_stair, 0.03, 0.015);
-      const landingNosingMesh = new THREE.Mesh(landingNosingGeo, materials.graniteStep);
-      landingNosingMesh.position.set(-W_stair / 2, totalRise - 0.015, -totalRun + 0.004);
-      envGroup.add(landingNosingMesh);
+      const landingCenterX = (-W_stair + W_ramp) / 2;
+      addFinishedFloor('landing', landingCenterX-landingWidth/2, landingCenterX+landingWidth/2,
+        -totalRun-landingDepth, -totalRun, totalRise);
+      // 기초 상면은 P1 석재·모르타르 하부에 접하며 코어 바닥 아래는 막힌 콘크리트이다.
+      const foundationBottom = -Math.max(0.25, H_core + 0.05);
+      const foundationBack = -totalRun-landingDepth;
+      addConstructionLayer('foundation-front', -W_stair,W_ramp,0,0.70,foundationBottom,-0.065,materials.concreteSub);
+      addConstructionLayer('foundation-rear', -W_stair,W_ramp,foundationBack,0,foundationBottom,0,materials.concreteSub);
+      addConstructionLayer('compacted-sand', -W_stair,W_ramp,foundationBack,0.70,
+        foundationBottom-0.05,foundationBottom,materials.compactedSand,false);
 
       // 출입구 현관 매트 (Welcome Mat)
       const matGeo = new THREE.BoxGeometry(1.35, 0.012, 0.75);
@@ -3064,6 +3109,7 @@
       const rampBaseMesh = new THREE.Mesh(rampBaseGeo, materials.concreteSub);
       rampBaseMesh.position.set(W_ramp, 0, 0);
       rampBaseMesh.receiveShadow = true;
+      rampBaseMesh.visible = !sectionView;
       envGroup.add(rampBaseMesh);
 
       // (b) [실사 카운트 100% 일치] 정확히 5장의 개별 화강석 판석 (T32 Pocheon Granite Slabs)
@@ -3105,6 +3151,7 @@
         );
         slabMesh.castShadow = true;
         slabMesh.receiveShadow = true;
+        slabMesh.visible = !sectionView;
         envGroup.add(slabMesh);
 
         // 판석 사이 줄눈 (Dark Cement Mortar Joint)
@@ -3115,6 +3162,7 @@
           const jointMesh = new THREE.Mesh(jointGeo, materials.granitePillar);
           jointMesh.rotation.x = rampSlopeAngle;
           jointMesh.position.set(W_ramp / 2, jointY - 0.006, jointZ);
+          jointMesh.visible = !sectionView;
           envGroup.add(jointMesh);
         }
       }
@@ -3135,6 +3183,7 @@
       sideFacadeMesh.position.set(0.030, 0, 0);
       sideFacadeMesh.castShadow = true;
       sideFacadeMesh.receiveShadow = true;
+      sideFacadeMesh.visible = !sectionView;
       envGroup.add(sideFacadeMesh);
 
       // 현장 사진의 평면 석재 벽·사각 기둥. 사진에 없는 감실/띠장은 만들지 않는다.
@@ -3284,6 +3333,7 @@
         const holeGeo = new THREE.CylinderGeometry(D_core / 2, D_core / 2, H_core, 28, 1, true);
         const holeMesh = new THREE.Mesh(holeGeo, materials.coreHoleWall);
         holeMesh.position.set(pt.x, pt.floorY - H_core / 2, pt.z);
+        holeMesh.visible = false;
         coreAssemblyGroup.add(holeMesh);
 
         // (c) 코어 타공 시 추출되는 화강석 코어 슬러그 (Step 2 연출용)
@@ -3295,7 +3345,21 @@
         simRefs.coreSlugs.push({ mesh: slugMesh, baseFloorY: pt.floorY, depth: H_core });
 
         // (d) 무수축 모르타르(Non-shrink Grout) 충진 실린더 (Step 4)
-        const groutGeo = new THREE.CylinderGeometry(D_core / 2 - 0.001, D_core / 2 - 0.001, H_core - 0.004, 28);
+        const outerRadius = D_core / 2 - 0.0005;
+        const innerRadius = D_post / 2;
+        const ring = new THREE.Shape();
+        if (sectionView) {
+          ring.moveTo(0, outerRadius);
+          ring.absarc(0, 0, outerRadius, Math.PI/2, Math.PI*1.5, false);
+          ring.lineTo(0, -innerRadius);
+          ring.absarc(0, 0, innerRadius, Math.PI*1.5, Math.PI/2, true);
+          ring.closePath();
+        } else {
+          ring.absarc(0,0,outerRadius,0,Math.PI*2,false);
+          const voidPath = new THREE.Path(); voidPath.absarc(0,0,innerRadius,0,Math.PI*2,true); ring.holes.push(voidPath);
+        }
+        const groutGeo = new THREE.ExtrudeGeometry(ring, {depth:H_core-0.004,bevelEnabled:false,curveSegments:32});
+        groutGeo.rotateX(-Math.PI/2); groutGeo.translate(0,-(H_core-0.004)/2,0);
         const groutMesh = new THREE.Mesh(groutGeo, materials.groutMortar);
         groutMesh.position.set(pt.x, pt.floorY - H_core / 2, pt.z);
         coreAssemblyGroup.add(groutMesh);
@@ -4003,6 +4067,7 @@
 
     function switchCameraPreset(presetName) {
       state.activeCamPreset = presetName;
+      state.xrayMode = presetName === 'coreCutaway';
       state.walkMode = (presetName === 'walkthrough');
 
       document.querySelectorAll('.cam-btn').forEach((btn) => {
@@ -4041,9 +4106,14 @@
           target: new THREE.Vector3(railX, 0.65, -0.30)
         },
         coreCutaway: {
-          label: "습식 코어 타공 단면 확대뷰 (P1 지주 매립부)",
-          pos: new THREE.Vector3(railX + 0.62, 0.28, 0.5 * T + 0.42),
-          target: new THREE.Vector3(railX, 0.04, 0.5 * T)
+          label: "추정 시공층·습식코어 불투명 단면 (P1~P4)",
+          pos: new THREE.Vector3(railX + 1.35, 0.40, 0.85),
+          target: new THREE.Vector3(railX, totalRise * 0.35, -totalRun * 0.45)
+        },
+        underside: {
+          label: "계단 하부 점검 (도로 숨김)",
+          pos: new THREE.Vector3(railX + 1.0, -0.90, 1.15),
+          target: new THREE.Vector3(railX-0.5, -0.18, -totalRun * 0.5)
         },
         walkthrough: {
           label: "1인칭 보행자 워크뷰 (눈높이 1.65m)",
@@ -4055,7 +4125,7 @@
       const cfg = presets[presetName] || presets.iso;
       document.getElementById('activeViewBadge').textContent = cfg.label;
 
-      // 코어 단면뷰 선택 시 자동으로 바닥 반투명 X-ray 활성화하여 내부 매립 구조 노출
+      // 코어 단면뷰는 불투명 실제 절단 형상으로 내부 매립 구조 표시
       buildParametricScene();
 
       if (state.walkMode) {
@@ -4230,13 +4300,9 @@
     });
 
     // 상단 툴바 버튼
-    document.getElementById('btnToggleXray').addEventListener('click', (e) => {
-      state.xrayMode = !state.xrayMode;
-      e.currentTarget.textContent = `🔍 바닥 X-Ray 투시: ${state.xrayMode ? 'ON' : 'OFF'}`;
-      e.currentTarget.className = state.xrayMode
-        ? "px-2.5 py-1.5 rounded-lg text-xs font-bold bg-amber-500 text-slate-950 border border-amber-300 transition"
-        : "px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-600 transition";
-      buildParametricScene();
+    document.getElementById('btnToggleXray').addEventListener('click', () => {
+      const active = state.xrayMode || state.activeCamPreset === 'coreCutaway';
+      switchCameraPreset(active ? 'iso' : 'coreCutaway');
     });
 
     function updateLabelToggleUI() {
