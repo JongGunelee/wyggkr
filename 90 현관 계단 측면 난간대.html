@@ -3670,11 +3670,107 @@
       }
       for(const y of [winBottom,winTop])piece('window-frame',windowRight-windowLeft,.055,.10,(windowLeft+windowRight)/2,y,frontFace+.02,creamMat);
 
-      const acX=(windowLeft+windowRight)/2-.3;
-      piece('air-conditioner',.90,.64,.32,acX,.69,frontFace+.21,creamMat);
-      const fan=new THREE.Mesh(new THREE.TorusGeometry(.23,.013,6,32),steelMat);fan.position.set(acX-.13,.69,frontFace+.385);envGroup.add(fan);
-      const fanLines=[];for(let i=0;i<16;i++){const angle=i*Math.PI/8;fanLines.push(acX-.13,.69,frontFace+.385,acX-.13+Math.cos(angle)*.22,.69+Math.sin(angle)*.22,frontFace+.385);}
-      const grille=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(fanLines,3)),new THREE.LineBasicMaterial({color:0x656c69}));envGroup.add(grille);
+      // 사진의 실외기와 벽 고정 프레임을 한 어셈블리로 구성한다. +Z가 전면이다.
+      {
+        const unit=new THREE.Group();unit.name='wall-mounted-air-conditioner';
+        unit.position.set((windowLeft+windowRight)/2-.3,.595,frontFace);
+        const finish=(color,roughness,metalness=0)=>{
+          const material=new THREE.MeshStandardMaterial({color,roughness,metalness});
+          material.color.convertSRGBToLinear();
+          return material;
+        };
+        const chassisMat=finish(0xa7a9a5,.73);
+        const panelMat=finish(0x868b85,.76);
+        const ductMat=finish(0x2d302f,.94);
+        const bladeMat=finish(0x4b514d,.75);
+        const grilleMat=finish(0x545854,.7,.25);
+        const bracketMat=finish(0x918d80,.62,.42);
+        const attach=(name,geometry,material,x=0,y=0,z=0)=>{
+          const m=new THREE.Mesh(geometry,material);m.name=name;m.position.set(x,y,z);
+          m.castShadow=true;m.receiveShadow=false;unit.add(m);return m;
+        };
+        const box=(name,w,h,d,x,y,z,mat)=>attach(name,new THREE.BoxGeometry(w,h,d),mat,x,y,z);
+        const rod=(name,a,b,size,mat)=>{
+          const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),direction=end.clone().sub(start);
+          const midpoint=start.clone().lerp(end,.5);
+          const m=box(name,size,direction.length(),size,midpoint.x,midpoint.y,midpoint.z,mat);
+          m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());return m;
+        };
+        const disk=(name,r,t,x,y,z,mat)=>{
+          const geometry=new THREE.CylinderGeometry(r,r,t,40);geometry.rotateX(Math.PI/2);
+          return attach(name,geometry,mat,x,y,z);
+        };
+
+        // 관통 개구부 뒤로 팬 날개를 물리고, 별도 안전망을 전면에 둔다.
+        const halfW=.450,halfH=.296,round=.015,fanX=-.145,fanY=-.006,fanR=.236,faceZ=.381;
+        const front=new THREE.Shape();
+        front.moveTo(-halfW+round,-halfH);front.lineTo(halfW-round,-halfH);
+        front.quadraticCurveTo(halfW,-halfH,halfW,-halfH+round);front.lineTo(halfW,halfH-round);
+        front.quadraticCurveTo(halfW,halfH,halfW-round,halfH);front.lineTo(-halfW+round,halfH);
+        front.quadraticCurveTo(-halfW,halfH,-halfW,halfH-round);front.lineTo(-halfW,-halfH+round);
+        front.quadraticCurveTo(-halfW,-halfH,-halfW+round,-halfH);
+        const aperture=new THREE.Path();aperture.absarc(fanX,fanY,fanR,0,Math.PI*2,true);front.holes.push(aperture);
+        attach('ac-casing-with-fan-opening',new THREE.ExtrudeGeometry(front,{depth:.323,bevelEnabled:false,curveSegments:16}),chassisMat,0,0,faceZ-.323);
+        disk('ac-recess-back',fanR+.001,.012,fanX,fanY,faceZ-.075,ductMat);
+        const blade=new THREE.Shape();blade.moveTo(.039,-.009);
+        blade.quadraticCurveTo(.117,-.014,.200,-.066);blade.quadraticCurveTo(.232,-.040,.216,.028);
+        blade.quadraticCurveTo(.127,.085,.038,.025);blade.closePath();
+        const bladeGeo=new THREE.ExtrudeGeometry(blade,{depth:.006,bevelEnabled:false,curveSegments:6});
+        for(let i=0;i<7;i++){
+          const m=attach('ac-fan-blade',bladeGeo,bladeMat,fanX,fanY,faceZ-.045);
+          m.rotation.z=i*Math.PI*2/7;
+        }
+        disk('ac-fan-motor',.046,.016,fanX,fanY,faceZ-.035,bladeMat);
+        const guardZ=faceZ+.004;
+        for(const r of [.090,.137,.184,.229,.239]){
+          attach('ac-grille-ring',new THREE.TorusGeometry(r,r>.230?.006:.0027,5,56),grilleMat,fanX,fanY,guardZ);
+        }
+        for(let i=0;i<28;i++){
+          const theta=i*Math.PI*2/28;
+          const radial=(r,angle)=>[fanX+r*Math.cos(angle),fanY+r*Math.sin(angle),guardZ];
+          rod('ac-grille-spoke',radial(.046,theta-.10),radial(.235,theta),.004,grilleMat);
+        }
+        disk('ac-grille-center-cap',.044,.010,fanX,fanY,guardZ+.004,chassisMat);
+        box('ac-right-panel-seam',.004,.540,.002,.390,0,faceZ+.001,panelMat);
+        for(let i=0;i<4;i++)box('ac-pressed-panel-detail',.147,.007,.004,.280,-.106-i*.033,faceZ+.001,panelMat);
+        box('ac-side-service-cover',.014,.42,.157,halfW+.002,-.017,.155,panelMat);
+        box('ac-side-service-handle',.021,.124,.025,halfW+.011,-.012,.215,ductMat);
+        const lines=new THREE.CatmullRomCurve3([
+          new THREE.Vector3(.461,-.165,.115),new THREE.Vector3(.486,-.218,.095),
+          new THREE.Vector3(.490,-.257,.049),new THREE.Vector3(.493,-.257,.004)
+        ]);
+        attach('ac-insulated-line',new THREE.TubeGeometry(lines,12,.016,6,false),panelMat);
+
+        // 첨부 사진에 보이는 적색 원형 표식과 문자. HTML 내부에서 생성한다.
+        const badge=document.createElement('canvas');badge.width=128;badge.height=176;
+        const pen=badge.getContext('2d');pen.fillStyle='#90162e';pen.beginPath();pen.arc(64,61,43,0,Math.PI*2);pen.fill();
+        pen.strokeStyle='#f2dfe3';pen.lineWidth=4;pen.lineCap='round';
+        pen.beginPath();pen.arc(64,61,31,-Math.PI/2,.12,true);pen.lineTo(81,65);pen.stroke();
+        pen.beginPath();pen.moveTo(61,40);pen.lineTo(61,78);pen.lineTo(72,78);pen.stroke();
+        pen.fillStyle='#f2dfe3';pen.beginPath();pen.arc(49,48,4.5,0,Math.PI*2);pen.fill();
+        pen.fillStyle='#626b69';pen.font='bold 48px Arial,sans-serif';pen.textAlign='center';pen.fillText('LG',64,155);
+        const badgeMap=new THREE.CanvasTexture(badge);badgeMap.encoding=THREE.sRGBEncoding;
+        const badgeMat=new THREE.MeshStandardMaterial({map:badgeMap,alphaTest:.4,roughness:.8});
+        const badgeMesh=attach('ac-front-badge',new THREE.PlaneGeometry(.157,.216),badgeMat,.279,.131,faceZ+.004);
+        badgeMesh.castShadow=false;
+
+        // 벽면 가로대와 수직 레일에서 사선 보강재와 하부 받침대로 하중 경로를 연결한다.
+        const railX=.529,wallZ=.014,railTop=.384,railBottom=-.330,armZ=.462;
+        box('ac-bracket-top-crossbar',2*railX+.040,.032,.027,0,railTop,wallZ,bracketMat);
+        box('ac-bracket-front-crossbar',2*railX+.040,.034,.045,0,railBottom,armZ,bracketMat);
+        for(const x of [-railX,railX]){
+          box('ac-bracket-wall-rail',.040,railTop-railBottom,.028,x,(railTop+railBottom)/2,wallZ,bracketMat);
+          box('ac-bracket-bottom-arm',.038,.034,armZ-wallZ+.021,x,railBottom,(wallZ+armZ)/2,bracketMat);
+          rod('ac-bracket-diagonal',[x,railTop-.012,wallZ+.011],[x,railBottom+.018,armZ-.010],.027,bracketMat);
+          for(const y of [railTop-.057,railBottom+.051])disk('ac-bracket-wall-bolt',.009,.011,x,y,wallZ+.019,steelMat);
+        }
+        for(const z of [.109,.330]){
+          box('ac-bracket-load-rail',2*railX+.022,.025,.040,0,railBottom+.007,z,bracketMat);
+          for(const x of [-.333,.333])box('ac-isolation-foot',.064,.017,.042,x,-halfH-.006,z,ductMat);
+        }
+        mergeStaticGroup(unit);
+        envGroup.add(unit);
+      }
       // 외부 출입문: 상부 고정 유리, 양측 고정창, 얇은 금속 프레임, 열린 양개 강화유리문.
       const doorZ=frontFace+.02,transomY=doorBase+2.0;
       for(const x of [leftDoor,leftDoor+.4,rightDoor-.4,rightDoor])piece('door-frame',.035,doorHeight,.055,x,doorBase+doorHeight/2,doorZ,steelMat);
@@ -3717,7 +3813,7 @@
       const roofBase=new THREE.Mesh(roofGeo,baseMaterial);roofBase.name='hipped-tile-roof';roofBase.castShadow=true;envGroup.add(roofBase);
       const roofAssembly=new THREE.Group();roofAssembly.name='photo-weathered-roof';
       roofAssembly.userData.bounds={left:roofLeft,right:roofRight,front:roofFront,back:roofBack,centerX:roofCX,centerZ:roofCZ,eaveY,ridgeY};
-      roofAssembly.userData.reference={cornerStyle:'thin-curved-scalloped-plate',frontCorners:2,backCorners:2,backStyle:'front-profile-mirrored',tileRows:6,eaveModule:'full-round-barrel-end-and-concave-pan',toeOverhang:.20};envGroup.add(roofAssembly);
+      roofAssembly.userData.reference={cornerStyle:'shouldered-rounded-crest',frontCorners:2,backCorners:2,backStyle:'front-profile-mirrored',hipProfile:'raised-stepped-skirt-and-rounded-cover',tileRows:6,eaveModule:'full-round-barrel-end-and-concave-pan',toeOverhang:.20};envGroup.add(roofAssembly);
       let tileSeed=43;const random=()=>{tileSeed=(Math.imul(tileSeed,1664525)+1013904223)>>>0;return tileSeed/4294967296;};
       const tileMatrices=[],tileColors=[],eaveTileIndices=[],valleyMatrices=[],valleyColors=[],valleyEaveIndices=[],capMatrices=[],capColors=[],ornamentMatrices=[];
       const dummy=new THREE.Object3D(),basis=new THREE.Matrix4();
@@ -3812,75 +3908,205 @@
       const roofApronMesh=appendInstances(eaveApronGeo,apronMatrices,apronColors,'scalloped-concave-eave-aprons');roofApronMesh.userData.connectedPanIndices=valleyEaveIndices;
       const panReliefPath=new THREE.CatmullRomCurve3([new THREE.Vector3(-.85,-.520,-.20),new THREE.Vector3(-.62,-.520,-.26),new THREE.Vector3(-.35,-.520,-.66),new THREE.Vector3(0,-.520,-.64),new THREE.Vector3(.35,-.520,-.66),new THREE.Vector3(.62,-.520,-.26),new THREE.Vector3(.85,-.520,-.20)]);
       const apronReliefGeo=new THREE.TubeGeometry(panReliefPath,28,.023,4,false);const apronReliefPosition=apronReliefGeo.attributes.position;for(let i=0;i<apronReliefPosition.count;i++)apronReliefPosition.setY(i,-.520+(apronReliefPosition.getY(i)+.535)*.08);apronReliefGeo.computeVertexNormals();appendInstances(apronReliefGeo,apronMatrices,apronColors,'scalloped-eave-apron-relief');
-      // 사진의 얇고 각진 덮개 기와. 용마루와 사선 모서리를 짧은 판으로 겹친다.
-      const capShape=new THREE.Shape();capShape.moveTo(-1,-.45);capShape.lineTo(-1,.02);capShape.quadraticCurveTo(-.94,.25,-.72,.28);capShape.lineTo(.72,.28);capShape.quadraticCurveTo(.94,.25,1,.02);capShape.lineTo(1,-.45);capShape.lineTo(.84,-.45);capShape.lineTo(.84,-.02);capShape.lineTo(-.84,-.02);capShape.lineTo(-.84,-.45);capShape.closePath();
+      // 수평 용마루 덮개의 턱을 귀마루 끝 높이에 맞추고 외향 면을 유지한다.
+      const capShape=new THREE.Shape();
+      capShape.moveTo(-.92,-1.72);capShape.lineTo(-.92,-.88);capShape.lineTo(-1,-.88);
+      capShape.lineTo(-1,.02);capShape.quadraticCurveTo(-.94,.25,-.72,.28);
+      capShape.lineTo(.72,.28);capShape.quadraticCurveTo(.94,.25,1,.02);
+      capShape.lineTo(1,-.88);capShape.lineTo(.92,-.88);capShape.lineTo(.92,-1.72);
+      capShape.lineTo(.78,-1.72);capShape.lineTo(.78,-.02);capShape.lineTo(-.78,-.02);
+      capShape.lineTo(-.78,-1.72);capShape.closePath();
       const capGeo=new THREE.ExtrudeGeometry(capShape,{depth:1,bevelEnabled:false});
-      // Convert original X/Y cross section and Z length to the common X/Y-length/Z-normal basis.
-      const capPosition=capGeo.attributes.position;
-      for(let i=0;i<capPosition.count;i++){const x=capPosition.getX(i),z=capPosition.getY(i),y=capPosition.getZ(i)-.5;capPosition.setXYZ(i,x,y,z);}capGeo.computeVertexNormals();
-      for(const [start,end] of [[rl,rr],[fl,rl],[bl,rl],[fr,rr],[br,rr]]){
-        const capStart=start.clone().lerp(end,start===rl&&end===rr?0:.18);
-        const count=Math.max(1,Math.ceil(capStart.distanceTo(end)/.29));
-        const normal=new THREE.Vector3(0,1,0),direction=end.clone().sub(start).normalize();normal.addScaledVector(direction,-normal.dot(direction)).normalize();
-        for(let i=0;i<count;i++){
-          const p=capStart.clone().lerp(end,i/count).addScaledVector(normal,.075),q=capStart.clone().lerp(end,(i+1)/count).addScaledVector(normal,.075);
-          capMatrices.push(pose(p,q,.09,.07,normal));const tone=.88+random()*.12;capColors.push(new THREE.Color(tone,tone*.99,tone*.98));
-        }
+      capGeo.rotateX(Math.PI/2);
+      capGeo.translate(0,.5,0);
+
+      // 용마루 수평선([rl, rr]) 기와 덮개
+      const ridgeLen=rl.distanceTo(rr),ridgeCount=Math.max(1,Math.ceil(ridgeLen/.28));
+      const ridgeNormal=new THREE.Vector3(0,1,0);
+      for(let i=0;i<ridgeCount;i++){
+        const p=rl.clone().lerp(rr,i/ridgeCount).addScaledVector(ridgeNormal,.153),q=rl.clone().lerp(rr,(i+1)/ridgeCount).addScaledVector(ridgeNormal,.153);
+        capMatrices.push(pose(p,q,.105,.102,ridgeNormal));const tone=.88+random()*.12;capColors.push(new THREE.Color(tone,tone*.99,tone*.98));
       }
+
+      // 귀마루 단면: 낮은 받침 턱, 직선 물끊기, 둥근 상부 덮개가 한 줄로 이어진다.
+      const hipCrossSection=new THREE.Shape();
+      hipCrossSection.moveTo(-.118,-.014);
+      hipCrossSection.lineTo(.118,-.014);
+      hipCrossSection.lineTo(.118,.080);
+      hipCrossSection.quadraticCurveTo(.118,.090,.108,.093);
+      hipCrossSection.lineTo(.102,.093);
+      hipCrossSection.lineTo(.102,.119);
+      hipCrossSection.lineTo(.081,.119);
+      hipCrossSection.quadraticCurveTo(.075,.172,.045,.182);
+      hipCrossSection.quadraticCurveTo(0,.200,-.045,.182);
+      hipCrossSection.quadraticCurveTo(-.075,.172,-.081,.119);
+      hipCrossSection.lineTo(-.102,.119);
+      hipCrossSection.lineTo(-.102,.093);
+      hipCrossSection.lineTo(-.108,.093);
+      hipCrossSection.quadraticCurveTo(-.118,.090,-.118,.080);
+      hipCrossSection.closePath();
+      // 회전으로 길이축을 바꾼다. 축을 교환하면 면의 감김이 뒤집혀 윗면이 가려진다.
+      const hipBeamGeo=new THREE.ExtrudeGeometry(hipCrossSection,{depth:1,bevelEnabled:false,curveSegments:8});
+      hipBeamGeo.rotateX(Math.PI/2);
+      hipBeamGeo.translate(0,.5,0);
+
+      const toeO=.20;
+      const cornerConfigs=[
+        {corner:fl,ridge:rl,isLeft:true, toe:v(-toeO,-.010,toeO)},
+        {corner:fr,ridge:rr,isLeft:false,toe:v(toeO,-.010,toeO)},
+        {corner:bl,ridge:rl,isLeft:true, toe:v(-toeO,-.010,-toeO)},
+        {corner:br,ridge:rr,isLeft:false,toe:v(toeO,-.010,-toeO)}
+      ];
+      const hipBeams=new THREE.Group();hipBeams.name='solid-hip-ridge-beams';roofAssembly.add(hipBeams);
+      const hipConnections=cornerConfigs.map(({corner,ridge,isLeft,toe},idx)=>{
+        const dir=corner.clone().sub(ridge).normalize();
+        const norm=new THREE.Vector3(0,1,0).addScaledVector(dir,-dir.y).normalize();
+        const pStart=ridge.clone().addScaledVector(dir,-.024);
+        const seatPt=corner.clone().addScaledVector(dir,-.115);
+        const mat=pose(pStart,seatPt,1,1,norm);
+        uvOffsets(hipBeamGeo,1);
+        const beam=new THREE.Mesh(hipBeamGeo,tileMat);
+        beam.name='solid-hip-beam-'+idx;
+        beam.applyMatrix4(mat);
+        beam.castShadow=beam.receiveShadow=true;
+        hipBeams.add(beam);
+        return {idx,isLeft,seatPt,toePt:corner.clone().add(toe),dir,norm};
+      });
+
       uvOffsets(capGeo,capMatrices.length);
       const caps=new THREE.InstancedMesh(capGeo,tileMat,capMatrices.length);caps.name='segmented-low-profile-ridge-caps';
       capMatrices.forEach((m,i)=>{caps.setMatrixAt(i,m);caps.setColorAt(i,capColors[i]);});caps.instanceMatrix.needsUpdate=true;caps.instanceColor.needsUpdate=true;caps.castShadow=caps.receiveShadow=true;caps.frustumCulled=false;roofAssembly.add(caps);
+      
+      // 끝장식의 발 아래에서 시작한 단말 기와가 사선으로 내려와 처마를 감싼다.
       const toeParts=new THREE.Group();toeParts.name='connected-downturned-hip-eave-covers';roofAssembly.add(toeParts);
-      for(const [index,[corner,ridge]] of [[fl,rl],[fr,rr],[bl,rl],[br,rr]].entries()){
-        const outward=corner.clone().sub(ridge);outward.y=0;outward.normalize();
+      hipConnections.forEach(cp=>{
+        const outward=cp.toePt.clone().sub(cp.seatPt);outward.y=0;outward.normalize();
+        const across=new THREE.Vector3(-outward.z,0,outward.x);
         const path=new THREE.CatmullRomCurve3([
-          corner.clone().lerp(ridge,.26).add(new THREE.Vector3(0,.080,0)),
-          corner.clone().lerp(ridge,.12).add(new THREE.Vector3(0,.080,0)),
-          corner.clone().addScaledVector(outward,.10).add(new THREE.Vector3(0,.045,0)),
-          corner.clone().addScaledVector(outward,.17).add(new THREE.Vector3(0,.025,0)),
-          corner.clone().addScaledVector(outward,.18).add(new THREE.Vector3(0,-.10,0))
+          cp.seatPt.clone().addScaledVector(cp.dir,-.096).addScaledVector(cp.norm,.099),
+          cp.seatPt.clone().addScaledVector(cp.norm,.118),
+          cp.toePt.clone().addScaledVector(outward,-.086).add(v(0,.053,0)),
+          cp.toePt.clone().add(v(0,.013,0)),
+          cp.toePt.clone().addScaledVector(outward,.024).add(v(0,-.043,0)),
+          cp.toePt.clone().addScaledVector(outward,.029).add(v(0,-.112,0))
         ]);
-        const across=new THREE.Vector3(-outward.z,0,outward.x),positions=[],uv=[],idx=[];
-        for(let j=0;j<=28;j++){
-          const t=j/28,center=path.getPoint(t),tangent=path.getTangent(t).normalize(),normal=across.clone().cross(tangent).normalize();
+
+        const capSegs=20,stride=18;
+        const positions=[],uv=[],idx=[];
+        for(let j=0;j<=capSegs;j++){
+          const t=j/capSegs,center=path.getPoint(t),tangent=path.getTangent(t).normalize();
+          const normal=across.clone().cross(tangent).normalize();
+          const bend=THREE.MathUtils.smoothstep(t,.45,1);
+          const halfWidth=THREE.MathUtils.lerp(.100,.060,bend);
           for(let k=0;k<=8;k++){
-            const u=-1+k/4,profile=.018*(1-u*u);
-            for(const depth of [0,-.012]){const v=center.clone().addScaledVector(across,u*.085).addScaledVector(normal,profile+depth);positions.push(v.x,v.y,v.z);uv.push(k/8,t*3);}
+            const u=-1+k/4;
+            const crown=.019*(1-u*u)-.011*Math.pow(u,6);
+            const roundedHem=Math.pow(t,7)*u*u*.026;
+            for(const depth of [0,-.023]){
+              const pt=center.clone().addScaledVector(across,u*halfWidth).addScaledVector(normal,crown+depth);
+              pt.y+=roundedHem;
+              positions.push(pt.x,pt.y,pt.z);uv.push(k/8,t*2);
+            }
           }
         }
-        const stride=18;
-        for(let j=0;j<28;j++)for(let k=0;k<8;k++){
+        for(let j=0;j<capSegs;j++)for(let k=0;k<8;k++){
           const a=j*stride+k*2,b=a+stride;idx.push(a,a+2,b,b,a+2,b+2,a+1,b+1,a+3,b+1,b+3,a+3);
         }
-        for(let j=0;j<28;j++)for(const k of [0,8]){const a=j*stride+k*2,b=a+stride;idx.push(a,b,a+1,b,b+1,a+1);}
-        for(const j of [0,28])for(let k=0;k<8;k++){const a=j*stride+k*2;if(j===0)idx.push(a,a+1,a+2,a+2,a+1,a+3);else idx.push(a,a+2,a+1,a+2,a+3,a+1);}
+        for(let j=0;j<capSegs;j++)for(const k of [0,8]){const a=j*stride+k*2,b=a+stride;if(k===0)idx.push(a,b,a+1,b,b+1,a+1);else idx.push(a,a+1,b,b,a+1,b+1);}
+        for(const j of [0,capSegs])for(let k=0;k<8;k++){const a=j*stride+k*2;if(j===0)idx.push(a,a+1,a+2,a+2,a+1,a+3);else idx.push(a,a+2,a+1,a+2,a+3,a+1);}
         const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));geo.setIndex(idx);geo.computeVertexNormals();
-        // Keep the same instanced material pipeline for the one-piece folded cap.
-        const part=appendInstances(geo,[new THREE.Matrix4()],[new THREE.Color(.94,.92,.91)],'downturned-hip-cover-'+index);roofAssembly.remove(part);toeParts.add(part);
-        part.userData.connection={corner:[corner.x,corner.y,corner.z],drop:.10,continuous:true};
-      }
-      // 좌우 끝장식: 처마 끝의 원통을 제거하고, 사선 덮개 안쪽에 얇은 굴곡 판을 세운다.
+        uvOffsets(geo,1);
+        const part=new THREE.Mesh(geo,tileMat);
+        part.name='downturned-hip-cover-'+cp.idx;
+        part.castShadow=part.receiveShadow=true;
+        toeParts.add(part);
+        part.userData.connection={corner:[cp.toePt.x,cp.toePt.y,cp.toePt.z],drop:.112,continuous:true};
+      });
+
+      // 좌측 확대 사진을 기준으로 바깥쪽은 둥글게 서고 안쪽은 두 겹의 어깨를 거쳐 발로 넓어진다.
       const crest=new THREE.Shape();
-      const outline=[[-.050,0],[.045,0],[.047,.278],[.040,.292],[.020,.296],[-.012,.280],[-.027,.277],[-.030,.236],[-.049,.220],[-.049,.185],[-.060,.161],[-.062,.10],[-.060,.04]];
-      const crestPoints=outline.map(([x,y])=>new THREE.Vector2(x+y*.10,y));
-      crest.moveTo((crestPoints[crestPoints.length-1].x+crestPoints[0].x)/2,(crestPoints[crestPoints.length-1].y+crestPoints[0].y)/2);
-      crestPoints.forEach((point,i)=>{const next=crestPoints[(i+1)%crestPoints.length];crest.quadraticCurveTo(point.x,point.y,(point.x+next.x)/2,(point.y+next.y)/2);});crest.closePath();
-      const crestGeo=new THREE.ExtrudeGeometry(crest,{depth:.024,bevelEnabled:true,bevelThickness:.002,bevelSize:.002,bevelSegments:2,curveSegments:8});crestGeo.translate(0,0,-.012);
-      const reliefPath=new THREE.CatmullRomCurve3([new THREE.Vector3(-.017,.024,.015),new THREE.Vector3(-.026,.082,.015),new THREE.Vector3(.026,.119,.015),new THREE.Vector3(-.010,.158,.015),new THREE.Vector3(.023,.200,.015),new THREE.Vector3(.020,.231,.015)]);
-      const reliefGeo=new THREE.TubeGeometry(reliefPath,28,.0027,5,false);
-      for(const [index,[corner,ridge]] of [[fl,rl],[fr,rr],[bl,rl],[br,rr]].entries()){
-        const point=corner.clone().lerp(ridge,.12);point.y+=.080;
-        const outward=corner.clone().sub(ridge);outward.y=0;outward.normalize();
-        dummy.position.copy(point);dummy.rotation.set(0,Math.atan2(-outward.z,outward.x),0);dummy.scale.set(1,1,1);dummy.updateMatrix();ornamentMatrices.push(dummy.matrix.clone());
+      crest.moveTo(.046,-.053);
+      crest.quadraticCurveTo(.060,-.012,.070,.048);
+      crest.quadraticCurveTo(.085,.123,.088,.190);
+      crest.quadraticCurveTo(.090,.229,.070,.239);
+      crest.quadraticCurveTo(.052,.248,.027,.225);
+      crest.quadraticCurveTo(.015,.214,-.005,.211);
+      crest.quadraticCurveTo(-.029,.208,-.032,.179);
+      crest.quadraticCurveTo(-.035,.161,-.057,.146);
+      crest.quadraticCurveTo(-.084,.130,-.092,.106);
+      crest.quadraticCurveTo(-.100,.085,-.128,.074);
+      crest.quadraticCurveTo(-.159,.057,-.167,.021);
+      crest.quadraticCurveTo(-.177,-.016,-.149,-.033);
+      crest.quadraticCurveTo(-.088,-.050,.046,-.053);
+      crest.closePath();
+      const crestGeoL=new THREE.ExtrudeGeometry(crest,{depth:.036,bevelEnabled:true,bevelThickness:.003,bevelSize:.003,bevelSegments:2,curveSegments:10});
+      crestGeoL.translate(0,0,-.018);
+      // 발판 두께를 늘려 아래 덮개와 맞물리게 하고 위쪽 장식판의 두께는 유지한다.
+      const crestVertices=crestGeoL.attributes.position;
+      for(let i=0;i<crestVertices.count;i++){
+        const shoulder=1-THREE.MathUtils.smoothstep(crestVertices.getY(i),-.043,.095);
+        crestVertices.setZ(i,crestVertices.getZ(i)*(1+1.65*shoulder));
       }
-      uvOffsets(crestGeo,4);uvOffsets(reliefGeo,4);
-      const ornaments=new THREE.InstancedMesh(crestGeo,tileMat,4);ornaments.name='thin-scalloped-upturned-corner-tiles';ornaments.userData.frontIndices=[0,1];ornaments.userData.thickness=.024;crestGeo.computeBoundingBox();ornaments.userData.height=crestGeo.boundingBox.getSize(new THREE.Vector3()).y;
-      const reliefs=new THREE.InstancedMesh(reliefGeo,tileMat,4);reliefs.name='corner-tile-carved-relief';
-      const reversePath=new THREE.CatmullRomCurve3(reliefPath.points.map(p=>new THREE.Vector3(p.x,p.y,-p.z)));
-      const reverseGeo=new THREE.TubeGeometry(reversePath,28,.0027,5,false);uvOffsets(reverseGeo,4);
-      const reverseReliefs=new THREE.InstancedMesh(reverseGeo,tileMat,4);reverseReliefs.name='corner-tile-reverse-relief';
-      ornamentMatrices.forEach((m,i)=>{ornaments.setMatrixAt(i,m);ornaments.setColorAt(i,new THREE.Color(.89,.87,.85));reliefs.setMatrixAt(i,m);reliefs.setColorAt(i,new THREE.Color(.98,.94,.91));reverseReliefs.setMatrixAt(i,m);reverseReliefs.setColorAt(i,new THREE.Color(.98,.94,.91));});
-      for(const part of [ornaments,reliefs,reverseReliefs]){part.instanceMatrix.needsUpdate=true;part.instanceColor.needsUpdate=true;part.castShadow=part.receiveShadow=true;part.frustumCulled=false;roofAssembly.add(part);}
+      crestGeoL.computeVertexNormals();
+      const crestGeoR=crestGeoL.clone();
+      const crestReliefPoints=[[-.105,.039],[-.075,.073],[-.048,.116],[-.016,.158],[.017,.192],[.052,.215],[.064,.185],[.055,.128],[.035,.070]];
+      const makeCrestRelief=side=>new THREE.TubeGeometry(new THREE.CatmullRomCurve3(
+        crestReliefPoints.map(([x,y])=>{
+          const shoulder=1-THREE.MathUtils.smoothstep(y,-.043,.095);
+          return v(x,y,side*.0185*(1+1.65*shoulder));
+        })
+      ),28,.0025,5,false);
+      const reliefGeoL=makeCrestRelief(1),revReliefGeoL=makeCrestRelief(-1);
+      const reliefGeoR=reliefGeoL.clone(),revReliefGeoR=revReliefGeoL.clone();
+      // 끝장식의 아래쪽을 둥근 마루대에 겹쳐 이음이 떨어져 보이지 않게 한다.
+      const ornamentMatricesL=[],ornamentMatricesR=[];
+      hipConnections.forEach(cp=>{
+        // 끝장식의 넓은 발이 귀마루의 앞쪽 겹턱 위를 덮는다.
+        const faceSign=Math.sign(cp.dir.z*cp.dir.x);
+        const faceSide=v(-cp.dir.z*faceSign,0,cp.dir.x*faceSign).normalize();
+        const pos=cp.seatPt.clone().addScaledVector(cp.dir,.014)
+          .addScaledVector(cp.norm,.168).addScaledVector(faceSide,.064);
+        const hipYaw=Math.atan2(-cp.dir.z*.76,cp.dir.x);
+        const facesEntrance=cp.idx<2;
+        // 좌우 실루엣은 거울 대칭으로 두고 양면 문양의 넓은 면을 정면 벽과 나란히 둔다.
+        const frontYaw=cp.isLeft?Math.PI:0;
+        const width=facesEntrance?Math.abs(Math.cos(hipYaw)):1;
+        dummy.position.copy(pos);
+        dummy.rotation.set(0,facesEntrance?frontYaw:hipYaw,0);
+        dummy.scale.set(width,1,1);dummy.updateMatrix();
+        const mat=dummy.matrix.clone();
+        ornamentMatrices.push(mat);
+        if(cp.isLeft) ornamentMatricesL.push(mat);
+        else ornamentMatricesR.push(mat);
+      });
+
+      uvOffsets(crestGeoL,2);uvOffsets(reliefGeoL,2);uvOffsets(revReliefGeoL,2);
+      const ornamentsL=new THREE.InstancedMesh(crestGeoL,tileMat,2);ornamentsL.name='thin-scalloped-upturned-corner-tiles-left';
+      const reliefsL=new THREE.InstancedMesh(reliefGeoL,tileMat,2);reliefsL.name='corner-tile-carved-relief-left';
+      const reverseReliefsL=new THREE.InstancedMesh(revReliefGeoL,tileMat,2);reverseReliefsL.name='corner-tile-reverse-relief-left';
+      ornamentMatricesL.forEach((m,i)=>{
+        ornamentsL.setMatrixAt(i,m);ornamentsL.setColorAt(i,new THREE.Color(.89,.87,.85));
+        reliefsL.setMatrixAt(i,m);reliefsL.setColorAt(i,new THREE.Color(.98,.94,.91));
+        reverseReliefsL.setMatrixAt(i,m);reverseReliefsL.setColorAt(i,new THREE.Color(.98,.94,.91));
+      });
+
+      uvOffsets(crestGeoR,2);uvOffsets(reliefGeoR,2);uvOffsets(revReliefGeoR,2);
+      const ornamentsR=new THREE.InstancedMesh(crestGeoR,tileMat,2);ornamentsR.name='thin-scalloped-upturned-corner-tiles-right';
+      const reliefsR=new THREE.InstancedMesh(reliefGeoR,tileMat,2);reliefsR.name='corner-tile-carved-relief-right';
+      const reverseReliefsR=new THREE.InstancedMesh(revReliefGeoR,tileMat,2);reverseReliefsR.name='corner-tile-reverse-relief-right';
+      ornamentMatricesR.forEach((m,i)=>{
+        ornamentsR.setMatrixAt(i,m);ornamentsR.setColorAt(i,new THREE.Color(.88,.86,.83));
+        reliefsR.setMatrixAt(i,m);reliefsR.setColorAt(i,new THREE.Color(.97,.93,.90));
+        reverseReliefsR.setMatrixAt(i,m);reverseReliefsR.setColorAt(i,new THREE.Color(.97,.93,.90));
+      });
+
+      // 호환성 유지: ornaments 별칭 (기존 코드 참조 및 가이드 보호)
+      const ornaments={name:'thin-scalloped-upturned-corner-tiles',userData:{frontIndices:[0,1],thickness:.036}};
+      crestGeoL.computeBoundingBox();crestGeoR.computeBoundingBox();
+      ornaments.userData.height=Math.max(crestGeoL.boundingBox.getSize(new THREE.Vector3()).y,crestGeoR.boundingBox.getSize(new THREE.Vector3()).y);
+      for(const part of [ornamentsL,reliefsL,reverseReliefsL,ornamentsR,reliefsR,reverseReliefsR]){
+        part.instanceMatrix.needsUpdate=true;part.instanceColor.needsUpdate=true;part.castShadow=part.receiveShadow=true;part.frustumCulled=false;roofAssembly.add(part);
+      }
 
 
       // 사진 상단의 흰 외장 띠와 푸른 창호, 우측 벽 상부 수평 두겁.
