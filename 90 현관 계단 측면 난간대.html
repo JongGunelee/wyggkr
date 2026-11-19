@@ -4322,6 +4322,111 @@ void main() {
       display: block;
       width: 100%;
       height: 100%;
+      touch-action: none; /* [모바일 세로 모드 최적화] 3D 오빗 터치 조작 시 브라우저 기본 스크롤/줌 간섭 완전 차단 */
+    }
+
+    /* [치수 라벨 개별 닫기 X 버튼] */
+    #labelsContainer .label-3d {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 6px !important;
+      padding: 5px 8px !important;
+      border-radius: 6px !important;
+    }
+    .label-close-x {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      color: #94a3b8;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      font-size: 10px;
+      font-weight: bold;
+      line-height: 1;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+      margin-left: 4px;
+    }
+    .label-close-x:hover {
+      background: #ef4444 !important;
+      color: #ffffff !important;
+      border-color: #f87171 !important;
+      transform: scale(1.15);
+    }
+
+    /* [한국기준·단면도 도면 마우스 커서 호버 2배 확대 플로팅 뷰] */
+    #diagramHoverPreview {
+      position: fixed;
+      right: 400px;
+      top: 60px;
+      width: 640px;
+      max-width: calc(100vw - 420px);
+      max-height: 85vh;
+      overflow-y: auto;
+      z-index: 60;
+      background: rgba(11, 18, 30, 0.98);
+      border: 2px solid #38bdf8;
+      border-radius: 16px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(14px);
+      padding: 16px;
+      display: none;
+      pointer-events: auto;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
+    @media (max-width: 1024px) {
+      #diagramHoverPreview {
+        right: 12px !important;
+        left: 12px !important;
+        width: auto !important;
+        max-width: none !important;
+        top: 56px !important;
+        bottom: 16px !important;
+        max-height: calc(100vh - 72px) !important;
+        z-index: 70 !important;
+      }
+    }
+    .diagram-hover-zoomable {
+      position: relative;
+      cursor: pointer;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .diagram-hover-zoomable:hover {
+      border-color: #38bdf8 !important;
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.35) !important;
+    }
+
+    /* [데스크탑 및 모바일 세로 모드 최적화] 사이드바 오버레이 드로어 및 3D 뷰포트 무결성 보장 */
+    @media (max-width: 768px) {
+      #rightSidebar {
+        position: fixed !important;
+        top: 48px !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        max-width: 380px !important;
+        z-index: 50 !important;
+        box-shadow: -8px 0 32px rgba(0, 0, 0, 0.85) !important;
+      }
+      #btnExpandSidebarHandle {
+        top: 60% !important;
+        padding: 12px 10px !important;
+        font-size: 12px !important;
+        z-index: 40 !important;
+        border-radius: 12px 0 0 12px !important;
+      }
+    }
+    header {
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    header::-webkit-scrollbar {
+      display: none;
     }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
@@ -4511,13 +4616,23 @@ void main() {
     <!-- 3D 뷰포트 영역 -->
     <div id="viewportContainer" class="flex-1 relative overflow-hidden bg-[#829bb0]">
       <canvas id="threeCanvas" class="w-full h-full block"></canvas>
-      <!-- [부팅 체감 가속 HUD] 첫 3D 렌더 완료 즉시 부드럽게 페이드아웃되는 초고속 로딩 안내 레이어 -->
-      <div id="viewportLoadingHud" style="position:absolute; inset:0; z-index:25; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#0b1120; pointer-events:none; transition:opacity 0.28s ease, visibility 0.28s ease;">
-        <div style="display:flex; align-items:center; gap:12px; padding:12px 24px; border-radius:12px; background:rgba(15,26,40,0.95); border:1px solid #38bdf8; box-shadow:0 12px 36px rgba(0,0,0,0.7);">
-          <div style="font-size:22px; line-height:1;">⚡</div>
+      <!-- [한국기준·단면도 2배 호버 줌 프리뷰] 마우스 커서 호버 시 200% 정밀 확대 표출 -->
+      <div id="diagramHoverPreview">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #38bdf8; padding-bottom:8px; margin-bottom:12px;">
+          <span style="font-weight:800; font-size:13px; color:#38bdf8; display:flex; align-items:center; gap:6px;">
+            <span>🔍</span> <span id="diagramHoverTitle">도면 2배 정밀 확대 뷰 (200% HD Vector)</span>
+          </span>
+          <button id="btnCloseHoverPreview" style="background:#1e293b; border:1px solid #475569; color:#f8fafc; padding:2px 8px; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">✕ 닫기</button>
+        </div>
+        <div id="diagramHoverContent" style="transform-origin:top left;"></div>
+      </div>
+      <!-- [부팅 체감 가속 HUD] 초경량 즉시 페이드아웃 안내 레이어 -->
+      <div id="viewportLoadingHud" style="position:absolute; inset:0; z-index:25; display:flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(11,17,32,0.7); backdrop-filter:blur(3px); pointer-events:none; transition:opacity 0.1s ease, visibility 0.1s ease;">
+        <div style="display:flex; align-items:center; gap:10px; padding:10px 20px; border-radius:12px; background:rgba(15,26,40,0.96); border:1px solid #38bdf8; box-shadow:0 12px 36px rgba(0,0,0,0.7);">
+          <div style="font-size:20px; line-height:1;">⚡</div>
           <div>
-            <div style="font-weight:700; font-size:13px; color:#f8fafc; letter-spacing:-0.2px;">Revit BIM 3D 가속 뷰 초기화 중...</div>
-            <div style="font-size:11px; color:#94a3b8; margin-top:2px;">STS304 PBR 환경 반사 및 고정밀 3D 모델 즉시 표출</div>
+            <div style="font-weight:700; font-size:12px; color:#f8fafc; letter-spacing:-0.2px;">Revit BIM 3D 모델 초기화 완료</div>
+            <div style="font-size:10px; color:#94a3b8; margin-top:1px;">고정밀 3D 인터랙션 즉시 활성화</div>
           </div>
         </div>
       </div>
@@ -4533,13 +4648,13 @@ void main() {
 
       <!-- [Revit BIM 4D·5D Solar Study] 옥외 태양광 연구 및 반돔 제어 HUD 패널 (3D 뷰포트 상단 플로팅) -->
       <!-- [Revit BIM 4D·5D Solar Study] 옥외 태양광 연구 및 반돔 제어 HUD 패널 -->
-  <div id="sunPathControlPanel" class="timeline-aux" style="display:none; width:340px; padding:12px; border-radius:12px; background:rgba(15,26,40,0.96); border:1px solid #f59e0b; box-shadow:0 12px 36px rgba(0,0,0,0.7); z-index:60; position:fixed; top:75px; right:16px;">
+    <div id="sunPathControlPanel" class="timeline-aux" style="display:none; width:340px; max-width:calc(100vw - 24px); max-height:calc(100vh - 90px); overflow-y:auto; padding:12px; border-radius:12px; background:rgba(15,26,40,0.96); border:1px solid #f59e0b; box-shadow:0 12px 36px rgba(0,0,0,0.7); z-index:60; position:fixed; top:75px; right:12px;">
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(245,158,11,0.35); padding-bottom:6px; margin-bottom:8px;">
       <span style="font-weight:700; font-size:12px; color:#fef08a; display:flex; align-items:center; gap:6px;">☀️ Revit BIM 태양광 연구 (Solar Study 4D·5D)</span>
       <button id="btnCloseSunPanel" style="background:transparent; border:none; color:#94a3b8; font-size:14px; cursor:pointer; font-weight:bold; line-height:1;" title="패널 닫기">✕</button>
     </div>
     <div style="font-size:11px; color:#94a3b8; margin-bottom:8px; line-height:1.4;">
-      3D 뷰의 <b style="color:#fde047;">태양 구체</b>를 마우스로 직접 드래그하거나 슬라이더로 방위각과 고도를 자유롭게 제어합니다.
+      3D 뷰의 <b style="color:#fde047;">태양 구체</b>를 드래그하여 일영 각도를 조절하고, <b style="color:#38bdf8;">타겟 마커(🎯)</b>를 마우스/터치로 드래그하여 조준 대상을 원하는 건축 부재로 변경합니다.
     </div>
     <div style="margin-bottom:8px;">
       <div style="display:flex; justify-content:space-between; font-size:11px; color:#cbd5e1; margin-bottom:2px;">
@@ -4567,12 +4682,38 @@ void main() {
       <button class="sun-preset-btn" data-az="225" data-alt="22" style="font-size:10px; padding:5px 4px; background:#1e293b; color:#cbd5e1; border:1px solid #475569; border-radius:4px; cursor:pointer;" title="동지 오후 15:00 긴 그림자 분석">동지 15:00</button>
       <button class="sun-preset-btn" data-az="192.3" data-alt="33.9" style="font-size:10px; padding:5px 4px; background:#0f766e; color:#ccfbf1; border:1px solid #14b8a6; border-radius:4px; cursor:pointer; font-weight:bold;" title="기본 최적 광원 방향 복원">기본값 복원</button>
     </div>
+
+    <!-- [사용자 요구 반영] 태양광 타겟 대상물 드래그 및 프리셋 섹션 -->
+    <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(245,158,11,0.35);">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+        <span style="font-size:11px; font-weight:bold; color:#7dd3fc; display:flex; align-items:center; gap:4px;">
+          🎯 태양광 타겟 대상물 (마우스 드래그)
+        </span>
+        <span id="sunTargetCoordText" style="font-size:10px; color:#fde047; font-weight:bold;">난간대 P1 (기본)</span>
+      </div>
+      <div id="sunTargetXYZText" style="font-size:9.5px; color:#94a3b8; font-family:monospace; margin-bottom:6px;">
+        X: -0.10m · Y: 0.00m · Z: -0.40m
+      </div>
+      <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:4px; margin-bottom:8px;">
+        <button type="button" class="sun-target-preset-btn active" data-tx="-0.10" data-ty="0.00" data-tz="-0.40" style="font-size:10px; padding:4px 2px; background:#1e293b; color:#38bdf8; border:1px solid #38bdf8; border-radius:4px; cursor:pointer; font-weight:bold;" title="난간대 하부 P1 지주 타겟">난간대(기본)</button>
+        <button type="button" class="sun-target-preset-btn" data-tx="-0.52" data-ty="0.45" data-tz="-2.15" style="font-size:10px; padding:4px 2px; background:#1e293b; color:#cbd5e1; border:1px solid #475569; border-radius:4px; cursor:pointer;" title="현관 유리 출입문 타겟">현관 출입문</button>
+        <button type="button" class="sun-target-preset-btn" data-tx="-0.10" data-ty="0.45" data-tz="-0.75" style="font-size:10px; padding:4px 2px; background:#1e293b; color:#cbd5e1; border:1px solid #475569; border-radius:4px; cursor:pointer;" title="계단 최상단 슬래브 타겟">계단 상단</button>
+        <button type="button" class="sun-target-preset-btn" data-tx="-0.10" data-ty="0.30" data-tz="-0.45" style="font-size:10px; padding:4px 2px; background:#1e293b; color:#cbd5e1; border:1px solid #475569; border-radius:4px; cursor:pointer;" title="계단 중간 디딤판 타겟">디딤판 2단</button>
+        <button type="button" class="sun-target-preset-btn" data-tx="0.00" data-ty="0.00" data-tz="1.20" style="font-size:10px; padding:4px 2px; background:#1e293b; color:#cbd5e1; border:1px solid #475569; border-radius:4px; cursor:pointer;" title="전면 콘크리트 보도 타겟">전면 보도</button>
+        <button type="button" class="sun-target-preset-btn" data-tx="2.20" data-ty="0.26" data-tz="-0.20" style="font-size:10px; padding:4px 2px; background:#1e293b; color:#cbd5e1; border:1px solid #475569; border-radius:4px; cursor:pointer;" title="우측 조경 화단 타겟">우측 화단</button>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(15,23,42,0.6); padding:4px 6px; border-radius:4px; border:1px solid rgba(56,189,248,0.2); margin-bottom:8px;">
+        <span style="font-size:10px; color:#cbd5e1;">반구체(천구) 중심:</span>
+        <button type="button" id="btnToggleDomeFollow" style="font-size:10px; padding:2px 8px; background:#0369a1; color:#f0f9ff; border:1px solid #38bdf8; border-radius:4px; cursor:pointer; font-weight:bold;" title="반구체 천구 중심을 타겟과 함께 이동할지 설정">타겟 추종: ON</button>
+        <button type="button" id="btnResetSunTarget" style="font-size:10px; padding:2px 6px; background:#334155; color:#e2e8f0; border:1px solid #64748b; border-radius:4px; cursor:pointer;" title="타겟을 난간대 기본 위치로 복원">초기화</button>
+      </div>
+    </div>
+
     <div style="background:rgba(2,6,23,0.65); padding:8px 10px; border-radius:6px; border:1px solid rgba(56,189,248,0.25); font-size:10px; line-height:1.55;">
       <div id="sunBim4dNote" style="color:#7dd3fc; margin-bottom:3px; font-weight:600;">[4D 일영] 직사광 입사: 남남서(SSW) 34° · 그림자 반대방향 전개</div>
       <div id="sunBim5dNote" style="color:#fde047; font-weight:600;">[5D 스펙큘러] STS304 반사지수: 56% · 수직/수평 파이프 하이라이트 활성</div>
     </div>
   </div>
-
       <div id="constructionInspectionNote" style="display:none !important;position:absolute;left:12px;top:55px;z-index:20;max-width:min(70%,580px);padding:8px 12px;border-radius:8px;background:rgba(15,23,42,.92);color:#e2e8f0;font-size:12px;pointer-events:none"></div>
       <!-- 3D 동적 라벨 오버레이 레이어 -->
       <div id="labelsContainer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
@@ -4898,8 +5039,12 @@ void main() {
                 <span>② 900mm — 산업안전·일반 추락방지 안전난간 기준</span>
                 <span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">안전보건규칙</span>
               </div>
-              <div class="text-[11px] text-slate-400 mt-0.5">
-                디딤판 상면 ~ 상부파이프 최상단 <b>900mm</b> (파이프 중심 874.6mm, 지주절단 849.2mm)
+              <div class="text-[11px] text-slate-300 mt-0.5 leading-snug">
+                디딤판 상면 ~ 상부파이프 최상단 <b>900mm</b> (파이프 중심 874.6mm) · <b>중간 간살 1개(기본 유지)</b>
+              </div>
+              <div class="text-[10px] text-slate-300 mt-1.5 p-1.5 rounded bg-slate-900/90 border border-amber-500/30 leading-normal">
+                <span class="text-amber-300 font-bold">⚖️ 법령 분석:</span> 산업안전보건기준에 관한 규칙 제13조(안전난간 요건)는 작업자 추락방지 목적(이격 간격 ≤60cm)이므로 <b>경간당 1개(간격 112mm)로도 법적 적합</b>합니다.<br/>
+                <span class="text-sky-300 font-bold">※ 2개 증가가 필요한 경우:</span> 주택건설기준 제18조 및 실내건축기준 제8조(영유아·어린이 추락방지 안목치수 ≤100mm) 적용 시에는 <b>간살 2개(안목치수 66mm) 필수</b> (우측 슬라이더로 2개 즉시 변경 가능).
               </div>
             </button>
             <button id="presetHighGuard" class="text-left px-2.5 py-2 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 transition">
@@ -5072,12 +5217,15 @@ void main() {
       <!-- 탭 2: 난간 높이(850/900/1200mm) 측정 기준점 & 습식 코어 단면 상세도 -->
       <div id="tabPanel-standards" class="hidden flex-1 overflow-y-auto p-3.5 space-y-4">
         <!-- 850mm / 900mm / 1200mm 바닥면~난간 측정 기준 부위 상세 다이어그램 -->
-        <div class="bg-slate-900/95 border border-sky-500/40 rounded-xl p-3 space-y-2.5">
+        <div class="bg-slate-900/95 border border-sky-500/40 rounded-xl p-3 space-y-2.5 diagram-hover-zoomable" data-zoom-title="📏 난간 높이(850·900·1200mm) 법적 측정 기준점 단면도">
           <div class="flex items-center justify-between">
             <span class="text-xs font-bold text-sky-300">📏 난간 높이(850·900·1200mm) 법적 측정 기준점 안내</span>
-            <button id="btnTurnOnMarkersFromStd" class="text-[10px] px-2 py-0.5 rounded bg-sky-500 text-slate-950 font-extrabold hover:bg-sky-400 transition">
-              3D 치수·마커 켜기
-            </button>
+            <div class="flex items-center gap-1.5">
+              <span class="zoom-badge text-[10px] px-1.5 py-0.5 rounded bg-sky-950/80 border border-sky-400/60 text-sky-300 font-bold flex items-center gap-1 cursor-pointer" title="마우스 커서를 올리거나 탭하면 2배로 확대됩니다">🔍 2배 확대 (Hover)</span>
+              <button id="btnTurnOnMarkersFromStd" class="text-[10px] px-2 py-0.5 rounded bg-sky-500 text-slate-950 font-extrabold hover:bg-sky-400 transition">
+                3D 치수·마커 켜기
+              </button>
+            </div>
           </div>
           <p class="text-[11px] text-slate-300 leading-relaxed">
             고용노동부 질의회시(산업안전기준과-474) 및 장애인편의시설 표준상세도에 따라, 모든 난간 높이(<b>H</b>)는 파이프 중심이 아니라 <b>「계단 디딤판 코(Nosing) 상부 마감면」에서 수직으로 「상부 손잡이 파이프(Ø50.8)의 최상단 외피(Top Edge)」까지의 거리</b>로 측정합니다.
@@ -5132,12 +5280,15 @@ void main() {
           <div id="heightBreakdownBox" class="bg-slate-950/90 rounded-lg p-2.5 border border-slate-800 text-[11px] space-y-1"></div>
         </div>
         <!-- 습식 코어 타공 2D 정밀 단면도 (SVG 실시간 연동) -->
-        <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-3">
+        <div class="bg-slate-900/90 border border-slate-700 rounded-xl p-3 diagram-hover-zoomable" data-zoom-title="🔩 습식 코어 타공부 정밀 단면도 (Section A-A')">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-bold text-amber-300">🔩 습식 코어 타공부 정밀 단면도 (Section A-A')</span>
-            <button id="btnFocusCoreFromTab" class="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 font-bold">
-              3D 단면뷰 이동
-            </button>
+            <div class="flex items-center gap-1.5">
+              <span class="zoom-badge text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-400/60 text-amber-300 font-bold flex items-center gap-1 cursor-pointer" title="마우스 커서를 올리거나 탭하면 2배로 확대됩니다">🔍 2배 확대 (Hover)</span>
+              <button id="btnFocusCoreFromTab" class="text-[11px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 font-bold">
+                3D 단면뷰 이동
+              </button>
+            </div>
           </div>
           <div class="bg-slate-950 rounded-lg p-2 border border-slate-800 flex justify-center">
             <svg id="coreSectionSvg" viewBox="0 0 300 230" class="w-full h-48">
@@ -5645,6 +5796,10 @@ void main() {
       showMarkers: false,
       showStrataLabels: true, // [사용자 요구 반영] [예측] 3D 라벨 ON/OFF 제어 (기본값 ON)
       sunPathGizmo: false, // [사용자 요구 반영] 옥외 태양광 반돔(Celestial Half-Dome) 타겟 (기본값 OFF)
+      sunTargetX: -0.1,    // [사용자 요구 반영] 태양광 타겟 경로 대상물 X좌표 (기본: 난간대 P1 지주)
+      sunTargetY: 0.0,     // [사용자 요구 반영] 태양광 타겟 경로 대상물 Y좌표
+      sunTargetZ: -0.4,    // [사용자 요구 반영] 태양광 타겟 경로 대상물 Z좌표
+      sunDomeFollowTarget: true, // [사용자 요구 반영] 천구 반구체 중심이 타겟을 연동 추종할지 여부 (기본: ON)
       sunAzimuth: 192.3,   // 기본 태양 방위각 (현재 최적 조명 방향: 192.3° 남남서)
       sunAltitude: 33.9,   // 기본 태양 고도각 (33.9°)
       markerGroups: {core:true,spec:true},
@@ -6012,7 +6167,7 @@ void main() {
 
     // 사진의 회회색 바탕, 중간 굵기 결정, 잔다듬 요철을 한 쌍의 PBR 맵에 담는다.
     function createEntranceGraniteMaps() {
-      const size = 384;
+      const size = 192; // [초고속 부팅 최적화] 텍스처 해시 루프 75% 감축으로 부팅 가속
       const colorCanvas = document.createElement('canvas');
       const reliefCanvas = document.createElement('canvas');
       for (const canvas of [colorCanvas, reliefCanvas]) canvas.width = canvas.height = size;
@@ -6737,16 +6892,40 @@ void main() {
       return annotationRaycaster.intersectObject(object,true)[0]?.point||fallback;
     }
     function updateMeasurementGeometry(){
-      const m=simRefs.measurement;if(!m)return;
-      dimLinesGroup.visible=state.showLabels&&partVisible(simRefs.topRail?.group);
-      if(!dimLinesGroup.visible)return;
+      dimLinesGroup.visible = state.showLabels && partVisible(simRefs.topRail?.group);
+      if (!dimLinesGroup.visible) return;
       rootGroup.updateMatrixWorld(true);
-      const top=m.top(),bottom=m.bottom();
-      const set=(line,a,b)=>{const p=line.geometry.attributes.position;p.setXYZ(0,a.x,a.y,a.z);p.setXYZ(1,b.x,b.y,b.z);p.needsUpdate=true;line.geometry.computeBoundingSphere();};
-      set(m.heightLine,new THREE.Vector3(m.dimX,bottom.y,bottom.z),new THREE.Vector3(m.dimX,top.y,top.z));
-      set(m.bottomLine,bottom,new THREE.Vector3(m.dimX-.08,bottom.y,bottom.z));
-      set(m.topLine,top,new THREE.Vector3(m.dimX-.08,top.y,top.z));
-      dimLinesGroup.visible=state.showLabels&&partVisible(simRefs.topRail?.group);
+
+      const set = (line, a, b) => {
+        if (!line || !line.geometry) return;
+        const p = line.geometry.attributes.position;
+        p.setXYZ(0, a.x, a.y, a.z);
+        p.setXYZ(1, b.x, b.y, b.z);
+        p.needsUpdate = true;
+        line.geometry.computeBoundingSphere();
+      };
+
+      const m = simRefs.measurement;
+      if (m) {
+        const top = m.top(), bottom = m.bottom();
+        set(m.heightLine, new THREE.Vector3(m.dimX, bottom.y, bottom.z), new THREE.Vector3(m.dimX, top.y, top.z));
+        set(m.bottomLine, bottom, new THREE.Vector3(m.dimX - 0.08, bottom.y, bottom.z));
+        set(m.topLine, top, new THREE.Vector3(m.dimX - 0.08, top.y, top.z));
+      }
+
+      if (simRefs.stepMeasurements) {
+        simRefs.stepMeasurements.forEach(sm => {
+          const pt = sm.pt;
+          const topY = pt.topY + (state.topRailDia / 2000);
+          const floorY = pt.floorY;
+          const lines = sm.stepLines;
+          if (lines && lines.length >= 3) {
+            set(lines[0], new THREE.Vector3(sm.pDimX, floorY, pt.z), new THREE.Vector3(sm.pDimX, topY, pt.z));
+            set(lines[1], new THREE.Vector3(pt.x - 0.04, floorY, pt.z), new THREE.Vector3(sm.pDimX - 0.04, floorY, pt.z));
+            set(lines[2], new THREE.Vector3(pt.x - 0.04, topY, pt.z), new THREE.Vector3(sm.pDimX - 0.04, topY, pt.z));
+          }
+        });
+      }
     }
 
     function clearGroup(group) {
@@ -8575,33 +8754,110 @@ void main() {
       sim4DGroup.add(weldTorch);
       simRefs.weldTorch = weldTorch;
 
-      // 10) 3D 치수선 및 높이 측정 기준(850 / 900 / 1200mm) 비교 가이드라인 등록
+      // 10) 3D 치수선 및 각 계단 단차별 높이 측정 기준(피난방화규칙·장애인편의법·산업안전보건기준) 검토 시스템
       dimLinesGroup.visible = state.showLabels;
-      const dimLineMat = new THREE.LineBasicMaterial({ color: state.labelColors.dim,depthTest:false });
-      const ref850Mat = new THREE.LineBasicMaterial({ color: state.labelColors.dim,depthTest:false });
-      const ref900Mat = new THREE.LineBasicMaterial({ color: state.labelColors.dim,depthTest:false });
-      const ref1200Mat = new THREE.LineBasicMaterial({ color: state.labelColors.dim,depthTest:false });
+      const dimLineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, depthTest: false, transparent: true, opacity: 0.95 });
+      const ref850Mat = new THREE.LineBasicMaterial({ color: 0x38bdf8, depthTest: false, transparent: true, opacity: 0.85 });
+      const ref900Mat = new THREE.LineBasicMaterial({ color: 0xfbbf24, depthTest: false, transparent: true, opacity: 0.85 });
+      const ref1200Mat = new THREE.LineBasicMaterial({ color: 0x34d399, depthTest: false, transparent: true, opacity: 0.85 });
 
-      // P1 실제 설치면과 상부 손잡이 최상면. 설계 비교 눈금은 별도 안내이다.
-      const p1=simRefs.postPositions[0],dimX=p1.x-.22,yFloor=p1.floorY;
-      const topAnchor=()=>{const g=simRefs.topRail.group;rootGroup.updateMatrixWorld(true);const ideal=g.localToWorld(new THREE.Vector3(p1.x,p1.topY+D_top/2,p1.z));return topSurfaceAnchor(g,ideal.x,ideal.z,ideal.y+D_top*3,ideal);};
-      const floorAnchor=()=>new THREE.Vector3(p1.x-.075,yFloor,p1.z);
-      const line=(a,b,material)=>{const mesh=new THREE.Line(new THREE.BufferGeometry().setFromPoints([a,b]),material);mesh.renderOrder=10;dimLinesGroup.add(mesh);return mesh;};
-      const top=topAnchor(),floor=floorAnchor();
-      const heightLine=line(new THREE.Vector3(dimX,floor.y,p1.z),new THREE.Vector3(dimX,top.y,p1.z),dimLineMat);
-      const bottomLine=line(floor,new THREE.Vector3(dimX-.08,floor.y,p1.z),dimLineMat);
-      const topLine=line(top,new THREE.Vector3(dimX-.08,top.y,p1.z),dimLineMat);
-      simRefs.measurement={heightLine,bottomLine,topLine,dimX,top:topAnchor,bottom:floorAnchor};
-      const hasTop=()=>partVisible(simRefs.topRail?.group);
-      active3DLabels.push({
-        keyHint:'height-top',group:'dim',cls:'label-dim',pos:top.clone(),getAnchor:topAnchor,isAvailable:hasTop,targetKind:'rail-outer-top',
-        getText:()=>{const actual=(topAnchor().y-yFloor)*1000;return `P1 손잡이 실제 최상면 · 현재 ${actual.toFixed(1)}mm / 설계 ${state.railingHeight}mm`;}
+      const line = (a, b, material) => {
+        const mesh = new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), material);
+        mesh.renderOrder = 15;
+        dimLinesGroup.add(mesh);
+        return mesh;
+      };
+
+      const hasTop = () => partVisible(simRefs.topRail?.group);
+      simRefs.stepMeasurements = [];
+
+      // [개선사항 #4] 계단 디딤판 각각의 단차(P1~PN+1)에서 난간대 최상단까지 치수선 표출 및 법규 높이 검토
+      simRefs.postPositions.forEach((pt, idx) => {
+        const pDimX = pt.x - 0.16;
+        const topY = pt.topY + D_top / 2; // 파이프 최상단
+        const floorY = pt.floorY;
+        const currentH = (topY - floorY) * 1000;
+
+        // 법적 기준 준수 판정
+        let legalStatus = '';
+        if (currentH >= 1200 - 0.5) {
+          legalStatus = '건축법 고소난간(≥1200mm) 적합 ✅';
+        } else if (currentH >= 900 - 0.5) {
+          legalStatus = '산업안전·건축법(≥900mm) 적합 ✅';
+        } else if (currentH >= 800 - 0.5) {
+          legalStatus = '장애인편의법(800~900mm) 적합 ✅';
+        } else {
+          legalStatus = '법정 기준 미달 ⚠️';
+        }
+
+        const vFloor = new THREE.Vector3(pDimX, floorY, pt.z);
+        const vTop = new THREE.Vector3(pDimX, topY, pt.z);
+        const vFloorNosing = new THREE.Vector3(pt.x - 0.04, floorY, pt.z);
+        const vTopNosing = new THREE.Vector3(pt.x - 0.04, topY, pt.z);
+
+        // 3D 수직 치수선 및 수평 치수 보조선
+        const hLine = line(vFloor, vTop, dimLineMat);
+        const bLine = line(vFloorNosing, new THREE.Vector3(pDimX - 0.04, floorY, pt.z), dimLineMat);
+        const tLine = line(vTopNosing, new THREE.Vector3(pDimX - 0.04, topY, pt.z), dimLineMat);
+        // 상하단 45도 건축 티크(Tick) 표시
+        const tickB = line(new THREE.Vector3(pDimX - 0.02, floorY - 0.02, pt.z), new THREE.Vector3(pDimX + 0.02, floorY + 0.02, pt.z), dimLineMat);
+        const tickT = line(new THREE.Vector3(pDimX - 0.02, topY - 0.02, pt.z), new THREE.Vector3(pDimX + 0.02, topY + 0.02, pt.z), dimLineMat);
+
+        const stepLines = [hLine, bLine, tLine, tickB, tickT];
+        simRefs.stepMeasurements.push({ postIndex: idx, pDimX, pt, stepLines });
+
+        // 개별 치수 라벨 등록 (라벨 우측 X 버튼으로 개별 닫기 지원)
+        active3DLabels.push({
+          keyHint: `step-dim-${idx + 1}`,
+          group: 'dim',
+          cls: 'label-dim label-step-dim',
+          pos: new THREE.Vector3(pDimX, (floorY + topY) / 2, pt.z),
+          getAnchor: () => new THREE.Vector3(pDimX, (floorY + (pt.topY + D_top / 2)) / 2, pt.z),
+          dimPoints: {
+            bottom: () => new THREE.Vector3(pDimX, pt.floorY, pt.z),
+            top: () => new THREE.Vector3(pDimX, pt.topY + D_top / 2, pt.z),
+            nosingBottom: () => new THREE.Vector3(pt.x, pt.floorY, pt.z),
+            nosingTop: () => new THREE.Vector3(pt.x, pt.topY + D_top / 2, pt.z)
+          },
+          stepLines: stepLines,
+          isAvailable: hasTop,
+          targetKind: 'step-height-measure',
+          getText: () => {
+            const hNow = (pt.topY + D_top / 2 - pt.floorY) * 1000;
+            return `P${idx + 1} [${pt.descTag}] 높이: ${hNow.toFixed(1)}mm · ${legalStatus}`;
+          }
+        });
       });
-      active3DLabels.push({keyHint:'height-floor',group:'dim',cls:'label-dim',pos:floor.clone(),getAnchor:floorAnchor,isAvailable:hasTop,targetKind:'installation-floor',text:'P1 설치면 0mm · 하부 화강석 포장 상면 (베이스·좌대 높이 제외)'});
-      for(const [mm,material] of [[850,ref850Mat],[900,ref900Mat],[1200,ref1200Mat]]){
-        const y=yFloor+mm/1000,anchor=new THREE.Vector3(dimX-.14,y,p1.z);
-        line(anchor,new THREE.Vector3(dimX+.04,y,p1.z),material);
-        active3DLabels.push({keyHint:'reference-'+mm,group:'dim',cls:'label-dim',pos:anchor,anchor,isAvailable:hasTop,targetKind:'design-guide',text:`비교 눈금 ${mm}mm · 설치면 기준 설계 가이드`});
+
+      // P1 기준 비교 가이드라인 (850 / 900 / 1200mm)
+      const p1 = simRefs.postPositions[0], dimX = p1.x - 0.22, yFloor = p1.floorY;
+      const topAnchor = () => {
+        const g = simRefs.topRail.group;
+        rootGroup.updateMatrixWorld(true);
+        const ideal = g.localToWorld(new THREE.Vector3(p1.x, p1.topY + D_top / 2, p1.z));
+        return topSurfaceAnchor(g, ideal.x, ideal.z, ideal.y + D_top * 3, ideal);
+      };
+      const floorAnchor = () => new THREE.Vector3(p1.x - 0.075, yFloor, p1.z);
+      const top = topAnchor(), floor = floorAnchor();
+      const heightLine = line(new THREE.Vector3(dimX, floor.y, p1.z), new THREE.Vector3(dimX, top.y, p1.z), dimLineMat);
+      const bottomLine = line(floor, new THREE.Vector3(dimX - 0.08, floor.y, p1.z), dimLineMat);
+      const topLine = line(top, new THREE.Vector3(dimX - 0.08, top.y, p1.z), dimLineMat);
+      simRefs.measurement = { heightLine, bottomLine, topLine, dimX, top: topAnchor, bottom: floorAnchor };
+
+      for (const [mm, material] of [[850, ref850Mat], [900, ref900Mat], [1200, ref1200Mat]]) {
+        const y = yFloor + mm / 1000, anchor = new THREE.Vector3(dimX - 0.14, y, p1.z);
+        const refLine = line(anchor, new THREE.Vector3(dimX + 0.04, y, p1.z), material);
+        active3DLabels.push({
+          keyHint: 'reference-' + mm,
+          group: 'dim',
+          cls: 'label-dim',
+          pos: anchor,
+          anchor,
+          stepLines: [refLine],
+          isAvailable: hasTop,
+          targetKind: 'design-guide',
+          text: `비교 기준선 ${mm}mm · 법정 높이 가이드`
+        });
       }
       const middleIndex=Math.min(1,simRefs.posts.length-1),middleRef=simRefs.posts[middleIndex];
       active3DLabels.push({keyHint:'post-spec',group:'spec',cls:'label-spec',pos:simRefs.postPositions[middleIndex],
@@ -8643,14 +8899,83 @@ void main() {
       const counts={dim:0,core:0,spec:0,strata:0};
       active3DLabels.forEach(item=>{
         item.group=annotationGroup(item);const index=counts[item.group]++;item.key=item.keyHint||item.group+':'+index;
-        item.defaultOffset=item.defaultOffset||(item.group==='core'?[160,-35-index%3*24]:item.group==='dim'?[-155,index*38-20]:[175,35+index*35]);
-        const div=document.createElement('div');div.className=`label-3d ${item.cls}`;div.textContent=item.getText?item.getText():item.text;div.dataset.annotationKey=item.key;
-        div.title='드래그: 표시 위치 이동 · 더블클릭: 배치 복원';labelsContainer.appendChild(div);item.el=div;
-        const group=document.createElementNS(SVG_NS,'g');svg.appendChild(group);item.leader=group;
+        item.defaultOffset=item.defaultOffset||(item.group==='core'?[160,-35-index%3*24]:item.group==='dim'?[-165,index*38-20]:[175,35+index*35]);
+        
+        // 라벨 본체 및 텍스트 래퍼
+        const div=document.createElement('div');
+        div.className=`label-3d ${item.cls}`;
+        div.dataset.annotationKey=item.key;
+        div.title='드래그: 위치 이동 · 더블클릭: 위치 복원 · X: 라벨 닫기';
+        
+        const txtSpan = document.createElement('span');
+        txtSpan.className = 'label-text-node select-none';
+        txtSpan.textContent = item.getText ? item.getText() : item.text;
+        div.appendChild(txtSpan);
+        item.textNode = txtSpan;
+
+        // [개선사항 #4] 개별 라벨 'X' 닫기 제어 버튼 설치
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'label-close-x';
+        closeBtn.textContent = '✕';
+        closeBtn.title = '이 치수 라벨 및 지시선 닫기';
+        closeBtn.addEventListener('pointerdown', ev => ev.stopPropagation());
+        closeBtn.addEventListener('click', ev => {
+          ev.stopPropagation();
+          item.userClosed = true;
+          div.style.display = 'none';
+          if (item.leader) item.leader.style.display = 'none';
+          if (item.dimSvgGroup) item.dimSvgGroup.style.display = 'none';
+          if (item.stepLines) item.stepLines.forEach(l => l.visible = false);
+          requestRender();
+        });
+        div.appendChild(closeBtn);
+
+        labelsContainer.appendChild(div);
+        item.el=div;
+
+        // 지시선(Leader Line) SVG 그룹
+        const group=document.createElementNS(SVG_NS,'g');
+        svg.appendChild(group);
+        item.leader=group;
         for(const [stroke,width] of [['#12212e',4],[item.color||state.labelColors[item.group]||'#38bdf8',1.6]]){
           const line=document.createElementNS(SVG_NS,'line');line.setAttribute('stroke',stroke);line.setAttribute('stroke-width',width);group.appendChild(line);
         }
         const dot=document.createElementNS(SVG_NS,'circle');dot.setAttribute('r','3');dot.setAttribute('stroke','#12212e');group.appendChild(dot);
+
+        // [개선사항 #4] 고선명 2D SVG 치수선(Dimension String) 그룹
+        if (item.dimPoints) {
+          const dimSvg = document.createElementNS(SVG_NS, 'g');
+          dimSvg.setAttribute('class', 'dim-svg-line-group');
+          // 메인 수직 치수선 (어두운 테두리 + 밝은 중심선)
+          const dimBack = document.createElementNS(SVG_NS, 'line');
+          dimBack.setAttribute('stroke', '#0f172a');
+          dimBack.setAttribute('stroke-width', '4');
+          dimSvg.appendChild(dimBack);
+
+          const dimFront = document.createElementNS(SVG_NS, 'line');
+          dimFront.setAttribute('stroke', '#38bdf8');
+          dimFront.setAttribute('stroke-width', '2');
+          dimSvg.appendChild(dimFront);
+
+          // 상·하단 치수 보조선 및 티크
+          const extTop = document.createElementNS(SVG_NS, 'line');
+          extTop.setAttribute('stroke', '#38bdf8');
+          extTop.setAttribute('stroke-width', '1.5');
+          extTop.setAttribute('stroke-dasharray', '2 2');
+          dimSvg.appendChild(extTop);
+
+          const extBottom = document.createElementNS(SVG_NS, 'line');
+          extBottom.setAttribute('stroke', '#38bdf8');
+          extBottom.setAttribute('stroke-width', '1.5');
+          extBottom.setAttribute('stroke-dasharray', '2 2');
+          dimSvg.appendChild(extBottom);
+
+          svg.appendChild(dimSvg);
+          item.dimSvgGroup = dimSvg;
+          item.dimSvgElements = { dimBack, dimFront, extTop, extBottom };
+        }
+
         div.addEventListener('pointerdown',event=>{
           if(event.button!==0)return;event.preventDefault();event.stopPropagation();
           annotationDrag={item,x:event.clientX,y:event.clientY,offset:[...(annotationLayout.get(item.key)||item.defaultOffset)],controlsEnabled:controls.enabled};
@@ -8682,12 +9007,54 @@ void main() {
       const note=document.getElementById("constructionInspectionNote");
       const topInset=note&&note.offsetHeight?note.offsetTop+note.offsetHeight+8:8;
       active3DLabels.forEach(item=>{
+        // 사용자가 개별 X 버튼으로 닫은 라벨은 비표시 유지
+        if (item.userClosed) {
+          if (item.el) item.el.style.display = 'none';
+          if (item.leader) item.leader.style.display = 'none';
+          if (item.dimSvgGroup) item.dimSvgGroup.style.display = 'none';
+          if (item.stepLines) item.stepLines.forEach(l => l.visible = false);
+          return;
+        }
+
         const enabled=(item.group==='strata'?isInspection:(item.group==='dim'?state.showLabels:state.showMarkers&&state.markerGroups[item.group]))&&(!item.isAvailable||item.isAvailable());
-        if(item.getText)item.el.textContent=item.getText();
+        if(item.getText && item.textNode) item.textNode.textContent = item.getText();
         const anchor=item.getAnchor?item.getAnchor():item.anchor||item.pos;
         const p=labelProjection.copy(anchor).project(camera);
         const visible=enabled&&p.z>=-1&&p.z<=1&&Math.abs(p.x)<1.2&&Math.abs(p.y)<1.2;
-        item.el.style.display=visible?'block':'none';item.leader.style.display=visible?'':'none';if(!visible)return;
+        item.el.style.display=visible?'inline-flex':'none';
+        item.leader.style.display=visible?'':'none';
+        if (item.stepLines) item.stepLines.forEach(l => l.visible = visible);
+
+        // [개선사항 #4] 고선명 2D SVG 치수선 실시간 투영 갱신
+        if (item.dimPoints && item.dimSvgGroup) {
+          const ptFloor = labelProjection.copy(item.dimPoints.bottom()).project(camera);
+          const ptTop = labelProjection.copy(item.dimPoints.top()).project(camera);
+          const ptNoseB = labelProjection.copy(item.dimPoints.nosingBottom()).project(camera);
+          const ptNoseT = labelProjection.copy(item.dimPoints.nosingTop()).project(camera);
+          const dimVis = visible && ptFloor.z >= -1 && ptFloor.z <= 1 && ptTop.z >= -1 && ptTop.z <= 1;
+          item.dimSvgGroup.style.display = dimVis ? '' : 'none';
+          if (dimVis) {
+            const fx = (ptFloor.x * 0.5 + 0.5) * width;
+            const fy = (-ptFloor.y * 0.5 + 0.5) * height;
+            const tx = (ptTop.x * 0.5 + 0.5) * width;
+            const ty = (-ptTop.y * 0.5 + 0.5) * height;
+            const nbx = (ptNoseB.x * 0.5 + 0.5) * width;
+            const nby = (-ptNoseB.y * 0.5 + 0.5) * height;
+            const ntx = (ptNoseT.x * 0.5 + 0.5) * width;
+            const nty = (-ptNoseT.y * 0.5 + 0.5) * height;
+
+            const el = item.dimSvgElements;
+            el.dimBack.setAttribute('x1', fx); el.dimBack.setAttribute('y1', fy);
+            el.dimBack.setAttribute('x2', tx); el.dimBack.setAttribute('y2', ty);
+            el.dimFront.setAttribute('x1', fx); el.dimFront.setAttribute('y1', fy);
+            el.dimFront.setAttribute('x2', tx); el.dimFront.setAttribute('y2', ty);
+            el.extBottom.setAttribute('x1', nbx); el.extBottom.setAttribute('y1', nby);
+            el.extBottom.setAttribute('x2', fx); el.extBottom.setAttribute('y2', fy);
+            el.extTop.setAttribute('x1', ntx); el.extTop.setAttribute('y1', nty);
+            el.extTop.setAttribute('x2', tx); el.extTop.setAttribute('y2', ty);
+          }
+        }
+        if(!visible)return;
         const ax=(p.x*.5+.5)*width,ay=(-p.y*.5+.5)*height;
         const offset=annotationLayout.get(item.key)||item.defaultOffset;
         const hw=item.el.offsetWidth/2,hh=item.el.offsetHeight/2;
@@ -9601,7 +9968,7 @@ void main() {
       Object.assign(state, {
         ...DEFAULTS,
         railingHeight: 900,
-        balustersPerBay: 2,
+        balustersPerBay: 1, // [산업안전보건기준 제13조 분석 반영] 규칙 제13조(≤60cm) 충족하므로 1개 유지! (주택건설기준 제18조 ≤100mm 적용 시에만 2개 필요)
         coreHoleDia: 70,
         coreHoleDepth: 140
       });
@@ -9648,7 +10015,13 @@ void main() {
       document.getElementById('annotationDimEnabled').checked=state.showLabels;
       const chkStrata = document.getElementById('annotationStrataEnabled');
       if (chkStrata) chkStrata.checked = state.showStrataLabels;
-      dimLinesGroup.visible=state.showLabels;requestRender();
+      if (state.showLabels) {
+        // [개선사항 #4] 치수 ON 시 사용자가 개별 닫았던 치수 라벨 및 치수선 전원 복원 표출
+        active3DLabels.forEach(it => { if (it.group === 'dim') it.userClosed = false; });
+      }
+      dimLinesGroup.visible=state.showLabels;
+      updateMeasurementGeometry();
+      requestRender();
     }
     document.getElementById('btnToggleLabels').addEventListener('click',()=>{state.showLabels=!state.showLabels;updateLabelToggleUI();});
     document.getElementById('btnToggleMarkers').addEventListener('click',()=>{state.showMarkers=!state.showMarkers;updateLabelToggleUI();});
@@ -9704,6 +10077,48 @@ void main() {
           });
         }
       });
+
+      // [사용자 요구 반영] 태양광 타겟 대상물 프리셋 버튼 이벤트 바인딩
+      document.querySelectorAll('.sun-target-preset-btn').forEach(btn => {
+        if (!btn.dataset.bound) {
+          btn.dataset.bound = 'true';
+          btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const tx = parseFloat(btn.dataset.tx);
+            const ty = parseFloat(btn.dataset.ty);
+            const tz = parseFloat(btn.dataset.tz);
+            updateSunTarget(tx, ty, tz, false);
+          });
+        }
+      });
+
+      const btnResetTargetEl = document.getElementById('btnResetSunTarget');
+      if (btnResetTargetEl && !btnResetTargetEl.dataset.bound) {
+        btnResetTargetEl.dataset.bound = 'true';
+        btnResetTargetEl.addEventListener('click', (e) => {
+          e.preventDefault();
+          updateSunTarget(-0.10, 0.00, -0.40, false);
+        });
+      }
+
+      const btnDomeFollowEl = document.getElementById('btnToggleDomeFollow');
+      if (btnDomeFollowEl && !btnDomeFollowEl.dataset.bound) {
+        btnDomeFollowEl.dataset.bound = 'true';
+        btnDomeFollowEl.addEventListener('click', (e) => {
+          e.preventDefault();
+          state.sunDomeFollowTarget = (state.sunDomeFollowTarget === false);
+          if (state.sunDomeFollowTarget) {
+            DOME_CENTER.set(SUN_TARGET.x, 0.0, SUN_TARGET.z);
+          } else {
+            DOME_CENTER.set(-0.10, 0.00, -0.40);
+          }
+          if (sunPathDomeGroup) {
+            sunPathDomeGroup.position.set(DOME_CENTER.x, 0.0, DOME_CENTER.z);
+          }
+          updateSunPosition(state.sunAzimuth || DEFAULT_SUN_AZIMUTH, state.sunAltitude || DEFAULT_SUN_ALTITUDE);
+          syncSunTargetUI(SUN_TARGET.x, SUN_TARGET.y, SUN_TARGET.z);
+        });
+      }
     }
     bindSunPathEvents();
 
@@ -10387,8 +10802,22 @@ void main() {
       applyUICollapseStates();
     });
 
+    function collapseAllSidebarCards(collapse = true) {
+      uiCollapseState.allSectionsCollapsed = collapse;
+      document.querySelectorAll('.sec-body').forEach((el) => {
+        el.classList.toggle('collapsed', collapse);
+      });
+      document.querySelectorAll('.acc-card-btn').forEach((btn) => {
+        btn.textContent = collapse ? '펴기 ▼' : '접기 ▲';
+      });
+      const allBtn = document.getElementById('btnToggleAllSections');
+      if (allBtn) allBtn.textContent = collapse ? '카드 모두펴기 ▼' : '카드 모두접기 ▲';
+    }
+
     document.getElementById('btnExpandSidebarHandle').addEventListener('click', () => {
       uiCollapseState.sidebarCollapsed = false;
+      // [사용자 요구사항 #2] 메뉴 펼치기 클릭 시 팝업창 내부의 모든 항목 접기 상태로 활성화
+      collapseAllSidebarCards(true);
       applyUICollapseStates();
     });
 
@@ -10444,6 +10873,8 @@ void main() {
     }
 
     initCollapsibleCards();
+    // [초기 상태 최적화] 사이드바 내부 모든 카드 기본 접기 상태로 시작
+    collapseAllSidebarCards(true);
 
     // 사이드바 상단 '카드 모두접기 / 모두펴기' 버튼
     document.getElementById('btnToggleAllSections').addEventListener('click', (e) => {
@@ -10691,6 +11122,7 @@ void main() {
     
     // =========================================================================
     // Revit BIM 방식 4D·5D 옥외 태양광 연구(Solar Study) & 천구 반돔(Celestial Half-Dome) 시스템
+    // [사용자 요구 반영] 태양광 타겟 대상물(난간대/현관문/계단 등) 마우스/터치 인터랙티브 드래그 시스템 완비
     // =========================================================================
     const sunPathGroup = new THREE.Group();
     sunPathGroup.name = 'revitBimSunPathGroup';
@@ -10698,39 +11130,59 @@ void main() {
     scene.add(sunPathGroup);
 
     const DOME_CENTER = new THREE.Vector3(-0.1, 0.0, -0.4);
+    const SUN_TARGET = new THREE.Vector3(-0.1, 0.0, -0.4);
     const DOME_RADIUS = 4.8;
     const DEFAULT_SUN_AZIMUTH = 192.3;
     const DEFAULT_SUN_ALTITUDE = 33.9;
 
     let isDraggingSun = false;
+    let isDraggingTarget = false;
+    let sunPathDomeGroup = null;
+
     let sunHitbox = null;
     let sunSphere = null;
     let sunCorona = null;
     let sunDropLineGeo = null;
     let sunRadialLineGeo = null;
+    let sunBeamLineGeo = null;
     let sunGroundDisc = null;
     let sunReadoutSprite = null;
     let sunReadoutCanvas = null;
     let sunReadoutCtx = null;
     let sunReadoutTex = null;
 
+    let sunTargetGroup = null;
+    let sunTargetHitbox = null;
+    let sunTargetRingOuter = null;
+    let sunTargetRingInner = null;
+    let sunTargetCrosshairs = null;
+    let sunTargetPin = null;
+    let sunTargetBadgeSprite = null;
+    let sunTargetBadgeCanvas = null;
+    let sunTargetBadgeCtx = null;
+    let sunTargetBadgeTex = null;
+
     function buildSunPathCelestialDome() {
       clearGroup(sunPathGroup);
 
       const R = DOME_RADIUS;
-      const C = DOME_CENTER;
+
+      // 천구 반돔 구조체 로컬 그룹 (DOME_CENTER 위치에 일괄 배치되어 타겟 이동 시 고속 좌표 동기화)
+      sunPathDomeGroup = new THREE.Group();
+      sunPathDomeGroup.name = 'sunPathDomeGroup';
+      sunPathDomeGroup.position.set(DOME_CENTER.x, 0.0, DOME_CENTER.z);
 
       // 1. 지면 방위각 나침반 링 (Ground Compass Rose)
       const compassSegments = 64;
       const compassPts = [];
       for (let i = 0; i <= compassSegments; i++) {
         const theta = (i / compassSegments) * Math.PI * 2;
-        compassPts.push(new THREE.Vector3(C.x + R * Math.sin(theta), 0.006, C.z - R * Math.cos(theta)));
+        compassPts.push(new THREE.Vector3(R * Math.sin(theta), 0.006, -R * Math.cos(theta)));
       }
       const compassRingGeo = new THREE.BufferGeometry().setFromPoints(compassPts);
       const compassRingMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.60 });
       const compassRing = new THREE.Line(compassRingGeo, compassRingMat);
-      sunPathGroup.add(compassRing);
+      sunPathDomeGroup.add(compassRing);
 
       // 눈금 및 4방위 지시선
       const ticksGroup = new THREE.Group();
@@ -10740,8 +11192,8 @@ void main() {
         const isMajor = (deg % 30 === 0);
         const rInner = isCardinal ? R - 0.28 : (isMajor ? R - 0.16 : R - 0.09);
         const lineGeo = new THREE.BufferGeometry().setFromPoints([
-          new THREE.Vector3(C.x + rInner * Math.sin(rad), 0.007, C.z - rInner * Math.cos(rad)),
-          new THREE.Vector3(C.x + R * Math.sin(rad), 0.007, C.z - R * Math.cos(rad))
+          new THREE.Vector3(rInner * Math.sin(rad), 0.007, -rInner * Math.cos(rad)),
+          new THREE.Vector3(R * Math.sin(rad), 0.007, -R * Math.cos(rad))
         ]);
         const lineMat = new THREE.LineBasicMaterial({
           color: isCardinal ? 0xf59e0b : (isMajor ? 0x38bdf8 : 0x64748b),
@@ -10750,7 +11202,7 @@ void main() {
         });
         ticksGroup.add(new THREE.Line(lineGeo, lineMat));
       }
-      sunPathGroup.add(ticksGroup);
+      sunPathDomeGroup.add(ticksGroup);
 
       // 4대 방위 문자 지면 마커 (N 북, S 남, E 동, W 서)
       function makeCardinalMarker(text, color, scale = 0.65) {
@@ -10778,14 +11230,14 @@ void main() {
       }
 
       const markerN = makeCardinalMarker('N(북)', '#f59e0b', 0.70);
-      markerN.position.set(C.x, 0.015, C.z - R - 0.38);
+      markerN.position.set(0, 0.015, -R - 0.38);
       const markerS = makeCardinalMarker('S(남)', '#38bdf8', 0.70);
-      markerS.position.set(C.x, 0.015, C.z + R + 0.38);
+      markerS.position.set(0, 0.015, R + 0.38);
       const markerE = makeCardinalMarker('E(동)', '#38bdf8', 0.70);
-      markerE.position.set(C.x + R + 0.38, 0.015, C.z);
+      markerE.position.set(R + 0.38, 0.015, 0);
       const markerW = makeCardinalMarker('W(서)', '#38bdf8', 0.70);
-      markerW.position.set(C.x - R - 0.38, 0.015, C.z);
-      sunPathGroup.add(markerN, markerS, markerE, markerW);
+      markerW.position.set(-R - 0.38, 0.015, 0);
+      sunPathDomeGroup.add(markerN, markerS, markerE, markerW);
 
       // 2. 천구 반돔 와이어프레임 (Celestial Half-Dome Meridians & Altitude Parallels)
       // 12 자오선 (Meridians)
@@ -10796,13 +11248,13 @@ void main() {
         const altSteps = 24;
         for (let j = 0; j <= altSteps; j++) {
           const alt = (j / altSteps) * (Math.PI / 2);
-          const x = C.x + R * Math.cos(alt) * Math.sin(rad);
-          const y = C.y + R * Math.sin(alt);
-          const z = C.z - R * Math.cos(alt) * Math.cos(rad);
+          const x = R * Math.cos(alt) * Math.sin(rad);
+          const y = R * Math.sin(alt);
+          const z = -R * Math.cos(alt) * Math.cos(rad);
           pts.push(new THREE.Vector3(x, y, z));
         }
         const mGeo = new THREE.BufferGeometry().setFromPoints(pts);
-        sunPathGroup.add(new THREE.Line(mGeo, meridianMat));
+        sunPathDomeGroup.add(new THREE.Line(mGeo, meridianMat));
       }
 
       // 5 위도/고도선 (15°, 30°, 45°, 60°, 75°)
@@ -10810,14 +11262,14 @@ void main() {
       for (const altDeg of [15, 30, 45, 60, 75]) {
         const alt = altDeg * Math.PI / 180;
         const rAlt = R * Math.cos(alt);
-        const yAlt = C.y + R * Math.sin(alt);
+        const yAlt = R * Math.sin(alt);
         const pts = [];
         for (let k = 0; k <= compassSegments; k++) {
           const theta = (k / compassSegments) * Math.PI * 2;
-          pts.push(new THREE.Vector3(C.x + rAlt * Math.sin(theta), yAlt, C.z - rAlt * Math.cos(theta)));
+          pts.push(new THREE.Vector3(rAlt * Math.sin(theta), yAlt, -rAlt * Math.cos(theta)));
         }
         const pGeo = new THREE.BufferGeometry().setFromPoints(pts);
-        sunPathGroup.add(new THREE.Line(pGeo, parallelMat));
+        sunPathDomeGroup.add(new THREE.Line(pGeo, parallelMat));
       }
 
       // 3. Revit BIM 일영 분석 궤적 호 (Solstice & Equinox Solar Arcs)
@@ -10828,9 +11280,9 @@ void main() {
           const t = i / steps;
           const az = (startDeg + (endDeg - startDeg) * t) * Math.PI / 180;
           const alt = (Math.sin(t * Math.PI) * maxAltDeg) * Math.PI / 180;
-          const x = C.x + R * Math.cos(alt) * Math.sin(az);
-          const y = C.y + R * Math.sin(alt);
-          const z = C.z - R * Math.cos(alt) * Math.cos(az);
+          const x = R * Math.cos(alt) * Math.sin(az);
+          const y = R * Math.sin(alt);
+          const z = -R * Math.cos(alt) * Math.cos(az);
           pts.push(new THREE.Vector3(x, y, z));
         }
         const arcGeo = new THREE.BufferGeometry().setFromPoints(pts);
@@ -10839,13 +11291,15 @@ void main() {
       }
 
       // 하지 (Summer Solstice, 최고고도 76°)
-      sunPathGroup.add(createSolarArc(76, 60, 300, 0xf59e0b, 0.70));
+      sunPathDomeGroup.add(createSolarArc(76, 60, 300, 0xf59e0b, 0.70));
       // 춘추분 (Equinox, 최고고도 52°)
-      sunPathGroup.add(createSolarArc(52, 90, 270, 0x38bdf8, 0.60));
+      sunPathDomeGroup.add(createSolarArc(52, 90, 270, 0x38bdf8, 0.60));
       // 동지 (Winter Solstice, 최고고도 29°)
-      sunPathGroup.add(createSolarArc(29, 120, 240, 0x818cf8, 0.50));
+      sunPathDomeGroup.add(createSolarArc(29, 120, 240, 0x818cf8, 0.50));
 
-      // 4. 인터랙티브 3D 태양 오브젝트 (Interactive 3D Sun Sphere & Target Handle)
+      sunPathGroup.add(sunPathDomeGroup);
+
+      // 4. 인터랙티브 3D 태양 구체 핸들 (Interactive 3D Sun Sphere & Azimuth/Altitude Drag Handle)
       const sunHandleGroup = new THREE.Group();
       sunHandleGroup.name = 'sunHandleGroup';
 
@@ -10861,7 +11315,7 @@ void main() {
       sunCorona = new THREE.Mesh(sunCoronaGeo, sunCoronaMat);
       sunHandleGroup.add(sunCorona);
 
-      // 마우스 그립용 투명 히트박스 (Three.js 레이캐스트가 visible=false를 스킵하는 결함 해소: 투명도 0으로 완벽 교차 판정)
+      // 태양 구체 마우스 그립용 투명 히트박스
       const hitboxGeo = new THREE.SphereGeometry(0.48, 16, 12);
       const hitboxMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.0, depthWrite: false });
       sunHitbox = new THREE.Mesh(hitboxGeo, hitboxMat);
@@ -10876,16 +11330,23 @@ void main() {
       sunDropLineGeo.setAttribute('position', new THREE.BufferAttribute(dropLinePositions, 3));
       const sunDropLineMat = new THREE.LineBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.85 });
       const sunDropLine = new THREE.Line(sunDropLineGeo, sunDropLineMat);
-      // sunDropLine.computeLineDistances();
       sunPathGroup.add(sunDropLine);
 
-      // 지면 반경 연결선
+      // 지면 반경 연결선 (태양 지면 투영점 -> 타겟 대상물 지면 위치)
       const radialLinePositions = new Float32Array([0, 0, 0, 0, 0, 0]);
       sunRadialLineGeo = new THREE.BufferGeometry();
       sunRadialLineGeo.setAttribute('position', new THREE.BufferAttribute(radialLinePositions, 3));
-      const sunRadialLineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.70 });
+      const sunRadialLineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
       const sunRadialLine = new THREE.Line(sunRadialLineGeo, sunRadialLineMat);
       sunPathGroup.add(sunRadialLine);
+
+      // 3D 직사광 광선 빔 라인 (태양 구체 -> 타겟 대상물 직사 벡터)
+      const beamLinePositions = new Float32Array([0, 0, 0, 0, 0, 0]);
+      sunBeamLineGeo = new THREE.BufferGeometry();
+      sunBeamLineGeo.setAttribute('position', new THREE.BufferAttribute(beamLinePositions, 3));
+      const sunBeamLineMat = new THREE.LineBasicMaterial({ color: 0xfde047, transparent: true, opacity: 0.65 });
+      const sunBeamLine = new THREE.Line(sunBeamLineGeo, sunBeamLineMat);
+      sunPathGroup.add(sunBeamLine);
 
       // 지면 투영 디스크
       const groundDiscGeo = new THREE.RingGeometry(0.08, 0.18, 24);
@@ -10906,8 +11367,71 @@ void main() {
       sunReadoutSprite.renderOrder = 999;
       sunPathGroup.add(sunReadoutSprite);
 
+      // =======================================================================
+      // 7. [사용자 요구 반영] 3D 태양광 타겟 경로 대상물 (Interactive Sun Target Marker & Handle)
+      // =======================================================================
+      sunTargetGroup = new THREE.Group();
+      sunTargetGroup.name = 'sunTargetGroup';
+      sunTargetGroup.position.set(SUN_TARGET.x, SUN_TARGET.y, SUN_TARGET.z);
+
+      // 외곽 조준 링
+      const ringOuterGeo = new THREE.RingGeometry(0.18, 0.25, 32);
+      const ringOuterMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.85, depthWrite: false });
+      sunTargetRingOuter = new THREE.Mesh(ringOuterGeo, ringOuterMat);
+      sunTargetRingOuter.rotation.x = -Math.PI / 2;
+      sunTargetRingOuter.position.y = 0.015;
+      sunTargetGroup.add(sunTargetRingOuter);
+
+      // 내부 불스아이 링
+      const ringInnerGeo = new THREE.RingGeometry(0.04, 0.09, 24);
+      const ringInnerMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide, transparent: true, opacity: 0.90, depthWrite: false });
+      sunTargetRingInner = new THREE.Mesh(ringInnerGeo, ringInnerMat);
+      sunTargetRingInner.rotation.x = -Math.PI / 2;
+      sunTargetRingInner.position.y = 0.017;
+      sunTargetGroup.add(sunTargetRingInner);
+
+      // 4방향 십자선 (Crosshairs)
+      const chPts = [
+        new THREE.Vector3(-0.35, 0.016, 0), new THREE.Vector3(0.35, 0.016, 0),
+        new THREE.Vector3(0, 0.016, -0.35), new THREE.Vector3(0, 0.016, 0.35)
+      ];
+      const chGeo = new THREE.BufferGeometry().setFromPoints(chPts);
+      const chMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.80 });
+      sunTargetCrosshairs = new THREE.LineSegments(chGeo, chMat);
+      sunTargetGroup.add(sunTargetCrosshairs);
+
+      // 중심 3D 타겟 핀 (중심점 수직 지시 핀)
+      const pinGeo = new THREE.CylinderGeometry(0, 0.06, 0.22, 8);
+      pinGeo.rotateX(Math.PI);
+      pinGeo.translate(0, 0.12, 0);
+      const pinMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.92 });
+      sunTargetPin = new THREE.Mesh(pinGeo, pinMat);
+      sunTargetGroup.add(sunTargetPin);
+
+      // 마우스/터치 그립용 투명 히트박스
+      const targetHitboxGeo = new THREE.SphereGeometry(0.55, 16, 12);
+      const targetHitboxMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.0, depthWrite: false });
+      sunTargetHitbox = new THREE.Mesh(targetHitboxGeo, targetHitboxMat);
+      sunTargetHitbox.name = 'sunTargetHitbox';
+      sunTargetHitbox.position.y = 0.15;
+      sunTargetGroup.add(sunTargetHitbox);
+
+      // 타겟 3D 플로팅 태그 (HUD Badge Billboard)
+      sunTargetBadgeCanvas = document.createElement('canvas');
+      sunTargetBadgeCanvas.width = 380;
+      sunTargetBadgeCanvas.height = 80;
+      sunTargetBadgeCtx = sunTargetBadgeCanvas.getContext('2d');
+      sunTargetBadgeTex = new THREE.CanvasTexture(sunTargetBadgeCanvas);
+      sunTargetBadgeTex.colorSpace = THREE.SRGBColorSpace;
+      const targetBadgeMat = new THREE.MeshBasicMaterial({ map: sunTargetBadgeTex, transparent: true, side: THREE.DoubleSide, depthTest: false });
+      sunTargetBadgeSprite = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.25), targetBadgeMat);
+      sunTargetBadgeSprite.renderOrder = 999;
+      sunTargetGroup.add(sunTargetBadgeSprite);
+
+      sunPathGroup.add(sunTargetGroup);
+
       // 초기 위치 계산 및 적용
-      updateSunPosition(state.sunAzimuth || DEFAULT_SUN_AZIMUTH, state.sunAltitude || DEFAULT_SUN_ALTITUDE);
+      updateSunTarget(state.sunTargetX || -0.1, state.sunTargetY || 0.0, state.sunTargetZ || -0.4);
     }
 
     function updateSunReadoutCanvas(azimuth, altitude) {
@@ -10928,6 +11452,67 @@ void main() {
       ctx.textBaseline = 'middle';
       ctx.fillText(`☀️ 방위: ${azimuth.toFixed(1)}° | 고도: ${altitude.toFixed(1)}°`, 190, 40);
       sunReadoutTex.needsUpdate = true;
+    }
+
+    function updateSunTargetBadgeCanvas(tx, ty, tz) {
+      if (!sunTargetBadgeCtx) return;
+      const ctx = sunTargetBadgeCtx;
+      ctx.clearRect(0, 0, 380, 80);
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.90)';
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.roundRect(4, 4, 372, 72, 16);
+      ctx.fill();
+      ctx.stroke();
+
+      let locName = '일영 타겟';
+      if (Math.hypot(tx - (-0.1), tz - (-0.4)) < 0.25) locName = '난간대 하단 P1';
+      else if (Math.hypot(tx - (-0.1), tz - (-0.75)) < 0.25) locName = '난간대 상단 P4';
+      else if (Math.hypot(tx - (-0.52), tz - (-2.15)) < 0.35) locName = '현관 출입문';
+      else if (Math.hypot(tx - (-0.58), tz - (-1.25)) < 0.25) locName = '현관 매트';
+      else if (Math.hypot(tx - 2.2, tz - (-0.2)) < 0.35) locName = '우측 조경 화단';
+      else if (tz >= 0.5) locName = '전면 보도';
+      else if (tz <= 0 && tz >= -1.0 && tx >= -1.2 && tx <= 0) locName = `계단 디딤판 (H:${(ty * 1000).toFixed(0)}mm)`;
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.font = 'bold 22px ui-sans-serif, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`🎯 타겟: ${locName}`, 190, 14);
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = 'bold 18px ui-sans-serif, system-ui, sans-serif';
+      ctx.fillText(`X: ${tx.toFixed(2)}m · Y: ${ty.toFixed(2)}m · Z: ${tz.toFixed(2)}m (드래그 이동)`, 190, 44);
+
+      sunTargetBadgeTex.needsUpdate = true;
+    }
+
+    // [사용자 요구 반영] 태양광 타겟 경로 대상물 위치 실시간 갱신 함수
+    function updateSunTarget(tx, ty, tz, isInteractive = false) {
+      tx = Math.max(-4.5, Math.min(4.5, tx));
+      tz = Math.max(-4.0, Math.min(3.5, tz));
+      ty = Math.max(0.0, Math.min(3.0, ty));
+
+      SUN_TARGET.set(tx, ty, tz);
+      state.sunTargetX = tx;
+      state.sunTargetY = ty;
+      state.sunTargetZ = tz;
+
+      if (sunTargetGroup) {
+        sunTargetGroup.position.set(tx, ty, tz);
+      }
+
+      if (state.sunDomeFollowTarget !== false) {
+        DOME_CENTER.set(tx, 0.0, tz);
+        if (sunPathDomeGroup) {
+          sunPathDomeGroup.position.set(tx, 0.0, tz);
+        }
+      }
+
+      updateSunPosition(state.sunAzimuth || DEFAULT_SUN_AZIMUTH, state.sunAltitude || DEFAULT_SUN_ALTITUDE, isInteractive);
+      syncSunTargetUI(tx, ty, tz);
+      requestRender(true);
     }
 
     // 태양 위치 실시간 갱신 및 Three.js 조명·그림자 연동
@@ -10962,16 +11547,8 @@ void main() {
       if (sunDropLineGeo) {
         const pos = sunDropLineGeo.attributes.position.array;
         pos[0] = sx; pos[1] = sy; pos[2] = sz;
-        pos[3] = sx; pos[4] = 0.01; pos[5] = sz;
+        pos[3] = sx; pos[4] = 0.012; pos[5] = sz;
         sunDropLineGeo.attributes.position.needsUpdate = true;
-      }
-
-      // 지면 반경선
-      if (sunRadialLineGeo) {
-        const pos = sunRadialLineGeo.attributes.position.array;
-        pos[0] = C.x; pos[1] = 0.01; pos[2] = C.z;
-        pos[3] = sx; pos[4] = 0.01; pos[5] = sz;
-        sunRadialLineGeo.attributes.position.needsUpdate = true;
       }
 
       // 지면 투영 디스크
@@ -10979,26 +11556,51 @@ void main() {
         sunGroundDisc.position.set(sx, 0.012, sz);
       }
 
-      // HUD 텍스트
+      // [지면 반경 연결선] 태양 지면 투영점 -> 타겟 대상물 지면 위치 (사용자 요구 반영)
+      const T = SUN_TARGET;
+      if (sunRadialLineGeo) {
+        const pos = sunRadialLineGeo.attributes.position.array;
+        pos[0] = sx; pos[1] = 0.012; pos[2] = sz;
+        pos[3] = T.x; pos[4] = Math.max(0.012, T.y + 0.012); pos[5] = T.z;
+        sunRadialLineGeo.attributes.position.needsUpdate = true;
+      }
+
+      // [3D 직사광 광선 빔 벡터] 태양 구체 (sx, sy, sz) -> 타겟 대상물 (T.x, T.y, T.z)
+      if (sunBeamLineGeo) {
+        const pos = sunBeamLineGeo.attributes.position.array;
+        pos[0] = sx; pos[1] = sy; pos[2] = sz;
+        pos[3] = T.x; pos[4] = T.y + 0.08; pos[5] = T.z;
+        sunBeamLineGeo.attributes.position.needsUpdate = true;
+      }
+
+      // HUD 텍스트 (태양 구체 위)
       if (sunReadoutSprite) {
         sunReadoutSprite.position.set(sx, sy + 0.38, sz);
         sunReadoutSprite.quaternion.copy(camera.quaternion);
         updateSunReadoutCanvas(azimuth, altitude);
       }
 
+      // 타겟 3D 배지 태그 (타겟 마커 위)
+      if (sunTargetBadgeSprite) {
+        sunTargetBadgeSprite.position.set(T.x, T.y + 0.38, T.z);
+        sunTargetBadgeSprite.quaternion.copy(camera.quaternion);
+        updateSunTargetBadgeCanvas(T.x, T.y, T.z);
+      }
+
       // 태양광(DirectionalLight) 좌표 동기화 (거리 8m)
       const lightDist = 8.0;
-      dirLight.position.set(C.x + lightDist * dx, C.y + lightDist * dy, C.z + lightDist * dz);
-      dirLight.target.position.copy(C);
+      dirLight.position.set(T.x + lightDist * dx, T.y + lightDist * dy, T.z + lightDist * dz);
+      dirLight.target.position.set(T.x, T.y, T.z);
+      dirLight.target.updateMatrixWorld();
       dirLight.shadow.camera.updateProjectionMatrix();
 
       // 지붕 캐노피 음영 보정 스카이 필 라이트 동기화
       if (typeof skyFill !== 'undefined') {
-        skyFill.position.set(C.x - 4.5 * dx, C.y + 2.5, C.z - 4.5 * dz);
+        skyFill.position.set(T.x - 4.5 * dx, T.y + 2.5, T.z - 4.5 * dz);
       }
       // 난간 전용 스펙큘러 보조광 동기화
       if (typeof localLight !== 'undefined') {
-        localLight.position.set(C.x + 0.35 * sinA, 1.85, C.z - 0.35 * cosA);
+        localLight.position.set(T.x + 0.35 * sinA, T.y + 1.85, T.z - 0.35 * cosA);
       }
 
       state.sunAzimuth = azimuth;
@@ -11008,7 +11610,63 @@ void main() {
       requestRender(true);
     }
 
-    // 마우스 드래그를 통한 3D 태양 구면 조작 인터랙션
+    // [한국기준·단면도 2배 호버 줌 인터랙션 시스템]
+    function initDiagramHoverZoom() {
+      const preview = document.getElementById('diagramHoverPreview');
+      const previewContent = document.getElementById('diagramHoverContent');
+      const previewTitle = document.getElementById('diagramHoverTitle');
+      const btnClose = document.getElementById('btnCloseHoverPreview');
+      if (!preview || !previewContent) return;
+
+      let hoverTimeout = null;
+
+      const showZoom = (card) => {
+        const title = card.getAttribute('data-zoom-title') || '한국 건설기준 정밀 단면도 2배 확대';
+        previewTitle.textContent = title;
+        previewContent.innerHTML = '';
+        const clone = card.cloneNode(true);
+        clone.querySelectorAll('button, .zoom-badge').forEach(b => b.remove());
+        clone.style.background = 'transparent';
+        clone.style.border = 'none';
+        clone.style.padding = '0';
+        
+        const svgs = clone.querySelectorAll('svg');
+        svgs.forEach(svg => {
+          svg.style.height = '360px';
+          svg.style.width = '100%';
+        });
+        
+        previewContent.appendChild(clone);
+        preview.style.display = 'block';
+        preview.style.opacity = '1';
+      };
+
+      const hideZoom = () => {
+        preview.style.opacity = '0';
+        preview.style.display = 'none';
+      };
+
+      document.querySelectorAll('.diagram-hover-zoomable').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+          clearTimeout(hoverTimeout);
+          showZoom(card);
+        });
+        card.addEventListener('mouseleave', (e) => {
+          hoverTimeout = setTimeout(() => {
+            if (!preview.matches(':hover')) hideZoom();
+          }, 120);
+        });
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('button')) return;
+          showZoom(card);
+        });
+      });
+
+      preview.addEventListener('mouseleave', hideZoom);
+      if (btnClose) btnClose.addEventListener('click', hideZoom);
+    }
+
+    // [마우스/터치 드래그를 통한 3D 태양 구체 및 타겟 대상물 조작 인터랙션]
     function initSunDragInteraction() {
       const raycaster = new THREE.Raycaster();
       const mouse = new THREE.Vector2();
@@ -11038,35 +11696,59 @@ void main() {
         return null;
       }
 
-      // [태양광 타겟 마우스 드래그] capture:true로 OrbitControls 간섭을 원천 차단하고 히트박스/구체/코로나 다중 감지
+      // [태양광 타겟 및 구체 마우스/터치 드래그] capture:true로 OrbitControls 간섭을 원천 차단하고 히트 판정
       renderer.domElement.addEventListener('pointerdown', (e) => {
-        if (!state.sunPathGizmo || !sunHitbox) return;
+        if (!state.sunPathGizmo) return;
         const rect = renderer.domElement.getBoundingClientRect();
         mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
 
-        const targets = [sunHitbox];
-        if (sunSphere) targets.push(sunSphere);
-        if (sunCorona) targets.push(sunCorona);
-        const hits = raycaster.intersectObjects(targets, false);
-        if (hits.length > 0) {
-          isDraggingSun = true;
-          controls.enabled = false; // OrbitControls 카메라 회전 일시 비활성화
-          try { renderer.domElement.setPointerCapture(e.pointerId); } catch(err) {}
-          renderer.domElement.style.cursor = 'grabbing';
-          e.preventDefault();
-          e.stopPropagation();
+        // 1. [사용자 요구 반영] 태양광 타겟 대상물 히트 판정 (우선순위 최고)
+        if (sunTargetHitbox) {
+          const targetTargets = [sunTargetHitbox];
+          if (sunTargetRingOuter) targetTargets.push(sunTargetRingOuter);
+          if (sunTargetRingInner) targetTargets.push(sunTargetRingInner);
+          if (sunTargetPin) targetTargets.push(sunTargetPin);
+          const targetHits = raycaster.intersectObjects(targetTargets, false);
+          if (targetHits.length > 0) {
+            isDraggingTarget = true;
+            isDraggingSun = false;
+            controls.enabled = false;
+            try { renderer.domElement.setPointerCapture(e.pointerId); } catch(err) {}
+            renderer.domElement.style.cursor = 'grabbing';
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
+        }
+
+        // 2. 태양 구체 히트 판정
+        if (sunHitbox) {
+          const targets = [sunHitbox];
+          if (sunSphere) targets.push(sunSphere);
+          if (sunCorona) targets.push(sunCorona);
+          const hits = raycaster.intersectObjects(targets, false);
+          if (hits.length > 0) {
+            isDraggingSun = true;
+            isDraggingTarget = false;
+            controls.enabled = false;
+            try { renderer.domElement.setPointerCapture(e.pointerId); } catch(err) {}
+            renderer.domElement.style.cursor = 'grabbing';
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+          }
         }
       }, { capture: true });
 
       // 마우스 호버 커서 피드백
       renderer.domElement.addEventListener('pointermove', (e) => {
-        if (isDraggingSun) {
+        if (isDraggingSun || isDraggingTarget) {
           renderer.domElement.style.cursor = 'grabbing';
           return;
         }
-        if (!state.sunPathGizmo || !sunHitbox) {
+        if (!state.sunPathGizmo) {
           if (renderer.domElement.style.cursor === 'grab') renderer.domElement.style.cursor = '';
           return;
         }
@@ -11074,33 +11756,106 @@ void main() {
         mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
-        const targets = [sunHitbox];
-        if (sunSphere) targets.push(sunSphere);
-        if (sunCorona) targets.push(sunCorona);
-        const hits = raycaster.intersectObjects(targets, false);
-        renderer.domElement.style.cursor = hits.length > 0 ? 'grab' : '';
+
+        // 타겟 호버 판정
+        if (sunTargetHitbox) {
+          const targetTargets = [sunTargetHitbox];
+          if (sunTargetRingOuter) targetTargets.push(sunTargetRingOuter);
+          if (sunTargetRingInner) targetTargets.push(sunTargetRingInner);
+          const targetHits = raycaster.intersectObjects(targetTargets, false);
+          if (targetHits.length > 0) {
+            renderer.domElement.style.cursor = 'grab';
+            if (sunTargetRingOuter) sunTargetRingOuter.material.color.setHex(0xfef08a);
+            return;
+          } else {
+            if (sunTargetRingOuter) sunTargetRingOuter.material.color.setHex(0x38bdf8);
+          }
+        }
+
+        // 태양 구체 호버 판정
+        if (sunHitbox) {
+          const targets = [sunHitbox];
+          if (sunSphere) targets.push(sunSphere);
+          if (sunCorona) targets.push(sunCorona);
+          const hits = raycaster.intersectObjects(targets, false);
+          if (hits.length > 0) {
+            renderer.domElement.style.cursor = 'grab';
+            return;
+          }
+        }
+
+        if (renderer.domElement.style.cursor === 'grab') renderer.domElement.style.cursor = '';
       });
 
+      // 실시간 드래그 이동 처리 (태양광 타겟 및 태양 구체)
       window.addEventListener('pointermove', (e) => {
-        if (!isDraggingSun) return;
-        const hitPt = getPointerDomeIntersection(e);
-        if (hitPt) {
-          const deltaX = hitPt.x - DOME_CENTER.x;
-          const deltaY = Math.max(0.1, hitPt.y - DOME_CENTER.y);
-          const deltaZ = hitPt.z - DOME_CENTER.z;
+        // A. 타겟 대상물 드래그 (지면 및 계단/참 평면 스냅)
+        if (isDraggingTarget) {
+          const rect = renderer.domElement.getBoundingClientRect();
+          mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+          raycaster.setFromCamera(mouse, camera);
 
-          const altRad = Math.asin(Math.min(0.996, Math.max(0.087, deltaY / DOME_RADIUS)));
-          const altDeg = altRad * 180 / Math.PI;
+          const ray = raycaster.ray;
+          if (Math.abs(ray.direction.y) > 1e-4) {
+            const t = -ray.origin.y / ray.direction.y;
+            if (t > 0) {
+              const tx = Math.max(-4.2, Math.min(4.2, ray.origin.x + ray.direction.x * t));
+              const tz = Math.max(-3.8, Math.min(3.5, ray.origin.z + ray.direction.z * t));
 
-          let azDeg = (Math.atan2(deltaX, -deltaZ) * 180 / Math.PI + 360) % 360;
+            const T = state.treadDepth / 1000;
+            const R = state.riserHeight / 1000;
+            const totalRun = (state.stepCount - 1) * T;
+            const totalRise = state.stepCount * R;
+            const W_stair = state.stairWidth / 1000;
+            const W_ramp = state.rampWidth / 1000;
 
-          updateSunPosition(azDeg, altDeg, true);
+            let ty = 0.0;
+            // 계단 디딤판 및 포치 상단 단차 높이 자동 스냅
+            if (tx >= -W_stair && tx <= 0) {
+              if (tz <= -totalRun) ty = totalRise;
+              else if (tz <= 0) {
+                const stepIdx = Math.floor((-tz) / T) + 1;
+                ty = Math.min(totalRise, stepIdx * R);
+              }
+            } else if (tx > 0 && tx <= W_ramp) {
+              if (tz <= -totalRun) ty = totalRise;
+              else if (tz <= 0.35) {
+                const rampRatio = (0.35 - tz) / (0.35 + totalRun);
+                ty = Math.max(0, Math.min(totalRise, rampRatio * totalRise));
+              }
+            } else if (tz <= -totalRun - 0.2) {
+              ty = totalRise;
+            }
+
+            updateSunTarget(tx, ty, tz, true);
+            }
+          }
+          return;
+        }
+
+        // B. 태양 구체 드래그 (방위각/고도각 조절)
+        if (isDraggingSun) {
+          const hitPt = getPointerDomeIntersection(e);
+          if (hitPt) {
+            const deltaX = hitPt.x - DOME_CENTER.x;
+            const deltaY = Math.max(0.1, hitPt.y - DOME_CENTER.y);
+            const deltaZ = hitPt.z - DOME_CENTER.z;
+
+            const altRad = Math.asin(Math.min(0.996, Math.max(0.087, deltaY / DOME_RADIUS)));
+            const altDeg = altRad * 180 / Math.PI;
+
+            let azDeg = (Math.atan2(deltaX, -deltaZ) * 180 / Math.PI + 360) % 360;
+
+            updateSunPosition(azDeg, altDeg, true);
+          }
         }
       });
 
       const endSunDrag = (e) => {
-        if (isDraggingSun) {
+        if (isDraggingSun || isDraggingTarget) {
           isDraggingSun = false;
+          isDraggingTarget = false;
           controls.enabled = true;
           renderer.domElement.style.cursor = '';
           try { renderer.domElement.releasePointerCapture(e.pointerId); } catch(err) {}
@@ -11157,12 +11912,49 @@ void main() {
         else if (azimuth < 247.5) dirName = '남서(SW)';
         else if (azimuth < 292.5) dirName = '서(W)';
         else dirName = '북서(NW)';
-        txt4d.textContent = `[4D 일영] 직사광 입사: ${dirName} (고도 ${altitude.toFixed(0)}°) · 그림자 투영 반대방향 전개`;
+        txt4d.textContent = `[4D 일영] 직사광 입사: ${dirName} (고도 ${altitude.toFixed(0)}°) · 타겟 대상물 방향 그림자 투영`;
       }
       if (txt5d) {
         const specularFactor = Math.sin(altitude * Math.PI / 180) * 100;
-        txt5d.textContent = `[5D 스펙큘러] STS304 반사지수: ${specularFactor.toFixed(0)}% · 캐노피 처마 하부 음영 자동 보정`;
+        txt5d.textContent = `[5D 스펙큘러] STS304 반사지수: ${specularFactor.toFixed(0)}% · 타겟 지점 입사 스펙큘러 하이라이트 반영`;
       }
+    }
+
+    // [사용자 요구 반영] 태양광 타겟 UI 텍스트 및 프리셋 버튼 상태 동기화
+    function syncSunTargetUI(tx, ty, tz) {
+      const coordEl = document.getElementById('sunTargetCoordText');
+      const xyzEl = document.getElementById('sunTargetXYZText');
+      const btnFollowEl = document.getElementById('btnToggleDomeFollow');
+
+      let name = '일영 타겟';
+      if (Math.hypot(tx - (-0.1), tz - (-0.4)) < 0.25) name = '난간대 P1 (기본)';
+      else if (Math.hypot(tx - (-0.1), tz - (-0.75)) < 0.25) name = '계단 최상단 P4';
+      else if (Math.hypot(tx - (-0.52), tz - (-2.15)) < 0.35) name = '현관 출입문';
+      else if (Math.hypot(tx - (-0.58), tz - (-1.25)) < 0.25) name = '현관 매트';
+      else if (Math.hypot(tx - 2.2, tz - (-0.2)) < 0.35) name = '우측 화단';
+      else if (tz >= 0.5) name = '전면 보도';
+      else if (tz <= 0 && tz >= -1.0 && tx >= -1.2 && tx <= 0) name = '계단 디딤판';
+
+      if (coordEl) coordEl.textContent = name;
+      if (xyzEl) xyzEl.textContent = `X: ${tx.toFixed(2)}m · Y: ${ty.toFixed(2)}m · Z: ${tz.toFixed(2)}m`;
+
+      if (btnFollowEl) {
+        const isFollow = (state.sunDomeFollowTarget !== false);
+        btnFollowEl.textContent = isFollow ? '타겟 추종: ON' : '타겟 추종: OFF';
+        btnFollowEl.style.background = isFollow ? '#0369a1' : '#334155';
+        btnFollowEl.style.borderColor = isFollow ? '#38bdf8' : '#64748b';
+      }
+
+      // 타겟 프리셋 활성 테두리 동기화
+      document.querySelectorAll('.sun-target-preset-btn').forEach(btn => {
+        const ptx = parseFloat(btn.dataset.tx);
+        const ptz = parseFloat(btn.dataset.tz);
+        const isMatch = (Math.hypot(tx - ptx, tz - ptz) < 0.20);
+        btn.style.borderColor = isMatch ? '#38bdf8' : '#475569';
+        btn.style.color = isMatch ? '#38bdf8' : '#cbd5e1';
+        btn.style.background = isMatch ? 'rgba(3,105,161,0.45)' : '#1e293b';
+        btn.style.fontWeight = isMatch ? 'bold' : 'normal';
+      });
     }
 
     let sunPathDomeBuilt = false;
@@ -11176,22 +11968,24 @@ void main() {
         sunPathGroup.visible = state.sunPathGizmo;
       }
       syncSunUI(state.sunAzimuth || DEFAULT_SUN_AZIMUTH, state.sunAltitude || DEFAULT_SUN_ALTITUDE);
+      syncSunTargetUI(state.sunTargetX || -0.1, state.sunTargetY || 0.0, state.sunTargetZ || -0.4);
       requestRender(true);
     }
 
     function initApp(){
-      syncSlidersAndLabels();buildParametricScene();initSunDragInteraction();bindSunPathEvents();
+      syncSlidersAndLabels();buildParametricScene();initSunDragInteraction();bindSunPathEvents();initDiagramHoverZoom();
       applyUICollapseStates();handleResize();controls.update();
       const firstDrawStartedAt=performance.now();
       updateMeasurementGeometry();renderer.render(scene,camera);startupMetrics.frames++;
       startupMetrics.firstDrawMs=performance.now()-firstDrawStartedAt;
       startupMetrics.assetPreparationMs=assetPreparationMs;
-      // [부팅 체감 가속] 첫 프레임 드로우 완료 즉시 로딩 HUD 페이드아웃
+      // [부팅 체감 가속 #3] 첫 프레임 드로우 완료 즉시 0초 무지연으로 로딩 HUD 완전 제거
       const loadHud = document.getElementById('viewportLoadingHud');
       if (loadHud) {
         loadHud.style.opacity = '0';
         loadHud.style.visibility = 'hidden';
-        setTimeout(() => { try { loadHud.remove(); } catch(e) {} }, 300);
+        loadHud.style.display = 'none';
+        try { loadHud.remove(); } catch(e) {}
       }
       updateDOMLabelsPosition();renderDirty=shadowsDirty=false;
       appInteractive=true;
