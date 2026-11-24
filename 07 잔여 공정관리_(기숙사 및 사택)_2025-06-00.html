@@ -49,7 +49,14 @@
     const carryMemo = new WeakMap();
 
     function carryStep(state, event) {
-        if (event.from !== state.year || event.to !== event.from + 1 || !validYear(event.to)) return false;
+        if (event.from !== state.year || !validYear(event.to)) return false;
+        if (event.action === 'move') {
+            if (state.reservation || event.to === event.from) return false;
+            state.year = event.to;
+            state.transfers.push(event);
+            return true;
+        }
+        if (event.to !== event.from + 1) return false;
         if (event.action === 'reserve' && !state.reservation) {
             state.reservation = event;
         } else if (['cancel', 'transfer', 'settle'].includes(event.action) && state.reservation) {
@@ -73,13 +80,14 @@
             if (typeof raw !== 'string' || !/^[A-Za-z0-9_-]{1,30000}$/.test(raw)) throw new Error('encoding');
             const decoded = Uint8Array.from(atob(raw.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
             const record = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(decoded));
-            if (record.version !== 1 || !validYear(record.base) || !Array.isArray(record.events)) throw new Error('schema');
+            if (![1, 2].includes(record.version) || !validYear(record.base) || !Array.isArray(record.events)) throw new Error('schema');
             const value = { record, year: record.base, reservation: null, transfers: [] };
             const ids = new Set();
             for (const event of record.events) {
                 if (typeof event.id !== 'string' || !event.id || ids.has(event.id) ||
                     !Number.isFinite(Date.parse(event.at)) || !Number.isSafeInteger(event.po) ||
                     typeof event.customer !== 'string' || typeof event.center !== 'string' ||
+                    (event.action === 'move' && record.version !== 2) ||
                     (event.action === 'settle' && !validYear(event.settledYear)) ||
                     !carryStep(value, event)) throw new Error('history');
                 ids.add(event.id);
@@ -107,7 +115,11 @@
         if (year === 'all') return [];
         const carry = carryState(project);
         if (!carry || carry.invalid) return [];
-        const result = carry.transfers.filter(event => event.from === year).map(event => ({ ...event, bucket: 'sent' }));
+        const result = [];
+        for (const event of carry.transfers) {
+            if (event.from === year) result.push({...event, bucket: event.action === 'move' ? 'movedOut' : 'sent'});
+            if (event.action === 'move' && event.to === year) result.push({...event, bucket: 'movedIn'});
+        }
         if (carry.reservation?.to === year && !settlementYear(project)) {
             result.push({ ...carry.reservation, po: Number(project.poAmount) || 0,
                 customer: projectGroup(project, 'customer'), center: projectGroup(project, 'center'), bucket: 'incoming' });
@@ -115,25 +127,29 @@
         return result;
     }
 
-    function prepareCarry(project, action, from, now = currentYear()) {
+    function prepareCarry(project, action, from, now = currentYear(), destination = from + 1) {
         const state = carryState(project);
         const status = classification(project, now);
-        if (state?.invalid || !validYear(from) || !validYear(from + 1) || from > now) throw new Error('관리 연도 또는 이월 기록을 확인해 주세요.');
+        const moving = action === 'move';
+        const to = moving ? destination : from + 1;
+        if (state?.invalid || !validYear(from) || !validYear(to) || to === from || (!moving && from > now)) {
+            throw new Error('출발·대상 연도 또는 이월 기록을 확인해 주세요.');
+        }
         const settling = action === 'settle';
         if (settling ? (!state?.reservation || status.kind !== 'settled') :
-            (status.kind !== 'open' || status.year !== from)) throw new Error('프로젝트 상태가 바뀌었습니다. 목록을 다시 열어 확인해 주세요.');
+            ((status.kind !== 'open' && !(moving && status.kind === 'planned')) || status.year !== from)) throw new Error('프로젝트 상태가 바뀌었습니다. 목록을 다시 열어 확인해 주세요.');
         if (action === 'transfer' && now <= from) throw new Error('대상 연도가 시작된 뒤 인계를 확정할 수 있습니다.');
         const po = Number(project.poAmount ?? 0);
         if (!Number.isSafeInteger(po)) throw new Error('프로젝트 PO금액을 확인해 주세요.');
         const record = state?.record || { version: 1, base: from, events: [] };
         const event = { id: root.crypto?.randomUUID?.() || Array.from(root.crypto.getRandomValues(new Uint32Array(4))).join('-'),
-            action, from, to: from + 1, at: new Date().toISOString(), po,
+            action, from, to, at: new Date().toISOString(), po,
             customer: projectGroup(project, 'customer'), center: projectGroup(project, 'center') };
         if (settling) event.settledYear = status.year;
         const next = state ? { ...state, transfers: state.transfers.slice() } :
             { year: from, reservation: null, transfers: [] };
         if (!carryStep(next, event)) throw new Error('현재 상태에서 해당 이월 작업을 적용할 수 없습니다.');
-        return encodeCarry({ ...record, events: [...record.events, event] });
+        return encodeCarry({ ...record, version: moving ? 2 : record.version, events: [...record.events, event] });
     }
     function classification(p,now=currentYear()) {
         const year = settlementYear(p), completed = Number(p?.progress) >= 100;
@@ -429,18 +445,33 @@
     function close() {
         if (!opened) return;
         opened = false; draftYear = null; if (backdrop) backdrop.hidden = true;
+        panel?.querySelector('[data-year-view="summary"]')?.replaceChildren();
         if (button) button.setAttribute('aria-expanded', 'false');
         if (root.document?.body && previousOverflow !== null && root.document.body.style.overflow === 'hidden') root.document.body.style.overflow = previousOverflow;
         previousOverflow = null;
         const target = opener?.isConnected ? opener : button; target?.focus({preventScroll: true}); opener = null;
     }
-    function open() {
+    function showView(view, title) {
+        const scroll = panel?.querySelector('.year-modal-scroll');
+        const body = scroll?.querySelector('[data-year-view="' + view + '"]');
+        if (!body) return;
+        const switched = body.hidden;
+        for (const section of scroll.children) section.hidden = section !== body;
+        if (switched) scroll.scrollTop = 0;
+        panel.querySelector('#operation-year-modal-title').textContent = title;
+        panel.querySelector('#operation-year-close').setAttribute('aria-label', title + ' 닫기');
+    }
+    function open(view = 'settings') {
         root.YearContext?.refreshClock();
         mount(); if (!backdrop || opened) return;
         opener = root.document.activeElement; draftYear = String(safeState().year); opened = true;
         backdrop.hidden = false; panel?.__fitViewport?.(); button.setAttribute('aria-expanded', 'true');
         previousOverflow = root.document.body.style.overflow; backdrop.dataset.bodyOverflowBefore = previousOverflow; root.document.body.style.overflow = 'hidden';
-        update(safeState()); root.document.getElementById('operation-year-select')?.focus({preventScroll: true});
+        showView(view, view === 'summary' ? '확정·이월 요약' : '운영 연도 선택');
+        const scroll = panel.querySelector('.year-modal-scroll');
+        if (scroll) scroll.scrollTop = 0;
+        update(safeState());
+        if (view === 'settings') root.document.getElementById('operation-year-select')?.focus({preventScroll: true});
     }
     function keyboard(event) {
         if (!ownsModalFocus()) return;
@@ -562,7 +593,7 @@
         if (!globalListeners) { root.addEventListener('resize', resize); doc.addEventListener('keydown', keyboard, true); doc.addEventListener('focusin', focusGuard); globalListeners = true; }
         mounted = true; root.CarryoverUI?.mount(panel); update(safeState()); return true;
     }
-    const api = {VERSION, mount, update, getPosition, resetPosition, serializePosition, restorePosition, normalizeSnapshot, setLocked, open, close};
+    const api = {VERSION, mount, update, getPosition, resetPosition, serializePosition, restorePosition, normalizeSnapshot, setLocked, open, close, showView};
     root.YearBubbleUI = api;
     if (typeof module === 'object' && module.exports) module.exports = api;
     if (root.document) {
@@ -642,7 +673,7 @@
         if((root.projectData||[]).length || root.WebSavePlugin?.state?.dirty || root.WebSavePlugin?.state?.remoteDirty)return false;
         if(state.usingCache)return true;
         const candidate=await validProbe;if(!candidate)return false;
-        if(candidate.carryoverVersion!==1||candidate.schemaVersion!==SCHEMA||candidate.mappingVersion!==VERSION||candidate.generatedForOperatingYear!==root.YearContext.currentYear()||candidate.sourcePath!==source.path||!candidate.sourceCommit||!/^[a-f0-9]{40}$/.test(candidate.sourceCommit)||!/^[a-f0-9]{64}$/.test(candidate.sourceSha256)||!Array.isArray(candidate.years))return false;
+        if(![1,2].includes(candidate.carryoverVersion)||candidate.schemaVersion!==SCHEMA||candidate.mappingVersion!==VERSION||candidate.generatedForOperatingYear!==root.YearContext.currentYear()||candidate.sourcePath!==source.path||!candidate.sourceCommit||!/^[a-f0-9]{40}$/.test(candidate.sourceCommit)||!/^[a-f0-9]{64}$/.test(candidate.sourceSha256)||!Array.isArray(candidate.years))return false;
         manifest=candidate;cacheBase=defaultBase;sourceBase='https://raw.githubusercontent.com/'+source.owner+'/'+source.repo+'/';
         const current=root.YearContext.chooseDefault(manifest.years),model=await readModel(current).catch(()=>null);if(!model)return false;
         // Two recovery callers can await the same first model concurrently. The
@@ -17583,6 +17614,7 @@
 
             function countWorkItems(projects) {
                 try {
+                    if (typeof window.countUnifiedWorkItems === 'function') return window.countUnifiedWorkItems();
                     if (typeof window.getUnifiedWorkItems === 'function') {
                         const items = window.getUnifiedWorkItems();
                         if (Array.isArray(items)) return items.length;
@@ -23573,8 +23605,6 @@
             border-right: 1px solid #e2e8f0;
             box-sizing: border-box;
             position: relative;
-            backface-visibility: hidden;
-            transform: translate3d(0, 0, 0);
             contain: layout style paint;
         }
 
@@ -23617,8 +23647,6 @@
             border-left: 1px solid #e2e8f0;
             z-index: 1;
             pointer-events: none;
-            backface-visibility: hidden;
-            transform: translate3d(0, 0, 0);
         }
 
         /* [REMOVED] 기존 마커 스타일 - 새로운 시스템으로 대체됨 */
@@ -27783,7 +27811,7 @@
                         <!-- 개선 사항: 고객사와 시공사 바로가기 추가 -->
                         <!-- [UI-FIX-v3] flex-wrap 제거 및 수평 스크롤 적용 -->
                         <div class="schedule-header-filter-row flex items-center gap-2 ml-4 flex-nowrap"
-                            style="pointer-events: auto; flex-wrap: nowrap !important; overflow-x: auto; white-space: nowrap;">
+                            style="pointer-events: auto; overflow-x: auto; white-space: nowrap;">
                             <select id="header-customer-filter-shortcut"
                                 class="px-3 py-1 text-sm border border-gray-300 rounded hover:border-violet-500 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white"
                                 style="pointer-events: auto;">
@@ -51925,6 +51953,8 @@
                         workbook = ExcelParserUnified.readXlsx(data, {
                             type: 'array',
                             cellDates: false,
+                            // This upload applies Work rows against the confirmed project mapping.
+                            codexProjectMappingOwnsWorkSheet: true,
                             cellNF: true,  // [RESTORED] \uc22b\uc790 \ud3ec\ub9f7 \uc720\uc9c0 \ud544\uc218 (\ub0a0\uc9dc \ud45c\uc2dc \ud615\uc2dd \ubcf4\uc874)
                             cellStyles: false,
                             sheetStubs: false
@@ -63955,6 +63985,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
         const carryLabels = {
             confirmed: '당년 확정', pending: '정산 대기', reserved: '이월 예정',
             planned: '미래 계획', received: '전년 유입', incoming: '받을 예정', sent: '보낸 이력',
+            movedOut: '다른 연도로 이동', movedIn: '다른 연도에서 이동',
             unknown: '귀속 확인 필요'
         };
         const carryOrder = Object.keys(carryLabels);
@@ -63972,9 +64003,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             return Number(po).toLocaleString('ko-KR') + '원 / ' + Number(count).toLocaleString('ko-KR') + '건';
         }
 
-        function carrySummary(data) {
+        function carrySummary(data, state) {
             const context = window.YearContext;
-            const state = context.getViewState();
             const review = carryReviewExpanded || (state.year === state.currentYear && context.isReviewSeason());
             const key = [state.year, state.currentYear, state.includeOpen, state.generation, review].join('|');
             const cached = carrySummaryCache.get(data);
@@ -64005,7 +64035,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const status = context.classification(project);
                 const history = context.carryState(project);
                 const row = {
-                    project, id, po: Number(project.poAmount) || 0,
+                    project, id, po: Number(project.poAmount) || 0, carryValue: project.customFields?.[context.carryKey],
                     customer: context.projectGroup(project, 'customer'), center: context.projectGroup(project, 'center')
                 };
                 const isFinancial = financial.has(project);
@@ -64014,17 +64044,17 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                         history?.reservation ? 'reserved' : 'pending';
                     add({ ...row, bucket, financial: true, year: status.year });
                     const inlet = history?.transfers?.at(-1);
-                    if (state.year !== 'all' && inlet?.to === state.year) {
+                    if (state.year !== 'all' && inlet?.action !== 'move' && inlet?.to === state.year) {
                         add({ ...row, bucket: 'received', financial: false, year: inlet.from });
                     }
                 } else if (status.kind === 'unknown') {
                     add({ ...row, bucket: 'unknown', financial: false, year: null });
                 }
                 for (const event of context.references(project, state.year)) {
-                    add({ ...row, ...event, financial: false, year: event.bucket === 'sent' ? event.to : event.from });
+                    add({ ...row, ...event, financial: false, year: event.bucket === 'sent' || event.bucket === 'movedOut' ? event.to : event.from });
                 }
             }
-            const summary = { key, groups, rows, review, state };
+            const summary = { key, groups, rows };
             carrySummaryCache.set(data, summary);
             return summary;
         }
@@ -64072,10 +64102,10 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const info = carryText('button', 'carry-info-trigger', 'ⓘ');
                 info.type = 'button';
                 if (alerts.has(name)) info.classList.add('carry-attention');
-                info.setAttribute('aria-label', name + ' 확정·이월 내역 표시');
-                info.title = name + ' 확정·이월 내역 표시';
+                info.setAttribute('aria-label', name + ' 확정·이월 요약');
+                info.title = name + ' 확정·이월 요약';
                 info.onclick = event => { event.preventDefault(); event.stopPropagation();
-                    openCarryReview(axis, {group: name, details: true}); };
+                    showCarryOverview(axis, name); };
                 label.append(info, document.createTextNode(name + ':'));
                 item.append(label, document.createTextNode(' 총 ' + formatCurrency(group.po) +
                     ' (' + formatAmountWithUnit(group.po) + ') / ' + group.count + '건'));
@@ -64091,24 +64121,28 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             return true;
         }
 
-        function applyCarryProjects(selected, action, year) {
-            const context = window.YearContext;
-            context.assertCarryEditable(year);
-            const projects = window.projectData || [];
+        function carryCanonicalProjectsById() {
             const byId = new Map();
-            for (const project of projects) {
+            for (const project of window.projectData || []) {
                 const id = String(project.id ?? '').trim();
                 if (id) byId.set(id, byId.has(id) ? null : project);
             }
+            return byId;
+        }
+
+        function applyCarryProjects(selected, action, year, destination) {
+            const context = window.YearContext;
+            context.assertCarryEditable(year);
+            const byId = carryCanonicalProjectsById();
             const staged = selected.map(row => {
                 const project = byId.get(row.id);
                 const field = context.carryKey;
-                if (!project || project !== row.project || Number(project.poAmount || 0) !== row.po ||
+                if (!project || project !== row.canonicalProject || Number(project.poAmount || 0) !== row.po ||
                     context.projectGroup(project, 'customer') !== row.customer ||
-                    context.projectGroup(project, 'center') !== row.center) {
+                    context.projectGroup(project, 'center') !== row.center || project.customFields?.[field] !== row.carryValue) {
                     throw new Error('미리보기 후 프로젝트가 변경되었습니다. 목록을 다시 열어 확인해 주세요.');
                 }
-                return { project, field, value: context.prepareCarry(project, action, year) };
+                return { project, field, value: context.prepareCarry(project, action, year, context.currentYear(), destination) };
             });
             for (const {project, field, value} of staged) {
                 project.customFields = { ...project.customFields, [field]: value };
@@ -64126,6 +64160,64 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             window.YearContext.refresh();
         }
 
+        function showCarryOverview(axis, name) {
+            window.YearBubbleUI.open('summary');
+            const panel = document.querySelector('[data-year-view="summary"]');
+            if (!panel) return;
+            const state = window.YearContext.getViewState();
+            const {groups, rows} = carrySummary(getStableProjectDatasetForSummary(), state);
+            const year = state.year === 'all' ? '전체 기간' : state.year + '년';
+            const groupTitle = name + ' · ' + year;
+            const group = groups[axis].get(name);
+            const matching = rows.filter(row => row.financial && row[axis] === name);
+            const empty = {po: 0, count: 0};
+            const confirmed = group?.buckets.confirmed || empty;
+            const pending = group?.buckets.pending || empty;
+            const reserved = group?.buckets.reserved || empty;
+            const title = carryText('h3', '', groupTitle);
+            const stats = carryText('div', 'carry-overview-stats');
+            const note = carryText('p', 'year-modal-note', state.includeOpen || state.year === 'all'
+                ? '이월 예정은 정산 대기 중 예약한 금액입니다. 총 PO에 다시 합산하지 않습니다.'
+                : '진행·정산 대기 제외 설정이 적용된 요약입니다.');
+            const scroll = panel.closest('.year-modal-scroll');
+
+            function restoreSummary(focusTarget = panel) {
+                window.YearBubbleUI.showView('summary', '확정·이월 요약');
+                panel.replaceChildren(title, stats, note);
+                if (scroll) scroll.scrollTop = 0;
+                focusTarget.focus({preventScroll: true});
+            }
+
+            for (const [label, value, buckets] of [
+                ['총 PO', group?.total || empty, null],
+                [year + ' 확정', confirmed, ['confirmed']],
+                ['정산 대기', {po: pending.po + reserved.po, count: pending.count + reserved.count}, ['pending', 'reserved']],
+                [state.year === 'all' ? '이월 예정' : (state.year + 1) + '년 이월 예정', reserved, ['reserved']]
+            ]) {
+                const amount = carryAmount(value.po, value.count);
+                const item = carryText('button', 'carry-overview-stat');
+                item.type = 'button';
+                item.append(carryText('span', '', label), carryText('strong', '', amount));
+                item.onclick = () => {
+                    const projects = matching.filter(row => !buckets || buckets.includes(row.bucket)).map(row => row.project);
+                    const detailsTitle = label + ' 상세 증빙';
+                    const back = carryText('button', 'carry-evidence-back', '요약으로 돌아가기');
+                    back.type = 'button';
+                    back.onclick = () => restoreSummary(item);
+                    const tableHost = carryText('div', 'carry-evidence-table');
+                    window.YearBubbleUI.showView('summary', detailsTitle);
+                    panel.replaceChildren(back, carryText('h3', '', groupTitle), carryText('p', 'year-modal-note', amount));
+                    if (!projects.length) panel.append(carryText('p', 'year-modal-note', '이 항목에 해당하는 프로젝트가 없습니다.'));
+                    panel.append(tableHost);
+                    renderDataDetailProjectTable(tableHost, groupTitle + ' ' + detailsTitle, projects);
+                    if (scroll) scroll.scrollTop = 0;
+                    back.focus({preventScroll: true});
+                };
+                stats.append(item);
+            }
+            restoreSummary();
+        }
+
         function openCarryReview(axis, options = {}) {
             const context = window.YearContext;
             if (document.getElementById('operation-year-modal')?.hidden) window.YearBubbleUI.open();
@@ -64135,14 +64227,16 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const detailsOnly = options.details === true;
             document.getElementById('carry-year-axis').value = axis;
             const data = getStableProjectDatasetForSummary();
-            const {rows, groups, state} = carrySummary(data);
+            const state = context.getViewState();
+            const {rows, groups} = carrySummary(data, state);
             const heading = carryText('h2', '', (state.year === 'all' ? '전체 기간' : state.year + '년') + (detailsOnly ? ' 확정·이월 내역' : ' 프로젝트 이월 검토'));
             heading.id = 'carry-review-title';
-            const actions = { reserve: '이월 예정 지정', cancel: '이월 예약 취소', transfer: '인계 확정' };
+            const actions = { move: '선택 연도로 즉시 이동', reserve: '다음 해 이월 예약', cancel: '이월 예약 취소', transfer: '예약 인계 확정' };
             const filters = carryText('div', 'carry-review-filters');
             function selectField(title, values) {
                 const label = carryText('label', '', title);
                 const select = carryText('select', '');
+                select.setAttribute('aria-label', title);
                 for (const [value, text] of values) {
                     const option = carryText('option', '', text);
                     option.value = value;
@@ -64152,10 +64246,14 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 filters.append(label);
                 return select;
             }
+            const grouping = selectField('집계 기준', [['customer', '고객사별'], ['center', '센터별']]);
+            grouping.value = axis;
             const group = selectField(axis === 'customer' ? '고객사' : '센터',
                 [['', '전체 그룹'], ...[...groups[axis].keys()].map(name => [name, name])]);
             const status = selectField('상태', [['', '전체 상태'], ...carryOrder.map(k => [k, carryLabels[k]])]);
             const action = selectField('적용할 작업', Object.entries(actions));
+            const destination = detailsOnly ? null : selectField('대상 연도', []);
+            if (destination) destination.id = 'carry-target-year';
             if (options.group && [...group.options].some(option => option.value === options.group)) group.value = options.group;
             const searchLabel = carryText('label', 'carry-review-search', '프로젝트 이름 검색');
             const search = carryText('input', ''); search.type = 'search'; search.id = 'carry-project-search';
@@ -64170,15 +64268,42 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             error.setAttribute('role', 'status');
             const footer = carryText('div', 'carry-review-footer');
             const preview = carryText('button', '', '선택 내역 확인');
-            const close = carryText('button', '', '닫기');
+            const close = carryText('button', '', '운영 연도 선택으로 돌아가기');
             const selectAll = carryText('button', '', '표시된 대상 모두 선택');
-            const mayEdit = !detailsOnly && !state.readonly && state.year !== 'all' && window.YearBootCoordinator?.getState().complete !== false;
+            const clearSelection = carryText('button', '', '선택 해제');
+            const mayEdit = !detailsOnly && !state.readonly && typeof state.year === 'number' &&
+                state.year >= 2000 && state.year <= 2199 && window.YearBootCoordinator?.getState().complete !== false;
+            const destinationReady = () => mayEdit && destination.value !== '';
+            function chooseDestinations() {
+                if (!destination) return;
+                destination.replaceChildren(new Option('연도를 선택하세요', ''));
+                if (!mayEdit) return;
+                const from = state.year;
+                if (action.value === 'move') {
+                    if (from > 2000) destination.add(new Option((from - 1) + '년 (전년)', String(from - 1)));
+                    if (from < 2199) destination.add(new Option((from + 1) + '년 (다음 해)', String(from + 1)));
+                    const years = document.createElement('optgroup');
+                    years.label = '특정 연도';
+                    for (let year = 2000; year <= 2199; year++) {
+                        if (Math.abs(year - from) > 1) years.append(new Option(year + '년', String(year)));
+                    }
+                    destination.append(years);
+                } else if (from < 2199 && from <= state.currentYear) {
+                    destination.add(new Option((from + 1) + '년 (예약 대상)', String(from + 1)));
+                }
+            }
+            const instructions = carryText('p', 'year-modal-note', detailsOnly ? '' :
+                '출발 연도 ' + (typeof state.year === 'number' ? state.year + '년' : '전체 기간') +
+                ' · 프로젝트 체크 → 대상 연도 선택 → 선택 내역 확인 → 적용. 정산 확정 건은 정산월로 관리합니다.');
             let eligibleVisible = [];
             let previewSelection = null;
 
             function updateTally() {
-                tally.textContent = '선택 ' + carryAmount([...selected].reduce((sum, row) => sum + row.po, 0), selected.size);
-                preview.disabled = !selected.size;
+                const hidden = selected.size - eligibleVisible.filter(({row}) => selected.has(row)).length;
+                tally.textContent = '선택 ' + carryAmount([...selected].reduce((sum, row) => sum + row.po, 0), selected.size) +
+                    (hidden ? ' · 현재 목록 밖 ' + hidden + '건 포함' : '');
+                clearSelection.disabled = !selected.size;
+                preview.disabled = !destinationReady() || !selected.size;
                 selectAll.disabled = !eligibleVisible.length;
             }
 
@@ -64189,7 +64314,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 const tokens = search.value.toLocaleLowerCase('ko-KR').trim().split(' ').filter(Boolean);
                 previewSelection = null;
                 preview.textContent = '선택 내역 확인';
-                selected.clear();
                 eligibleVisible = [];
                 const fragment = document.createDocumentFragment();
                 for (const row of rows) {
@@ -64200,11 +64324,14 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     value.po += row.po; value.count++; summaryValues.set(row.bucket, value);
                     const entry = carryText('label', 'carry-review-row');
                     entry.dataset.carryProjectId = row.id; entry.dataset.carryBucket = row.bucket;
-                    const expected = action.value === 'reserve' ? 'pending' : 'reserved';
-                    if (row.id && mayEdit && row.bucket === expected &&
+                    const eligible = row.financial && row.year === state.year && (action.value === 'move'
+                        ? row.bucket === 'pending' || row.bucket === 'planned'
+                        : row.bucket === (action.value === 'reserve' ? 'pending' : 'reserved'));
+                    if (row.id && mayEdit && eligible &&
                         (action.value !== 'transfer' || state.currentYear > state.year)) {
                         const input = carryText('input', '');
                         input.type = 'checkbox';
+                        input.checked = selected.has(row);
                         input.onchange = () => {
                             if (input.checked) selected.add(row);
                             else selected.delete(row);
@@ -64217,7 +64344,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     }
                     const name = row.project.name || row.project.maintenanceName || row.id || '이름 미지정';
                     entry.append(carryText('span', '', name + ' · ' + row[axis]),
-                        carryText('span', '', carryLabels[row.bucket] + ' · ' + carryAmount(row.po, 1)));
+                        carryText('span', '', carryLabels[row.bucket] + (row.action === 'move' ? ' · ' + row.from + '년 → ' + row.to + '년' : '') + ' · ' + carryAmount(row.po, 1)));
                     fragment.append(entry);
                 }
                 if (!fragment.childNodes.length) fragment.append(carryText('p', '', '이 조건에 해당하는 프로젝트가 없습니다.'));
@@ -64226,15 +64353,25 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                     if (value) summary.append(carryText('p', '', carryLabels[bucket] + ' ' + carryAmount(value.po, value.count)));
                 }
                 list.replaceChildren(fragment);
-                error.textContent = detailsOnly ? '조회용 내역입니다. 받을 예정·전년 유입·보낸 이력은 금융 소계에 중복 합산하지 않습니다.' : !mayEdit ? '조회 모드 또는 전체 원본 준비 중입니다.' :
-                    action.value === 'transfer' && state.currentYear <= state.year ? '대상 연도가 시작된 뒤 인계할 수 있습니다.' : '';
+                error.textContent = detailsOnly ? '조회용 내역입니다. 받을 예정·전년 유입·보낸 이력은 금융 소계에 중복 합산하지 않습니다.' : !mayEdit ? (state.year === 'all' ? '운영 연도 선택으로 돌아가 출발 연도를 적용하세요.' :
+                        state.year < state.currentYear && state.readonly ? '이전 연도의 이월을 처리하려면 운영 연도 선택에서 이전 연도 수정을 켜세요.' :
+                        '출발 연도와 전체 원본 확인 상태를 확인하세요.') :
+                    action.value === 'transfer' && state.currentYear <= state.year ? '대상 연도가 시작된 뒤 인계할 수 있습니다.' :
+                    !eligibleVisible.length && !selected.size ? '현재 조건에 선택할 수 있는 프로젝트가 없습니다. 이월 예약이 있는 건은 예약을 먼저 취소하세요.' :
+                    !destinationReady() ? '프로젝트를 체크한 뒤 대상 연도를 선택하세요.' : '';
                 updateTally();
             }
 
-            group.onchange = status.onchange = action.onchange = draw;
+            grouping.onchange = () => openCarryReview(grouping.value, {details: detailsOnly, query: search.value});
+            group.onchange = status.onchange = draw;
+            action.onchange = () => { chooseDestinations(); selected.clear(); draw(); };
             search.oninput = draw;
+            if (destination) { destination.onchange = draw; destination.disabled = !mayEdit; chooseDestinations(); }
             if (detailsOnly) { action.parentElement.hidden = true; preview.hidden = true; selectAll.hidden = true; }
-            close.onclick = () => { workspace.hidden = true; document.getElementById(detailsOnly ? 'carry-year-details' : 'carry-year-review')?.focus(); };
+            close.onclick = () => {
+                window.YearBubbleUI.showView('settings', '운영 연도 선택');
+                document.getElementById(detailsOnly ? 'carry-year-details' : 'carry-year-review')?.focus();
+            };
             selectAll.onclick = () => {
                 for (const {input, row} of eligibleVisible) {
                     input.checked = true;
@@ -64245,17 +64382,24 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 updateTally();
             };
             preview.onclick = () => {
+                if (!destinationReady() || !selected.size) return;
                 if (!previewSelection) {
-                    previewSelection = [...selected];
+                    const originals = carryCanonicalProjectsById();
+                    previewSelection = [...selected].map(row => ({...row, canonicalProject: originals.get(row.id)}));
+                    if (previewSelection.some(row => !row.canonicalProject)) {
+                        previewSelection = null;
+                        error.textContent = '원본에서 고유한 프로젝트를 확인할 수 없습니다. 목록을 다시 열어 확인해 주세요.';
+                        return;
+                    }
                     const amount = carryAmount(previewSelection.reduce((sum, row) => sum + row.po, 0), selected.size);
-                    error.textContent = state.year + '년 → ' + (state.year + 1) + '년 · ' + actions[action.value] +
-                        ' · ' + amount + (action.value === 'transfer' ? ' · 출발 연도에서 빠지고 대상 연도 대기에 반영됩니다.' :
+                    error.textContent = state.year + '년 → ' + destination.value + '년 · ' + actions[action.value] +
+                        ' · ' + amount + (['transfer','move'].includes(action.value) ? ' · 대상 연도에 PO가 귀속됩니다. 정산월과 작업일은 그대로 유지됩니다.' :
                             ' · 양쪽 연도의 합산 금액은 유지됩니다.');
                     preview.textContent = '확인 후 적용';
                     return;
                 }
                 try {
-                    applyCarryProjects(previewSelection, action.value, state.year);
+                    applyCarryProjects(previewSelection, action.value, state.year, Number(destination.value));
                     openCarryReview(axis, {group: group.value, details: detailsOnly, query: search.value});
                     window.showToast?.('이월 변경을 적용했습니다. 기존 저장 기능으로 보존해 주세요.', 'success');
                 } catch (failure) {
@@ -64265,13 +64409,18 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 }
             };
             action.disabled = !mayEdit;
-            footer.append(selectAll, close, preview);
-            workspace.replaceChildren(heading, searchLabel, filters, summary, tally, list, error,
-                carryText('p', 'year-modal-note', '검색·필터·적용할 작업을 변경하면 선택이 초기화됩니다.'), footer);
-            workspace.hidden = false;
+            clearSelection.onclick = () => { selected.clear(); draw(); };
+            footer.append(selectAll, clearSelection, close, preview);
+            workspace.replaceChildren(heading);
+            if (detailsOnly) workspace.append(filters, searchLabel, summary, list, error, close);
+            else workspace.append(instructions, filters, searchLabel, tally, error, footer, summary, list);
+            window.YearBubbleUI.showView('review', detailsOnly ? '확정·이월 내역' : '프로젝트 이월');
             workspace.__carryAxis = axis; workspace.__carryYear = state.year; workspace.__carryGeneration = state.generation;
+            workspace.__carryReadonly = state.readonly;
+            workspace.__carryComplete = window.YearBootCoordinator?.getState().complete !== false;
             draw();
-            search.focus({preventScroll: true}); workspace.scrollIntoView({block: 'nearest'});
+            heading.tabIndex = -1;
+            heading.focus({preventScroll: true});
         }
 
         function setupYearPanelGestures(panel) {
@@ -64337,7 +64486,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             optionLabel.append(notify, document.createTextNode('금년 ↔ 내년 이월이 있으면 기호 강조'));
             controls.append(optionLabel);
             setupYearPanelGestures(panel);
-            const review = carryText('button', '', '프로젝트 이월 검토'); review.id = 'carry-year-review';
+            const review = carryText('button', '', '프로젝트 선택·이월'); review.id = 'carry-year-review';
             const details = carryText('button', '', '확정·이월 내역 표시'); details.id = 'carry-year-details';
             review.type = details.type = 'button';
             for (const button of [review, details]) {
@@ -64364,11 +64513,22 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 };
             }
             const row = carryText('div', 'carry-review-footer'); row.append(axisLabel, review, details);
-            controls.append(row, carryText('p', 'year-modal-note', '연도 적용 후 검토하세요. 예약·인계는 선택 내역 확인 후 적용하며 기존 웹 저장·웹 다운으로 보존합니다.'));
+            controls.append(row, carryText('p', 'year-modal-note', '조회할 연도는 화면에 표시할 자료를 바꿉니다. 이월하려면 먼저 출발 연도를 적용한 뒤 프로젝트 선택·이월을 여세요. 적용한 이월은 웹 저장으로 보존합니다.'));
             const workspace = carryText('section', 'carry-review-workspace');
             workspace.id = 'operation-year-carry-workspace'; workspace.hidden = true;
-            controls.append(workspace);
-            panel.insertBefore(controls, panel.querySelector('.year-modal-footer'));
+            workspace.dataset.yearView = 'review';
+            const summary = carryText('section', 'carry-overview');
+            summary.dataset.yearView = 'summary';
+            summary.tabIndex = -1;
+            summary.hidden = true;
+            const settings = carryText('section', '');
+            settings.dataset.yearView = 'settings';
+            const heading = panel.querySelector('.year-modal-heading');
+            panel.insertBefore(controls, panel.querySelector('#operation-year-open-count'));
+            while (heading.nextSibling) settings.append(heading.nextSibling);
+            const scroll = carryText('div', 'year-modal-scroll');
+            scroll.append(settings, workspace, summary);
+            panel.append(scroll);
             axis.onchange = () => {
                 if (!workspace.hidden) openCarryReview(axis.value, {details: workspace.__carryOptions?.details === true});
             };
@@ -64390,7 +64550,8 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             const workspace = document.getElementById('operation-year-carry-workspace');
             if (!workspace || workspace.hidden || document.getElementById('operation-year-modal')?.hidden) return;
             const state = window.YearContext.getViewState();
-            if (workspace.__carryGeneration === state.generation && workspace.__carryYear === state.year) return;
+            if (workspace.__carryGeneration === state.generation && workspace.__carryYear === state.year &&
+                workspace.__carryReadonly === state.readonly && workspace.__carryComplete === (window.YearBootCoordinator?.getState().complete !== false)) return;
             openCarryReview(workspace.__carryAxis || 'customer', workspace.__carryOptions || {});
         }
 
@@ -66401,69 +66562,7 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
             }
         }
 
-        function showDataDetailModal(title, data) {
-            dataDetailTitle.textContent = title;
-            
-            // [v18] Maximize Button Logic (Unicode Stabilized)
-            let maxBtn = dataDetailModal.querySelector('.modal-maximize-btn');
-            if (!maxBtn) {
-                maxBtn = document.createElement('button');
-                maxBtn.className = 'modal-maximize-btn leading-none';
-                maxBtn.style.fontSize = '36px'; // 20% larger than 30px (text-3xl)
-                maxBtn.innerHTML = '\u25fb'; // Maximize icon
-                maxBtn.title = '\uc804\uccb4\ubcf4\uae30'; // "\uc804\uccb4\ubcf4\uae30"
-                const header = dataDetailModal.querySelector('.resizable-modal-header');
-                const closeBtn = document.getElementById('closeDataDetailModalBtn');
-                if (header && closeBtn) header.insertBefore(maxBtn, closeBtn);
-                
-                maxBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    dataDetailModal.classList.toggle('maximized');
-                    const isMax = dataDetailModal.classList.contains('maximized');
-                    maxBtn.innerHTML = isMax ? '\u2750' : '\u25fb'; // Toggle icons
-                    maxBtn.title = isMax ? '\uc774\uc804 \ud06c\uae30\ub85c' : '\uc804\uccb4\ubcf4\uae30';
-                    if (typeof updateMaximizedModalLayout === 'function') updateMaximizedModalLayout();
-                };
-            }
-            dataDetailModal.classList.remove('maximized');
-            if (maxBtn) { 
-                maxBtn.innerHTML = '\u25fb'; 
-                maxBtn.title = '\uc804\uccb4\ubcf4\uae30'; 
-            }
-            // [FIX] Clean up inline styles from previous maximize state
-            if (typeof updateMaximizedModalLayout === 'function') updateMaximizedModalLayout();
-
-            // [SETTLEMENT-ID] \uc815\uc0b0 \ubaa8\ub2ec \uc2dd\ubcc4 \uc18d\uc131 \uc8fc\uc785 \ubc0f \uac00\ub85c \uc2a4\ud06c\ub864 \uc815\ud569\uc131 \ubcf4\uc99d (1500px) [v16-APS]
-            // [UX-FIX] \ubaa9\ub85d(\ubaa9\ub85d) \ub610\ub294 \ud604\ud669(\ud604\ud669) \uc774\ub984\uc774 \ub4e4\uc5b4\uac04 \uc6d4\ubcc4 \ucd1d\uad04 \ubcf4\uace0\uc11c\ub294 \uace0\uc815 \ubc30\uce58 \ubc84\ud2bc\uc774 \ud544\uc694\ud55c 'settlement' \ud0c0\uc785\uc5d0\uc11c \uc81c\uc678 (\ube44\uc6a9\uacc4\uc815\ubcc4 \ucd1d\uad04\uacfc \ub3d9\uc791 \ubcf4\uc7a5)
-            const isSettlementReport = title && (title.includes('\ubaa9\ub85d') || title.includes('\ud604\ud669'));
-            if (title && (title.includes('\uc815\uc0b0') || title.includes('\ubd84\uae30\ubcc4') || title.includes('\uc5f0\ub3c4\ubcc4') || title.includes('Settlement')) && !isSettlementReport) {
-                dataDetailModal.dataset.modalType = 'settlement';
-                // [v16] \ub300\uc2dc\ubcf4\ub4dc\uc640 \ud14c\uc774\ube14 \ub05d\uc120\uc744 \ub9de\ucd94\uae30 \uc704\ud574 1500px \ucd5c\uc18c\ud3ed \uac15\uc81c
-                const modalInner = dataDetailModal.querySelector(':scope > div');
-                if (modalInner) {
-                    modalInner.style.minWidth = '1500px';
-                    modalInner.style.flexShrink = '0';
-                }
-            } else {
-                delete dataDetailModal.dataset.modalType;
-                const modalInner = dataDetailModal.querySelector(':scope > div');
-                if (modalInner) {
-                    modalInner.style.minWidth = '';
-                    modalInner.style.flexShrink = '';
-                }
-            }
-
-            // [UX-FIX] \ubaa8\ubc14\uc77c \ud130\ucc38 \ubc18\uc751\uc131 \uac15\ud654: \ub2eb\uae30 \ubc84\ud2bc\uc5d0 \uc9c1\uc811 touchstart \ud578\ub4e4\ub7ec \uc8fc\uc785
-            const closeBtn = document.getElementById('closeDataDetailModalBtn');
-            if (closeBtn && !closeBtn.__touchBoundAuto) {
-                closeBtn.__touchBoundAuto = true;
-                closeBtn.addEventListener('touchstart', (e) => {
-                    if (e.cancelable) e.preventDefault();
-                    e.stopPropagation();
-                    closeBtn.click();
-                }, { passive: false });
-            }
-
+        function renderDataDetailProjectTable(container, title, data) {
             const toolbarHTML = `<div class="flex justify-between items-center mb-3">
                     <div class="text-sm text-gray-600">\ucd1d <strong>${data.length}</strong>\uac74</div>
                     <div><button class="table-export-btn px-3 py-1 bg-indigo-600 text-white rounded text-sm">\uc5d1\uc140 \ub2e4\uc6b4\ub85c\ub4dc</button></div>
@@ -66596,10 +66695,10 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
             });
 
             tableHTML += `</tbody></table>`;
-            dataDetailTableContainer.innerHTML = tableHTML;
+            container.innerHTML = tableHTML;
 
             // Make table sortable and attach export
-            const tbl = dataDetailTableContainer.querySelector('table');
+            const tbl = container.querySelector('table');
             if (tbl) {
                 const detailTableMinWidth = Math.max(900, tbl.querySelectorAll('thead th').length * 140);
                 tbl.style.width = '100%';
@@ -66609,16 +66708,82 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
                 makeTableSortable(tbl);
                 bindSharedRowFocusForTable(tbl);
             }
-            dataDetailTableContainer.style.overflowX = 'auto';
-            dataDetailTableContainer.style.overflowY = 'auto';
-            dataDetailTableContainer.style.minWidth = '0';
-            dataDetailTableContainer.style.maxWidth = '100%';
-            dataDetailTableContainer.style.overscrollBehavior = 'contain';
-            dataDetailTableContainer.style.touchAction = 'pan-x pan-y pinch-zoom';
-            dataDetailTableContainer.style.webkitOverflowScrolling = 'touch';
-            ensureBidirectionalTouchScrollBridge(dataDetailTableContainer);
-            const btn = dataDetailTableContainer.querySelector('.table-export-btn');
+            container.style.overflowX = 'auto';
+            container.style.overflowY = 'auto';
+            container.style.minWidth = '0';
+            container.style.maxWidth = '100%';
+            container.style.overscrollBehavior = 'contain';
+            container.style.touchAction = 'pan-x pan-y pinch-zoom';
+            container.style.webkitOverflowScrolling = 'touch';
+            ensureBidirectionalTouchScrollBridge(container);
+            const btn = container.querySelector('.table-export-btn');
             if (btn) btn.addEventListener('click', () => exportTableToXLSX(tbl, `${title.replace(/[^0-9a-zA-Z\uac00-\ud7a3\s_-]/g, '') || 'export'}.xlsx`));
+        }
+
+        function showDataDetailModal(title, data) {
+            dataDetailTitle.textContent = title;
+            
+            // [v18] Maximize Button Logic (Unicode Stabilized)
+            let maxBtn = dataDetailModal.querySelector('.modal-maximize-btn');
+            if (!maxBtn) {
+                maxBtn = document.createElement('button');
+                maxBtn.className = 'modal-maximize-btn leading-none';
+                maxBtn.style.fontSize = '36px'; // 20% larger than 30px (text-3xl)
+                maxBtn.innerHTML = '\u25fb'; // Maximize icon
+                maxBtn.title = '\uc804\uccb4\ubcf4\uae30'; // "\uc804\uccb4\ubcf4\uae30"
+                const header = dataDetailModal.querySelector('.resizable-modal-header');
+                const closeBtn = document.getElementById('closeDataDetailModalBtn');
+                if (header && closeBtn) header.insertBefore(maxBtn, closeBtn);
+                
+                maxBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    dataDetailModal.classList.toggle('maximized');
+                    const isMax = dataDetailModal.classList.contains('maximized');
+                    maxBtn.innerHTML = isMax ? '\u2750' : '\u25fb'; // Toggle icons
+                    maxBtn.title = isMax ? '\uc774\uc804 \ud06c\uae30\ub85c' : '\uc804\uccb4\ubcf4\uae30';
+                    if (typeof updateMaximizedModalLayout === 'function') updateMaximizedModalLayout();
+                };
+            }
+            dataDetailModal.classList.remove('maximized');
+            if (maxBtn) { 
+                maxBtn.innerHTML = '\u25fb'; 
+                maxBtn.title = '\uc804\uccb4\ubcf4\uae30'; 
+            }
+            // [FIX] Clean up inline styles from previous maximize state
+            if (typeof updateMaximizedModalLayout === 'function') updateMaximizedModalLayout();
+
+            // [SETTLEMENT-ID] \uc815\uc0b0 \ubaa8\ub2ec \uc2dd\ubcc4 \uc18d\uc131 \uc8fc\uc785 \ubc0f \uac00\ub85c \uc2a4\ud06c\ub864 \uc815\ud569\uc131 \ubcf4\uc99d (1500px) [v16-APS]
+            // [UX-FIX] \ubaa9\ub85d(\ubaa9\ub85d) \ub610\ub294 \ud604\ud669(\ud604\ud669) \uc774\ub984\uc774 \ub4e4\uc5b4\uac04 \uc6d4\ubcc4 \ucd1d\uad04 \ubcf4\uace0\uc11c\ub294 \uace0\uc815 \ubc30\uce58 \ubc84\ud2bc\uc774 \ud544\uc694\ud55c 'settlement' \ud0c0\uc785\uc5d0\uc11c \uc81c\uc678 (\ube44\uc6a9\uacc4\uc815\ubcc4 \ucd1d\uad04\uacfc \ub3d9\uc791 \ubcf4\uc7a5)
+            const isSettlementReport = title && (title.includes('\ubaa9\ub85d') || title.includes('\ud604\ud669'));
+            if (title && (title.includes('\uc815\uc0b0') || title.includes('\ubd84\uae30\ubcc4') || title.includes('\uc5f0\ub3c4\ubcc4') || title.includes('Settlement')) && !isSettlementReport) {
+                dataDetailModal.dataset.modalType = 'settlement';
+                // [v16] \ub300\uc2dc\ubcf4\ub4dc\uc640 \ud14c\uc774\ube14 \ub05d\uc120\uc744 \ub9de\ucd94\uae30 \uc704\ud574 1500px \ucd5c\uc18c\ud3ed \uac15\uc81c
+                const modalInner = dataDetailModal.querySelector(':scope > div');
+                if (modalInner) {
+                    modalInner.style.minWidth = '1500px';
+                    modalInner.style.flexShrink = '0';
+                }
+            } else {
+                delete dataDetailModal.dataset.modalType;
+                const modalInner = dataDetailModal.querySelector(':scope > div');
+                if (modalInner) {
+                    modalInner.style.minWidth = '';
+                    modalInner.style.flexShrink = '';
+                }
+            }
+
+            // [UX-FIX] \ubaa8\ubc14\uc77c \ud130\ucc38 \ubc18\uc751\uc131 \uac15\ud654: \ub2eb\uae30 \ubc84\ud2bc\uc5d0 \uc9c1\uc811 touchstart \ud578\ub4e4\ub7ec \uc8fc\uc785
+            const closeBtn = document.getElementById('closeDataDetailModalBtn');
+            if (closeBtn && !closeBtn.__touchBoundAuto) {
+                closeBtn.__touchBoundAuto = true;
+                closeBtn.addEventListener('touchstart', (e) => {
+                    if (e.cancelable) e.preventDefault();
+                    e.stopPropagation();
+                    closeBtn.click();
+                }, { passive: false });
+            }
+
+            renderDataDetailProjectTable(dataDetailTableContainer, title, data);
 
             // \ubaa8\ub2ec \ud45c\uc2dc \ubc0f \uc2a4\ud0c0\uc77c \uc124\uc815
             dataDetailModal.classList.remove('hidden');
@@ -70244,11 +70409,14 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
                 };
 
                 const updateGanttFloatingScrollbarMetrics = () => {
-                    if (!ganttFloatingScrollbar || !ganttFloatingScrollbarInner) return;
-                    const scrollWidth = Math.max(finalTimelineBodyWrapper.scrollWidth || 0, finalTimelineBodyWrapper.clientWidth || 0);
-                    const hasHorizontalOverflow = scrollWidth > (finalTimelineBodyWrapper.clientWidth + 1);
-                    ganttFloatingScrollbarInner.style.width = `${scrollWidth}px`;
-                    ganttFloatingScrollbar.style.display = hasHorizontalOverflow ? 'block' : 'none';
+                    if (!ganttFloatingScrollbar?.isConnected || !ganttFloatingScrollbarInner) return;
+                    const clientWidth = finalTimelineBodyWrapper.clientWidth;
+                    if (!clientWidth) return;
+                    const scrollWidth = Math.max(finalTimelineBodyWrapper.scrollWidth, clientWidth);
+                    const width = `${scrollWidth}px`;
+                    const display = scrollWidth > clientWidth + 1 ? 'block' : 'none';
+                    if (ganttFloatingScrollbarInner.style.width !== width) ganttFloatingScrollbarInner.style.width = width;
+                    if (ganttFloatingScrollbar.style.display !== display) ganttFloatingScrollbar.style.display = display;
                     if (Math.abs(ganttFloatingScrollbar.scrollLeft - finalTimelineBodyWrapper.scrollLeft) > 1) {
                         ganttFloatingScrollbarSyncing = true;
                         ganttFloatingScrollbar.scrollLeft = finalTimelineBodyWrapper.scrollLeft;
@@ -70256,10 +70424,19 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
                     }
                 };
 
+                let floatingScrollbarMetricsFrame = 0;
+                const scheduleGanttFloatingScrollbarMetrics = () => {
+                    if (floatingScrollbarMetricsFrame) return;
+                    floatingScrollbarMetricsFrame = requestAnimationFrame(() => {
+                        floatingScrollbarMetricsFrame = 0;
+                        updateGanttFloatingScrollbarMetrics();
+                    });
+                };
+
                 const syncGanttFloatingScrollbarFromBody = () => {
                     if (!ganttFloatingScrollbar) return;
                     if (ganttFloatingScrollbarInner && Math.abs(ganttFloatingScrollbarInner.scrollWidth - finalTimelineBodyWrapper.scrollWidth) > 2) {
-                        updateGanttFloatingScrollbarMetrics();
+                        scheduleGanttFloatingScrollbarMetrics();
                     }
                     if (Math.abs(ganttFloatingScrollbar.scrollLeft - finalTimelineBodyWrapper.scrollLeft) <= 1) return;
                     ganttFloatingScrollbarSyncing = true;
@@ -70298,15 +70475,13 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
                             releaseGanttFloatingScrollbarSync();
                         }, { passive: true });
                     }
-                    requestAnimationFrame(updateGanttFloatingScrollbarMetrics);
-                    requestAnimationFrame(() => requestAnimationFrame(updateGanttFloatingScrollbarMetrics));
-                    setTimeout(updateGanttFloatingScrollbarMetrics, 120);
-                    setTimeout(updateGanttFloatingScrollbarMetrics, 350);
-                    if (typeof ResizeObserver === 'function' && ganttFloatingScrollbar.dataset.resizeBound !== 'true') {
+                    scheduleGanttFloatingScrollbarMetrics();
+                    if (typeof ResizeObserver !== 'function') {
+                        setTimeout(scheduleGanttFloatingScrollbarMetrics, 120);
+                        setTimeout(scheduleGanttFloatingScrollbarMetrics, 350);
+                    } else if (ganttFloatingScrollbar.dataset.resizeBound !== 'true') {
                         ganttFloatingScrollbar.dataset.resizeBound = 'true';
-                        const floatingScrollbarResizeObserver = new ResizeObserver(() => {
-                            requestAnimationFrame(updateGanttFloatingScrollbarMetrics);
-                        });
+                        const floatingScrollbarResizeObserver = new ResizeObserver(scheduleGanttFloatingScrollbarMetrics);
                         floatingScrollbarResizeObserver.observe(finalTimelineBodyWrapper);
                         const ganttBodyNode = finalTimelineBodyWrapper.querySelector('.gantt-body');
                         if (ganttBodyNode) floatingScrollbarResizeObserver.observe(ganttBodyNode);
@@ -75857,11 +76032,28 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
 
         // [C1 \uc218\uc815] \ubaa8\ub4e0 \ud504\ub85c\uc81d\ud2b8\uc758 \uc791\uc5c5\uc77c \ub370\uc774\ud130\ub97c \ud589 \uae30\ubc18\uc73c\ub85c \ubc18\ud658 (Work \uc2dc\ud2b8\uc6a9)
         // \ubc18\ud658 \ud615\uc2dd: [{ projectId, projectName, workDate, workDetail }, ...]
+        function visitUnifiedWorkDates(visit) {
+            const seen = new Set();
+            const source = Array.isArray(window.projectData) ? window.projectData :
+                (typeof projectData !== 'undefined' && Array.isArray(projectData) ? projectData : []);
+            for (const project of source) {
+                const data = window.getUnifiedWorkDateData(project.id);
+                if (!Array.isArray(data.dates)) continue;
+                for (const date of data.dates) {
+                    const key = `${project.id}_${date.date}`;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    visit(project, date);
+                }
+            }
+        }
+        window.countUnifiedWorkItems = function () {
+            let count = 0;
+            visitUnifiedWorkDates(() => { count++; });
+            return count;
+        };
         window.getUnifiedWorkItems = function () {
             const result = [];
-            const seen = new Set(); // \uc911\ubcf5 \ubc29\uc9c0
-
-            // [UNIFIED] Helper to get maintenanceCode - NEVER fall back to ID
             const getMaintenanceCode = (proj) => {
                 if (window.ExcelBuilder && typeof window.ExcelBuilder.getMaintenanceCode === 'function') {
                     return window.ExcelBuilder.getMaintenanceCode(proj);
@@ -75870,33 +76062,21 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
                 return String(proj.maintenanceCode || proj['\uc720\uc9c0\uad00\ub9ac\ubc88\ud638'] || proj['\uad00\ub9ac\ubc88\ud638'] || '').trim();
             };
 
-            const projectDataSource = Array.isArray(window.projectData) ? window.projectData :
-                (typeof projectData !== 'undefined' && Array.isArray(projectData) ? projectData : []);
-
-            projectDataSource.forEach(project => {
-                const data = window.getUnifiedWorkDateData(project.id);
-                if (data.dates && Array.isArray(data.dates)) {
-                    data.dates.forEach(d => {
-                        const key = `${project.id}_${d.date}`;
-                        if (!seen.has(key)) {
-                            seen.add(key);
-                            result.push({
-                                projectId: String(project.id),
-                                // [CRITICAL FIX] Include maintenanceCode from project. NEVER use project.id as fallback.
-                                maintenanceCode: getMaintenanceCode(project),
-                                projectName: project.name || '',
-                                workDate: d.date || '',
-                                workDetail: d.detail || ''
-                            });
-                        }
-                    });
-                }
+            const codes = new Map();
+            visitUnifiedWorkDates((project, row) => {
+                if (!codes.has(project)) codes.set(project, getMaintenanceCode(project));
+                result.push({
+                    projectId: String(project.id),
+                    maintenanceCode: codes.get(project),
+                    projectName: project.name || '',
+                    workDate: row.date || '',
+                    workDetail: row.detail || ''
+                });
             });
-
             return result;
         };
 
-        // [M3 \uc218\uc815] \uacf5\ud1b5 ensureWorkDateAPI \ud568\uc218 (\uc911\ubcf5 \uc81c\uac70)
+        // [M3] Share the Work Date API setup.
         window.ensureWorkDateAPI = function () {
             if (window.workDate && typeof window.workDate.saveWorkDate === 'function') {
                 return window.workDate;
@@ -103375,16 +103555,83 @@ function showPendingSettlementModal(periodType, projects) {
                 font-size:clamp(14px,1.18vw,20px)!important; gap:4px!important;
             }
         }
-        #dashboardContent > .accordion-item:is(#overviewView,#settlementView,#projectView):not(.open) > .accordion-header {
-            display:flex!important; flex-flow:row nowrap!important; align-items:center!important;
-            white-space:nowrap!important; overflow-x:auto; max-width:100%; gap:8px!important;
+        @media not screen and (max-width: 768px) and (orientation: portrait) {
+            #dashboardContent #projectView .schedule-header-filter-row { flex-wrap: nowrap !important; }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView,#projectView):not(.open) > .accordion-header {
+                display:flex!important; flex-flow:row nowrap!important; align-items:center!important;
+                white-space:nowrap!important; overflow-x:auto; max-width:100%; gap:8px!important;
+            }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView,#projectView):not(.open) > .accordion-header :is(h2.accordion-title-btn,#overview-header-summaries,#settlement-header-summaries,.flex-grow,.schedule-header-filter-row) {
+                display:inline-flex!important; flex-flow:row nowrap!important; align-items:center!important;
+                white-space:nowrap!important; width:max-content!important; max-width:none!important; flex-shrink:0!important;
+            }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView,#projectView):not(.open) > .accordion-header h2.accordion-title-btn > span {
+                white-space:nowrap!important; align-self:center!important; margin-block:0!important;
+            }
         }
-        #dashboardContent > .accordion-item:is(#overviewView,#settlementView,#projectView):not(.open) > .accordion-header :is(h2.accordion-title-btn,#overview-header-summaries,#settlement-header-summaries,.flex-grow,.schedule-header-filter-row) {
-            display:inline-flex!important; flex-flow:row nowrap!important; align-items:center!important;
-            white-space:nowrap!important; width:max-content!important; max-width:none!important; flex-shrink:0!important;
-        }
-        #dashboardContent > .accordion-item:is(#overviewView,#settlementView,#projectView):not(.open) > .accordion-header h2.accordion-title-btn > span {
-            white-space:nowrap!important; align-self:center!important; margin-block:0!important;
+        @media screen and (max-width: 768px) and (orientation: portrait) {
+            /* Leave room for the status badge and operating-year controls. */
+            #dashboardContent { padding-block-start: calc(9rem + env(safe-area-inset-top, 0px)); }
+            #dashboardContent > :is(#overviewView,#settlementView,#projectView):not(.open) > .accordion-header {
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr) 24px !important;
+                gap: 8px !important;
+                align-items: start !important;
+                overflow-x: visible;
+            }
+            #dashboardContent > :is(#overviewView,#settlementView,#projectView):not(.open) > .accordion-header > svg.accordion-icon {
+                grid-column: 2;
+                grid-row: 1;
+                margin-inline: 0 !important;
+            }
+            #dashboardContent > :is(#overviewView,#settlementView,#projectView) > .accordion-header h2.accordion-title-btn {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 4px 8px !important;
+                min-width: 0 !important;
+                max-width: 100%;
+                white-space: normal !important;
+            }
+            #dashboardContent > :is(#overviewView,#settlementView,#projectView) > .accordion-header h2.accordion-title-btn > span {
+                max-width: 100%;
+            }
+            #dashboardContent > :is(#overviewView,#settlementView) > .accordion-header > :is(#overview-header-summaries,#settlement-header-summaries) {
+                grid-column: 1 / -1 !important;
+                grid-row: 2;
+                display: grid !important;
+                grid-template-columns: minmax(0, 1fr);
+                gap: 4px !important;
+                width: 100% !important;
+                min-width: 0;
+                margin-inline: 0 !important;
+                font-size: 1rem !important;
+                text-align: start !important;
+                white-space: normal !important;
+            }
+            #dashboardContent > :is(#overviewView,#settlementView) > .accordion-header :is(#overview-header-summaries,#settlement-header-summaries) > span.inline-block {
+                white-space: normal !important;
+                overflow-wrap: anywhere;
+            }
+            #dashboardContent > :is(#overviewView,#settlementView) > .accordion-header :is(#overview-header-summaries,#settlement-header-summaries):has(> [data-carry-group]) > span.inline-block:not([data-carry-group]) {
+                display: none !important;
+            }
+            #dashboardContent > #projectView:not(.schedule-header-collapsed) > .accordion-header > .flex-grow {
+                grid-column: 1;
+                grid-row: 1;
+                flex-wrap: wrap !important;
+                min-width: 0;
+                max-width: 100%;
+            }
+            #dashboardContent > #projectView > .accordion-header div.schedule-header-filter-row {
+                flex-wrap: wrap !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-inline: 0 !important;
+                overflow: visible !important;
+            }
+            #dashboardContent > #projectView > .accordion-header .schedule-header-filter-row > * {
+                max-width: 100% !important;
+            }
         }
         #dashboardContent > .accordion-item:not(.open) [data-carry-group] { padding-inline-start:20px; }
         #dashboardContent > .accordion-item:not(.open) > .accordion-header > svg.accordion-icon { align-self:center!important; margin-top:0!important; }
@@ -103392,8 +103639,16 @@ function showPendingSettlementModal(periodType, projects) {
         html:not(.carry-alerts-muted) .carry-info-trigger.carry-attention::before { content:'☝';position:absolute;top:100%;color:#b91c1c;line-height:1; }
         @keyframes carry-alert-pulse { from {box-shadow:0 0 0 0 #dc2626aa} to {box-shadow:0 0 0 6px transparent} }
         @media(prefers-reduced-motion:reduce){html:not(.carry-alerts-muted) .carry-info-trigger.carry-attention{animation:none}}
-        #operation-year-modal #operation-year-toolbar {width:min(640px,100%);max-width:calc(100vw - 12px);max-height:calc(100dvh - 12px);}
-        #operation-year-toolbar .year-modal-heading {position:sticky;top:0;background:white;z-index:2;cursor:move;touch-action:none;user-select:none;}
+        #operation-year-modal #operation-year-toolbar {display:flex;flex-direction:column;width:min(640px,100%);max-width:calc(100vw - 12px);max-height:calc(100dvh - 12px);padding:0;overflow:hidden;}
+        #operation-year-toolbar .year-modal-heading {flex:none;margin:0;padding:12px 16px;border-bottom:1px solid #e2e8f0;background:#fff;cursor:move;touch-action:none;user-select:none;}
+        #operation-year-toolbar .year-modal-scroll {min-height:0;overflow:auto;overscroll-behavior:contain;padding:12px 16px 16px;}
+        #operation-year-toolbar .carry-overview h3 {margin:0 0 12px;font-weight:700;}
+        #operation-year-toolbar .carry-overview-stats {margin:0;}
+        #operation-year-toolbar button.carry-overview-stat {display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 12px;width:100%;min-height:44px;padding:8px 0;border:0;border-bottom:1px solid #e2e8f0;border-radius:0;background:transparent;color:inherit;text-align:start;touch-action:manipulation;}
+        #operation-year-toolbar .carry-overview-stat strong {font-variant-numeric:tabular-nums;}
+        #operation-year-toolbar .carry-overview-stat:hover,#operation-year-toolbar .carry-overview-stat:focus-visible {background:#f1f5f9;}
+        #operation-year-toolbar .carry-evidence-back {margin-bottom:12px;}
+        #operation-year-toolbar .carry-evidence-table .table-export-btn {background:#4f46e5;color:white;}
         #operation-year-toolbar .year-modal-heading h2 {flex:1;}
         #operation-year-toolbar .year-size-grip {cursor:nwse-resize;}
         #operation-year-toolbar .carry-review-footer button { touch-action:manipulation; }
@@ -103407,7 +103662,7 @@ function showPendingSettlementModal(periodType, projects) {
         #operation-year-toolbar .carry-year-controls h3 { font-weight: 700; margin: 0 0 8px; }
         #operation-year-toolbar .carry-year-controls button,
         #operation-year-toolbar .carry-year-controls select,
-        #operation-year-toolbar .carry-year-controls input[type="search"] { min-height: 44px; padding: 6px 9px; border: 1px solid #94a3b8; border-radius: 6px; color: #173049; background: #f8fafc; font: inherit; max-width: 100%; box-sizing: border-box; }
+        #operation-year-toolbar .carry-review-workspace input[type="search"] { min-height: 44px; padding: 6px 9px; border: 1px solid #94a3b8; border-radius: 6px; color: #173049; background: #f8fafc; font: inherit; max-width: 100%; box-sizing: border-box; }
         #operation-year-toolbar .carry-review-workspace { margin-top: 10px; min-width: 0; }
         #operation-year-toolbar .carry-review-workspace[hidden] { display: none; }
         #operation-year-toolbar .carry-review-workspace h2 { font-size: 1rem; font-weight: 700; }
@@ -103415,9 +103670,9 @@ function showPendingSettlementModal(periodType, projects) {
         #operation-year-toolbar .carry-review-filters label { display: grid; min-width: 0; flex: 1 1 140px; }
         #operation-year-toolbar .carry-review-search { display: grid; gap: 4px; margin-block: 8px; }
         #operation-year-toolbar .carry-review-search input { width: 100%; }
-        #operation-year-toolbar .carry-review-list { max-height: 40dvh; min-height: 44px; overflow: auto; border-block: 1px solid #cbd5e1; overscroll-behavior: contain; }
+        #operation-year-toolbar .carry-review-list { min-height: 44px; border-block: 1px solid #cbd5e1; }
         #operation-year-toolbar .carry-review-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; padding: 8px 4px; min-height: 44px; border-bottom: 1px solid #e2e8f0; overflow-wrap: anywhere; }
-        #operation-year-toolbar .carry-review-row input { width: 22px; height: 22px; flex-shrink: 0; }
+        #operation-year-toolbar .carry-review-row input[type="checkbox"] { appearance: auto; accent-color: #0369a1; width: 22px; height: 22px; flex-shrink: 0; cursor: pointer; }
         #operation-year-toolbar .carry-review-summary { display: grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap: 6px; margin-block: 8px; }
         #operation-year-toolbar .carry-review-summary p { margin: 0; padding: 6px; background: #f1f5f9; border-radius: 4px; overflow-wrap: anywhere; }
         #operation-year-toolbar .carry-review-tally, #operation-year-toolbar .carry-review-error { margin-block: 6px; }
@@ -105084,7 +105339,8 @@ function showPendingSettlementModal(periodType, projects) {
 
                 XLSX.read = function () {
                     var workbook = originalRead.apply(this, arguments);
-                    if (window.__codexWebSaveWorkbookReadInProgress === true) return workbook;
+                    if (window.__codexWebSaveWorkbookReadInProgress === true ||
+                        arguments[1]?.codexProjectMappingOwnsWorkSheet === true) return workbook;
 
                     // Check for Work sheet
                     if (workbook && workbook.SheetNames) {
