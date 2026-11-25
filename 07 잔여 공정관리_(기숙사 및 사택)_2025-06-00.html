@@ -341,8 +341,10 @@
     }
     function defaultPosition() {
         const area = viewport(); if (bubbleSize() === 80) return clamp({x: EDGE, y: EDGE});
-        const badge = root.document?.getElementById('network-status')?.getBoundingClientRect();
-        return clamp({x: area.width - bubbleSize() - EDGE, y: badge?.width > 0 && badge.bottom > 0 ? badge.bottom + 29 : 88});
+        const networkStatus = root.document?.getElementById('network-status');
+        const badge = networkStatus?.getBoundingClientRect();
+        const gap = networkStatus?.classList.contains('online') ? 2 : 29;
+        return clamp({x: area.width - bubbleSize() - EDGE, y: badge?.width > 0 && badge.bottom > 0 ? badge.bottom + gap : 88});
     }
     function validPosition(value) { return value && Number.isFinite(Number(value.x)) && Number.isFinite(Number(value.y)); }
     function adaptedPosition(value) {
@@ -27608,7 +27610,7 @@
                 <div class="accordion-header p-4 flex justify-between items-center border-b">
                     <h2 class="accordion-title-btn text-2xl font-bold flex items-baseline" role="button" tabindex="0"
                         aria-expanded="false" aria-controls="accordion-panel-overview" data-accordion-id="overview">
-                        <span>📊 총괄</span>
+                        <span class="accordion-title-name"><span>📊</span> <span>총괄</span></span>
                         <span class="text-lg font-medium text-gray-400 ml-2">(PO비용 기준)</span>
                         <span class="accordion-hint-chip hint-visible" data-accordion-hint="overview">
                             <span aria-hidden="true">👆</span>
@@ -27774,7 +27776,7 @@
                 <div class="accordion-header p-4 flex items-center border-b">
                     <h2 class="accordion-title-btn text-2xl font-bold flex items-baseline" role="button" tabindex="0"
                         aria-expanded="false" aria-controls="accordion-panel-settlement" data-accordion-id="settlement">
-                        <span>💰 정산</span>
+                        <span class="accordion-title-name"><span>💰</span> <span>정산</span></span>
                         <span class="text-lg font-medium text-gray-400 ml-2">(PO이용 기준)</span>
                         <span class="accordion-hint-chip hint-visible" data-accordion-hint="settlement">
                             <span aria-hidden="true">👆</span>
@@ -27811,7 +27813,7 @@
                         <h2 class="accordion-title-btn text-2xl font-bold transition-colors" role="button" tabindex="0"
                             aria-expanded="false" aria-controls="accordion-panel-schedule" data-accordion-id="schedule"
                             style="user-select: none;">
-                            <span>🗓️ 일정</span>
+                            <span class="accordion-title-name"><span>🗓️</span> <span>일정</span></span>
                             <span class="accordion-hint-chip hint-visible" data-accordion-hint="schedule">
                                 <span aria-hidden="true">👆</span>
                                 <span>타임라인을 열어보세요</span>
@@ -103583,6 +103585,7 @@ function showPendingSettlementModal(periodType, projects) {
     <!-- [SMART-SELECTION-GUARD-20260919] 빈 바탕 드래그 방지 및 직접 대상 텍스트 선택/복사 보장 CSS -->
     <style id="carryover-responsive-style">
         /* Keep all pre-carryover accordion/header rules owned by the reference layout. */
+        .accordion-title-name > span { display: contents; }
         @media(max-width:1024px) { html:not(:has(> body > div > main#dashboardContent > .accordion-item.open)) { font-size:100%!important; } }
         #dashboardContent { zoom: 1; }
         @media screen {
@@ -103609,6 +103612,14 @@ function showPendingSettlementModal(periodType, projects) {
             }
         }
         @media screen and (max-width: 768px) and (orientation: portrait) {
+            #dashboardContent {
+                --portrait-width-deficit: clamp(0px, 390px - 100vw, 90px);
+                --portrait-header-compression: clamp(0px, 375px - 100vw, 75px);
+                --portrait-title-size: calc(20px - var(--portrait-width-deficit) * .043);
+                --portrait-title-icon: calc(25px - var(--portrait-width-deficit) * .043);
+                --portrait-state-size: calc(12px - var(--portrait-width-deficit) * .025);
+                --portrait-state-padding: calc(8.8px - var(--portrait-width-deficit) * .055);
+            }
             body { --dashboard-portrait-top: calc(.5rem + env(safe-area-inset-top, 0px)); }
             #codex-dashboard-shell { padding-block-start: var(--dashboard-portrait-top) !important; }
             #dashboardContent { padding-block-start: 0; }
@@ -103617,20 +103628,48 @@ function showPendingSettlementModal(periodType, projects) {
                 padding-block-start: 3.25rem !important;
             }
             #dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header {
+                --overview-title-offset: clamp(0px, (470px - 100vw) * .6, 24px);
                 padding-block-start: 0 !important;
                 padding-inline-start: .5rem !important;
                 grid-template-columns: max-content 20px minmax(0,1fr) !important;
-                column-gap: 4px !important;
+                grid-template-rows: minmax(36px, max-content) auto !important;
+                gap: 8px 4px !important;
             }
-            #dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header > h2.accordion-title-btn {
+            main#dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header > h2.accordion-title-btn {
                 align-self: start !important;
                 margin: 0 !important;
+                margin-block-start: var(--overview-title-offset) !important;
             }
-            #dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header > svg.accordion-icon {
+            main#dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header > svg.accordion-icon {
                 align-self: start !important;
-                margin-block-start: .3rem !important;
+                margin-block-start: calc(var(--overview-title-offset) + 8px) !important;
                 inline-size: 20px !important;
                 block-size: 20px !important;
+            }
+            #network-status.online {
+                --portrait-online-growth: clamp(0px, (100vw - 430px) * .66, 46px);
+                box-sizing: border-box;
+                inline-size: calc(88px + var(--portrait-online-growth)) !important;
+                justify-content: space-between;
+                padding-block: 0 !important;
+                padding-inline: calc(2px + var(--portrait-online-growth) * .13) !important;
+                gap: calc(2px + var(--portrait-online-growth) * .08) !important;
+                min-block-size: 32px !important;
+                font-size: calc(12px + var(--portrait-online-growth) * .087);
+            }
+            #network-status.online > #network-status-icon {
+                --portrait-status-dot: calc(12px + var(--portrait-online-growth) * .087);
+                inline-size: var(--portrait-status-dot);
+                block-size: var(--portrait-status-dot);
+                flex: 0 0 var(--portrait-status-dot);
+            }
+            #network-status.online > #network-menu-btn {
+                flex: 0 0 32px;
+                min-inline-size: 32px !important;
+                min-block-size: 30px !important;
+                padding: 0 !important;
+                margin-inline-start: 0 !important;
+                line-height: 1;
             }
             @media (max-width: 480px) {
                 #network-status {
@@ -103645,10 +103684,6 @@ function showPendingSettlementModal(periodType, projects) {
                 #network-status-icon { inline-size: .75rem; block-size: .75rem; flex: 0 0 .75rem; }
                 #network-status-text { flex: none; white-space: nowrap; }
                 #network-menu-btn { flex: 0 0 2rem; min-inline-size: 2rem !important; padding-inline: 0; margin-inline-start: 0 !important; }
-                #dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header > h2.accordion-title-btn { zoom: .80; }
-            }
-            @media (max-width: 360px) {
-                #dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header > h2.accordion-title-btn { zoom: .68; }
             }
             #dashboardContent > :is(#overviewView,#settlementView):not(.open) > .accordion-header {
                 padding-block-start: 10px;
@@ -103669,7 +103704,6 @@ function showPendingSettlementModal(periodType, projects) {
                 border-block-start: 1px solid #e2e8f0;
             }
             #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header {
-                grid-template-rows: minmax(56px, auto) auto !important;
                 contain: layout;
             }
             #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > svg.accordion-icon {
@@ -103680,82 +103714,82 @@ function showPendingSettlementModal(periodType, projects) {
             }
             #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header
                 > :is(#overview-header-summaries,#settlement-header-summaries) {
-                font-size: clamp(9.75px, 3vw, 14px) !important;
+                font-size: clamp(9px, 3vw, 14px) !important;
                 overflow-x: auto;
             }
             #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header
                 > :is(#overview-header-summaries,#settlement-header-summaries) > [data-carry-group] {
-                white-space: nowrap !important;
-                overflow-wrap: normal;
+                white-space: normal !important;
+                overflow-wrap: anywhere;
             }
-            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn {
+            main#dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn {
                 display: grid !important;
                 grid-column: 1 !important;
                 grid-template-columns: repeat(4, max-content) !important;
                 grid-template-rows: auto !important;
                 justify-content: start !important;
                 align-items: center;
-                gap: 4px !important;
+                column-gap: calc(3px - var(--portrait-width-deficit) * .014 - var(--portrait-header-compression) * .018) !important;
+                padding-inline: 4px calc(4px - var(--portrait-header-compression) * .036) !important;
             }
-            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > span:first-child {
-                grid-area: 1 / 1 !important;
-                font-size: 1.05rem !important;
-                white-space: nowrap;
+            main#dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > span {
+                grid-area: auto !important;
             }
-            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > span.text-gray-400 {
-                grid-area: 1 / 2 !important;
+            main#dashboardContent > .accordion-item:not(.open) > .accordion-header h2.accordion-title-btn > .accordion-title-name {
+                display: inline-flex !important;
+                align-items: center;
+                gap: 5px;
+                font-size: var(--portrait-title-size) !important;
+                white-space: nowrap !important;
+            }
+            main#dashboardContent > .accordion-item:not(.open) > .accordion-header .accordion-title-name > span:first-child {
+                display: inline-flex;
+                inline-size: var(--portrait-title-icon);
+                flex: 0 0 var(--portrait-title-icon);
+                justify-content: center;
+            }
+            main#dashboardContent > .accordion-item:not(.open) > .accordion-header .accordion-title-name > span:last-child {
+                display: inline;
+            }
+            main#dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > span.text-gray-400 {
                 margin-inline: 0 !important;
-                font-size: .7rem !important;
+                font-size: calc(9.5px - var(--portrait-width-deficit) * .012 - var(--portrait-header-compression) * .015) !important;
                 white-space: nowrap;
             }
-            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > .accordion-state-pill {
-                grid-area: 1 / 4 !important;
+            main#dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > .accordion-state-pill {
                 margin-inline: 0 !important;
-                padding-inline: .4rem !important;
-                font-size: .65rem !important;
+                padding-inline: calc(var(--portrait-state-padding) - var(--portrait-header-compression) * .025) !important;
+                font-size: var(--portrait-state-size) !important;
                 white-space: nowrap;
             }
-            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > .accordion-hint-chip {
-                grid-area: 1 / 3 !important;
+            main#dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > .accordion-hint-chip {
                 margin: 0 !important;
-                padding-inline: 3px !important;
-                font-size: .65rem !important;
+                padding-inline: calc(3px - var(--portrait-header-compression) * .025) !important;
+                gap: calc(4px - var(--portrait-header-compression) * .04);
+                block-size: 32px;
+                font-size: calc(10.5px - var(--portrait-width-deficit) * .021 - var(--portrait-header-compression) * .018) !important;
                 white-space: nowrap;
                 justify-self: start;
             }
-            @media (max-width: 389px) {
-                #network-status { padding-inline: 8px; gap: 4px; font-size: .75rem; }
-                #network-menu-btn { margin-inline-start: 2px; }
-                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header {
-                    padding-inline: 8px 4px !important;
-                    column-gap: 3px !important;
-                }
-                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > svg.accordion-icon {
-                    width: 20px !important;
-                    height: 20px !important;
-                    margin-block-start: 6px !important;
-                }
-                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > .accordion-state-pill {
-                    padding-inline: 4px !important;
-                    font-size: .6rem !important;
-                }
-                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn {
-                    column-gap: 2px !important;
-                    margin-inline: 0 !important;
-                }
-                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > span:first-child {
-                    font-size: .875rem !important;
-                }
-                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > span.text-gray-400 {
-                    font-size: .61rem !important;
-                }
-                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > .accordion-hint-chip {
-                    padding-inline: 2px !important;
-                    font-size: .58rem !important;
-                }
+            main#dashboardContent > #settlementView.accordion-item:not(.open) > div.accordion-header {
+                grid-template-rows: minmax(37px, max-content) auto !important;
+                padding-inline-start: 8px !important;
+                row-gap: 4px !important;
             }
-            #dashboardContent > #settlementView:not(.open) > .accordion-header > #settlement-header-summaries {
-                padding: 7px 12px !important;
+            main#dashboardContent > #settlementView.accordion-item:not(.open) > div.accordion-header > h2.accordion-title-btn {
+                margin-block-end: 0 !important;
+                width: max-content !important;
+            }
+            main#dashboardContent > #settlementView.accordion-item:not(.open) > div.accordion-header > h2.accordion-title-btn > .accordion-hint-chip {
+                font-size: calc(10.5px - var(--portrait-width-deficit) * .032 - var(--portrait-header-compression) * .012) !important;
+            }
+            main#dashboardContent > #settlementView.accordion-item:not(.open) > div.accordion-header > #settlement-header-summaries {
+                box-sizing: border-box;
+                border-inline-start: 1px solid #f1f5f9;
+                margin-block-start: 0 !important;
+                margin-inline-start: -6px !important;
+                width: calc(100% + 6px) !important;
+                padding: 7px 12px 7px 5px !important;
             }
             #dashboardContent > :is(#overviewView,#settlementView,#projectView):not(.open) > .accordion-header {
                 display: grid !important;
@@ -103816,6 +103850,63 @@ function showPendingSettlementModal(periodType, projects) {
             }
             #dashboardContent > #projectView > .accordion-header .schedule-header-filter-row > * {
                 max-width: 100% !important;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header h2.accordion-title-btn {
+                flex: 0 0 auto;
+                flex-wrap: nowrap !important;
+                width: max-content !important;
+                max-width: calc(100% + 8px) !important;
+                padding-inline-start: 4px !important;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header h2.accordion-title-btn > :is(.accordion-hint-chip,.accordion-state-pill) {
+                flex: 0 0 auto;
+                white-space: nowrap !important;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header {
+                padding-inline-start: 8px !important;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header h2.accordion-title-btn > .accordion-state-pill {
+                margin-inline-start: -6px !important;
+                padding-inline: var(--portrait-state-padding) !important;
+                font-size: var(--portrait-state-size) !important;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header h2.accordion-title-btn > .accordion-hint-chip {
+                padding-inline: calc(9.6px - var(--portrait-width-deficit) * .05) !important;
+                font-size: var(--portrait-state-size) !important;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header > svg.accordion-icon {
+                align-self: start !important;
+                margin-block-start: calc(21px - var(--portrait-width-deficit) * .23) !important;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header div.schedule-header-filter-row {
+                flex: 0 0 auto !important;
+                gap: calc(3px - var(--portrait-width-deficit) * .014) !important;
+                width: calc(100% + var(--portrait-width-deficit) * .45) !important;
+                max-width: none !important;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header #select-view-wrapper {
+                margin-inline-start: 0 !important;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header :is(#clear-all-filters-btn,#select-view-toggle-btn) {
+                padding-inline: calc(5px - var(--portrait-width-deficit) * .028) !important;
+                font-size: calc(12px - var(--portrait-width-deficit) * .02) !important;
+                flex: 0 0 auto;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header .schedule-header-filter-row > .codex-legend-select-host {
+                --portrait-select-size: calc(53px + clamp(0px, (100vw - 390px) * .2, 4px) - var(--portrait-width-deficit) * .1);
+                inline-size: var(--portrait-select-size);
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header .schedule-header-filter-row > .codex-legend-select-host:has(#header-cost-account-filter-shortcut) {
+                inline-size: calc(var(--portrait-select-size) + 10px);
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header .schedule-header-filter-row .codex-legend-select-trigger {
+                padding-inline: calc(4px - var(--portrait-width-deficit) * .014) calc(16px - var(--portrait-width-deficit) * .073) !important;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header .schedule-header-filter-row .codex-legend-select-label {
+                font-size: calc(11px - var(--portrait-width-deficit) * .006) !important;
+            }
+            main#dashboardContent > #projectView.accordion-item:not(.open) > .accordion-header .schedule-header-filter-row .codex-legend-select-chevron {
+                right: calc(6px - var(--portrait-width-deficit) * .043) !important;
             }
         }
         #dashboardContent > .accordion-item:not(.open) [data-carry-group] { padding-inline-start:20px; }
