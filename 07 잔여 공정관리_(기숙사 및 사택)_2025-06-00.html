@@ -61009,7 +61009,6 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
 
             const lookup = buildAutoUploadProjectLookup(projects);
             const byProject = new Map();
-            const projectIds = new Set(projects.map(p => String(p && p.id != null ? p.id : '')).filter(Boolean));
 
             for (let r = headerRowIndex + 1; r < workRows.length; r++) {
                 const row = workRows[r];
@@ -61040,6 +61039,11 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 });
             }
 
+            return commitAutoUploadWorkDates(projects, byProject, result, options);
+        }
+
+        function commitAutoUploadWorkDates(projects, byProject, result, options = {}) {
+            const projectIds = new Set(projects.map(p => String(p && p.id != null ? p.id : '')).filter(Boolean));
             try {
                 const wd = window.workDate || {};
                 if (options.clearBeforeApply !== false) {
@@ -61170,9 +61174,23 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
                 links: window.projectLinkStore && window.projectLinkStore.loadProjectLinkMap ? window.projectLinkStore.loadProjectLinkMap() : {} });
             const refresh = () => { invalidateFilteredDataCache(); latestFilteredData = null; render(true); scheduleSettlementHeaderSummariesFast('year-cache'); window.YearContext.updateUI(); };
             const applyWork = (model, projects) => {
-                for (const name of Object.keys(model.raw || {})) {
-                    if (isAutoUploadWorkSheetName(name)) applyAutoUploadWorkSheetData(model.raw[name], { projectDataSource: projects, clearBeforeApply: true });
+                if (!projects.length) return;
+                const targetIds = new Set(projects.map(project => String(project.id)));
+                const byProject = new Map();
+                const result = { applied: 0, skipped: 0, projects: 0, rows: model.works.length };
+                // The cache already verified project ownership and source counts.
+                // A projected raw sheet can omit rows resolved by the source mapper.
+                for (const item of model.works) {
+                    const id = String(item.projectId);
+                    if (!targetIds.has(id)) continue;
+                    const date = item.workDate;
+                    if (typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('연도 캐시 작업일 형식 오류');
+                    if (!byProject.has(id)) byProject.set(id, []);
+                    byProject.get(id).push({ date, detail: String(item.workDetail ?? '').trim() });
+                    result.applied++;
                 }
+                commitAutoUploadWorkDates(projects, byProject, result);
+                if (result.error) throw new Error('연도 캐시 작업일 매핑 실패: ' + result.error);
             };
             const applyLinks = (model, projects) => {
                 if (window.projectLinkStore && typeof window.projectLinkStore.setProjectLink === 'function') {
@@ -68476,6 +68494,10 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
                 currentGanttContainer.__floatingScrollbarResizeObserver.disconnect();
                 currentGanttContainer.__floatingScrollbarResizeObserver = null;
             }
+            if (existingGanttEl?.contains(window._workDateObservedBody)) {
+                window._workDateResizeObserver?.disconnect();
+                window._workDateObservedBody = null;
+            }
             if (activeTooltipBar && existingGanttEl && existingGanttEl.contains(activeTooltipBar)) hideFloatingTooltip();
             const wasHeaderCollapsed = existingGanttEl && existingGanttEl.classList.contains('header-collapsed');
             const existingToggleBtn = existingGanttEl && existingGanttEl.querySelector('.header-toggle-btn');
@@ -73796,7 +73818,7 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
         }
 
                 document.addEventListener('refreshMilestonesView', function() { if (typeof renderMilestoneModal === 'function') renderMilestoneModal(); });
-        function renderMilestoneModal(prepareHidden = false) {
+        function renderMilestoneModal(deferClosedRows = false) {
             // [DATA-INTEGRITY] Remove corrupt milestones (NaN dates)
             if (typeof milestones !== 'undefined' && Array.isArray(milestones)) {
                 const originalLen = milestones.length;
@@ -73814,7 +73836,7 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
                 milestones.sort((a, b) => dateOrder.get(b.date) - dateOrder.get(a.date));
             }
 
-            const deferRows = prepareHidden === true && milestoneModal.classList.contains('hidden');
+            const deferRows = deferClosedRows === true && milestoneModal.classList.contains('hidden');
             milestoneList.replaceChildren();
             // [FIX] \ub9c8\uc77c\uc2a4\ud1a4 \ud328\ub110\uc774 \ub3d9\uc801\uc73c\ub85c \ub9ac\ub80c\ub354\ub9c1\ub420 \ub54c \ub0a0\uc9dc \uc785\ub825 \uc774\ubca4\ud2b8\ub97c \ud56d\uc0c1 \uc7ac\ubd80\ucc29
             if (window.__reattachMilestoneDateHandlers) {
@@ -77635,6 +77657,22 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
             };
             window.updateWorkdateOutOfPlanNotice = updateWorkdateOutOfPlanNotice;
 
+            let workDateResizeFrame = 0;
+            function queueWorkDateLayerResize() {
+                if (workDateResizeFrame) return;
+                workDateResizeFrame = requestAnimationFrame(() => {
+                    workDateResizeFrame = 0;
+                    const liveBody = window._workDateObservedBody;
+                    if (!liveBody?.isConnected) return;
+                    const layer = liveBody.querySelector('#workdate-markers');
+                    if (!layer) return;
+                    const width = liveBody.scrollWidth + 'px';
+                    const height = liveBody.scrollHeight + 'px';
+                    if (layer.style.width !== width) layer.style.width = width;
+                    if (layer.style.height !== height) layer.style.height = height;
+                });
+            }
+
             const updateGanttWithWorkDates = () => {
                 hideTooltip();
                 const container = getActiveGanttViewportContainer();
@@ -78018,22 +78056,7 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
                 if (typeof ResizeObserver !== 'undefined') {
                     try {
                         if (!window._workDateResizeObserver) {
-                            let workDateResizeFrame = 0;
-                            window._workDateResizeObserver = new ResizeObserver(() => {
-                                if (workDateResizeFrame) return;
-                                workDateResizeFrame = requestAnimationFrame(() => {
-                                    workDateResizeFrame = 0;
-                                    const liveBody = window._workDateObservedBody;
-                                    if (!liveBody || !liveBody.isConnected) return;
-                                    const ml = liveBody.querySelector('#workdate-markers');
-                                    if (ml) {
-                                        const width = `${liveBody.scrollWidth}px`;
-                                        const height = `${liveBody.scrollHeight}px`;
-                                        if (ml.style.width !== width) ml.style.width = width;
-                                        if (ml.style.height !== height) ml.style.height = height;
-                                    }
-                                });
-                            });
+                            window._workDateResizeObserver = new ResizeObserver(queueWorkDateLayerResize);
                         }
                         if (window._workDateObservedBody !== ganttBody) {
                             window._workDateResizeObserver.disconnect();
@@ -103590,8 +103613,42 @@ function showPendingSettlementModal(periodType, projects) {
             #codex-dashboard-shell { padding-block-start: var(--dashboard-portrait-top) !important; }
             #dashboardContent { padding-block-start: 0; }
             #network-status { top: var(--dashboard-portrait-top); }
-            #dashboardContent > #overviewView.accordion-item > .accordion-header {
+            #dashboardContent > #overviewView.accordion-item.open > .accordion-header {
                 padding-block-start: 3.25rem !important;
+            }
+            #dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header {
+                padding-block-start: 0 !important;
+                padding-inline-start: .5rem !important;
+                grid-template-columns: max-content 20px minmax(0,1fr) !important;
+                column-gap: 4px !important;
+            }
+            #dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header > h2.accordion-title-btn {
+                align-self: start !important;
+                margin: 0 !important;
+            }
+            #dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header > svg.accordion-icon {
+                align-self: start !important;
+                margin-block-start: .3rem !important;
+                inline-size: 20px !important;
+                block-size: 20px !important;
+            }
+            @media (max-width: 480px) {
+                #network-status {
+                    box-sizing: border-box;
+                    inline-size: 5.5rem;
+                    justify-content: space-between;
+                    min-block-size: 3.2rem;
+                    padding-inline: .125rem !important;
+                    gap: .125rem !important;
+                    font-size: .75rem;
+                }
+                #network-status-icon { inline-size: .75rem; block-size: .75rem; flex: 0 0 .75rem; }
+                #network-status-text { flex: none; white-space: nowrap; }
+                #network-menu-btn { flex: 0 0 2rem; min-inline-size: 2rem !important; padding-inline: 0; margin-inline-start: 0 !important; }
+                #dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header > h2.accordion-title-btn { zoom: .80; }
+            }
+            @media (max-width: 360px) {
+                #dashboardContent > #overviewView.accordion-item:not(.open) > .accordion-header > h2.accordion-title-btn { zoom: .68; }
             }
             #dashboardContent > :is(#overviewView,#settlementView):not(.open) > .accordion-header {
                 padding-block-start: 10px;
@@ -103666,7 +103723,7 @@ function showPendingSettlementModal(periodType, projects) {
                 white-space: nowrap;
                 justify-self: start;
             }
-            @media (max-width: 360px) {
+            @media (max-width: 389px) {
                 #network-status { padding-inline: 8px; gap: 4px; font-size: .75rem; }
                 #network-menu-btn { margin-inline-start: 2px; }
                 #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header {
