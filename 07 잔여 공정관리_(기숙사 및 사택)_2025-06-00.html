@@ -322,6 +322,7 @@
     let button = null, lockButton = null, backdrop = null, panel = null, mounted = false, locked = false;
     let position = null, followsDefault = false, drag = null, suppressClickUntil = 0, opened = false;
     let opener = null, previousOverflow = null, draftYear = null, globalListeners = false;
+    let closeButtonOnly = false;
 
     function report(error) {
         const message = error?.message || String(error);
@@ -452,7 +453,7 @@
     }
     function close() {
         if (!opened) return;
-        opened = false; draftYear = null; if (backdrop) backdrop.hidden = true;
+        opened = false; closeButtonOnly = false; draftYear = null; if (backdrop) backdrop.hidden = true;
         panel?.querySelector('[data-year-view="summary"]')?.replaceChildren();
         if (button) button.setAttribute('aria-expanded', 'false');
         if (root.document?.body && previousOverflow !== null && root.document.body.style.overflow === 'hidden') root.document.body.style.overflow = previousOverflow;
@@ -473,6 +474,8 @@
         root.YearContext?.refreshClock();
         mount(); if (!backdrop || opened) return;
         opener = root.document.activeElement; draftYear = String(safeState().year); opened = true;
+        closeButtonOnly = view === 'settings';
+        panel.querySelector('#operation-year-cancel').hidden = closeButtonOnly;
         backdrop.hidden = false; panel?.__fitViewport?.(); button.setAttribute('aria-expanded', 'true');
         previousOverflow = root.document.body.style.overflow; backdrop.dataset.bodyOverflowBefore = previousOverflow; root.document.body.style.overflow = 'hidden';
         showView(view, view === 'summary' ? '확정·이월 요약' : '운영 연도 선택');
@@ -483,7 +486,11 @@
     }
     function keyboard(event) {
         if (!ownsModalFocus()) return;
-        if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); close(); return; }
+        if (event.key === 'Escape') {
+            event.stopImmediatePropagation();
+            if (!closeButtonOnly) { event.preventDefault(); close(); }
+            return;
+        }
         if (event.key !== 'Tab') return;
         const nodes = focusable(); if (!nodes.length) { event.preventDefault(); panel?.focus(); return; }
         const active = root.document.activeElement, first = nodes[0], last = nodes[nodes.length - 1];
@@ -555,12 +562,23 @@
     }
     function modalClick(event) {
         event.stopPropagation();
-        if (event.target === backdrop) { close(); return; }
+        if (event.target === backdrop) {
+            if (!closeButtonOnly) close();
+            return;
+        }
         const action = event.target.closest?.('button')?.id;
         try {
-            if (action === 'operation-year-close' || action === 'operation-year-cancel') close();
-            else if (action === 'operation-year-apply') { root.YearContext?.select(root.document.getElementById('operation-year-select').value); close(); }
-            else if (action === 'operation-year-current') { const state = safeState(); root.YearContext?.select(root.YearContext.chooseDefault(state.years), {explicit:false}); close(); }
+            if (action === 'operation-year-close' || (action === 'operation-year-cancel' && !closeButtonOnly)) close();
+            else if (action === 'operation-year-apply' || action === 'operation-year-current') {
+                const state = action === 'operation-year-apply'
+                    ? root.YearContext?.select(root.document.getElementById('operation-year-select').value)
+                    : root.YearContext?.select(root.YearContext.chooseDefault(safeState().years), {explicit:false});
+                if (closeButtonOnly) {
+                    const applied = state || safeState();
+                    draftYear = String(applied.year);
+                    rebuildPicker(applied);
+                } else close();
+            }
             else if (action === 'operation-year-edit') { root.YearContext?.toggleEdit?.(); update(safeState()); }
             else if (action === 'operation-year-position-reset') resetPosition();
             else if (action === 'operation-year-retry') Promise.resolve(root.YearBootCoordinator?.retry?.()).catch(report);
