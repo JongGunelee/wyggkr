@@ -320,7 +320,7 @@
     const EDGE = 8, DRAG_THRESHOLD = 6;
     const IDS = ['operation-year-bubble','operation-year-lock','operation-year-modal','operation-year-toolbar'];
     let button = null, lockButton = null, backdrop = null, panel = null, mounted = false, locked = false;
-    let position = null, drag = null, suppressClickUntil = 0, opened = false;
+    let position = null, followsDefault = false, drag = null, suppressClickUntil = 0, opened = false;
     let opener = null, previousOverflow = null, draftYear = null, globalListeners = false;
 
     function report(error) {
@@ -333,7 +333,7 @@
         const doc = root.document;
         return {width: Math.max(1, root.innerWidth || doc?.documentElement.clientWidth || 390), height: Math.max(1, root.innerHeight || doc?.documentElement.clientHeight || 844)};
     }
-    function bubbleSize() { const area = viewport(); return area.width <= 768 && area.height >= area.width ? 64 : 80; }
+    function bubbleSize() { const area = viewport(); return area.width <= 768 && area.height >= area.width ? 48 : 80; }
     function clamp(value) {
         const area = viewport(), SIZE = bubbleSize();
         const minX = Math.min(EDGE, Math.max(0, area.width - SIZE)), minY = Math.min(EDGE, Math.max(0, area.height - SIZE - 16));
@@ -342,7 +342,7 @@
     function defaultPosition() {
         const area = viewport(); if (bubbleSize() === 80) return clamp({x: EDGE, y: EDGE});
         const badge = root.document?.getElementById('network-status')?.getBoundingClientRect();
-        return clamp({x: area.width - bubbleSize() - EDGE, y: badge?.width > 0 && badge.bottom > 0 ? badge.bottom + EDGE : 64});
+        return clamp({x: area.width - bubbleSize() - EDGE, y: badge?.width > 0 && badge.bottom > 0 ? badge.bottom + 29 : 88});
     }
     function validPosition(value) { return value && Number.isFinite(Number(value.x)) && Number.isFinite(Number(value.y)); }
     function adaptedPosition(value) {
@@ -356,7 +356,12 @@
     }
     function paintPosition() {
         if (button && position) { button.style.left = position.x + 'px'; button.style.top = position.y + 'px'; }
-        if (lockButton && position) { lockButton.style.left = position.x + 'px'; lockButton.style.top = (position.y + bubbleSize() - 16) + 'px'; }
+        if (lockButton && position) {
+            const size = bubbleSize();
+            const portrait = size !== 80;
+            lockButton.style.left = (position.x - (portrait ? 8 : 0)) + 'px';
+            lockButton.style.top = (position.y + size - (portrait ? 24 : 16)) + 'px';
+        }
     }
     function paintLock() {
         if (!button || !lockButton) return;
@@ -373,7 +378,8 @@
     function storePosition() { try { root.localStorage?.setItem(POSITION_KEY, JSON.stringify(serializePosition())); } catch (_) { /* A storage restriction must not disable movement. */ } }
     function serializePosition() { const value = position || defaultPosition(); return {version: VERSION, x: value.x, y: value.y, width: value.width, height: value.height, size: bubbleSize(), locked}; }
     function restorePosition(value, persist = false) {
-        position = validPosition(value) ? adaptedPosition(value) : defaultPosition();
+        followsDefault = !validPosition(value);
+        position = followsDefault ? defaultPosition() : adaptedPosition(value);
         locked = value?.locked === true; paintPosition(); paintLock(); if (persist) storePosition(); return serializePosition();
     }
     function initialPosition() {
@@ -382,7 +388,7 @@
         return restorePosition(saved?.version === VERSION ? saved : null);
     }
     function getPosition() { return serializePosition(); }
-    function resetPosition() { locked = false; position = defaultPosition(); paintPosition(); paintLock(); storePosition(); update(safeState()); return serializePosition(); }
+    function resetPosition() { locked = false; followsDefault = true; position = defaultPosition(); paintPosition(); paintLock(); storePosition(); update(safeState()); return serializePosition(); }
 
     function style() {
         const doc = root.document; if (!doc) return;
@@ -398,7 +404,7 @@
 #operation-year-lock{position:fixed;width:32px;height:32px;min-width:32px;padding:0;z-index:100601;border:1px solid #0284c7;border-radius:50%;background:#f0f9ff;color:#075985;display:flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;box-shadow:0 2px 5px #0f172a30}
 #operation-year-lock[data-locked="true"]{background:#075985;color:#fff}
 #operation-year-lock:focus-visible{outline:3px solid #7c3aed;outline-offset:2px}
-@media(max-width:768px) and (orientation:portrait){#operation-year-bubble{width:64px;height:64px;min-width:64px;max-width:64px;padding:6px}#operation-year-bubble strong{font-size:21px}#operation-year-bubble small{font-size:9px}}
+@media(max-width:768px) and (orientation:portrait){#operation-year-bubble{width:48px;height:48px;min-width:48px;max-width:48px;padding:3px}#operation-year-bubble strong{font-size:17px}#operation-year-bubble small{font-size:8px}#operation-year-lock{width:24px;height:24px}}
 #operation-year-modal{position:fixed;inset:0;z-index:100610;display:flex;align-items:center;justify-content:center;background:#0f172a73;padding:12px;box-sizing:border-box;overscroll-behavior:contain}
 #operation-year-modal[hidden]{display:none!important}
 #operation-year-bubble{z-index:2147483640}
@@ -484,7 +490,12 @@
         event.stopImmediatePropagation();
     }
     function focusGuard(event) { if (ownsModalFocus() && panel && !panel.contains(event.target)) focusable()[0]?.focus({preventScroll: true}); }
-    function resize() { panel?.__fitViewport?.(); if (position) { position = clamp(position); paintPosition(); } }
+    function resize() {
+        panel?.__fitViewport?.();
+        if (!position) return;
+        position = followsDefault && !locked ? defaultPosition() : clamp(position);
+        paintPosition();
+    }
     function pointerDown(event) {
         if (locked || drag || opened || (event.pointerType === 'mouse' && event.button !== 0)) return;
         drag = {id: event.pointerId, x: event.clientX, y: event.clientY, start: {...position}, moved: false};
@@ -494,7 +505,7 @@
         if (locked || !drag || drag.id !== event.pointerId) return;
         const dx = event.clientX - drag.x, dy = event.clientY - drag.y;
         if (!drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
-        drag.moved = true; event.preventDefault(); button.dataset.dragging = 'true';
+        drag.moved = true; followsDefault = false; event.preventDefault(); button.dataset.dragging = 'true';
         position = clamp({x: drag.start.x + dx, y: drag.start.y + dy}); paintPosition();
     }
     function pointerEnd(event) {
@@ -507,7 +518,7 @@
         const steps = {ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1]};
         if (locked || !event.altKey || !steps[event.key]) return;
         event.preventDefault(); event.stopPropagation(); const [x, y] = steps[event.key], step = event.shiftKey ? 30 : 10;
-        position = clamp({x: position.x + x * step, y: position.y + y * step}); paintPosition(); storePosition();
+        followsDefault = false; position = clamp({x: position.x + x * step, y: position.y + y * step}); paintPosition(); storePosition();
     }
     function rebuildPicker(state) {
         const picker = root.document.getElementById('operation-year-select'); if (!picker) return;
@@ -27588,7 +27599,7 @@
 
     <!-- [REMOVED] Duplicate Loading Overlay - Using the one in body tag (line ~76714) -->
 
-    <div class="w-full h-full p-4 md:p-8 flex flex-col">
+    <div id="codex-dashboard-shell" class="w-full h-full p-4 md:p-8 flex flex-col">
         <!-- Main content area -->
         <main id="dashboardContent" class="flex flex-col flex-grow min-h-0 space-y-4 overflow-y-auto" style="overflow-y: auto !important;">
 
@@ -55260,7 +55271,7 @@ window.__normalizedTokenCache = window.__normalizedTokenCache || new Map();
             try { if (mappingModal) mappingModal.classList.add('hidden'); } catch (e) { }
             try { if (window.RefactoringSuite2025 && typeof window.RefactoringSuite2025.markDataStatsDirty === 'function') window.RefactoringSuite2025.markDataStatsDirty(); } catch (e) { }
             // [PERF-FIX] defer heavy rendering to give E2E polling a gap on the main thread
-            try { if (typeof renderMilestoneModal === 'function') setTimeout(() => renderMilestoneModal(), 0); } catch (e) { }
+            try { if (typeof renderMilestoneModal === 'function') setTimeout(() => renderMilestoneModal(true), 0); } catch (e) { }
             try {
                 if (typeof requestCoalescedMainRender === 'function') setTimeout(() => requestCoalescedMainRender('milestone-fast-apply'), 0);
                 else if (typeof render === 'function') setTimeout(() => render(), 0);
@@ -68596,11 +68607,17 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
             // \uac1c\uc120 \uc0ac\ud56d: \uba54\ubaa8\ub9ac \ucd5c\uc801\ud654 - DocumentFragment\ub97c \uc0ac\uc6a9\ud558\uc5ec DOM \uc870\uc791 \ucd5c\uc18c\ud654
             const dayFragment = document.createDocumentFragment();
             const weekdayFragment = document.createDocumentFragment();
+            const milestoneDateOffsetMap = new Map();
+            const startYear = viewMinDate.getFullYear();
+            const startMonth = viewMinDate.getMonth();
+            const startDay = viewMinDate.getDate();
 
             for (let i = 0; i <= totalDays; i++) {
                 // viewMinDate\uc5d0\uc11c i\uc77c\uc744 \ub354\ud55c \ub0a0\uc9dc\ub97c \uc0dd\uc131 (\ud0c0\uc784\uc874 \ubcc0\ud658 \uc5c6\uc74c)
-                const date = new Date(viewMinDate.getFullYear(), viewMinDate.getMonth(), viewMinDate.getDate() + i);
+                const date = new Date(startYear, startMonth, startDay + i);
                 date.setHours(0, 0, 0, 0);
+                const dateKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+                milestoneDateOffsetMap.set(dateKey, i);
                 const dayOfWeek = date.getDay();
                 const isWeekendOrHoliday = dayOfWeek === 0 || dayOfWeek === 6 || isHoliday(date);
 
@@ -68775,20 +68792,6 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
 
             // [PERF-OPT-2026-01-05] \ub9c8\uc77c\uc2a4\ud1a4 O(n\u00d7m) \u2192 O(n) \ucd5c\uc801\ud654
             // \ub0a0\uc9dc\u2192\uc624\ud504\uc14b \ub9f5\uc744 \ud55c \ubc88\ub9cc \uc0dd\uc131\ud558\uc5ec \uac01 \ub9c8\uc77c\uc2a4\ud1a4\uc5d0\uc11c O(1) \uc870\ud68c
-            const milestoneDateOffsetMap = new Map();
-            if (viewMinDate && viewMaxDate) {
-                const totalDaysForMap = dateDiffInDays(viewMinDate, viewMaxDate);
-                const mapViewMinYear = viewMinDate.getFullYear();
-                const mapViewMinMonth = viewMinDate.getMonth();
-                const mapViewMinDay = viewMinDate.getDate();
-                for (let i = 0; i <= totalDaysForMap; i++) {
-                    const d = new Date(mapViewMinYear, mapViewMinMonth, mapViewMinDay + i);
-                    d.setHours(0, 0, 0, 0);
-                    const ds = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                    milestoneDateOffsetMap.set(ds, i);
-                }
-            }
-
             const milestoneFragment = document.createDocumentFragment();
             const milestoneSource = Array.isArray(milestones) ? milestones : [];
             const normalizeMilestoneDateString = (m) => {
@@ -73793,7 +73796,7 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
         }
 
                 document.addEventListener('refreshMilestonesView', function() { if (typeof renderMilestoneModal === 'function') renderMilestoneModal(); });
-        function renderMilestoneModal() {
+        function renderMilestoneModal(prepareHidden = false) {
             // [DATA-INTEGRITY] Remove corrupt milestones (NaN dates)
             if (typeof milestones !== 'undefined' && Array.isArray(milestones)) {
                 const originalLen = milestones.length;
@@ -73804,9 +73807,15 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
             
 
                 // [UX-UPDATE] \ub9c8\uc77c\uc2a4\ud1a4 \uad00\ub9ac: \uc785\ub825 \ub0a0\uc9dc \uae30\uc900 \uc815\ub82c \ucd94\uac00
-                milestones.sort((a, b) => new Date(b.date) - new Date(a.date));}
+                const dateOrder = new Map();
+                for (const milestone of milestones) {
+                    if (!dateOrder.has(milestone.date)) dateOrder.set(milestone.date, Date.parse(milestone.date));
+                }
+                milestones.sort((a, b) => dateOrder.get(b.date) - dateOrder.get(a.date));
+            }
 
-            milestoneList.innerHTML = '';
+            const deferRows = prepareHidden === true && milestoneModal.classList.contains('hidden');
+            milestoneList.replaceChildren();
             // [FIX] \ub9c8\uc77c\uc2a4\ud1a4 \ud328\ub110\uc774 \ub3d9\uc801\uc73c\ub85c \ub9ac\ub80c\ub354\ub9c1\ub420 \ub54c \ub0a0\uc9dc \uc785\ub825 \uc774\ubca4\ud2b8\ub97c \ud56d\uc0c1 \uc7ac\ubd80\ucc29
             if (window.__reattachMilestoneDateHandlers) {
                 requestAnimationFrame(() => window.__reattachMilestoneDateHandlers());
@@ -73886,6 +73895,11 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
             if (typeof window.syncMilestoneFilterControls === 'function') {
                 window.syncMilestoneFilterControls(mappedMilestones);
             }
+            if (deferRows) {
+                window.milestones = milestones.slice();
+                delete milestoneList.dataset.virtualized;
+                return;
+            }
 
             if (milestones.length === 0) {
                 milestoneList.innerHTML = `<p class="text-center text-gray-500">\ub4f1\ub85d\ub41c \ub9c8\uc77c\uc2a4\ud1a4\uc774 \uc5c6\uc2b5\ub2c8\ub2e4.</p>`;
@@ -73894,8 +73908,10 @@ function sortSiCenterCustomerRows(table, columnIndex, direction) {
                 milestoneList.style.overflowY = 'auto';
                 milestoneList.style.maxHeight = '400px'; // \uc801\uc808\ud55c \ucd5c\ub300 \ub192\uc774 \uc124\uc815
 
+                const yearContext = window.YearContext;
+                const selectedYear = yearContext ? yearContext.getViewState().year : 'all';
                 const visibleMilestones = mappedMilestones.filter((entry) => {
-                    if (window.YearContext && window.YearContext.getViewState().year !== 'all' && window.YearContext.asYear(entry.raw.date) !== window.YearContext.getViewState().year) return false;
+                    if (selectedYear !== 'all' && yearContext.asYear(entry.raw.date) !== selectedYear) return false;
                     if (normalizedDateFilter && !entry.dateText.toLowerCase().includes(normalizedDateFilter)) return false;
                     if ((normalizedDateFromFilter || normalizedDateToFilter) && !entry.dateText) return false;
                     if (normalizedDateFromFilter && entry.dateText < normalizedDateFromFilter) return false;
@@ -103570,8 +103586,120 @@ function showPendingSettlementModal(periodType, projects) {
             }
         }
         @media screen and (max-width: 768px) and (orientation: portrait) {
-            /* Leave room for the status badge and operating-year controls. */
-            #dashboardContent { padding-block-start: calc(9rem + env(safe-area-inset-top, 0px)); }
+            body { --dashboard-portrait-top: calc(.5rem + env(safe-area-inset-top, 0px)); }
+            #codex-dashboard-shell { padding-block-start: var(--dashboard-portrait-top) !important; }
+            #dashboardContent { padding-block-start: 0; }
+            #network-status { top: var(--dashboard-portrait-top); }
+            #dashboardContent > #overviewView.accordion-item > .accordion-header {
+                padding-block-start: 3.25rem !important;
+            }
+            #dashboardContent > :is(#overviewView,#settlementView):not(.open) > .accordion-header {
+                padding-block-start: 10px;
+                padding-block-end: 12px;
+            }
+            #dashboardContent > :is(#overviewView,#settlementView):not(.open) > .accordion-header
+                :is(#overview-header-summaries,#settlement-header-summaries) {
+                font-size: clamp(.73rem, 3.15vw, .875rem) !important;
+                line-height: 1.45;
+                gap: 0 !important;
+            }
+            #dashboardContent > :is(#overviewView,#settlementView):not(.open) > .accordion-header [data-carry-group] {
+                padding-block: 7px;
+                overflow-wrap: normal;
+            }
+            #dashboardContent > :is(#overviewView,#settlementView):not(.open) > .accordion-header
+                [data-carry-group] ~ [data-carry-group] {
+                border-block-start: 1px solid #e2e8f0;
+            }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header {
+                grid-template-rows: minmax(56px, auto) auto !important;
+                contain: layout;
+            }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > svg.accordion-icon {
+                position: static !important;
+                grid-area: 1 / 2 !important;
+                align-self: start !important;
+                margin-block-start: 4px !important;
+            }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header
+                > :is(#overview-header-summaries,#settlement-header-summaries) {
+                font-size: clamp(9.75px, 3vw, 14px) !important;
+                overflow-x: auto;
+            }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header
+                > :is(#overview-header-summaries,#settlement-header-summaries) > [data-carry-group] {
+                white-space: nowrap !important;
+                overflow-wrap: normal;
+            }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn {
+                display: grid !important;
+                grid-column: 1 !important;
+                grid-template-columns: repeat(4, max-content) !important;
+                grid-template-rows: auto !important;
+                justify-content: start !important;
+                align-items: center;
+                gap: 4px !important;
+            }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > span:first-child {
+                grid-area: 1 / 1 !important;
+                font-size: 1.05rem !important;
+                white-space: nowrap;
+            }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > span.text-gray-400 {
+                grid-area: 1 / 2 !important;
+                margin-inline: 0 !important;
+                font-size: .7rem !important;
+                white-space: nowrap;
+            }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > .accordion-state-pill {
+                grid-area: 1 / 4 !important;
+                margin-inline: 0 !important;
+                padding-inline: .4rem !important;
+                font-size: .65rem !important;
+                white-space: nowrap;
+            }
+            #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > .accordion-hint-chip {
+                grid-area: 1 / 3 !important;
+                margin: 0 !important;
+                padding-inline: 3px !important;
+                font-size: .65rem !important;
+                white-space: nowrap;
+                justify-self: start;
+            }
+            @media (max-width: 360px) {
+                #network-status { padding-inline: 8px; gap: 4px; font-size: .75rem; }
+                #network-menu-btn { margin-inline-start: 2px; }
+                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header {
+                    padding-inline: 8px 4px !important;
+                    column-gap: 3px !important;
+                }
+                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > svg.accordion-icon {
+                    width: 20px !important;
+                    height: 20px !important;
+                    margin-block-start: 6px !important;
+                }
+                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > .accordion-state-pill {
+                    padding-inline: 4px !important;
+                    font-size: .6rem !important;
+                }
+                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn {
+                    column-gap: 2px !important;
+                    margin-inline: 0 !important;
+                }
+                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > span:first-child {
+                    font-size: .875rem !important;
+                }
+                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > span.text-gray-400 {
+                    font-size: .61rem !important;
+                }
+                #dashboardContent > .accordion-item:is(#overviewView,#settlementView):not(.open) > .accordion-header > h2.accordion-title-btn > .accordion-hint-chip {
+                    padding-inline: 2px !important;
+                    font-size: .58rem !important;
+                }
+            }
+            #dashboardContent > #settlementView:not(.open) > .accordion-header > #settlement-header-summaries {
+                padding: 7px 12px !important;
+            }
             #dashboardContent > :is(#overviewView,#settlementView,#projectView):not(.open) > .accordion-header {
                 display: grid !important;
                 grid-template-columns: minmax(0, 1fr) 24px !important;
