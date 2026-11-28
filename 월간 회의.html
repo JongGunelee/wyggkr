@@ -4365,7 +4365,18 @@
         }
 
         #focusedEditorHeader {
-            padding-left: 50px;
+            padding: 7px 10px 7px 46px;
+            min-height: 46px;
+            gap: 6px;
+            flex-wrap: nowrap;
+        }
+
+        #focusedEditorCloseBtn {
+            margin-left: auto;
+            flex-shrink: 0;
+            white-space: nowrap;
+            padding: 5px 10px !important;
+            font-size: 12.5px;
         }
 
         #focusedEditorFooter {
@@ -4415,35 +4426,59 @@
         /* --- START: 스마트 붙여넣기 · 실시간 서식 확인 · 일괄 통일 UI 스타일 (데스크탑 & 모바일 세로 모드 공용) --- */
         #focusedEditorFormatBar {
             display: none;
+            flex: 1 1 auto;
+            min-width: 0;
             align-items: center;
-            gap: 5px;
-            padding: 6px 12px;
-            background: #f8fafc;
-            border-bottom: 1px solid #dbe3ee;
-            flex-wrap: wrap;
+            gap: 3px;
+            padding: 0;
+            background: transparent;
+            border-bottom: none;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
             font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
-            font-size: 12px;
+            font-size: 11.5px;
             user-select: none;
             -webkit-user-select: none;
             z-index: 5;
         }
-        body.format-inspector-bar-enabled #focusedEditorFormatBar {
+        #focusedEditorFormatBar::-webkit-scrollbar {
+            display: none;
+        }
+        #focusedEditorFormatBar > * {
+            flex-shrink: 0;
+        }
+        body.focused-editor-active #focusedEditorFormatBar,
+        #focusedEditorOverlay.active #focusedEditorFormatBar {
             display: flex;
         }
         #focusedEditorFormatBar .fe-format-status-pill {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 4px 10px;
+            gap: 4px;
+            padding: 3px 6px;
+            max-width: 145px;
             border-radius: 999px;
             background: #ecfdf5;
             color: #065f46;
             border: 1px solid #a7f3d0;
-            font-size: 11.5px;
+            font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
             transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        #focusedEditorFormatBar #feFormatStatusText {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        @media (min-width: 1560px) {
+            #focusedEditorFormatBar .fe-format-status-pill {
+                max-width: none;
+            }
         }
         #focusedEditorFormatBar .fe-format-status-pill.is-mixed {
             background: #fffbeb;
@@ -4451,25 +4486,58 @@
             border-color: #fcd34d;
         }
         #focusedEditorFormatBar .fe-format-color-dot {
-            width: 10px;
-            height: 10px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
             border: 1px solid rgba(0, 0, 0, 0.28);
             display: inline-block;
             flex-shrink: 0;
         }
+        #focusedEditorFormatBar .uf-scope-badge {
+            padding: 2px 5px;
+            font-size: 11px;
+        }
+        #focusedEditorFormatBar .uf-icon-btn {
+            min-width: 22px;
+            height: 22px;
+            padding: 0 3px;
+            font-size: 11.5px;
+        }
+        #focusedEditorFormatBar .uf-color-label {
+            height: 26px;
+            padding: 0 4px;
+            gap: 2px;
+        }
+        #focusedEditorFormatBar .uf-color-label input[type="color"] {
+            width: 16px;
+            height: 16px;
+        }
+        #focusedEditorFormatBar .uf-clear-bg-btn {
+            height: 26px;
+            padding: 0 5px;
+        }
+        #focusedEditorFormatBar .uf-prefix-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            flex-wrap: nowrap;
+        }
         #focusedEditorFormatBar .fe-fmt-select {
-            height: 28px;
-            padding: 0 6px;
+            height: 26px;
+            padding: 0 4px;
             border: 1px solid #cbd5e1;
             border-radius: 6px;
             background: #ffffff;
             color: #1e293b;
-            font-size: 12px;
+            font-size: 11.5px;
             font-weight: 600;
             cursor: pointer;
             outline: none;
         }
+        #feFontFamilySelect { max-width: 102px; }
+        #feFontSizeSelect { max-width: 72px; }
+        #fePrefixSelect { max-width: 90px; }
+        #feIndentSelect { max-width: 64px; }
         #focusedEditorFormatBar .fe-fmt-select:focus {
             border-color: #2563eb;
             box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
@@ -4478,14 +4546,14 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            height: 28px;
-            padding: 0 9px;
+            gap: 3px;
+            height: 26px;
+            padding: 0 6px;
             border-radius: 6px;
             border: 1px solid #cbd5e1;
             background: #ffffff;
             color: #1e293b;
-            font-size: 11.5px;
+            font-size: 11px;
             font-weight: 700;
             cursor: pointer;
             white-space: nowrap;
@@ -4768,12 +4836,31 @@
 
         /* 모바일 세로 모드 전용 반응형 최적화 */
         @media (max-width: 768px) {
+            #focusedEditorHeader {
+                padding: 8px 12px;
+                flex-wrap: wrap;
+                gap: 6px 8px;
+            }
+            #focusedEditorTitle {
+                order: 1;
+                margin-left: 52px;
+            }
+            #focusedEditorCloseBtn {
+                order: 2;
+                margin-left: auto;
+            }
             #focusedEditorFormatBar {
+                order: 3;
+                flex: 1 1 100%;
+                width: 100%;
+                min-width: 0;
                 flex-wrap: nowrap !important;
                 overflow-x: auto !important;
                 -webkit-overflow-scrolling: touch;
                 scrollbar-width: none;
-                padding: 6px 10px !important;
+                margin-top: 2px;
+                padding: 6px 0 2px !important;
+                border-top: 1px solid #dbe3ee;
                 gap: 6px !important;
             }
             #focusedEditorFormatBar::-webkit-scrollbar {
@@ -5561,8 +5648,10 @@
 
         #focusedEditorTitle {
             font-weight: 800;
+            font-size: 13.5px;
             color: #26384d;
-            margin-right: auto;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         #focusedEditorBody {
@@ -5634,7 +5723,7 @@
         }
 
         #focusedEditorFooter button,
-        #focusedEditorHeader button {
+        #focusedEditorHeader > button {
             width: auto;
             border: 1px solid #b9c3cf;
             border-radius: 5px;
@@ -7172,10 +7261,8 @@
                 <button type="button" id="focusedEditorMasterToggle" title="전체 헤더 숨기기 (-)">−</button>
                 <div id="focusedEditorHeader">
                     <span id="focusedEditorTitle">입력 내용 확대 편집</span>
-                    <button type="button" id="focusedEditorCloseBtn" title="편집 내용 저장 후 닫기">닫기</button>
-                </div>
-                <!-- START: 확대 편집창 실시간 서식 확인 및 일괄 통일 바 -->
-                <div id="focusedEditorFormatBar" class="unified-format-bar" aria-label="실시간 서식 확인 및 부분·일괄 수정 도구">
+                    <!-- START: 확대 편집창 실시간 서식 확인 및 일괄 통일 바 -->
+                    <div id="focusedEditorFormatBar" class="unified-format-bar" aria-label="실시간 서식 확인 및 부분·일괄 수정 도구">
                     <button type="button" id="feFormatStatusBadge" class="fe-format-status-pill" title="클릭하여 기존 서식 상세 확인 및 통일 기준 흡수">
                         <span class="fe-format-color-dot" id="feFormatColorDot" style="background:#333333;"></span>
                         <span id="feFormatStatusText">✓ 맑은 고딕 · 16px</span>
@@ -7256,8 +7343,10 @@
                     <button type="button" id="feBtnUnifyAll" class="fe-fmt-btn fe-fmt-btn-primary" title="현재 편집창 전체를 기준 서식으로 일괄 통일 (이미지·링크·기호 보호)">✨ 일괄 통일</button>
                     <button type="button" id="feBtnUndoUnify" class="fe-fmt-btn fe-fmt-btn-undo" title="방금 적용한 서식 변경 되돌리기">↩ 되돌리기</button>
                     <button type="button" id="feAutoPasteUnifyToggle" class="fe-fmt-toggle" title="외부 복사 붙여넣기 시 표준 서식 자동 통일 켜기/끄기">✨ 자동통일: ON</button>
+                    </div>
+                    <!-- END: 확대 편집창 실시간 서식 확인 및 일괄 통일 바 -->
+                    <button type="button" id="focusedEditorCloseBtn" title="편집 내용 저장 후 닫기">닫기</button>
                 </div>
-                <!-- END: 확대 편집창 실시간 서식 확인 및 일괄 통일 바 -->
                 <div id="focusedEditorBody">
                     <div id="focusedEditorSurface" contenteditable="true" spellcheck="false"></div>
                 </div>
@@ -7848,9 +7937,9 @@
                         <input type="checkbox" id="showFormatInspectorBarCheckbox"
                             style="width: auto; margin-top: 3px;">
                         <span>
-                            ✨ 실시간 서식 도구바 표시 (일반 · 확대 편집)
+                            ✨ 일반 화면 실시간 서식 도구바 표시
                             <small style="display:block; color:#64748b; font-size:11px; font-weight:400; margin-top:2px; line-height:1.35;">
-                                기본값 OFF(숨김). ON으로 전환 시 입력창 선택 및 확대 편집 진입 시 글꼴·색상·접두사·간격 도구바가 표시됩니다.
+                                기본값 OFF(숨김). 확대 편집 진입 시 상단 헤더에 자동 표시(ON)되며, 확대 편집을 닫으면 일반 화면에서는 OFF로 전환됩니다.
                             </small>
                         </span>
                     </label>
@@ -19301,6 +19390,9 @@ function finishFocusedEditorSession(overlay, surface) {
                     overlay.classList.remove('active');
                     overlay.setAttribute('aria-hidden', 'true');
                     document.body.classList.remove('focused-editor-active', 'focused-editor-multi-flow-mode');
+                    if (window.MeetingFormatEngine && typeof window.MeetingFormatEngine.setFormatBarEnabled === 'function') {
+                        window.MeetingFormatEngine.setFormatBarEnabled(false, true);
+                    }
                     setFocusedFlowActionsVisible(false);
                     multiFlowChipEditTargets = [];
                     activeMultiFlowChipEditorItem = null;
@@ -21235,7 +21327,7 @@ document.addEventListener('focusin', e => {
             .delete-items-btn,
             .item-creation-controls > button,
             .item-controls .item-control-btn,
-            #focusedEditorHeader button,
+            #focusedEditorHeader > button,
             #focusedEditorFooter button,
             #imageZoomOverlay .zoom-tool-btn,
             #imageCropOverlay button {
@@ -21655,8 +21747,8 @@ document.addEventListener('focusin', e => {
                 }
                 if (!silent) {
                     notify(isFormatBarEnabled
-                        ? '실시간 서식 도구바 표시가 켜졌습니다 (일반 화면 · 확대 편집 공용).'
-                        : '실시간 서식 도구바가 숨김(OFF) 상태로 전환되었습니다.', 'info', 2200);
+                        ? '일반 화면 실시간 서식 도구바 표시가 켜졌습니다.'
+                        : '일반 화면 실시간 서식 도구바가 숨김(OFF) 상태로 전환되었습니다.', 'info', 2200);
                 }
                 return isFormatBarEnabled;
             }
@@ -21939,7 +22031,7 @@ document.addEventListener('focusin', e => {
             function isAnyInspectorVisible() {
                 const genBar = document.getElementById('generalFormatInspectorBar');
                 if (isFormatBarEnabled && genBar && genBar.classList.contains('visible')) return true;
-                if (isFormatBarEnabled && isFocusedEditorActive()) return true;
+                if (isFocusedEditorActive()) return true;
                 const auditPop = document.getElementById('formatAuditPopover');
                 if (auditPop && auditPop.classList.contains('visible')) return true;
                 const psPop = document.getElementById('prefixSpacingPopover');
@@ -23818,21 +23910,21 @@ document.addEventListener('focusin', e => {
                     if (isAnyInspectorVisible()) refreshInspector();
                 });
 
-                // Sync when Focused Editor opens/closes
+                // Sync when Focused Editor opens/closes (확대 편집 진입 시 자동 ON / 닫힘 시 일반 화면 OFF)
                 const feOverlay = document.getElementById('focusedEditorOverlay');
                 if (feOverlay && typeof MutationObserver !== 'undefined') {
                     const obs = new MutationObserver(() => {
                         if (feOverlay.classList.contains('active')) {
                             hideGeneralFormatBar();
                             hidePrefixSpacingPopover();
-                            if (isFormatBarEnabled) setTimeout(refreshInspector, 60);
+                            hideFormatAuditPopover();
+                            refreshInspector();
+                            setTimeout(refreshInspector, 60);
                         } else {
                             hideSmartPasteActionBar(true);
                             hideFormatAuditPopover();
                             hidePrefixSpacingPopover();
-                            if (isFormatBarEnabled && lastActiveGeneralTarget && lastActiveGeneralTarget.isConnected) {
-                                showGeneralFormatBar(lastActiveGeneralTarget);
-                            }
+                            setFormatBarEnabled(false, true);
                         }
                     });
                     obs.observe(feOverlay, { attributes: true, attributeFilter: ['class'] });
