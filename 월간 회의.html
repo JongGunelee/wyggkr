@@ -8008,8 +8008,13 @@
                     <li data-step="commit" data-step-state="pending">4. 원자적 커밋 및 배포 완료</li>
                 </ul>
                 <div class="web-save-pat-box" id="webSavePatBox">
-                    <div style="font-weight:700; color:#92400e;" id="webSavePatHint">GitHub PAT 직접 입력 (현재 세션 메모리에만 보관되며 저장 HTML에는 절대 포함되지 않습니다)</div>
+                    <div style="font-weight:700; color:#92400e; line-height:1.45;" id="webSavePatHint">GitHub PAT 직접 입력 (저장 HTML에는 절대 포함되지 않습니다)</div>
+                    <div id="webSavePatGuide" style="display:none; font-size:11.5px; color:#78350f; line-height:1.5; background:#fef3c7; padding:7px 9px; border-radius:6px;"></div>
                     <input type="password" id="webSavePatInput" placeholder="ghp_... 또는 github_pat_... (wyggkr Contents 쓰기 권한 필요)" autocomplete="off" spellcheck="false">
+                    <label style="display:flex; align-items:center; gap:6px; font-size:11.5px; color:#78350f; font-weight:700; cursor:pointer;">
+                        <input type="checkbox" id="webSavePatSaveVaultCheck" checked style="width:14px; height:14px;">
+                        이 브라우저에 암호화 보관 (기본 간편키 2026xlsb · 다음부터 재입력 불필요)
+                    </label>
                 </div>
                 <div class="web-save-result-links" id="webSaveResultLinks"></div>
             </div>
@@ -8987,11 +8992,18 @@
                 targetDoc.body?.classList.remove('codex-credential-prompt-active');
                 const clonedWebSavePatBox = targetDoc.getElementById('webSavePatBox');
                 if (clonedWebSavePatBox) clonedWebSavePatBox.classList.remove('visible');
+                const clonedWebSavePatGuide = targetDoc.getElementById('webSavePatGuide');
+                if (clonedWebSavePatGuide) {
+                    clonedWebSavePatGuide.style.display = 'none';
+                    clonedWebSavePatGuide.replaceChildren();
+                }
                 const clonedWebSavePatInput = targetDoc.getElementById('webSavePatInput');
                 if (clonedWebSavePatInput) {
                     clonedWebSavePatInput.value = '';
                     clonedWebSavePatInput.removeAttribute('value');
                 }
+                const clonedWebSavePatSaveCheck = targetDoc.getElementById('webSavePatSaveVaultCheck');
+                if (clonedWebSavePatSaveCheck) clonedWebSavePatSaveCheck.setAttribute('checked', '');
                 const clonedWebSaveLinks = targetDoc.getElementById('webSaveResultLinks');
                 if (clonedWebSaveLinks) {
                     clonedWebSaveLinks.classList.remove('visible');
@@ -16636,6 +16648,7 @@ function clampImagesToContainers(scope = contentArea) {
                     // 벤치마킹(공정관리)과 100% 동일한 암호화 PAT 볼트 주소·저장소 키·기본 간편키 규격
                     patKey: 'github_pat',
                     patVaultKey: 'codex_gh_token_vault_v1',
+                    repoPatVaultKey: 'codex_gh_token_vault_wyggkr_v1',
                     patPinRememberKey: 'codex_gh_token_pin_remember_v1',
                     remotePatVaultPath: 'RawData/공정관리/encrypted-pat.json',
                     remotePatVaultBase: 'https://jonggunelee.github.io/wyggkr04/',
@@ -16694,6 +16707,10 @@ function clampImagesToContainers(scope = contentArea) {
                     return Boolean(vault && vault.v === 1 && vault.alg === 'AES-GCM' && vault.kdf === 'PBKDF2-SHA256' && vault.salt && vault.iv && vault.cipher);
                 }
 
+                function hasRepoTokenVault() {
+                    try { return Boolean(localStorage.getItem(config.repoPatVaultKey)); } catch (_) { return false; }
+                }
+
                 function hasTokenVault() {
                     try { return Boolean(localStorage.getItem(config.patVaultKey)); } catch (_) { return false; }
                 }
@@ -16717,6 +16734,7 @@ function clampImagesToContainers(scope = contentArea) {
                     const patInput = document.getElementById('webSavePatInput');
                     if (patInput) patInput.value = '';
                     try { localStorage.removeItem(config.patKey); } catch (_) { }
+                    try { localStorage.removeItem(config.repoPatVaultKey); } catch (_) { }
                     try { localStorage.removeItem(config.patVaultKey); } catch (_) { }
                     try { window.MeetingGithubCredential?.clearSessionToken?.(); } catch (_) { }
                     try {
@@ -16752,15 +16770,16 @@ function clampImagesToContainers(scope = contentArea) {
                     }, baseKey, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
                 }
 
-                async function saveTokenVault(token, pin) {
+                async function saveTokenVault(token, pin, storageKeyOverride) {
                     if (!webCryptoAvailable()) throw new Error('이 브라우저는 암호화 보관함을 지원하지 않습니다.');
                     if (!isLikelyGithubToken(token)) throw new Error('GitHub PAT 형식이 아닙니다.');
-                    if (!validVaultPin(pin)) throw new Error('간편키는 4~12자리 영문/숫자로 입력하세요.');
+                    const normalizedPin = String(pin || '').trim() || config.defaultPin;
+                    if (!validVaultPin(normalizedPin)) throw new Error('간편키는 4~12자리 영문/숫자로 입력하세요.');
                     const salt = new Uint8Array(16);
                     const iv = new Uint8Array(12);
                     crypto.getRandomValues(salt);
                     crypto.getRandomValues(iv);
-                    const key = await deriveVaultKey(pin, salt, 120000);
+                    const key = await deriveVaultKey(normalizedPin, salt, 120000);
                     const cipher = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(token));
                     const vault = {
                         v: 1,
@@ -16772,20 +16791,20 @@ function clampImagesToContainers(scope = contentArea) {
                         cipher: vaultBytesToBase64(new Uint8Array(cipher)),
                         createdAt: new Date().toISOString()
                     };
-                    localStorage.setItem(config.patVaultKey, JSON.stringify(vault));
+                    localStorage.setItem(storageKeyOverride || config.patVaultKey, JSON.stringify(vault));
                     localStorage.removeItem(config.patKey);
                     customSessionToken = token;
                     try { window.MeetingGithubCredential?.adoptToken?.(token); } catch (_) { }
                     return token;
                 }
 
-                async function unlockTokenVault(pin, vaultOverride) {
+                async function unlockTokenVault(pin, vaultOverride, storageKeyOverride) {
                     if (!webCryptoAvailable()) throw new Error('이 브라우저는 암호화 보관함을 지원하지 않습니다.');
                     const normalizedPin = String(pin || '').trim() || config.defaultPin;
                     if (!validVaultPin(normalizedPin)) throw new Error('간편키는 4~12자리 영문/숫자로 입력하세요.');
                     let vault = vaultOverride || null;
                     if (!vault) {
-                        const raw = localStorage.getItem(config.patVaultKey);
+                        const raw = localStorage.getItem(storageKeyOverride || config.patVaultKey);
                         if (!raw) return '';
                         vault = JSON.parse(raw);
                     }
@@ -17024,12 +17043,21 @@ function clampImagesToContainers(scope = contentArea) {
                 }
 
                 async function ensureToken(options = {}) {
-                    // 1. 모달에서 사용자가 직접 PAT를 입력한 경우 최우선 적용
+                    // 1. 모달에서 사용자가 직접 PAT를 입력한 경우 최우선 적용 (옵션 체크 시 브라우저 전용 볼트에 암호화 저장)
                     const patInput = document.getElementById('webSavePatInput');
                     const enteredPat = String(patInput?.value || '').trim();
                     if (enteredPat) {
                         if (!isLikelyGithubToken(enteredPat)) {
                             throw new Error('입력한 GitHub PAT 형식이 올바르지 않습니다 (ghp_ 또는 github_pat_로 시작해야 합니다).');
+                        }
+                        const saveToVault = document.getElementById('webSavePatSaveVaultCheck')?.checked !== false;
+                        if (saveToVault && webCryptoAvailable()) {
+                            try {
+                                const pin = getRememberedVaultPin() || config.defaultPin;
+                                await saveTokenVault(enteredPat, pin, config.repoPatVaultKey);
+                            } catch (vaultErr) {
+                                console.warn('[WebSave] 전용 볼트 저장 건너뜀:', vaultErr);
+                            }
                         }
                         customSessionToken = enteredPat;
                         return customSessionToken;
@@ -17044,9 +17072,23 @@ function clampImagesToContainers(scope = contentArea) {
                     }
                     if (options.allowPrompt === false) return '';
 
-                    // 2. 벤치마킹 코드와 동일한 순서: 로컬 암호화 보관함 -> 원격 encrypted-pat.json(wyggkr04/RawData/공정관리) -> 최초 등록
+                    // 2. 벤치마킹 코드와 동일한 순서: wyggkr 전용 로컬 보관함 -> 공용 로컬 보관함 -> 원격 encrypted-pat.json(wyggkr04/RawData/공정관리) -> 최초 등록
                     let entered = '';
-                    if (hasTokenVault()) {
+                    if (hasRepoTokenVault()) {
+                        try {
+                            const repoVault = JSON.parse(localStorage.getItem(config.repoPatVaultKey));
+                            entered = await requestTokenUnlock('local', repoVault);
+                            if (entered === '__reset__') {
+                                try { localStorage.removeItem(config.repoPatVaultKey); } catch (_) {}
+                                entered = '';
+                            } else if (!entered) {
+                                return '';
+                            }
+                        } catch (_) {
+                            try { localStorage.removeItem(config.repoPatVaultKey); } catch (__) {}
+                        }
+                    }
+                    if (!entered && hasTokenVault()) {
                         entered = await requestTokenUnlock('local');
                         if (entered === '__reset__') entered = '';
                         else if (!entered) return '';
@@ -17473,8 +17515,32 @@ function clampImagesToContainers(scope = contentArea) {
                             userMsg = 'GitHub 인증(PAT)이 만료되었거나 유효하지 않습니다. 간편키로 보관함을 다시 열거나 PAT를 입력해 주세요.';
                             document.getElementById('webSavePatBox')?.classList.add('visible');
                         } else if (status === 403 || status === 404) {
-                            userMsg = `저장소(${config.owner}/${config.repo}) 쓰기 권한이 부족합니다. '${config.repo}' Contents(Read & Write) 권한이 있는 PAT를 입력해 주세요.`;
+                            customSessionToken = '';
+                            userMsg = `현재 PAT에 '${config.owner}/${config.repo}' 쓰기(Contents: Read & Write) 권한이 없습니다. GitHub Fine-grained PAT에 '${config.repo}' 저장소를 추가하거나 권한이 있는 PAT를 입력해 주세요.`;
                             document.getElementById('webSavePatBox')?.classList.add('visible');
+                            const guideEl = document.getElementById('webSavePatGuide');
+                            if (guideEl) {
+                                guideEl.replaceChildren();
+                                const line1 = document.createElement('div');
+                                line1.textContent = `원인: 기존 encrypted-pat.json 토큰이 'wyggkr04' 전용으로만 허용되어 '${config.repo}' 쓰기가 거부되었습니다(HTTP ${status}).`;
+                                const line2 = document.createElement('div');
+                                line2.style.marginTop = '4px';
+                                line2.append('해결 ①(권장): ');
+                                const link = document.createElement('a');
+                                link.href = 'https://github.com/settings/personal-access-tokens';
+                                link.target = '_blank';
+                                link.rel = 'noopener noreferrer';
+                                link.style.color = '#1d4ed8';
+                                link.style.fontWeight = '800';
+                                link.style.textDecoration = 'underline';
+                                link.textContent = 'GitHub Fine-grained PAT 설정 열기';
+                                line2.append(link, ` → 기존 토큰의 Repository access에 '${config.repo}' 추가 후 Save하면 2026xlsb 그대로 즉시 성공합니다.`);
+                                const line3 = document.createElement('div');
+                                line3.style.marginTop = '3px';
+                                line3.textContent = `해결 ②: '${config.repo}' 쓰기 권한이 있는 PAT를 아래 입력란에 붙여넣고 웹저장을 다시 누르세요.`;
+                                guideEl.append(line1, line2, line3);
+                                guideEl.style.display = 'block';
+                            }
                         }
                         const activeLi = document.querySelector('#webSaveStepsList li[data-step-state="active"]');
                         if (activeLi) {
@@ -17510,6 +17576,8 @@ function clampImagesToContainers(scope = contentArea) {
                     if (bakEl) bakEl.textContent = `기존 파일 존재 시 → ${target.backupDirPath}/${target.baseName}_YYYYMMDDHHMMSS${target.ext} 자동 백업 (폴더 미존재 시 자동 생성)`;
                     if (sizeEl) sizeEl.textContent = formatByteSize(byteLen);
                     if (linksEl) { linksEl.classList.remove('visible'); linksEl.replaceChildren(); }
+                    const guideEl = document.getElementById('webSavePatGuide');
+                    if (guideEl) { guideEl.style.display = 'none'; guideEl.replaceChildren(); }
                     resetModalSteps();
                     modal.classList.add('active');
                     modal.setAttribute('aria-hidden', 'false');
