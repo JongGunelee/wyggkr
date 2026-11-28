@@ -4406,9 +4406,830 @@
         }
 
         #focusedEditorDialog.focused-editor-chrome-hidden #focusedEditorHeader,
+        #focusedEditorDialog.focused-editor-chrome-hidden #focusedEditorFormatBar,
         #focusedEditorDialog.focused-editor-chrome-hidden #focusedEditorFooter {
             display: none;
         }
+
+        /* --- START: 스마트 붙여넣기 · 실시간 서식 확인 · 일괄 통일 UI 스타일 (데스크탑 & 모바일 세로 모드 공용) --- */
+        #focusedEditorFormatBar {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            background: #f8fafc;
+            border-bottom: 1px solid #dbe3ee;
+            flex-wrap: wrap;
+            font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
+            font-size: 12px;
+            user-select: none;
+            -webkit-user-select: none;
+            z-index: 5;
+        }
+        #focusedEditorFormatBar .fe-format-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        #focusedEditorFormatBar .fe-format-status-pill.is-mixed {
+            background: #fffbeb;
+            color: #92400e;
+            border-color: #fcd34d;
+        }
+        #focusedEditorFormatBar .fe-format-color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.28);
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        #focusedEditorFormatBar .fe-fmt-select {
+            height: 28px;
+            padding: 0 6px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #ffffff;
+            color: #1e293b;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+        }
+        #focusedEditorFormatBar .fe-fmt-select:focus {
+            border-color: #2563eb;
+            box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+        }
+        #focusedEditorFormatBar .fe-fmt-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 28px;
+            padding: 0 9px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1e293b;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            touch-action: manipulation;
+            transition: all 0.15s ease;
+        }
+        #focusedEditorFormatBar .fe-fmt-btn:hover {
+            background: #eff6ff;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+        #focusedEditorFormatBar .fe-fmt-btn.fe-fmt-btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+            border-color: #1d4ed8;
+        }
+        #focusedEditorFormatBar .fe-fmt-btn.fe-fmt-btn-primary:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%);
+        }
+        #focusedEditorFormatBar .fe-fmt-btn.fe-fmt-btn-undo {
+            background: #fff7ed;
+            color: #c2410c;
+            border-color: #fdba74;
+            display: none;
+        }
+        #focusedEditorFormatBar .fe-fmt-btn.fe-fmt-btn-undo.visible {
+            display: inline-flex;
+        }
+        #focusedEditorFormatBar .fe-fmt-toggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: auto;
+            padding: 3px 8px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #3730a3;
+            border: 1px solid #c7d2fe;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        #focusedEditorFormatBar .fe-fmt-toggle.off {
+            background: #f1f5f9;
+            color: #64748b;
+            border-color: #cbd5e1;
+        }
+
+        /* 플로팅 텍스트 서식 툴바 확장 요소 (글꼴 선택 + 인스펙터 뱃지 + 서식 통일 버튼) */
+        #textFormatToolbar .toolbar-format-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 7px;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, 0.22);
+            color: #a7f3d0;
+            border: 1px solid rgba(16, 185, 129, 0.45);
+            font-size: 11px;
+            font-weight: 700;
+            white-space: nowrap;
+            max-width: 110px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+        #textFormatToolbar .toolbar-format-badge.is-mixed {
+            background: rgba(245, 158, 11, 0.25);
+            color: #fde68a;
+            border-color: rgba(245, 158, 11, 0.55);
+        }
+        #textFormatToolbar .toolbar-font-select {
+            background: rgba(255, 255, 255, 0.12);
+            color: #f8fafc;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            border-radius: 4px;
+            height: 26px;
+            padding: 0 4px;
+            font-size: 11.5px;
+            font-weight: 600;
+            max-width: 96px;
+            cursor: pointer;
+            outline: none;
+        }
+        #textFormatToolbar .toolbar-font-select option {
+            background: #1e293b;
+            color: #f8fafc;
+        }
+        #textFormatToolbar .toolbar-btn-unify {
+            width: auto !important;
+            padding: 0 7px !important;
+            gap: 3px;
+            font-size: 11.5px !important;
+            background: rgba(37, 99, 235, 0.85) !important;
+            color: #ffffff !important;
+            border: 1px solid rgba(147, 197, 253, 0.5) !important;
+            border-radius: 5px !important;
+            white-space: nowrap;
+        }
+        #textFormatToolbar .toolbar-btn-unify:hover {
+            background: #2563eb !important;
+        }
+
+        /* 서식 패널 내 실시간 서식 진단 & 일괄 통일 카드 */
+        .format-inspector-card {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            line-height: 1.45;
+            color: #1e293b;
+        }
+        .format-inspector-card .fi-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            margin-bottom: 6px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .format-inspector-card .fi-status-tag {
+            padding: 2px 7px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #dcfce7;
+            color: #166534;
+        }
+        .format-inspector-card .fi-status-tag.is-mixed {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .format-inspector-card .fi-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 8px;
+            font-size: 11.5px;
+            color: #334155;
+        }
+        .format-inspector-card .fi-grid strong {
+            color: #0f172a;
+        }
+        .format-unify-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .format-unify-actions button {
+            width: 100%;
+            padding: 7px 10px;
+            font-size: 12px;
+            font-weight: 700;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1e293b;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.15s ease;
+        }
+        .format-unify-actions button:hover {
+            background: #eff6ff;
+            border-color: #60a5fa;
+            color: #1d4ed8;
+        }
+        .format-unify-actions button.primary-unify {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+            border-color: #1d4ed8;
+        }
+        .format-unify-actions button.primary-unify:hover {
+            background: linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%);
+        }
+        .format-unify-actions button.undo-unify {
+            background: #fff7ed;
+            color: #c2410c;
+            border-color: #fdba74;
+            display: none;
+        }
+        .format-unify-actions button.undo-unify.visible {
+            display: flex;
+        }
+        .smart-paste-pref-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 6px 0;
+            padding: 6px 8px;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-radius: 6px;
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #312e81;
+            cursor: pointer;
+        }
+        .smart-paste-pref-row input[type="checkbox"] {
+            width: 15px;
+            height: 15px;
+            margin: 0;
+            accent-color: #2563eb;
+            cursor: pointer;
+        }
+
+        /* 붙여넣기 직후 즉시 모드 전환 플로팅 바 (#smartPasteActionBar) */
+        #smartPasteActionBar {
+            position: fixed;
+            left: 50%;
+            bottom: 24px;
+            transform: translateX(-50%);
+            z-index: 36500 !important;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 11px;
+            background: rgba(15, 23, 42, 0.94);
+            backdrop-filter: blur(10px);
+            color: #f8fafc;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            border-radius: 999px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.32);
+            font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
+            font-size: 12px;
+            font-weight: 600;
+            max-width: calc(100vw - 20px);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        #smartPasteActionBar.visible {
+            display: inline-flex !important;
+        }
+        #smartPasteActionBar .sp-label {
+            color: #93c5fd;
+            font-weight: 700;
+            white-space: nowrap;
+            padding-right: 2px;
+        }
+        #smartPasteActionBar .sp-btn {
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            background: rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+            border-radius: 999px;
+            padding: 4px 10px;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.15s ease;
+        }
+        #smartPasteActionBar .sp-btn:hover {
+            background: rgba(255, 255, 255, 0.22);
+        }
+        #smartPasteActionBar .sp-btn.active {
+            background: #2563eb;
+            border-color: #60a5fa;
+            color: #ffffff;
+        }
+        #smartPasteActionBar .sp-close {
+            border: none;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 2px 5px;
+            line-height: 1;
+        }
+        #smartPasteActionBar .sp-close:hover {
+            color: #ffffff;
+        }
+
+        /* 모바일 세로 모드 전용 반응형 최적화 */
+        @media (max-width: 768px) {
+            #focusedEditorFormatBar {
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                padding: 6px 10px !important;
+                gap: 6px !important;
+            }
+            #focusedEditorFormatBar::-webkit-scrollbar {
+                display: none;
+            }
+            #focusedEditorFormatBar .fe-fmt-select,
+            #focusedEditorFormatBar .fe-fmt-btn,
+            #focusedEditorFormatBar .fe-format-status-pill,
+            #focusedEditorFormatBar .fe-fmt-toggle {
+                flex-shrink: 0 !important;
+                min-height: 34px !important;
+                font-size: 12px !important;
+            }
+            #textFormatToolbar {
+                max-width: calc(100vw - 12px) !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                padding: 6px 8px !important;
+                gap: 4px !important;
+            }
+            #smartPasteActionBar {
+                bottom: max(14px, env(safe-area-inset-bottom)) !important;
+                border-radius: 14px !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                padding: 8px 10px !important;
+                gap: 5px !important;
+            }
+            #smartPasteActionBar .sp-btn {
+                min-height: 32px !important;
+                padding: 5px 10px !important;
+            }
+        }
+        @media print {
+            #smartPasteActionBar,
+            #focusedEditorFormatBar {
+                display: none !important;
+            }
+        }
+
+        /* --- START: 일반 화면 & 확대 편집 공용 기존 서식 확인·부분/일괄 수정 바 & 상세 진단 팝오버 (v2) --- */
+        .unified-format-bar .uf-scope-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 7px;
+            border-radius: 6px;
+            background: #e0e7ff;
+            color: #3730a3;
+            font-size: 11px;
+            font-weight: 800;
+            white-space: nowrap;
+            border: 1px solid #c7d2fe;
+        }
+        .unified-format-bar .uf-scope-badge.is-partial {
+            background: #fef3c7;
+            color: #92400e;
+            border-color: #fcd34d;
+        }
+        .unified-format-bar .uf-style-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            padding: 2px;
+        }
+        .unified-format-bar .uf-icon-btn {
+            width: 26px;
+            height: 24px;
+            border: none;
+            background: transparent;
+            color: #334155;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            touch-action: manipulation;
+        }
+        .unified-format-bar .uf-icon-btn:hover {
+            background: #eff6ff;
+            color: #1d4ed8;
+        }
+        .unified-format-bar .uf-icon-btn.active {
+            background: #2563eb;
+            color: #ffffff;
+        }
+        .unified-format-bar .uf-color-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            height: 28px;
+            padding: 0 6px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #ffffff;
+            font-size: 11px;
+            font-weight: 700;
+            color: #334155;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .unified-format-bar .uf-color-label input[type="color"] {
+            width: 18px;
+            height: 18px;
+            padding: 0;
+            border: 1px solid #94a3b8;
+            border-radius: 4px;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        /* 일반 화면 실시간 서식 확인 · 부분/일괄 수정 플로팅 바 (#generalFormatInspectorBar) */
+        #generalFormatInspectorBar {
+            position: fixed;
+            left: 50%;
+            bottom: 14px;
+            transform: translateX(-50%);
+            z-index: 34500 !important;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 12px;
+            max-width: calc(100vw - 24px);
+            background: rgba(248, 250, 252, 0.97);
+            backdrop-filter: blur(10px);
+            border: 1.5px solid #93c5fd;
+            border-radius: 14px;
+            box-shadow: 0 10px 30px rgba(15, 23, 42, 0.22), 0 2px 6px rgba(37, 99, 235, 0.14);
+            font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
+            font-size: 12px;
+            flex-wrap: wrap;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+        }
+        #generalFormatInspectorBar.visible {
+            display: flex !important;
+        }
+        #generalFormatInspectorBar .fe-format-status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #ecfdf5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        #generalFormatInspectorBar .fe-format-status-pill.is-mixed {
+            background: #fffbeb;
+            color: #92400e;
+            border-color: #fcd34d;
+        }
+        #generalFormatInspectorBar .fe-format-color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.28);
+            display: inline-block;
+            flex-shrink: 0;
+        }
+        #generalFormatInspectorBar .fe-fmt-select {
+            height: 28px;
+            padding: 0 6px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background: #ffffff;
+            color: #1e293b;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #generalFormatInspectorBar .fe-fmt-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 28px;
+            padding: 0 9px;
+            border-radius: 6px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1e293b;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            white-space: nowrap;
+            touch-action: manipulation;
+        }
+        #generalFormatInspectorBar .fe-fmt-btn:hover {
+            background: #eff6ff;
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+        #generalFormatInspectorBar .fe-fmt-btn.fe-fmt-btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+            border-color: #1d4ed8;
+        }
+        #generalFormatInspectorBar .fe-fmt-btn.fe-fmt-btn-undo {
+            background: #fff7ed;
+            color: #c2410c;
+            border-color: #fdba74;
+            display: none;
+        }
+        #generalFormatInspectorBar .fe-fmt-btn.fe-fmt-btn-undo.visible {
+            display: inline-flex;
+        }
+        #generalFormatInspectorBar .gen-close-btn {
+            border: none;
+            background: transparent;
+            color: #64748b;
+            font-size: 15px;
+            font-weight: 800;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #generalFormatInspectorBar .gen-close-btn:hover {
+            background: #e2e8f0;
+            color: #0f172a;
+        }
+
+        /* 기존 서식 상세 확인 팝오버 (#formatAuditPopover) */
+        #formatAuditPopover {
+            position: fixed;
+            z-index: 38000 !important;
+            display: none;
+            width: 350px;
+            max-width: calc(100vw - 20px);
+            max-height: 82vh;
+            overflow-y: auto;
+            background: #ffffff;
+            border: 1.5px solid #3b82f6;
+            border-radius: 14px;
+            box-shadow: 0 18px 42px rgba(15, 23, 42, 0.34);
+            font-family: '맑은 고딕', 'Malgun Gothic', sans-serif;
+            color: #1e293b;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #formatAuditPopover.visible {
+            display: block !important;
+        }
+        #formatAuditPopover .fa-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+            color: #ffffff;
+            font-size: 13px;
+            font-weight: 800;
+            border-radius: 12px 12px 0 0;
+        }
+        #formatAuditPopover .fa-close-btn {
+            background: rgba(255, 255, 255, 0.18);
+            border: none;
+            color: #ffffff;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            font-weight: 800;
+            cursor: pointer;
+        }
+        #formatAuditPopoverBody {
+            padding: 12px 14px 6px;
+            font-size: 12px;
+        }
+        #formatAuditPopover .fa-section {
+            margin-bottom: 10px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+        }
+        #formatAuditPopover .fa-section.fa-std-box {
+            background: #eff6ff;
+            border-color: #bfdbfe;
+        }
+        #formatAuditPopover .fa-sec-title {
+            font-size: 11.5px;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+        #formatAuditPopover .fa-kv-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px 10px;
+            font-size: 11.5px;
+        }
+        #formatAuditPopover .fa-kv-grid div {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+            color: #64748b;
+        }
+        #formatAuditPopover .fa-kv-grid strong {
+            color: #0f172a;
+            font-weight: 700;
+        }
+        #formatAuditPopover .fa-raw-font {
+            margin-top: 6px;
+            padding-top: 5px;
+            border-top: 1px dashed #cbd5e1;
+            font-size: 10.5px;
+            color: #64748b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #formatAuditPopover .fa-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 4px;
+            margin-bottom: 5px;
+        }
+        #formatAuditPopover .fa-row-lbl {
+            font-size: 11px;
+            font-weight: 700;
+            color: #475569;
+            margin-right: 2px;
+        }
+        #formatAuditPopover .fa-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 7px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #334155;
+        }
+        #formatAuditPopover .fa-chip.is-std {
+            background: #dcfce7;
+            border-color: #86efac;
+            color: #166534;
+        }
+        #formatAuditPopover .fa-chip.is-diff {
+            background: #fef3c7;
+            border-color: #fcd34d;
+            color: #92400e;
+        }
+        #formatAuditPopover .fa-dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            vertical-align: middle;
+            margin-right: 3px;
+        }
+        #formatAuditPopover .fa-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+            padding: 8px 14px 12px;
+            border-top: 1px solid #e2e8f0;
+            background: #f8fafc;
+            border-radius: 0 0 12px 12px;
+        }
+        #formatAuditPopover .fa-actions button {
+            padding: 7px 8px;
+            border-radius: 7px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #1e293b;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        #formatAuditPopover .fa-actions button:hover {
+            background: #eff6ff;
+            border-color: #60a5fa;
+            color: #1d4ed8;
+        }
+        #formatAuditPopover .fa-actions button.fa-btn-adopt {
+            grid-column: 1 / -1;
+            background: #eef2ff;
+            color: #3730a3;
+            border-color: #a5b4fc;
+        }
+        #formatAuditPopover .fa-actions button.fa-btn-primary {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: #ffffff;
+            border-color: #1d4ed8;
+        }
+        #formatAuditPopover .fa-actions button.fa-btn-undo {
+            grid-column: 1 / -1;
+            background: #fff7ed;
+            color: #c2410c;
+            border-color: #fdba74;
+            display: none;
+        }
+        #formatAuditPopover .fa-actions button.fa-btn-undo.visible {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            #generalFormatInspectorBar {
+                left: 8px !important;
+                right: 8px !important;
+                bottom: max(10px, env(safe-area-inset-bottom)) !important;
+                transform: none !important;
+                max-width: calc(100vw - 16px) !important;
+                flex-wrap: nowrap !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch;
+                scrollbar-width: none;
+                padding: 7px 10px !important;
+                gap: 6px !important;
+                border-radius: 12px !important;
+            }
+            #generalFormatInspectorBar::-webkit-scrollbar {
+                display: none;
+            }
+            #generalFormatInspectorBar > * {
+                flex-shrink: 0 !important;
+            }
+            #generalFormatInspectorBar .fe-fmt-select,
+            #generalFormatInspectorBar .fe-fmt-btn,
+            #generalFormatInspectorBar .fe-format-status-pill,
+            #generalFormatInspectorBar .uf-color-label {
+                min-height: 34px !important;
+                font-size: 12px !important;
+            }
+            .unified-format-bar .uf-icon-btn {
+                width: 30px !important;
+                height: 30px !important;
+            }
+            #smartPasteActionBar {
+                bottom: max(64px, calc(58px + env(safe-area-inset-bottom))) !important;
+            }
+        }
+        @media print {
+            #generalFormatInspectorBar,
+            #formatAuditPopover {
+                display: none !important;
+            }
+        }
+        /* --- END: 일반 화면 & 확대 편집 공용 기존 서식 확인·부분/일괄 수정 바 & 상세 진단 팝오버 (v2) --- */
+        /* --- END: 스마트 붙여넣기 · 실시간 서식 확인 · 일괄 통일 UI 스타일 --- */
 
         #focusedEditorDialog.focused-editor-chrome-hidden #focusedEditorBody {
             padding: 0;
@@ -6092,6 +6913,49 @@
                     <span id="focusedEditorTitle">입력 내용 확대 편집</span>
                     <button type="button" id="focusedEditorCloseBtn" title="편집 내용 저장 후 닫기">닫기</button>
                 </div>
+                <!-- START: 확대 편집창 실시간 서식 확인 및 일괄 통일 바 -->
+                <div id="focusedEditorFormatBar" class="unified-format-bar" aria-label="실시간 서식 확인 및 부분·일괄 수정 도구">
+                    <button type="button" id="feFormatStatusBadge" class="fe-format-status-pill" title="클릭하여 기존 서식 상세 확인 및 통일 기준 흡수">
+                        <span class="fe-format-color-dot" id="feFormatColorDot" style="background:#333333;"></span>
+                        <span id="feFormatStatusText">✓ 맑은 고딕 · 16px</span>
+                    </button>
+                    <span id="feScopeModeBadge" class="uf-scope-badge" title="글자를 드래그하면 부분 수정, 선택 없이 누르면 영역 전체 일괄 수정">일괄(영역)</span>
+                    <select id="feFontFamilySelect" class="fe-fmt-select" title="글꼴 부분 또는 일괄 변경" aria-label="글꼴 선택">
+                        <option value="'맑은 고딕', 'Malgun Gothic', sans-serif">맑은 고딕 (표준)</option>
+                        <option value="-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', '맑은 고딕', sans-serif">시스템 고딕</option>
+                        <option value="'나눔고딕', 'NanumGothic', '맑은 고딕', sans-serif">나눔고딕</option>
+                        <option value="'돋움', 'Dotum', sans-serif">돋움</option>
+                        <option value="'바탕', 'Batang', Georgia, serif">바탕/명조</option>
+                        <option value="'Consolas', 'D2Coding', 'Courier New', monospace">고정폭</option>
+                    </select>
+                    <select id="feFontSizeSelect" class="fe-fmt-select" title="글꼴 크기 부분 또는 일괄 변경" aria-label="글꼴 크기 선택">
+                        <option value="11">11px</option>
+                        <option value="12">12px</option>
+                        <option value="13">13px</option>
+                        <option value="14">14px</option>
+                        <option value="15">15px</option>
+                        <option value="16" selected>16px(표준)</option>
+                        <option value="18">18px</option>
+                        <option value="20">20px</option>
+                        <option value="22">22px</option>
+                        <option value="24">24px</option>
+                        <option value="28">28px</option>
+                        <option value="32">32px</option>
+                    </select>
+                    <div class="uf-style-group" aria-label="글자 강조 서식">
+                        <button type="button" id="feBtnBold" class="uf-icon-btn" title="굵게 (부분/일괄)"><b>B</b></button>
+                        <button type="button" id="feBtnItalic" class="uf-icon-btn" title="기울임 (부분/일괄)"><i>I</i></button>
+                        <button type="button" id="feBtnUnderline" class="uf-icon-btn" title="밑줄 (부분/일괄)"><u>U</u></button>
+                        <button type="button" id="feBtnStrike" class="uf-icon-btn" title="취소선 (부분/일괄)"><s>S</s></button>
+                    </div>
+                    <label class="uf-color-label" title="글자 색상 (부분/일괄)">🎨<input type="color" id="feTextColorInput" value="#333333"></label>
+                    <label class="uf-color-label" title="배경 형광펜 (부분/일괄)">🖌️<input type="color" id="feBgColorInput" value="#fef08a"></label>
+                    <button type="button" id="feBtnUnifySelection" class="fe-fmt-btn" title="드래그 선택한 문장만 기준 서식으로 부분 통일">🧹 부분 통일</button>
+                    <button type="button" id="feBtnUnifyAll" class="fe-fmt-btn fe-fmt-btn-primary" title="현재 편집창 전체를 기준 서식으로 일괄 통일 (이미지·링크·기호 보호)">✨ 일괄 통일</button>
+                    <button type="button" id="feBtnUndoUnify" class="fe-fmt-btn fe-fmt-btn-undo" title="방금 적용한 서식 변경 되돌리기">↩ 되돌리기</button>
+                    <button type="button" id="feAutoPasteUnifyToggle" class="fe-fmt-toggle" title="외부 복사 붙여넣기 시 표준 서식 자동 통일 켜기/끄기">✨ 자동통일: ON</button>
+                </div>
+                <!-- END: 확대 편집창 실시간 서식 확인 및 일괄 통일 바 -->
                 <div id="focusedEditorBody">
                     <div id="focusedEditorSurface" contenteditable="true" spellcheck="false"></div>
                 </div>
@@ -6192,6 +7056,17 @@
                     <span style="position:absolute;top:-4px;right:-5px;font-size:10px;color:#ef4444;font-weight:900;text-shadow:0 0 2px rgba(0,0,0,0.8);">✕</span>
                 </span>
             </button>
+            <div class="toolbar-divider"></div>
+            <span id="floatFormatBadge" class="toolbar-format-badge" title="현재 선택 영역의 글꼴·크기·혼재 여부 (클릭 시 상세 정보)">맑은 고딕</span>
+            <select id="floatFontFamily" class="toolbar-font-select" title="선택 영역 글꼴 변경" aria-label="글꼴 변경">
+                <option value="'맑은 고딕', 'Malgun Gothic', sans-serif">맑은 고딕</option>
+                <option value="-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', '맑은 고딕', sans-serif">시스템 고딕</option>
+                <option value="'나눔고딕', 'NanumGothic', '맑은 고딕', sans-serif">나눔고딕</option>
+                <option value="'돋움', 'Dotum', sans-serif">돋움</option>
+                <option value="'바탕', 'Batang', Georgia, serif">바탕/명조</option>
+                <option value="'Consolas', 'D2Coding', 'Courier New', monospace">고정폭</option>
+            </select>
+            <button type="button" id="floatBtnUnifyFormat" class="toolbar-btn toolbar-btn-unify" title="선택한 텍스트를 문서 표준 서식으로 즉시 통일">🧹 통일</button>
 
             <!-- START: 링크 옵션 선택 팝오버 창 -->
             <div id="textLinkPickerPopover" class="text-link-popover" style="display: none;">
@@ -6232,6 +7107,75 @@
             <!-- END: 색상 옵션 선택 팝오버 창 -->
         </div>
         <!-- END: 텍스트 서식 플로팅 툴바 HTML 구조 -->
+        <!-- START: 붙여넣기 직후 즉시 서식 전환 플로팅 바 (런타임 전용, 저장 시 자동 숨김) -->
+        <div id="smartPasteActionBar" role="status" aria-live="polite" style="display: none;">
+            <span class="sp-label" id="smartPasteStatusLabel">✨ 표준 서식 통일 붙여넣기</span>
+            <button type="button" class="sp-btn active" data-paste-mode="unified" title="문서 표준 글꼴/크기로 깔끔하게 통일 (굵게·링크·이미지 보호)">표준 통일</button>
+            <button type="button" class="sp-btn" data-paste-mode="original" title="복사해 온 외부 웹의 원본 서식으로 복원">원본 서식</button>
+            <button type="button" class="sp-btn" data-paste-mode="plain" title="모든 서식을 제거하고 순수 글자와 기호만 유지">순수 텍스트</button>
+            <button type="button" class="sp-close" id="smartPasteCloseBtn" title="닫기" aria-label="닫기">✕</button>
+        </div>
+        <!-- END: 붙여넣기 직후 즉시 서식 전환 플로팅 바 -->
+        <!-- START: 일반 화면 실시간 기존 서식 확인 및 부분·일괄 수정 바 -->
+        <div id="generalFormatInspectorBar" class="unified-format-bar" role="toolbar" aria-label="일반 화면 기존 서식 확인 및 부분·일괄 수정 바" style="display: none;">
+            <button type="button" id="genFormatStatusBadge" class="fe-format-status-pill" title="클릭하여 기존 서식 상세 확인 및 통일 기준 흡수">
+                <span class="fe-format-color-dot" id="genFormatColorDot" style="background:#333333;"></span>
+                <span id="genFormatStatusText">✓ 맑은 고딕 · 16px</span>
+            </button>
+            <span id="genScopeModeBadge" class="uf-scope-badge" title="글자를 드래그하면 부분 수정, 영역만 선택하면 전체 일괄 수정">일괄(영역)</span>
+            <select id="genFontFamilySelect" class="fe-fmt-select" title="글꼴 부분 또는 일괄 변경" aria-label="일반 화면 글꼴 선택">
+                <option value="'맑은 고딕', 'Malgun Gothic', sans-serif">맑은 고딕 (표준)</option>
+                <option value="-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', '맑은 고딕', sans-serif">시스템 고딕</option>
+                <option value="'나눔고딕', 'NanumGothic', '맑은 고딕', sans-serif">나눔고딕</option>
+                <option value="'돋움', 'Dotum', sans-serif">돋움</option>
+                <option value="'바탕', 'Batang', Georgia, serif">바탕/명조</option>
+                <option value="'Consolas', 'D2Coding', 'Courier New', monospace">고정폭</option>
+            </select>
+            <select id="genFontSizeSelect" class="fe-fmt-select" title="글꼴 크기 부분 또는 일괄 변경" aria-label="일반 화면 글꼴 크기 선택">
+                <option value="11">11px</option>
+                <option value="12">12px</option>
+                <option value="13">13px</option>
+                <option value="14">14px</option>
+                <option value="15">15px</option>
+                <option value="16" selected>16px(표준)</option>
+                <option value="18">18px</option>
+                <option value="20">20px</option>
+                <option value="22">22px</option>
+                <option value="24">24px</option>
+                <option value="28">28px</option>
+                <option value="32">32px</option>
+            </select>
+            <div class="uf-style-group" aria-label="일반 화면 글자 강조 서식">
+                <button type="button" id="genBtnBold" class="uf-icon-btn" title="굵게 (부분/일괄)"><b>B</b></button>
+                <button type="button" id="genBtnItalic" class="uf-icon-btn" title="기울임 (부분/일괄)"><i>I</i></button>
+                <button type="button" id="genBtnUnderline" class="uf-icon-btn" title="밑줄 (부분/일괄)"><u>U</u></button>
+                <button type="button" id="genBtnStrike" class="uf-icon-btn" title="취소선 (부분/일괄)"><s>S</s></button>
+            </div>
+            <label class="uf-color-label" title="글자 색상 (부분/일괄)">🎨<input type="color" id="genTextColorInput" value="#333333"></label>
+            <label class="uf-color-label" title="배경 형광펜 (부분/일괄)">🖌️<input type="color" id="genBgColorInput" value="#fef08a"></label>
+            <button type="button" id="genBtnUnifySelection" class="fe-fmt-btn" title="드래그 선택한 글자/문장만 기준 서식으로 부분 통일">🧹 부분 통일</button>
+            <button type="button" id="genBtnUnifyAll" class="fe-fmt-btn fe-fmt-btn-primary" title="선택한 기존 입력창 전체를 기준 서식으로 일괄 통일">✨ 일괄 통일</button>
+            <button type="button" id="genBtnUndoUnify" class="fe-fmt-btn fe-fmt-btn-undo" title="방금 적용한 서식 변경 되돌리기">↩ 되돌리기</button>
+            <button type="button" id="genBtnCloseBar" class="gen-close-btn" title="서식 바 숨기기" aria-label="서식 바 숨기기">✕</button>
+        </div>
+        <!-- END: 일반 화면 실시간 기존 서식 확인 및 부분·일괄 수정 바 -->
+
+        <!-- START: 기존 서식 상세 확인 및 기준 흡수 팝오버 (#formatAuditPopover) -->
+        <div id="formatAuditPopover" role="dialog" aria-label="기존 서식 상세 진단" style="display: none;">
+            <div class="fa-header">
+                <span>🔍 기존 서식 상세 확인 · 진단</span>
+                <button type="button" id="formatAuditCloseBtn" class="fa-close-btn" title="닫기" aria-label="닫기">✕</button>
+            </div>
+            <div id="formatAuditPopoverBody"></div>
+            <div class="fa-actions">
+                <button type="button" id="auditBtnAdoptStd" class="fa-btn-adopt" title="현재 커서/선택 위치의 기존 글꼴·크기·색상을 통일 기준으로 복사합니다">🎯 현재 기존 서식을 통일 기준으로 가져오기</button>
+                <button type="button" id="auditBtnUnifySelection">🧹 선택 부분 통일</button>
+                <button type="button" id="auditBtnUnifyAll" class="fa-btn-primary">✨ 이 영역 일괄 통일</button>
+                <button type="button" id="auditBtnClearBg" style="grid-column: 1 / -1;">🧽 배경색(형광펜)만 깔끔하게 제거</button>
+                <button type="button" id="auditBtnUndo" class="fa-btn-undo">↩ 직전 서식 변경 되돌리기</button>
+            </div>
+        </div>
+        <!-- END: 기존 서식 상세 확인 및 기준 흡수 팝오버 -->
     </div>
     <div id="customMessageBox" class="custom-message-box"></div>
 
@@ -6286,6 +7230,46 @@
                     <div class="format-controls">
                         <button id="insertUnorderedListBtn" title="글머리 기호 목록">● 목록</button>
                         <button id="insertOrderedListBtn" title="번호 매기기 목록">1. 목록</button>
+                    </div>
+                </div>
+                <div class="panel-section" id="formatUnifyPanelSection">
+                    <div class="panel-section-title">✨ 서식 확인 · 글꼴 · 일괄 통일</div>
+                    <div class="format-inspector-card" id="panelFormatInspectorBox">
+                        <div class="fi-header">
+                            <span>🔍 현재 서식 진단</span>
+                            <span class="fi-status-tag" id="panelFormatStatusTag">✓ 표준</span>
+                        </div>
+                        <div class="fi-grid">
+                            <div>글꼴: <strong id="panelInfoFont">맑은 고딕</strong></div>
+                            <div>크기: <strong id="panelInfoSize">16px</strong></div>
+                            <div>색상: <strong id="panelInfoColor">#333333</strong></div>
+                            <div>스타일: <strong id="panelInfoStyle">기본</strong></div>
+                        </div>
+                    </div>
+                    <div class="format-controls" style="margin-bottom:6px; gap:6px;">
+                        <select id="panelFontFamilySelect" title="표준 기준 글꼴 선택 (선택 텍스트가 있으면 즉시 적용)" style="flex:1; height:32px; border:1px solid #cbd5e1; border-radius:6px; padding:0 6px; font-size:12px;">
+                            <option value="'맑은 고딕', 'Malgun Gothic', sans-serif">맑은 고딕 (표준)</option>
+                            <option value="-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', '맑은 고딕', sans-serif">시스템 고딕</option>
+                            <option value="'나눔고딕', 'NanumGothic', '맑은 고딕', sans-serif">나눔고딕</option>
+                            <option value="'돋움', 'Dotum', sans-serif">돋움</option>
+                            <option value="'바탕', 'Batang', Georgia, serif">바탕/명조</option>
+                            <option value="'Consolas', 'D2Coding', 'Courier New', monospace">고정폭</option>
+                        </select>
+                        <input type="number" id="panelStdFontSize" title="일괄 통일 기준 크기(px)" min="10" max="36" value="16" style="width:58px; height:32px; border:1px solid #cbd5e1; border-radius:6px; text-align:center; font-size:12px;">
+                    </div>
+                    <label class="smart-paste-pref-row" for="panelAutoPasteUnifyToggle">
+                        <input type="checkbox" id="panelAutoPasteUnifyToggle" checked>
+                        <span>외부 붙여넣기 시 표준 서식 자동 통일</span>
+                    </label>
+                    <label class="smart-paste-pref-row" for="panelPreserveBoldToggle" style="background:#f8fafc; border-color:#cbd5e1; color:#334155;">
+                        <input type="checkbox" id="panelPreserveBoldToggle" checked>
+                        <span>일괄 통일 시 굵게(B)·링크(🔗) 의미 유지</span>
+                    </label>
+                    <div class="format-unify-actions">
+                        <button type="button" id="panelBtnUnifySelection"><span>🧹 선택 문장 서식 통일</span><span style="font-size:10.5px; opacity:0.7;">드래그 영역</span></button>
+                        <button type="button" id="panelBtnUnifyActiveBox" class="primary-unify"><span>📦 현재 입력창 일괄 통일</span><span style="font-size:10.5px; opacity:0.9;">권장</span></button>
+                        <button type="button" id="panelBtnUnifyDocument"><span>🌐 문서 전체 본문 일괄 통일</span><span style="font-size:10.5px; opacity:0.7;">제목·이미지 보호</span></button>
+                        <button type="button" id="panelBtnUndoUnify" class="undo-unify"><span>↩ 방금 실행한 서식 통일 되돌리기</span><span style="font-size:10.5px;">Undo</span></button>
                     </div>
                 </div>
             </div>
@@ -6882,6 +7866,33 @@
                 if (targetDoc) cleanCurrentDocumentOfDuplicateToolbars(targetDoc);
                 if (!targetDoc) return targetDoc;
                 targetDoc.getElementById('selectedImageDownloadBtn')?.remove();
+                ['smartPasteActionBar', 'generalFormatInspectorBar', 'formatAuditPopover'].forEach(rtId => {
+                    const rtEl = targetDoc.getElementById(rtId);
+                    if (rtEl) {
+                        rtEl.classList.remove('visible');
+                        rtEl.style.display = 'none';
+                    }
+                });
+                const clonedGenUndoBtn = targetDoc.getElementById('genBtnUndoUnify');
+                if (clonedGenUndoBtn) clonedGenUndoBtn.classList.remove('visible');
+                const clonedAuditUndoBtn = targetDoc.getElementById('auditBtnUndo');
+                if (clonedAuditUndoBtn) clonedAuditUndoBtn.classList.remove('visible');
+                const clonedFeUndoBtn = targetDoc.getElementById('feBtnUndoUnify');
+                if (clonedFeUndoBtn) clonedFeUndoBtn.classList.remove('visible');
+                const clonedPanelUndoBtn = targetDoc.getElementById('panelBtnUndoUnify');
+                if (clonedPanelUndoBtn) clonedPanelUndoBtn.classList.remove('visible');
+                // Remove any temporary Smart Paste comment markers before standalone save
+                try {
+                    const walker = targetDoc.createTreeWalker(targetDoc.body || targetDoc, NodeFilter.SHOW_COMMENT);
+                    const commentsToRemove = [];
+                    let cNode;
+                    while ((cNode = walker.nextNode())) {
+                        if (cNode.nodeValue && (cNode.nodeValue.startsWith('sp-start:') || cNode.nodeValue.startsWith('sp-end:'))) {
+                            commentsToRemove.push(cNode);
+                        }
+                    }
+                    commentsToRemove.forEach(n => n.parentNode && n.parentNode.removeChild(n));
+                } catch (ce) {}
                 restoreZoomEditorToolbarHome(targetDoc);
 
                 const clonedBodyEl = targetDoc.body;
@@ -9216,20 +10227,31 @@ function processPastedImages(scope) {
                 }
                 range.deleteContents();
 
-                const fragment = document.createDocumentFragment();
-                const childNodes = Array.from(doc.body.childNodes);
-
-                if (childNodes.length > 0) {
-                    let lastNode = null;
-                    childNodes.forEach(node => {
-                        lastNode = fragment.appendChild(node);
+                // [스마트 붙여넣기 엔진 연동] 외부 웹 HTML의 원본/표준통일/순수텍스트 3종 스냅샷을 준비하고
+                // 기본 설정(표준 서식 자동 통일)에 따라 안전 삽입 후 즉시 전환 플로팅 바 제공
+                if (window.MeetingFormatEngine && typeof window.MeetingFormatEngine.insertSmartPastedHtml === 'function') {
+                    window.MeetingFormatEngine.insertSmartPastedHtml({
+                        docBody: doc.body,
+                        plainText: textData,
+                        range,
+                        selection,
+                        targetContainer
                     });
-                    range.insertNode(fragment);
-                    if (lastNode && selection) {
-                        range.setStartAfter(lastNode);
-                        range.collapse(true);
-                        selection.removeAllRanges();
-                        selection.addRange(range);
+                } else {
+                    const fragment = document.createDocumentFragment();
+                    const childNodes = Array.from(doc.body.childNodes);
+                    if (childNodes.length > 0) {
+                        let lastNode = null;
+                        childNodes.forEach(node => {
+                            lastNode = fragment.appendChild(node);
+                        });
+                        range.insertNode(fragment);
+                        if (lastNode && selection) {
+                            range.setStartAfter(lastNode);
+                            range.collapse(true);
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                        }
                     }
                 }
 
@@ -9242,9 +10264,11 @@ function processPastedImages(scope) {
                 requestAnimationFrame(() => {
                     processPastedImages(targetContainer);
                     if (typeof normalizeMonthlyEditingLayout === 'function') normalizeMonthlyEditingLayout(targetContainer);
+                    if (window.MeetingFormatEngine && typeof window.MeetingFormatEngine.refreshInspector === 'function') {
+                        window.MeetingFormatEngine.refreshInspector();
+                    }
                 });
 
-                if (typeof showMessage === 'function') showMessage('클립보드 내용이 성공적으로 붙여넣어졌습니다.', 'success');
                 return;
             }
 
@@ -11731,7 +12755,7 @@ function clampImagesToContainers(scope = contentArea) {
             // mousedown에서 에디터 포커스 소실 방지 (단, INPUT 박스는 우회) 및 조작 상태 마킹
             floatToolbar.addEventListener('mousedown', (e) => {
                 floatToolbar.classList.add('interacting');
-                if (e.target.tagName !== 'INPUT') {
+                if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'OPTION') {
                     e.preventDefault();
                     e.stopPropagation();
                 }
@@ -13634,7 +14658,7 @@ function clampImagesToContainers(scope = contentArea) {
 
             function handleDocumentClick(event) {
                 const textToolbar = document.getElementById('textFormatToolbar');
-                const isInsideTextToolbar = Boolean(textToolbar && (textToolbar.contains(event.target) || (event.target.closest && event.target.closest('#textFormatToolbar, .text-format-toolbar, .text-color-popover, .text-link-popover, #textLinkPickerPopover'))));
+                const isInsideTextToolbar = Boolean(textToolbar && (textToolbar.contains(event.target) || (event.target.closest && event.target.closest('#textFormatToolbar, .text-format-toolbar, .text-color-popover, .text-link-popover, #textLinkPickerPopover, #smartPasteActionBar, #focusedEditorFormatBar, #generalFormatInspectorBar, #formatAuditPopover'))));
 
                 const focusedEditorOverlay = document.getElementById('focusedEditorOverlay');
                 const duplicatePanel = document.getElementById('duplicatePanel');
@@ -13964,7 +14988,36 @@ function clampImagesToContainers(scope = contentArea) {
             const isFocusedActive = focusedEditor && focusedEditor.classList.contains('active');
             const targetEditor = isFocusedActive ? document.getElementById('focusedEditorSurface') : (typeof contentArea !== 'undefined' && contentArea ? contentArea : document.getElementById('content'));
 
-            if (styleProperty === 'fontSize') {
+            if (styleProperty === 'fontFamily') {
+                document.execCommand('styleWithCSS', false, false);
+                document.execCommand('fontName', false, '__MEETING_STD_FONT_MARKER__');
+                if (targetEditor) {
+                    const fontTags = targetEditor.querySelectorAll('font[face="__MEETING_STD_FONT_MARKER__"]');
+                    fontTags.forEach(fontEl => {
+                        fontEl.querySelectorAll('span, font').forEach(s => {
+                            s.style.fontFamily = '';
+                            if (s.tagName === 'FONT') s.removeAttribute('face');
+                        });
+                        const span = document.createElement('span');
+                        span.style.fontFamily = styleValue;
+                        while (fontEl.firstChild) {
+                            span.appendChild(fontEl.firstChild);
+                        }
+                        fontEl.parentNode.replaceChild(span, fontEl);
+                        span.classList.add('temp-font-family-replacement');
+                    });
+                    const newSpans = targetEditor.querySelectorAll('span.temp-font-family-replacement');
+                    if (newSpans.length > 0) {
+                        const newRange = document.createRange();
+                        newRange.setStart(newSpans[0], 0);
+                        const lastSpan = newSpans[newSpans.length - 1];
+                        newRange.setEnd(lastSpan, lastSpan.childNodes.length);
+                        selection.removeAllRanges();
+                        selection.addRange(newRange);
+                        newSpans.forEach(s => s.classList.remove('temp-font-family-replacement'));
+                    }
+                }
+            } else if (styleProperty === 'fontSize') {
                 // fontSize 변경 시 execCommand('fontSize', false, '7')을 실행하여 영역을 확보한 뒤 span으로 치환
                 // CSS 스타일 인라인화를 끄고 font 태그 강제 생성을 하도록 styleWithCSS를 임시로 비활성화합니다.
                 document.execCommand('styleWithCSS', false, false);
@@ -14568,6 +15621,13 @@ function clampImagesToContainers(scope = contentArea) {
                 }
                 clonedDoc.querySelectorAll('[data-keyboard-explicit-open]').forEach(el => delete el.dataset.keyboardExplicitOpen);
                 clonedDoc.querySelectorAll('[inputmode]').forEach(el => el.removeAttribute('inputmode'));
+                ['smartPasteActionBar', 'generalFormatInspectorBar', 'formatAuditPopover'].forEach(rtId => {
+                    const rtEl = clonedDoc.getElementById(rtId);
+                    if (rtEl) {
+                        rtEl.classList.remove('visible');
+                        rtEl.style.display = 'none';
+                    }
+                });
 
                 // ── N차 저장 무결성: 실시간 시계/캘린더 표시는 저장 시간에 따라 변하므로 정적 초기값으로 정규화한다.
                 const deterministicMonthlyHeader = {
@@ -18124,7 +19184,7 @@ function finishFocusedEditorSession(overlay, surface) {
                     
         // --- START: 입력창 터치/클릭 시 🔍 확대 편집 모드 및 ⌨️ 모바일 자판 버튼 근접 표출 연동 (모바일 즉각 반응) ---
         const handleEditableInteraction = (e) => {
-            if (e.target.closest('#openFocusedEditorBtn, #mobileKeyboardTriggerBtn, #focusedEditorKeyboardBtn, #flowChipToolbar, .annotation-settings-modal')) return;
+            if (e.target.closest('#openFocusedEditorBtn, #mobileKeyboardTriggerBtn, #focusedEditorKeyboardBtn, #flowChipToolbar, #smartPasteActionBar, #focusedEditorFormatBar, #generalFormatInspectorBar, #formatAuditPopover, .annotation-settings-modal')) return;
             
             const overlay = document.getElementById('focusedEditorOverlay');
             const isOverlayActive = overlay && overlay.classList.contains('active');
@@ -18194,7 +19254,7 @@ document.addEventListener('focusin', e => {
                     let clickStartY = 0;
 
                     document.addEventListener('pointerdown', e => {
-                        if (e.target.closest?.('#openFocusedEditorBtn, #focusedEditorOverlay, #flowChipToolbar')) return;
+                        if (e.target.closest?.('#openFocusedEditorBtn, #focusedEditorOverlay, #flowChipToolbar, #generalFormatInspectorBar, #formatAuditPopover, #smartPasteActionBar, #mobileKeyboardTriggerBtn')) return;
                         const immediateTarget = getFocusedEditableTarget(e.target);
                         if (!immediateTarget) {
                             hideFocusedEditorButton();
@@ -18208,7 +19268,7 @@ document.addEventListener('focusin', e => {
                     });
 
                     document.addEventListener('pointerup', e => {
-                        if (e.target.closest?.('#openFocusedEditorBtn, #focusedEditorOverlay, #flowChipToolbar, .item-controls, .insert-area-toggle-btn, .box-toggle-btn')) return;
+                        if (e.target.closest?.('#openFocusedEditorBtn, #focusedEditorOverlay, #flowChipToolbar, #generalFormatInspectorBar, #formatAuditPopover, #smartPasteActionBar, #mobileKeyboardTriggerBtn, .item-controls, .insert-area-toggle-btn, .box-toggle-btn')) return;
                         if (isClickPointer) {
                             const dx = e.clientX - clickStartX;
                             const dy = e.clientY - clickStartY;
@@ -19943,6 +21003,1540 @@ document.addEventListener('focusin', e => {
             if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
             else mount();
         })();
+    </script>
+
+
+    <script id="meetingFormatUnifierEngine">
+        (function initMeetingFormatUnifierEngine() {
+            if (window.__meetingFormatUnifierInitialized) return;
+            window.__meetingFormatUnifierInitialized = true;
+
+            const CONFIG_STORAGE_KEY = 'monthlyFormatStandardConfig_v1';
+            const DEFAULT_CONFIG = {
+                fontFamily: "'맑은 고딕', 'Malgun Gothic', sans-serif",
+                fontSize: 16,
+                color: '#333333',
+                lineHeight: 1.6,
+                autoUnifyOnPaste: true,
+                preserveBoldOnUnify: true
+            };
+
+            const FONT_LABELS = [
+                { match: /맑은\s*고딕|malgun\s*gothic/i, label: '맑은 고딕', value: "'맑은 고딕', 'Malgun Gothic', sans-serif" },
+                { match: /나눔고딕|nanumgothic/i, label: '나눔고딕', value: "'나눔고딕', 'NanumGothic', '맑은 고딕', sans-serif" },
+                { match: /apple\s*sd\s*gothic|noto\s*sans|pretendard|spoqa|roboto|segoe\s*ui/i, label: '시스템 고딕', value: "-apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Noto Sans KR', '맑은 고딕', sans-serif" },
+                { match: /돋움|dotum|굴림|gulim/i, label: '돋움', value: "'돋움', 'Dotum', sans-serif" },
+                { match: /바탕|batang|궁서|gungsuh|serif|georgia|times/i, label: '바탕/명조', value: "'바탕', 'Batang', Georgia, serif" },
+                { match: /consolas|d2coding|courier|monospace|menlo|monaco/i, label: '고정폭', value: "'Consolas', 'D2Coding', 'Courier New', monospace" }
+            ];
+
+            const PROTECTED_SELECTOR = '.resizable-image-wrapper, .item-controls, .add-sub-insert-area-btn, .insert-area-toggle-btn, .box-toggle-btn, .status-tag, .flow, [data-editable-type="flow-span"], .text-annotation-memo, button, input, select, textarea, canvas';
+            const DANGEROUS_TAGS_SELECTOR = 'script, style, meta, link, title, noscript, iframe, object, embed, form, input, textarea, button, select, svg, canvas, video, audio';
+            const EDITABLE_TARGET_SELECTOR = '.insert-area, .item, .box, .section-title, .section-subtitle, .action-item-text, .action-item-assignee, .action-item-duedate, #page-title';
+
+            let config = loadConfig();
+            let lastPasteBatch = null;
+            let smartPasteHideTimer = null;
+            let undoStack = []; // Multi-step undo stack (up to 15 snapshots)
+            let inspectorRafId = null;
+            let lastActiveGeneralTarget = null;
+            let savedEngineRange = null; // Preserved selection range across <select>/<input type="color"> interactions
+            let generalBarDismissedForTarget = null;
+
+            function loadConfig() {
+                try {
+                    const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+                    if (!raw) return { ...DEFAULT_CONFIG };
+                    const parsed = JSON.parse(raw);
+                    return {
+                        fontFamily: typeof parsed.fontFamily === 'string' && parsed.fontFamily.trim() ? parsed.fontFamily : DEFAULT_CONFIG.fontFamily,
+                        fontSize: Math.min(36, Math.max(10, parseInt(parsed.fontSize, 10) || DEFAULT_CONFIG.fontSize)),
+                        color: typeof parsed.color === 'string' && /^#[0-9a-fA-F]{6}$/.test(parsed.color) ? parsed.color : DEFAULT_CONFIG.color,
+                        lineHeight: parseFloat(parsed.lineHeight) || DEFAULT_CONFIG.lineHeight,
+                        autoUnifyOnPaste: parsed.autoUnifyOnPaste !== false,
+                        preserveBoldOnUnify: parsed.preserveBoldOnUnify !== false
+                    };
+                } catch (e) {
+                    return { ...DEFAULT_CONFIG };
+                }
+            }
+
+            function saveConfig() {
+                try {
+                    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+                } catch (e) {}
+                syncConfigUI();
+            }
+
+            function getPrimaryFontLabel(fontFamilyStr) {
+                if (!fontFamilyStr) return '맑은 고딕';
+                const firstFont = fontFamilyStr.split(',')[0].replace(/["']/g, '').trim();
+                for (const preset of FONT_LABELS) {
+                    if (preset.match.test(firstFont)) return preset.label;
+                }
+                return firstFont || '맑은 고딕';
+            }
+
+            function getMatchingPresetValue(fontFamilyStr) {
+                if (!fontFamilyStr) return DEFAULT_CONFIG.fontFamily;
+                const firstFont = fontFamilyStr.split(',')[0].replace(/["']/g, '').trim();
+                for (const preset of FONT_LABELS) {
+                    if (preset.match.test(firstFont)) return preset.value;
+                }
+                return null;
+            }
+
+            function normalizeHexColor(colorStr, fallback = '#333333') {
+                if (!colorStr || colorStr === 'transparent' || colorStr === 'rgba(0, 0, 0, 0)') return fallback;
+                if (colorStr.startsWith('#')) {
+                    if (colorStr.length === 4) {
+                        return '#' + colorStr[1] + colorStr[1] + colorStr[2] + colorStr[2] + colorStr[3] + colorStr[3];
+                    }
+                    return colorStr.toLowerCase();
+                }
+                const m = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/i);
+                if (!m) return fallback;
+                const hex = (n) => parseInt(n, 10).toString(16).padStart(2, '0');
+                return '#' + hex(m[1]) + hex(m[2]) + hex(m[3]);
+            }
+
+            function notify(msg, type = 'info', duration = 2200) {
+                if (typeof window.showMessage === 'function') {
+                    window.showMessage(msg, type, duration);
+                } else if (typeof showMessage === 'function') {
+                    showMessage(msg, type, duration);
+                }
+            }
+
+            function isProtectedElement(el) {
+                if (!el || el.nodeType !== 1) return false;
+                return el.matches(PROTECTED_SELECTOR) || Boolean(el.closest(PROTECTED_SELECTOR));
+            }
+
+            function sanitizeLinkElement(aEl) {
+                const rawHref = (aEl.getAttribute('href') || '').trim();
+                if (!rawHref || /^(javascript|vbscript|data\s*:\s*text\/html)/i.test(rawHref)) {
+                    aEl.removeAttribute('href');
+                } else {
+                    aEl.setAttribute('href', rawHref);
+                    aEl.setAttribute('target', '_blank');
+                    aEl.setAttribute('rel', 'noopener noreferrer');
+                }
+                aEl.removeAttribute('class');
+                aEl.removeAttribute('id');
+                aEl.style.removeProperty('font-family');
+                aEl.style.removeProperty('font-size');
+                aEl.style.removeProperty('line-height');
+                aEl.style.removeProperty('letter-spacing');
+                aEl.style.removeProperty('background');
+                aEl.style.removeProperty('background-color');
+                aEl.style.removeProperty('margin');
+                aEl.style.removeProperty('padding');
+                if (!aEl.getAttribute('style') || !aEl.getAttribute('style').trim()) {
+                    aEl.removeAttribute('style');
+                }
+            }
+
+            function stripDangerousAttributesAndNodes(root) {
+                if (!root) return;
+                root.querySelectorAll(DANGEROUS_TAGS_SELECTOR).forEach(el => {
+                    if (!el.closest('.resizable-image-wrapper')) el.remove();
+                });
+                root.querySelectorAll('*').forEach(el => {
+                    if (isProtectedElement(el)) return;
+                    Array.from(el.attributes).forEach(attr => {
+                        const name = attr.name.toLowerCase();
+                        if (name.startsWith('on')) {
+                            el.removeAttribute(attr.name);
+                        }
+                    });
+                    if (el.tagName === 'A') {
+                        const href = (el.getAttribute('href') || '').trim();
+                        if (/^(javascript|vbscript|data\s*:\s*text\/html)/i.test(href)) {
+                            el.removeAttribute('href');
+                        } else if (href) {
+                            el.setAttribute('target', '_blank');
+                            el.setAttribute('rel', 'noopener noreferrer');
+                        }
+                    }
+                });
+            }
+
+            function unwrapElement(el) {
+                const parent = el.parentNode;
+                if (!parent) return;
+                while (el.firstChild) {
+                    parent.insertBefore(el.firstChild, el);
+                }
+                parent.removeChild(el);
+            }
+
+            function normalizeSubtreeFormatting(root, options = {}) {
+                if (!root) return;
+                const preserveBold = options.preserveBold !== undefined ? options.preserveBold : config.preserveBoldOnUnify;
+                const stripInlineStyles = options.stripInlineStyles !== false;
+                const convertHeadings = options.convertHeadings !== false;
+
+                stripDangerousAttributesAndNodes(root);
+
+                const allElements = Array.from(root.querySelectorAll('*')).reverse();
+
+                allElements.forEach(el => {
+                    if (!el.isConnected || isProtectedElement(el)) return;
+                    const tag = el.tagName;
+
+                    if (tag === 'BR' || tag === 'HR') {
+                        el.removeAttribute('style');
+                        el.removeAttribute('class');
+                        return;
+                    }
+
+                    if (convertHeadings && /^H[1-6]$/.test(tag)) {
+                        const div = root.ownerDocument.createElement('div');
+                        if (preserveBold) {
+                            const b = root.ownerDocument.createElement('b');
+                            while (el.firstChild) b.appendChild(el.firstChild);
+                            div.appendChild(b);
+                        } else {
+                            while (el.firstChild) div.appendChild(el.firstChild);
+                        }
+                        el.parentNode.replaceChild(div, el);
+                        return;
+                    }
+
+                    let wasCssBold = false;
+                    if (preserveBold && (tag === 'SPAN' || tag === 'FONT')) {
+                        const fw = (el.style && el.style.fontWeight || '').toString().toLowerCase();
+                        if (fw === 'bold' || fw === 'bolder' || parseInt(fw, 10) >= 600) {
+                            wasCssBold = true;
+                        }
+                    }
+
+                    Array.from(el.attributes).forEach(attr => {
+                        const name = attr.name.toLowerCase();
+                        if (tag === 'A' && (name === 'href' || name === 'target' || name === 'rel')) return;
+                        if (name === 'style' && !stripInlineStyles) return;
+                        if (name === 'colspan' || name === 'rowspan') return;
+                        if (name === 'data-editable-type' || name === 'data-category-key' || name === 'contenteditable') return;
+                        if (name === 'class' && el.matches && el.matches('.insert-area, .item, .box, .section-title, .section-subtitle, .bullet-char, .bullet-text, .action-item, .action-item-text, .action-item-assignee, .action-item-duedate')) return;
+                        el.removeAttribute(attr.name);
+                    });
+
+                    if (tag === 'A') {
+                        sanitizeLinkElement(el);
+                        return;
+                    }
+
+                    if (tag === 'FONT') {
+                        if (wasCssBold) {
+                            const b = root.ownerDocument.createElement('b');
+                            while (el.firstChild) b.appendChild(el.firstChild);
+                            el.parentNode.replaceChild(b, el);
+                        } else {
+                            unwrapElement(el);
+                        }
+                        return;
+                    }
+
+                    if (tag === 'B' || tag === 'STRONG') {
+                        if (!preserveBold) {
+                            unwrapElement(el);
+                        }
+                        return;
+                    }
+
+                    if (tag === 'SPAN' || tag === 'MARK' || tag === 'SMALL' || tag === 'BIG' || tag === 'ABBR' || tag === 'CITE' || tag === 'TIME') {
+                        // Preserve structural bullet spans on existing meeting items
+                        if (el.classList && (el.classList.contains('bullet-char') || el.classList.contains('bullet-text') || el.hasAttribute('data-editable-type'))) {
+                            el.removeAttribute('style');
+                            return;
+                        }
+                        if (wasCssBold) {
+                            const b = root.ownerDocument.createElement('b');
+                            while (el.firstChild) b.appendChild(el.firstChild);
+                            el.parentNode.replaceChild(b, el);
+                        } else {
+                            unwrapElement(el);
+                        }
+                        return;
+                    }
+
+                    if (tag === 'TABLE') {
+                        el.style.borderCollapse = 'collapse';
+                        el.style.maxWidth = '100%';
+                        el.style.fontFamily = 'inherit';
+                        el.style.fontSize = 'inherit';
+                    } else if (tag === 'TD' || tag === 'TH') {
+                        el.style.border = '1px solid #cbd5e1';
+                        el.style.padding = '4px 6px';
+                    } else if (tag === 'P') {
+                        const div = root.ownerDocument.createElement('div');
+                        while (el.firstChild) div.appendChild(el.firstChild);
+                        el.parentNode.replaceChild(div, el);
+                    }
+                });
+            }
+
+            function auditContainerFormatting(container) {
+                const fontCounts = new Map();
+                const sizeCounts = new Map();
+                const colorCounts = new Map();
+                const bgSet = new Set();
+                const stdFontLabel = getPrimaryFontLabel(config.fontFamily);
+                const stdSize = config.fontSize;
+
+                if (!container || !container.isConnected) {
+                    return {
+                        fonts: [stdFontLabel],
+                        sizes: [stdSize],
+                        colors: [config.color],
+                        backgrounds: [],
+                        fontCounts: { [stdFontLabel]: 1 },
+                        sizeCounts: { [stdSize]: 1 },
+                        isMixed: false,
+                        hasNonStandard: false
+                    };
+                }
+
+                const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+                    acceptNode(node) {
+                        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                        const parent = node.parentElement;
+                        if (!parent || isProtectedElement(parent)) return NodeFilter.FILTER_REJECT;
+                        return NodeFilter.FILTER_ACCEPT;
+                    }
+                });
+
+                let count = 0;
+                let textNode;
+                while ((textNode = walker.nextNode()) && count < 180) {
+                    const el = textNode.parentElement;
+                    if (!el) continue;
+                    const cs = window.getComputedStyle(el);
+                    const fLabel = getPrimaryFontLabel(cs.fontFamily);
+                    const fSize = Math.round(parseFloat(cs.fontSize) || stdSize);
+                    const col = normalizeHexColor(cs.color, '#333333');
+                    const bg = normalizeHexColor(cs.backgroundColor, 'transparent');
+
+                    fontCounts.set(fLabel, (fontCounts.get(fLabel) || 0) + 1);
+                    sizeCounts.set(fSize, (sizeCounts.get(fSize) || 0) + 1);
+                    colorCounts.set(col, (colorCounts.get(col) || 0) + 1);
+                    if (bg !== 'transparent' && bg !== '#ffffff' && bg !== '#fcfcfc') {
+                        bgSet.add(bg);
+                    }
+                    count++;
+                }
+
+                if (fontCounts.size === 0) fontCounts.set(stdFontLabel, 1);
+                if (sizeCounts.size === 0) sizeCounts.set(stdSize, 1);
+                if (colorCounts.size === 0) colorCounts.set(config.color, 1);
+
+                const fontArr = Array.from(fontCounts.keys());
+                const sizeArr = Array.from(sizeCounts.keys()).sort((a, b) => a - b);
+                const colorArr = Array.from(colorCounts.keys());
+                const isMixed = fontArr.length > 1 || sizeArr.length > 1 || colorArr.length > 1;
+                const hasNonStandard = fontArr.some(f => f !== stdFontLabel) || sizeArr.some(s => Math.abs(s - stdSize) > 1);
+
+                return {
+                    fonts: fontArr,
+                    sizes: sizeArr,
+                    colors: colorArr,
+                    backgrounds: Array.from(bgSet),
+                    fontCounts: Object.fromEntries(fontCounts),
+                    sizeCounts: Object.fromEntries(sizeCounts),
+                    isMixed,
+                    hasNonStandard
+                };
+            }
+
+            function isFocusedEditorActive() {
+                const overlay = document.getElementById('focusedEditorOverlay');
+                return Boolean(overlay && overlay.classList.contains('active'));
+            }
+
+            function getActiveTargetContainer() {
+                const surface = document.getElementById('focusedEditorSurface');
+                if (isFocusedEditorActive() && surface) {
+                    return surface;
+                }
+                const sel = window.getSelection();
+                if (sel && sel.rangeCount > 0 && sel.anchorNode) {
+                    const el = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+                    if (el && el.closest) {
+                        const editable = el.closest(EDITABLE_TARGET_SELECTOR);
+                        if (editable && !isProtectedElement(editable)) {
+                            lastActiveGeneralTarget = editable;
+                            return editable;
+                        }
+                    }
+                }
+                if (typeof focusedEditorTarget !== 'undefined' && focusedEditorTarget && focusedEditorTarget.isConnected) {
+                    lastActiveGeneralTarget = focusedEditorTarget;
+                    return focusedEditorTarget;
+                }
+                if (lastActiveGeneralTarget && lastActiveGeneralTarget.isConnected) {
+                    return lastActiveGeneralTarget;
+                }
+                if (typeof currentlyActiveItemControlsElement !== 'undefined' && currentlyActiveItemControlsElement && currentlyActiveItemControlsElement.isConnected && !currentlyActiveItemControlsElement.matches('.resizable-image-wrapper')) {
+                    return currentlyActiveItemControlsElement;
+                }
+                return null;
+            }
+
+            function captureLiveSelection() {
+                const sel = window.getSelection();
+                if (!sel || sel.rangeCount === 0) return;
+                const range = sel.getRangeAt(0);
+                const container = getActiveTargetContainer();
+                if (container && container.contains(range.commonAncestorContainer)) {
+                    savedEngineRange = range.cloneRange();
+                }
+            }
+
+            function getValidSavedOrLiveRange(container) {
+                const sel = window.getSelection();
+                if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+                    const r = sel.getRangeAt(0);
+                    if (container && container.contains(r.commonAncestorContainer)) {
+                        savedEngineRange = r.cloneRange();
+                        return r;
+                    }
+                }
+                if (savedEngineRange && !savedEngineRange.collapsed && container && container.contains(savedEngineRange.commonAncestorContainer)) {
+                    if (sel) {
+                        sel.removeAllRanges();
+                        sel.addRange(savedEngineRange.cloneRange());
+                    }
+                    return savedEngineRange;
+                }
+                return null;
+            }
+
+            function hasActiveTextSelection() {
+                const container = getActiveTargetContainer();
+                if (!container) return false;
+                const sel = window.getSelection();
+                if (sel && sel.rangeCount > 0 && !sel.isCollapsed && container.contains(sel.getRangeAt(0).commonAncestorContainer)) {
+                    return true;
+                }
+                if (savedEngineRange && !savedEngineRange.collapsed && container.contains(savedEngineRange.commonAncestorContainer)) {
+                    return true;
+                }
+                return false;
+            }
+
+            function inspectCurrentFormat() {
+                const sel = window.getSelection();
+                let focusEl = null;
+                if (sel && sel.rangeCount > 0 && sel.anchorNode) {
+                    focusEl = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode;
+                }
+                const activeContainer = getActiveTargetContainer();
+                if (!focusEl || !focusEl.isConnected || (activeContainer && !activeContainer.contains(focusEl))) {
+                    // Find first non-empty text node inside existing container for accurate existing-format readout
+                    if (activeContainer) {
+                        const walker = document.createTreeWalker(activeContainer, NodeFilter.SHOW_TEXT, {
+                            acceptNode(n) {
+                                return n.nodeValue && n.nodeValue.trim() && n.parentElement && !isProtectedElement(n.parentElement)
+                                    ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+                            }
+                        });
+                        const firstTxt = walker.nextNode();
+                        focusEl = firstTxt ? firstTxt.parentElement : activeContainer;
+                    }
+                }
+
+                const cs = focusEl ? window.getComputedStyle(focusEl) : null;
+                const fontFamilyRaw = cs ? cs.fontFamily : config.fontFamily;
+                const fontLabel = getPrimaryFontLabel(fontFamilyRaw);
+                const fontSize = cs ? Math.round(parseFloat(cs.fontSize) || config.fontSize) : config.fontSize;
+                const colorHex = cs ? normalizeHexColor(cs.color, '#333333') : config.color;
+                const bgHex = cs ? normalizeHexColor(cs.backgroundColor, 'transparent') : 'transparent';
+                const lineHeightRaw = cs && cs.lineHeight && cs.lineHeight !== 'normal'
+                    ? Math.round((parseFloat(cs.lineHeight) / Math.max(10, fontSize)) * 10) / 10
+                    : config.lineHeight;
+                const isBold = cs ? (cs.fontWeight === 'bold' || parseInt(cs.fontWeight, 10) >= 600) : false;
+                const isItalic = cs ? cs.fontStyle === 'italic' : false;
+                const isUnderline = cs ? (cs.textDecorationLine || '').includes('underline') : false;
+                const isStrike = cs ? (cs.textDecorationLine || '').includes('line-through') : false;
+
+                const audit = activeContainer ? auditContainerFormatting(activeContainer) : {
+                    fonts: [fontLabel], sizes: [fontSize], colors: [colorHex], backgrounds: [],
+                    fontCounts: { [fontLabel]: 1 }, sizeCounts: { [fontSize]: 1 },
+                    isMixed: false, hasNonStandard: false
+                };
+
+                return {
+                    focusEl,
+                    activeContainer,
+                    fontFamilyRaw,
+                    fontLabel,
+                    fontSize,
+                    colorHex,
+                    bgHex,
+                    lineHeight: lineHeightRaw,
+                    isBold,
+                    isItalic,
+                    isUnderline,
+                    isStrike,
+                    isPartialMode: hasActiveTextSelection(),
+                    audit
+                };
+            }
+
+            // --- Multi-step Undo Stack ---
+            function pushUndoSnapshot(snapshot) {
+                if (!snapshot || !snapshot.items || snapshot.items.length === 0) return;
+                undoStack.push(snapshot);
+                if (undoStack.length > 15) undoStack.shift();
+                syncUndoButtonsUI();
+            }
+
+            function syncUndoButtonsUI() {
+                const hasUndo = undoStack.length > 0;
+                const labelSuffix = undoStack.length > 1 ? `(${undoStack.length})` : '';
+                ['feBtnUndoUnify', 'genBtnUndoUnify', 'panelBtnUndoUnify', 'auditBtnUndo'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    el.classList.toggle('visible', hasUndo);
+                    if (id === 'feBtnUndoUnify' || id === 'genBtnUndoUnify') {
+                        el.textContent = `↩ 되돌리기${labelSuffix}`;
+                    }
+                });
+            }
+
+            function undoLastUnify() {
+                if (undoStack.length === 0) {
+                    notify('되돌릴 서식 변경 기록이 없습니다.', 'info', 1800);
+                    return;
+                }
+                const snapshot = undoStack.pop();
+                snapshot.items.forEach(item => {
+                    if (item.el && item.el.isConnected) {
+                        item.el.innerHTML = item.html;
+                        if (item.styleText !== undefined) {
+                            if (item.styleText) item.el.setAttribute('style', item.styleText);
+                            else item.el.removeAttribute('style');
+                        }
+                        item.el.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+                });
+                syncUndoButtonsUI();
+                refreshInspector();
+                notify('방금 적용한 서식 변경을 원래대로 되돌렸습니다.', 'success', 2000);
+            }
+
+            // --- General Screen Inspector Bar Visibility ---
+            function showGeneralFormatBar(target) {
+                if (isFocusedEditorActive()) {
+                    hideGeneralFormatBar();
+                    return;
+                }
+                if (document.body.classList.contains('image-zoom-active') ||
+                    document.body.classList.contains('selection-zoom-active')) {
+                    hideGeneralFormatBar();
+                    return;
+                }
+                if (target && target.isConnected && !isProtectedElement(target)) {
+                    if (generalBarDismissedForTarget === target) return;
+                    lastActiveGeneralTarget = target;
+                }
+                if (!lastActiveGeneralTarget || !lastActiveGeneralTarget.isConnected) return;
+
+                const bar = document.getElementById('generalFormatInspectorBar');
+                if (!bar) return;
+                if (bar.parentNode !== document.body) document.body.appendChild(bar);
+                bar.style.display = 'flex';
+                bar.classList.add('visible');
+                refreshInspector();
+            }
+
+            function hideGeneralFormatBar() {
+                const bar = document.getElementById('generalFormatInspectorBar');
+                if (bar) {
+                    bar.classList.remove('visible');
+                    bar.style.display = 'none';
+                }
+                hideFormatAuditPopover();
+            }
+
+            // --- Unified Partial (Selection) OR Batch (Whole Existing Container) Style Application ---
+            function applyBatchStyleToContainer(container, property, value) {
+                if (!container || !container.isConnected) {
+                    notify('서식을 수정할 입력창이나 문장을 먼저 선택하세요.', 'warning', 2200);
+                    return false;
+                }
+
+                pushUndoSnapshot({
+                    type: 'single',
+                    items: [{ el: container, html: container.innerHTML, styleText: container.getAttribute('style') || '' }]
+                });
+
+                const descendants = Array.from(container.querySelectorAll('*'));
+
+                if (property === 'fontFamily') {
+                    descendants.forEach(el => {
+                        if (isProtectedElement(el)) return;
+                        if (el.tagName === 'FONT') el.removeAttribute('face');
+                        el.style.removeProperty('font-family');
+                    });
+                    container.style.fontFamily = value;
+                } else if (property === 'fontSize') {
+                    descendants.forEach(el => {
+                        if (isProtectedElement(el)) return;
+                        if (el.tagName === 'FONT') el.removeAttribute('size');
+                        el.style.removeProperty('font-size');
+                    });
+                    container.style.fontSize = value;
+                } else if (property === 'color') {
+                    descendants.forEach(el => {
+                        if (isProtectedElement(el) || el.tagName === 'A') return;
+                        if (el.tagName === 'FONT') el.removeAttribute('color');
+                        el.style.removeProperty('color');
+                    });
+                    container.style.color = value;
+                } else if (property === 'backgroundColor') {
+                    if (value === 'transparent' || !value) {
+                        descendants.forEach(el => {
+                            if (isProtectedElement(el)) return;
+                            el.style.removeProperty('background-color');
+                            el.style.removeProperty('background');
+                        });
+                        container.style.removeProperty('background-color');
+                    } else {
+                        // Highlight text inside container cleanly without painting entire box padding unless desired
+                        descendants.forEach(el => {
+                            if (isProtectedElement(el)) return;
+                            el.style.removeProperty('background-color');
+                        });
+                        container.style.backgroundColor = value;
+                    }
+                } else if (property === 'bold') {
+                    const cs = window.getComputedStyle(container);
+                    const currentlyBold = cs.fontWeight === 'bold' || parseInt(cs.fontWeight, 10) >= 600;
+                    const nextBold = !currentlyBold;
+                    if (!nextBold) {
+                        descendants.forEach(el => {
+                            if (isProtectedElement(el)) return;
+                            el.style.removeProperty('font-weight');
+                            if (el.tagName === 'B' || el.tagName === 'STRONG') unwrapElement(el);
+                        });
+                        container.style.fontWeight = 'normal';
+                    } else {
+                        container.style.fontWeight = '700';
+                    }
+                } else if (property === 'italic') {
+                    const currentlyItalic = window.getComputedStyle(container).fontStyle === 'italic';
+                    descendants.forEach(el => {
+                        if (isProtectedElement(el)) return;
+                        el.style.removeProperty('font-style');
+                        if (!currentlyItalic === false && (el.tagName === 'I' || el.tagName === 'EM')) unwrapElement(el);
+                    });
+                    container.style.fontStyle = currentlyItalic ? 'normal' : 'italic';
+                } else if (property === 'underline') {
+                    const curDeco = window.getComputedStyle(container).textDecorationLine || '';
+                    const nextUnder = !curDeco.includes('underline');
+                    if (!nextUnder) {
+                        descendants.forEach(el => {
+                            if (isProtectedElement(el)) return;
+                            el.style.removeProperty('text-decoration');
+                            el.style.removeProperty('text-decoration-line');
+                            if (el.tagName === 'U') unwrapElement(el);
+                        });
+                    }
+                    container.style.textDecoration = nextUnder ? 'underline' : 'none';
+                } else if (property === 'strikeThrough') {
+                    const curDeco = window.getComputedStyle(container).textDecorationLine || '';
+                    const nextStrike = !curDeco.includes('line-through');
+                    if (!nextStrike) {
+                        descendants.forEach(el => {
+                            if (isProtectedElement(el)) return;
+                            el.style.removeProperty('text-decoration');
+                            el.style.removeProperty('text-decoration-line');
+                            if (el.tagName === 'S' || el.tagName === 'STRIKE' || el.tagName === 'DEL') unwrapElement(el);
+                        });
+                    }
+                    container.style.textDecoration = nextStrike ? 'line-through' : 'none';
+                }
+
+                container.dispatchEvent(new Event('input', { bubbles: true }));
+                refreshInspector();
+                return true;
+            }
+
+            /**
+             * Smart Style Applicator:
+             * - If user selected a portion of text -> modifies ONLY that portion (부분 수정)
+             * - If user selected/focused a box without dragging -> batch-modifies the entire existing box (일괄 수정)
+             */
+            function applySmartStyle(property, value) {
+                const container = getActiveTargetContainer();
+                if (!container) {
+                    notify('먼저 서식을 수정할 기존 글자나 입력창을 선택하세요.', 'warning', 2200);
+                    return false;
+                }
+
+                const partialRange = getValidSavedOrLiveRange(container);
+                if (partialRange) {
+                    // Save container undo snapshot before partial edit
+                    pushUndoSnapshot({
+                        type: 'single',
+                        items: [{ el: container, html: container.innerHTML, styleText: container.getAttribute('style') || '' }]
+                    });
+                    if (typeof applyStyleToSelection === 'function') {
+                        applyStyleToSelection(property, value);
+                    }
+                    captureLiveSelection();
+                    container.dispatchEvent(new Event('input', { bubbles: true }));
+                    refreshInspector();
+                    return true;
+                }
+
+                // No dragged selection -> apply cleanly to the entire active existing container!
+                const ok = applyBatchStyleToContainer(container, property, value);
+                if (ok) {
+                    const propLabels = {
+                        fontFamily: `글꼴 '${getPrimaryFontLabel(value)}'`,
+                        fontSize: `글꼴 크기 ${value}`,
+                        color: `글자 색상 ${value}`,
+                        backgroundColor: value === 'transparent' ? '배경색 제거' : `배경 색상 ${value}`,
+                        bold: '굵게(B)',
+                        italic: '기울임(I)',
+                        underline: '밑줄(U)',
+                        strikeThrough: '취소선(S)'
+                    };
+                    notify(`현재 영역 전체에 ${propLabels[property] || property} 일괄 적용됨`, 'success', 1800);
+                }
+                return ok;
+            }
+
+            function stripBackgroundsOnly(container = getActiveTargetContainer()) {
+                if (!container || !container.isConnected) {
+                    notify('배경색을 정리할 입력창을 먼저 선택하세요.', 'warning', 2000);
+                    return false;
+                }
+                pushUndoSnapshot({
+                    type: 'single',
+                    items: [{ el: container, html: container.innerHTML, styleText: container.getAttribute('style') || '' }]
+                });
+                container.querySelectorAll('*').forEach(el => {
+                    if (isProtectedElement(el)) return;
+                    el.style.removeProperty('background');
+                    el.style.removeProperty('background-color');
+                    if (el.getAttribute('style') !== null && !el.getAttribute('style').trim()) {
+                        el.removeAttribute('style');
+                    }
+                });
+                container.style.removeProperty('background-color');
+                container.dispatchEvent(new Event('input', { bubbles: true }));
+                refreshInspector();
+                notify('현재 영역의 배경색(형광펜)만 깔끔하게 제거했습니다.', 'success', 2000);
+                return true;
+            }
+
+            function adoptCurrentFormatAsStandard() {
+                const info = inspectCurrentFormat();
+                config.fontFamily = getMatchingPresetValue(info.fontFamilyRaw) || info.fontFamilyRaw || DEFAULT_CONFIG.fontFamily;
+                config.fontSize = Math.min(36, Math.max(10, info.fontSize || 16));
+                config.color = info.colorHex || '#333333';
+                config.lineHeight = info.lineHeight || 1.6;
+                saveConfig();
+                refreshInspector();
+                notify(`기존 서식(${info.fontLabel} · ${config.fontSize}px · ${config.color})을 통일 기준으로 가져왔습니다! 이제 '일괄 통일'을 누르면 이 서식으로 통일됩니다.`, 'success', 3800);
+                renderAuditPopoverContent();
+            }
+
+            // --- Interactive Format Audit Popover (#formatAuditPopover) ---
+            function renderAuditPopoverContent() {
+                const body = document.getElementById('formatAuditPopoverBody');
+                if (!body) return;
+                const info = inspectCurrentFormat();
+                const stdLabel = getPrimaryFontLabel(config.fontFamily);
+
+                const fontChips = Object.entries(info.audit.fontCounts)
+                    .map(([name, cnt]) => `<span class="fa-chip ${name === stdLabel ? 'is-std' : 'is-diff'}">${name} <small>(${cnt})</small></span>`)
+                    .join('');
+                const sizeChips = Object.entries(info.audit.sizeCounts)
+                    .map(([sz, cnt]) => `<span class="fa-chip ${Math.abs(Number(sz) - config.fontSize) <= 1 ? 'is-std' : 'is-diff'}">${sz}px <small>(${cnt})</small></span>`)
+                    .join('');
+                const colorChips = info.audit.colors
+                    .map(hex => `<span class="fa-chip"><span class="fa-dot" style="background:${hex};"></span>${hex}</span>`)
+                    .join('');
+
+                const styleFlags = [
+                    info.isBold ? '굵게(B)' : null,
+                    info.isItalic ? '기울임(I)' : null,
+                    info.isUnderline ? '밑줄(U)' : null,
+                    info.isStrike ? '취소선(S)' : null
+                ].filter(Boolean).join(', ') || '일반(기본)';
+
+                body.innerHTML = `
+                    <div class="fa-section">
+                        <div class="fa-sec-title">📍 현재 커서/선택 위치의 기존 서식</div>
+                        <div class="fa-kv-grid">
+                            <div><span>글꼴</span><strong>${info.fontLabel}</strong></div>
+                            <div><span>크기</span><strong>${info.fontSize}px</strong></div>
+                            <div><span>글자색</span><strong><span class="fa-dot" style="background:${info.colorHex};"></span>${info.colorHex}</strong></div>
+                            <div><span>배경색</span><strong>${info.bgHex === 'transparent' ? '없음(투명)' : `<span class="fa-dot" style="background:${info.bgHex};"></span>${info.bgHex}`}</strong></div>
+                            <div><span>강조</span><strong>${styleFlags}</strong></div>
+                            <div><span>줄간격</span><strong>${info.lineHeight}</strong></div>
+                        </div>
+                        <div class="fa-raw-font" title="${info.fontFamilyRaw}">원본 CSS 글꼴: ${info.fontFamilyRaw}</div>
+                    </div>
+                    <div class="fa-section">
+                        <div class="fa-sec-title">📊 이 영역 전체 기존 서식 분포 (${info.audit.isMixed ? '⚠ 혼재 감지' : '✓ 단일 통일'})</div>
+                        <div class="fa-chip-row"><span class="fa-row-lbl">글꼴:</span>${fontChips}</div>
+                        <div class="fa-chip-row"><span class="fa-row-lbl">크기:</span>${sizeChips}</div>
+                        <div class="fa-chip-row"><span class="fa-row-lbl">색상:</span>${colorChips}</div>
+                    </div>
+                    <div class="fa-section fa-std-box">
+                        <div class="fa-sec-title">🎯 현재 적용 중인 통일 기준</div>
+                        <div style="font-size:12px; color:#1e3a8a; font-weight:700;">${stdLabel} · ${config.fontSize}px · <span class="fa-dot" style="background:${config.color};"></span>${config.color} · 줄간격 ${config.lineHeight}</div>
+                    </div>
+                `;
+            }
+
+            function toggleFormatAuditPopover(anchorEl) {
+                const pop = document.getElementById('formatAuditPopover');
+                if (!pop) return;
+                if (pop.parentNode !== document.body) document.body.appendChild(pop);
+
+                if (pop.classList.contains('visible')) {
+                    hideFormatAuditPopover();
+                    return;
+                }
+                renderAuditPopoverContent();
+                syncUndoButtonsUI();
+                pop.style.display = 'block';
+                pop.classList.add('visible');
+
+                const isMobile = window.innerWidth <= 768;
+                if (isMobile) {
+                    pop.style.left = '50%';
+                    pop.style.top = '50%';
+                    pop.style.transform = 'translate(-50%, -50%)';
+                } else if (anchorEl && anchorEl.getBoundingClientRect) {
+                    const r = anchorEl.getBoundingClientRect();
+                    const pW = pop.offsetWidth || 350;
+                    const pH = pop.offsetHeight || 320;
+                    let left = Math.min(Math.max(10, r.left), window.innerWidth - pW - 10);
+                    let top = r.bottom + 8;
+                    if (top + pH > window.innerHeight - 10) {
+                        top = Math.max(10, r.top - pH - 8);
+                    }
+                    pop.style.left = `${left}px`;
+                    pop.style.top = `${top}px`;
+                    pop.style.transform = 'none';
+                }
+            }
+
+            function hideFormatAuditPopover() {
+                const pop = document.getElementById('formatAuditPopover');
+                if (pop) {
+                    pop.classList.remove('visible');
+                    pop.style.display = 'none';
+                }
+            }
+
+            function syncBarControls(prefix, info) {
+                const isAlert = info.audit.isMixed || info.audit.hasNonStandard;
+                const badge = document.getElementById(`${prefix}FormatStatusBadge`);
+                const text = document.getElementById(`${prefix}FormatStatusText`);
+                const dot = document.getElementById(`${prefix}FormatColorDot`);
+                if (badge && text) {
+                    badge.classList.toggle('is-mixed', isAlert);
+                    if (info.audit.isMixed) {
+                        text.textContent = `⚠ 혼재(폰트${info.audit.fonts.length}·크기${info.audit.sizes.length}) · ${info.fontLabel} ${info.fontSize}px`;
+                    } else if (info.audit.hasNonStandard) {
+                        text.textContent = `⚠ ${info.fontLabel} · ${info.fontSize}px`;
+                    } else {
+                        text.textContent = `✓ ${info.fontLabel} · ${info.fontSize}px`;
+                    }
+                }
+                if (dot) dot.style.backgroundColor = info.colorHex;
+
+                const scopeBadge = document.getElementById(`${prefix}ScopeModeBadge`);
+                if (scopeBadge) {
+                    scopeBadge.textContent = info.isPartialMode ? '부분(선택)' : '일괄(영역)';
+                    scopeBadge.classList.toggle('is-partial', info.isPartialMode);
+                }
+
+                const fontSel = document.getElementById(`${prefix}FontFamilySelect`);
+                if (fontSel && document.activeElement !== fontSel) {
+                    const matched = getMatchingPresetValue(info.fontFamilyRaw);
+                    if (matched) fontSel.value = matched;
+                }
+                const sizeSel = document.getElementById(`${prefix}FontSizeSelect`);
+                if (sizeSel && document.activeElement !== sizeSel) {
+                    const opt = Array.from(sizeSel.options).find(o => parseInt(o.value, 10) === info.fontSize);
+                    if (opt) sizeSel.value = opt.value;
+                }
+
+                document.getElementById(`${prefix}BtnBold`)?.classList.toggle('active', info.isBold);
+                document.getElementById(`${prefix}BtnItalic`)?.classList.toggle('active', info.isItalic);
+                document.getElementById(`${prefix}BtnUnderline`)?.classList.toggle('active', info.isUnderline);
+                document.getElementById(`${prefix}BtnStrike`)?.classList.toggle('active', info.isStrike);
+
+                const colInput = document.getElementById(`${prefix}TextColorInput`);
+                if (colInput && document.activeElement !== colInput) {
+                    colInput.value = info.colorHex;
+                }
+                const bgInput = document.getElementById(`${prefix}BgColorInput`);
+                if (bgInput && document.activeElement !== bgInput) {
+                    bgInput.value = info.bgHex === 'transparent' ? '#fef08a' : info.bgHex;
+                }
+            }
+
+            function refreshInspector() {
+                if (inspectorRafId) cancelAnimationFrame(inspectorRafId);
+                inspectorRafId = requestAnimationFrame(() => {
+                    inspectorRafId = null;
+                    const info = inspectCurrentFormat();
+                    const isAlert = info.audit.isMixed || info.audit.hasNonStandard;
+
+                    // 1. Focused Editor Bar
+                    syncBarControls('fe', info);
+
+                    // 2. General Screen Bar
+                    syncBarControls('gen', info);
+
+                    // 3. Floating Text Format Toolbar
+                    const floatBadge = document.getElementById('floatFormatBadge');
+                    if (floatBadge) {
+                        floatBadge.classList.toggle('is-mixed', isAlert);
+                        floatBadge.textContent = info.audit.isMixed ? `⚠ ${info.fontLabel}·혼재` : info.fontLabel;
+                        floatBadge.title = `현재: ${info.fontLabel} / ${info.fontSize}px / ${info.colorHex} (클릭 시 기존 서식 상세 확인)`;
+                    }
+                    const floatFontSel = document.getElementById('floatFontFamily');
+                    if (floatFontSel && document.activeElement !== floatFontSel) {
+                        const matched = getMatchingPresetValue(info.fontFamilyRaw);
+                        if (matched) floatFontSel.value = matched;
+                    }
+
+                    // 4. Side/Bottom Format Panel Inspector Card
+                    const panelTag = document.getElementById('panelFormatStatusTag');
+                    const panelFont = document.getElementById('panelInfoFont');
+                    const panelSize = document.getElementById('panelInfoSize');
+                    const panelColor = document.getElementById('panelInfoColor');
+                    const panelStyle = document.getElementById('panelInfoStyle');
+                    if (panelTag) {
+                        panelTag.classList.toggle('is-mixed', isAlert);
+                        panelTag.textContent = info.audit.isMixed
+                            ? `⚠ 혼재 (${info.audit.fonts.length}종/${info.audit.sizes.length}크기)`
+                            : (info.audit.hasNonStandard ? '⚠ 비표준 서식' : '✓ 표준 일치');
+                    }
+                    if (panelFont) panelFont.textContent = info.fontLabel;
+                    if (panelSize) panelSize.textContent = `${info.fontSize}px`;
+                    if (panelColor) {
+                        panelColor.innerHTML = `<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${info.colorHex};border:1px solid #94a3b8;vertical-align:middle;margin-right:3px;"></span>${info.colorHex}`;
+                    }
+                    if (panelStyle) {
+                        const tags = [];
+                        if (info.isBold) tags.push('굵게');
+                        if (info.isItalic) tags.push('기울임');
+                        if (info.isUnderline) tags.push('밑줄');
+                        if (info.isStrike) tags.push('취소선');
+                        panelStyle.textContent = tags.length ? tags.join('·') : '기본';
+                    }
+
+                    // 5. If audit popover is currently open, refresh it live too
+                    const pop = document.getElementById('formatAuditPopover');
+                    if (pop && pop.classList.contains('visible')) {
+                        renderAuditPopoverContent();
+                    }
+                });
+            }
+
+            function unifySelectionFormat() {
+                const container = getActiveTargetContainer();
+                if (!container) {
+                    notify('서식을 통일할 영역을 먼저 선택하세요.', 'warning', 2200);
+                    return false;
+                }
+                const range = getValidSavedOrLiveRange(container);
+                if (!range || range.collapsed) {
+                    notify('먼저 서식을 통일할 글자나 문장을 드래그해 선택하세요.', 'warning', 2200);
+                    return false;
+                }
+
+                pushUndoSnapshot({
+                    type: 'single',
+                    items: [{ el: container, html: container.innerHTML, styleText: container.getAttribute('style') || '' }]
+                });
+
+                const frag = range.extractContents();
+                const tempHost = document.createElement('div');
+                tempHost.appendChild(frag);
+                normalizeSubtreeFormatting(tempHost, { preserveBold: config.preserveBoldOnUnify });
+
+                const hasBlock = Boolean(tempHost.querySelector('div, p, ul, ol, li, table, .resizable-image-wrapper'));
+                const insertedNodes = [];
+
+                if (!hasBlock) {
+                    const cleanSpan = document.createElement('span');
+                    cleanSpan.style.fontFamily = config.fontFamily;
+                    cleanSpan.style.fontSize = config.fontSize + 'px';
+                    cleanSpan.style.color = config.color;
+                    while (tempHost.firstChild) cleanSpan.appendChild(tempHost.firstChild);
+                    range.insertNode(cleanSpan);
+                    insertedNodes.push(cleanSpan);
+                } else {
+                    const outFrag = document.createDocumentFragment();
+                    Array.from(tempHost.childNodes).forEach(node => {
+                        if (node.nodeType === 1 && !isProtectedElement(node)) {
+                            node.style.fontFamily = config.fontFamily;
+                            node.style.fontSize = config.fontSize + 'px';
+                            node.style.color = config.color;
+                        }
+                        insertedNodes.push(node);
+                        outFrag.appendChild(node);
+                    });
+                    range.insertNode(outFrag);
+                }
+
+                const sel = window.getSelection();
+                if (sel && insertedNodes.length > 0) {
+                    const newRange = document.createRange();
+                    newRange.setStartBefore(insertedNodes[0]);
+                    newRange.setEndAfter(insertedNodes[insertedNodes.length - 1]);
+                    sel.removeAllRanges();
+                    sel.addRange(newRange);
+                    savedEngineRange = newRange.cloneRange();
+                }
+
+                container.dispatchEvent(new Event('input', { bubbles: true }));
+                refreshInspector();
+                notify(`선택 문장을 기준 서식(${getPrimaryFontLabel(config.fontFamily)} ${config.fontSize}px)으로 통일했습니다.`, 'success', 2200);
+                return true;
+            }
+
+            function unifyContainerFormat(container = getActiveTargetContainer(), silent = false) {
+                if (!container || !container.isConnected) {
+                    if (!silent) notify('서식을 통일할 입력창을 먼저 선택하거나 확대 편집창을 여세요.', 'warning', 2400);
+                    return false;
+                }
+
+                if (!silent) {
+                    pushUndoSnapshot({
+                        type: 'single',
+                        items: [{ el: container, html: container.innerHTML, styleText: container.getAttribute('style') || '' }]
+                    });
+                }
+
+                normalizeSubtreeFormatting(container, { preserveBold: config.preserveBoldOnUnify });
+
+                container.style.fontFamily = config.fontFamily;
+                container.style.fontSize = config.fontSize + 'px';
+                container.style.color = config.color;
+                container.style.lineHeight = String(config.lineHeight);
+                container.style.fontWeight = 'normal';
+                container.style.fontStyle = 'normal';
+                container.style.textDecoration = 'none';
+
+                if (typeof window.clampImagesToContainers === 'function') {
+                    window.clampImagesToContainers(container);
+                }
+                container.dispatchEvent(new Event('input', { bubbles: true }));
+                refreshInspector();
+
+                if (!silent) {
+                    notify(`현재 영역 전체를 기준 서식(${getPrimaryFontLabel(config.fontFamily)} ${config.fontSize}px)으로 일괄 통일했습니다.`, 'success', 2600);
+                }
+                return true;
+            }
+
+            function unifyDocumentBodyFormat() {
+                const contentEl = document.getElementById('content');
+                if (!contentEl) return false;
+                const areas = Array.from(contentEl.querySelectorAll('.insert-area'));
+                if (areas.length === 0) {
+                    notify('일괄 통일할 본문 입력창이 없습니다.', 'info', 2000);
+                    return false;
+                }
+
+                const stdLabel = getPrimaryFontLabel(config.fontFamily);
+                const confirmed = window.confirm(
+                    `문서 내 모든 본문 입력창(${areas.length}개)의 글꼴과 서식을 표준(${stdLabel} ${config.fontSize}px)으로 일괄 통일하시겠습니까?\n\n• 제목, 섹션 헤더, 흐름 칩, 이미지, 링크, 특수 기호는 안전하게 보호됩니다.\n• 실행 후 '↩ 되돌리기'로 즉시 원복할 수 있습니다.`
+                );
+                if (!confirmed) return false;
+
+                const snapshotItems = areas.map(el => ({
+                    el,
+                    html: el.innerHTML,
+                    styleText: el.getAttribute('style') || ''
+                }));
+                pushUndoSnapshot({ type: 'document', items: snapshotItems });
+
+                areas.forEach(area => {
+                    unifyContainerFormat(area, true);
+                });
+
+                refreshInspector();
+                notify(`전체 본문 ${areas.length}개 영역을 기준 서식(${stdLabel} ${config.fontSize}px)으로 일괄 통일했습니다.`, 'success', 3200);
+                return true;
+            }
+
+            // --- Smart Paste Batch Management ---
+            function cleanupPasteBatchMarkers(batch) {
+                if (!batch) return;
+                if (batch.startMarker && batch.startMarker.parentNode) {
+                    batch.startMarker.parentNode.removeChild(batch.startMarker);
+                }
+                if (batch.endMarker && batch.endMarker.parentNode) {
+                    batch.endMarker.parentNode.removeChild(batch.endMarker);
+                }
+            }
+
+            function hideSmartPasteActionBar(clearBatch = true) {
+                if (smartPasteHideTimer) {
+                    clearTimeout(smartPasteHideTimer);
+                    smartPasteHideTimer = null;
+                }
+                const bar = document.getElementById('smartPasteActionBar');
+                if (bar) {
+                    bar.classList.remove('visible');
+                    bar.style.display = 'none';
+                }
+                if (clearBatch && lastPasteBatch) {
+                    cleanupPasteBatchMarkers(lastPasteBatch);
+                    lastPasteBatch = null;
+                }
+            }
+
+            function buildPlainTextFragment(doc, plainText) {
+                const frag = doc.createDocumentFragment();
+                const lines = (plainText || '').replace(/\r\n/g, '\n').split('\n');
+                lines.forEach((line, idx) => {
+                    if (idx > 0) frag.appendChild(doc.createElement('br'));
+                    if (line.length > 0) frag.appendChild(doc.createTextNode(line));
+                });
+                return frag;
+            }
+
+            function buildHtmlFragment(doc, htmlStr) {
+                const temp = doc.createElement('div');
+                temp.innerHTML = htmlStr;
+                const frag = doc.createDocumentFragment();
+                while (temp.firstChild) frag.appendChild(temp.firstChild);
+                return frag;
+            }
+
+            function showSmartPasteActionBar(activeMode) {
+                const bar = document.getElementById('smartPasteActionBar');
+                if (!bar) return;
+                if (bar.parentNode !== document.body) {
+                    document.body.appendChild(bar);
+                }
+                const labelEl = document.getElementById('smartPasteStatusLabel');
+                if (labelEl) {
+                    if (activeMode === 'unified') labelEl.textContent = '✨ 표준 서식 통일됨';
+                    else if (activeMode === 'original') labelEl.textContent = '📋 원본 서식 적용됨';
+                    else labelEl.textContent = '📝 순수 텍스트 적용됨';
+                }
+                bar.querySelectorAll('.sp-btn').forEach(btn => {
+                    btn.classList.toggle('active', btn.dataset.pasteMode === activeMode);
+                });
+                bar.style.display = 'inline-flex';
+                bar.classList.add('visible');
+
+                if (smartPasteHideTimer) clearTimeout(smartPasteHideTimer);
+                smartPasteHideTimer = setTimeout(() => {
+                    hideSmartPasteActionBar(true);
+                }, 9000);
+            }
+
+            function switchLastPasteMode(mode) {
+                if (!lastPasteBatch || !lastPasteBatch.startMarker || !lastPasteBatch.endMarker) {
+                    hideSmartPasteActionBar(true);
+                    return;
+                }
+                const parent = lastPasteBatch.startMarker.parentNode;
+                if (!parent || lastPasteBatch.endMarker.parentNode !== parent) {
+                    hideSmartPasteActionBar(true);
+                    return;
+                }
+
+                let cur = lastPasteBatch.startMarker.nextSibling;
+                while (cur && cur !== lastPasteBatch.endMarker) {
+                    const next = cur.nextSibling;
+                    parent.removeChild(cur);
+                    cur = next;
+                }
+
+                let newFrag;
+                if (mode === 'original') {
+                    newFrag = buildHtmlFragment(document, lastPasteBatch.originalHtml);
+                } else if (mode === 'plain') {
+                    newFrag = buildPlainTextFragment(document, lastPasteBatch.plainText);
+                } else {
+                    newFrag = buildHtmlFragment(document, lastPasteBatch.unifiedHtml);
+                }
+
+                parent.insertBefore(newFrag, lastPasteBatch.endMarker);
+
+                const sel = window.getSelection();
+                if (sel) {
+                    const r = document.createRange();
+                    r.setStartAfter(lastPasteBatch.endMarker);
+                    r.collapse(true);
+                    sel.removeAllRanges();
+                    sel.addRange(r);
+                }
+
+                const container = lastPasteBatch.targetContainer;
+                if (container) {
+                    if (typeof window.processPastedImages === 'function') window.processPastedImages(container);
+                    if (typeof window.clampImagesToContainers === 'function') window.clampImagesToContainers(container);
+                    container.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                showSmartPasteActionBar(mode);
+                refreshInspector();
+            }
+
+            function insertSmartPastedHtml({ docBody, plainText, range, selection, targetContainer }) {
+                if (lastPasteBatch) {
+                    cleanupPasteBatchMarkers(lastPasteBatch);
+                    lastPasteBatch = null;
+                }
+
+                const originalClone = docBody.cloneNode(true);
+                stripDangerousAttributesAndNodes(originalClone);
+                const originalHtml = originalClone.innerHTML;
+
+                const unifiedClone = docBody.cloneNode(true);
+                normalizeSubtreeFormatting(unifiedClone, { preserveBold: config.preserveBoldOnUnify });
+                const unifiedHtml = unifiedClone.innerHTML;
+
+                const fallbackPlain = (plainText && plainText.trim()) ? plainText : (docBody.innerText || docBody.textContent || '');
+
+                const initialMode = config.autoUnifyOnPaste ? 'unified' : 'original';
+                const batchId = 'b_' + Date.now();
+                const startMarker = document.createComment('sp-start:' + batchId);
+                const endMarker = document.createComment('sp-end:' + batchId);
+
+                const frag = document.createDocumentFragment();
+                frag.appendChild(startMarker);
+                frag.appendChild(buildHtmlFragment(document, initialMode === 'unified' ? unifiedHtml : originalHtml));
+                frag.appendChild(endMarker);
+
+                range.insertNode(frag);
+
+                if (selection) {
+                    const afterRange = document.createRange();
+                    afterRange.setStartAfter(endMarker);
+                    afterRange.collapse(true);
+                    selection.removeAllRanges();
+                    selection.addRange(afterRange);
+                }
+
+                lastPasteBatch = {
+                    batchId,
+                    startMarker,
+                    endMarker,
+                    originalHtml,
+                    unifiedHtml,
+                    plainText: fallbackPlain,
+                    targetContainer
+                };
+
+                const hasStyleDifference = originalHtml.trim() !== unifiedHtml.trim();
+                if (hasStyleDifference || fallbackPlain.trim().length > 0) {
+                    showSmartPasteActionBar(initialMode);
+                } else {
+                    cleanupPasteBatchMarkers(lastPasteBatch);
+                    lastPasteBatch = null;
+                    notify('클립보드 내용이 깔끔하게 붙여넣어졌습니다.', 'success', 1800);
+                }
+            }
+
+            function syncConfigUI() {
+                ['feAutoPasteUnifyToggle', 'genAutoPasteUnifyToggle'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) {
+                        btn.classList.toggle('off', !config.autoUnifyOnPaste);
+                        btn.textContent = config.autoUnifyOnPaste ? '✨ 자동통일: ON' : '📋 자동통일: OFF';
+                    }
+                });
+                const panelAutoCheck = document.getElementById('panelAutoPasteUnifyToggle');
+                if (panelAutoCheck) panelAutoCheck.checked = config.autoUnifyOnPaste;
+
+                const panelBoldCheck = document.getElementById('panelPreserveBoldToggle');
+                if (panelBoldCheck) panelBoldCheck.checked = config.preserveBoldOnUnify;
+
+                const panelFontSel = document.getElementById('panelFontFamilySelect');
+                if (panelFontSel) panelFontSel.value = config.fontFamily;
+
+                const panelStdSize = document.getElementById('panelStdFontSize');
+                if (panelStdSize) panelStdSize.value = String(config.fontSize);
+            }
+
+            function wireUnifiedFormatBar(prefix, barId) {
+                const bar = document.getElementById(barId);
+                if (!bar) return;
+
+                bar.addEventListener('pointerdown', (e) => {
+                    captureLiveSelection();
+                    e.stopPropagation();
+                });
+                bar.addEventListener('mousedown', (e) => {
+                    captureLiveSelection();
+                    if (!e.target.closest('select, input')) {
+                        e.preventDefault();
+                    }
+                });
+
+                document.getElementById(`${prefix}FormatStatusBadge`)?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleFormatAuditPopover(e.currentTarget);
+                });
+
+                document.getElementById(`${prefix}FontFamilySelect`)?.addEventListener('change', (e) => {
+                    const val = e.target.value;
+                    config.fontFamily = val;
+                    saveConfig();
+                    applySmartStyle('fontFamily', val);
+                });
+
+                document.getElementById(`${prefix}FontSizeSelect`)?.addEventListener('change', (e) => {
+                    const sizeNum = parseInt(e.target.value, 10) || 16;
+                    config.fontSize = sizeNum;
+                    saveConfig();
+                    applySmartStyle('fontSize', sizeNum + 'px');
+                });
+
+                document.getElementById(`${prefix}BtnBold`)?.addEventListener('click', () => applySmartStyle('bold', null));
+                document.getElementById(`${prefix}BtnItalic`)?.addEventListener('click', () => applySmartStyle('italic', null));
+                document.getElementById(`${prefix}BtnUnderline`)?.addEventListener('click', () => applySmartStyle('underline', null));
+                document.getElementById(`${prefix}BtnStrike`)?.addEventListener('click', () => applySmartStyle('strikeThrough', null));
+
+                document.getElementById(`${prefix}TextColorInput`)?.addEventListener('input', (e) => {
+                    applySmartStyle('color', e.target.value);
+                });
+                document.getElementById(`${prefix}BgColorInput`)?.addEventListener('input', (e) => {
+                    applySmartStyle('backgroundColor', e.target.value);
+                });
+
+                document.getElementById(`${prefix}BtnUnifySelection`)?.addEventListener('click', () => unifySelectionFormat());
+                document.getElementById(`${prefix}BtnUnifyAll`)?.addEventListener('click', () => {
+                    const target = prefix === 'fe' ? (document.getElementById('focusedEditorSurface') || getActiveTargetContainer()) : getActiveTargetContainer();
+                    unifyContainerFormat(target);
+                });
+                document.getElementById(`${prefix}BtnUndoUnify`)?.addEventListener('click', undoLastUnify);
+                document.getElementById(`${prefix}AutoPasteUnifyToggle`)?.addEventListener('click', () => {
+                    config.autoUnifyOnPaste = !config.autoUnifyOnPaste;
+                    saveConfig();
+                    notify(config.autoUnifyOnPaste
+                        ? '외부 붙여넣기 시 표준 서식 자동 통일이 켜졌습니다.'
+                        : '외부 붙여넣기 시 원본 서식 유지 모드로 전환되었습니다.', 'info', 2000);
+                });
+            }
+
+            function bindAllEvents() {
+                syncConfigUI();
+                syncUndoButtonsUI();
+
+                // 1. Wire BOTH Focused Editor Bar & General Screen Bar identically
+                wireUnifiedFormatBar('fe', 'focusedEditorFormatBar');
+                wireUnifiedFormatBar('gen', 'generalFormatInspectorBar');
+
+                document.getElementById('genBtnCloseBar')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    generalBarDismissedForTarget = lastActiveGeneralTarget;
+                    hideGeneralFormatBar();
+                });
+
+                // 2. Wire Interactive Audit Popover
+                const auditPop = document.getElementById('formatAuditPopover');
+                if (auditPop) {
+                    auditPop.addEventListener('pointerdown', (e) => e.stopPropagation());
+                    auditPop.addEventListener('mousedown', (e) => {
+                        if (!e.target.closest('select, input')) e.preventDefault();
+                    });
+                }
+                document.getElementById('formatAuditCloseBtn')?.addEventListener('click', hideFormatAuditPopover);
+                document.getElementById('auditBtnAdoptStd')?.addEventListener('click', adoptCurrentFormatAsStandard);
+                document.getElementById('auditBtnUnifySelection')?.addEventListener('click', () => {
+                    unifySelectionFormat();
+                    renderAuditPopoverContent();
+                });
+                document.getElementById('auditBtnUnifyAll')?.addEventListener('click', () => {
+                    unifyContainerFormat(getActiveTargetContainer());
+                    renderAuditPopoverContent();
+                });
+                document.getElementById('auditBtnClearBg')?.addEventListener('click', () => {
+                    stripBackgroundsOnly(getActiveTargetContainer());
+                    renderAuditPopoverContent();
+                });
+                document.getElementById('auditBtnUndo')?.addEventListener('click', () => {
+                    undoLastUnify();
+                    renderAuditPopoverContent();
+                });
+
+                // 3. Floating Text Format Toolbar bindings
+                document.getElementById('floatFormatBadge')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    toggleFormatAuditPopover(e.currentTarget);
+                });
+                document.getElementById('floatFontFamily')?.addEventListener('change', (e) => {
+                    applySmartStyle('fontFamily', e.target.value);
+                });
+                document.getElementById('floatBtnUnifyFormat')?.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    unifySelectionFormat();
+                });
+
+                // 4. Side/Bottom Format Panel bindings
+                document.getElementById('panelFormatInspectorBox')?.addEventListener('click', (e) => {
+                    toggleFormatAuditPopover(e.currentTarget);
+                });
+                document.getElementById('panelFontFamilySelect')?.addEventListener('change', (e) => {
+                    const val = e.target.value;
+                    config.fontFamily = val;
+                    saveConfig();
+                    applySmartStyle('fontFamily', val);
+                });
+                document.getElementById('panelStdFontSize')?.addEventListener('change', (e) => {
+                    const num = Math.min(36, Math.max(10, parseInt(e.target.value, 10) || 16));
+                    e.target.value = String(num);
+                    config.fontSize = num;
+                    saveConfig();
+                    refreshInspector();
+                });
+                document.getElementById('panelAutoPasteUnifyToggle')?.addEventListener('change', (e) => {
+                    config.autoUnifyOnPaste = Boolean(e.target.checked);
+                    saveConfig();
+                });
+                document.getElementById('panelPreserveBoldToggle')?.addEventListener('change', (e) => {
+                    config.preserveBoldOnUnify = Boolean(e.target.checked);
+                    saveConfig();
+                });
+                document.getElementById('panelBtnUnifySelection')?.addEventListener('click', () => unifySelectionFormat());
+                document.getElementById('panelBtnUnifyActiveBox')?.addEventListener('click', () => unifyContainerFormat(getActiveTargetContainer()));
+                document.getElementById('panelBtnUnifyDocument')?.addEventListener('click', () => unifyDocumentBodyFormat());
+                document.getElementById('panelBtnUndoUnify')?.addEventListener('click', undoLastUnify);
+
+                // 5. Smart Paste Instant Switcher Bar bindings
+                const spBar = document.getElementById('smartPasteActionBar');
+                if (spBar) {
+                    spBar.addEventListener('pointerdown', (e) => e.stopPropagation());
+                    spBar.querySelectorAll('.sp-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            switchLastPasteMode(btn.dataset.pasteMode);
+                        });
+                    });
+                    document.getElementById('smartPasteCloseBtn')?.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        hideSmartPasteActionBar(true);
+                    });
+                }
+
+                // 6. General Screen Editable Click/Touch Detection -> Show General Format Bar!
+                const handleGeneralTargetDetect = (e) => {
+                    if (!e.target || !e.target.closest) return;
+                    if (e.target.closest('#generalFormatInspectorBar, #formatAuditPopover, #smartPasteActionBar, #focusedEditorFormatBar, #textFormatToolbar, #menuPanel, #openFocusedEditorBtn, #mobileKeyboardTriggerBtn, #flowChipToolbar, .item-controls, .resizable-image-wrapper')) {
+                        return;
+                    }
+                    if (isFocusedEditorActive()) return;
+
+                    const editable = e.target.closest(EDITABLE_TARGET_SELECTOR);
+                    const appEl = document.getElementById('appContainer');
+                    if (editable && appEl && appEl.contains(editable) && !isProtectedElement(editable)) {
+                        if (editable !== generalBarDismissedForTarget) {
+                            generalBarDismissedForTarget = null;
+                        }
+                        lastActiveGeneralTarget = editable;
+                        showGeneralFormatBar(editable);
+                    } else if (!e.target.closest('#focusedEditorOverlay')) {
+                        hideFormatAuditPopover();
+                    }
+                };
+
+                document.addEventListener('pointerdown', handleGeneralTargetDetect, { passive: true });
+                document.addEventListener('click', handleGeneralTargetDetect);
+
+                // 7. Live Format Inspector & Selection Tracking
+                document.addEventListener('selectionchange', () => {
+                    captureLiveSelection();
+                    refreshInspector();
+                });
+                document.addEventListener('keyup', () => {
+                    captureLiveSelection();
+                    refreshInspector();
+                });
+                document.addEventListener('mouseup', () => {
+                    captureLiveSelection();
+                    refreshInspector();
+                });
+                document.addEventListener('touchend', () => {
+                    captureLiveSelection();
+                    refreshInspector();
+                }, { passive: true });
+                document.addEventListener('focusin', (e) => {
+                    const editable = e.target && e.target.closest ? e.target.closest(EDITABLE_TARGET_SELECTOR) : null;
+                    if (editable && !isFocusedEditorActive() && !isProtectedElement(editable)) {
+                        lastActiveGeneralTarget = editable;
+                        showGeneralFormatBar(editable);
+                    }
+                    refreshInspector();
+                });
+
+                // Sync when Focused Editor opens/closes
+                const feOverlay = document.getElementById('focusedEditorOverlay');
+                if (feOverlay && typeof MutationObserver !== 'undefined') {
+                    const obs = new MutationObserver(() => {
+                        if (feOverlay.classList.contains('active')) {
+                            hideGeneralFormatBar();
+                            setTimeout(refreshInspector, 60);
+                        } else {
+                            hideSmartPasteActionBar(true);
+                            hideFormatAuditPopover();
+                            if (lastActiveGeneralTarget && lastActiveGeneralTarget.isConnected) {
+                                showGeneralFormatBar(lastActiveGeneralTarget);
+                            }
+                        }
+                    });
+                    obs.observe(feOverlay, { attributes: true, attributeFilter: ['class'] });
+                }
+            }
+
+            window.MeetingFormatEngine = {
+                getConfig: () => ({ ...config }),
+                setConfig: (partial) => { config = { ...config, ...partial }; saveConfig(); },
+                inspectCurrentFormat,
+                auditContainerFormatting,
+                normalizeSubtreeFormatting,
+                applySmartStyle,
+                applyBatchStyleToContainer,
+                stripBackgroundsOnly,
+                adoptCurrentFormatAsStandard,
+                unifySelectionFormat,
+                unifyContainerFormat,
+                unifyDocumentBodyFormat,
+                undoLastUnify,
+                showGeneralFormatBar,
+                hideGeneralFormatBar,
+                toggleFormatAuditPopover,
+                hideFormatAuditPopover,
+                insertSmartPastedHtml,
+                switchLastPasteMode,
+                hideSmartPasteActionBar,
+                refreshInspector
+            };
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', bindAllEvents, { once: true });
+            } else {
+                bindAllEvents();
+            }
+        })();
+
     </script>
 
 </body>
